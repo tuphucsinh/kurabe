@@ -171,7 +171,7 @@ export default function EmployeesPage() {
   ];
 
   return (
-    <div className="w-full space-y-6 p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

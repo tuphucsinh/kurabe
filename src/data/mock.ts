@@ -77,6 +77,26 @@ export const mockEvaluations: Evaluation[] = [
     grade: 'A',
     status: 'Submitted',
     createdAt: '2026-04-27T00:00:00Z',
+  },
+  {
+    id: 'e2',
+    employeeId: 'u4',
+    evaluatorId: 'u2',
+    scores: { 'c1': 5, 'c2': 5, 'c3': 5, 'c4': 4, 'c5': 5, 'c6': 5, 'c7': 5 },
+    totalScore: 148,
+    grade: 'S',
+    status: 'Submitted',
+    createdAt: '2026-04-27T00:00:00Z',
+  },
+  {
+    id: 'e3',
+    employeeId: 'u5',
+    evaluatorId: 'u1',
+    scores: { 'c1': 3, 'c2': 4, 'c3': 3, 'c4': 3, 'c5': 3, 'c6': 4, 'c7': 3 },
+    totalScore: 115,
+    grade: 'B',
+    status: 'Submitted',
+    createdAt: '2026-04-27T00:00:00Z',
   }
 ];
 

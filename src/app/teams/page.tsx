@@ -1,7 +1,16 @@
+
 'use client';
 
 import { db } from '@/data/mock';
-import { Users, User as UserIcon, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
+import { 
+  Users, 
+  User as UserIcon, 
+  CheckCircle2, 
+  Clock, 
+  ChevronRight, 
+  Plus,
+  TrendingUp
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeamsPage() {
@@ -13,106 +22,184 @@ export default function TeamsPage() {
     );
     
     const completedCount = evaluations.filter(e => e.status === 'Approved').length;
+    const pendingCount = evaluations.filter(e => e.status === 'Submitted').length;
     const progress = members.length > 0 ? Math.round((completedCount / members.length) * 100) : 0;
     
     return {
       ...team,
+      leader,
       leaderName: leader?.name || 'Chưa xác định',
+      members,
       membersCount: members.length,
       completedCount,
+      pendingCount,
       progress,
-      status: progress === 100 ? 'Hoàn thành' : 'Đang thực hiện'
+      status: progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'
     };
   });
 
+  // Summary stats
+  const totalMembers = teamsData.reduce((s, t) => s + t.membersCount, 0);
+  const totalCompleted = teamsData.reduce((s, t) => s + t.completedCount, 0);
+  const overallProgress = totalMembers > 0 ? Math.round((totalCompleted / totalMembers) * 100) : 0;
+
   return (
-    <div className="w-full space-y-6 p-4 md:px-6 lg:px-8 py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Danh sách nhóm QAQC</h1>
-          <p className="text-slate-500 mt-1 text-sm md:text-base">Quản lý và theo dõi tiến độ đánh giá theo từng đơn vị</p>
+          <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhóm QAQC</h1>
+          <p className="text-on-surface-variant mt-1 text-sm md:text-base">Theo dõi tiến độ đánh giá theo từng đơn vị</p>
         </div>
-        <button className="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95">
+        <button className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95">
+          <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
           Thêm nhóm mới
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {teamsData.map((team) => (
-          <div 
-            key={team.id} 
-            className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden"
-          >
-            {/* Card Header */}
-            <div className="p-6 border-b border-slate-50">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
-                  <Users size={24} />
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  team.progress === 100 
-                    ? 'bg-emerald-100 text-emerald-700' 
-                    : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {team.status}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-1">{team.name}</h3>
-              <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                <UserIcon size={14} className="text-slate-400" />
-                Leader: <span className="font-medium text-slate-700">{team.leaderName}</span>
-              </p>
-            </div>
-
-            {/* Card Body */}
-            <div className="p-6 flex-1 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Nhân sự</p>
-                  <p className="text-xl font-bold text-slate-800">{team.membersCount}</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Đã đánh giá</p>
-                  <p className="text-xl font-bold text-slate-800">{team.completedCount}/{team.membersCount}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs font-medium">
-                  <span className="text-slate-500 text-sm">Tiến độ</span>
-                  <span className="text-indigo-600 text-sm font-bold">{team.progress}%</span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out group-hover:bg-indigo-600" 
-                    style={{ width: `${team.progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="px-6 py-4 bg-slate-50/50 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                  <CheckCircle2 size={14} className="text-emerald-500" />
-                  <span>{team.completedCount}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                  <Clock size={14} className="text-amber-500" />
-                  <span>{team.membersCount - team.completedCount}</span>
-                </div>
-              </div>
-              <Link 
-                href={`/teams/${team.id}`}
-                className="text-indigo-600 text-sm font-bold flex items-center gap-1 hover:text-indigo-800 transition-colors"
-              >
-                Xem chi tiết
-                <ChevronRight size={16} />
-              </Link>
-            </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-primary/10 text-primary">
+            <Users size={22} />
           </div>
-        ))}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-outline">Tổng nhóm</p>
+            <p className="text-2xl font-black text-on-surface">{teamsData.length}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-green-50 text-green-600">
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-outline">Đã đánh giá</p>
+            <p className="text-2xl font-black text-on-surface">{totalCompleted}<span className="text-base font-medium text-on-surface/40">/{totalMembers}</span></p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-amber-50 text-amber-600">
+            <TrendingUp size={22} />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-outline">Tiến độ chung</p>
+            <p className="text-2xl font-black text-on-surface">{overallProgress}<span className="text-base font-medium text-on-surface/40">%</span></p>
+          </div>
+        </div>
+      </div>
+
+      {/* Team Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        {teamsData.map((team) => {
+          const statusColor = team.progress === 100 
+            ? 'bg-green-100 text-green-700' 
+            : team.progress > 0 
+              ? 'bg-amber-100 text-amber-700' 
+              : 'bg-surface text-outline';
+
+          const progressColor = team.progress === 100 
+            ? 'bg-green-500' 
+            : 'bg-primary';
+
+          return (
+            <div 
+              key={team.id} 
+              className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden"
+            >
+              {/* Card Header */}
+              <div className="p-6 pb-5">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                    <Users size={22} />
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                    {team.status}
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
+                <p className="text-sm text-outline flex items-center gap-1.5">
+                  <UserIcon size={14} />
+                  Leader: <span className="font-bold text-on-surface">{team.leaderName}</span>
+                </p>
+              </div>
+
+              {/* Card Body */}
+              <div className="px-6 pb-5 flex-1 space-y-5">
+                {/* Stats Row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-3 rounded-xl bg-surface">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
+                    <p className="text-xl font-black text-on-surface">{team.membersCount}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-surface">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
+                    <p className="text-xl font-black text-green-600">{team.completedCount}</p>
+                  </div>
+                  <div className="text-center p-3 rounded-xl bg-surface">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
+                    <p className="text-xl font-black text-amber-600">{team.membersCount - team.completedCount}</p>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
+                    <span className="text-sm font-black text-primary">{team.progress}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${progressColor} rounded-full transition-all duration-1000 ease-out`}
+                      style={{ width: `${team.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Member Avatars */}
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-2">
+                    {team.members.slice(0, 4).map((member) => (
+                      <div 
+                        key={member.id}
+                        className="w-7 h-7 rounded-full bg-primary/10 border-2 border-white flex items-center justify-center text-[10px] font-bold text-primary"
+                        title={member.name}
+                      >
+                        {member.name.charAt(0)}
+                      </div>
+                    ))}
+                    {team.membersCount > 4 && (
+                      <div className="w-7 h-7 rounded-full bg-surface border-2 border-white flex items-center justify-center text-[10px] font-bold text-outline">
+                        +{team.membersCount - 4}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-outline">{team.membersCount} thành viên</span>
+                </div>
+              </div>
+
+              {/* Card Footer */}
+              <div className="px-6 py-4 bg-surface/50 border-t border-outline-variant/50 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                    <CheckCircle2 size={14} />
+                    <span>{team.completedCount}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                    <Clock size={14} />
+                    <span>{team.membersCount - team.completedCount}</span>
+                  </div>
+                </div>
+                <Link 
+                  href={`/teams/${team.id}`}
+                  className="text-primary text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
+                >
+                  Chi tiết
+                  <ChevronRight size={16} />
+                </Link>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

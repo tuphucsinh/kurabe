@@ -5,38 +5,18 @@ import { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   leaderCriteria, 
-  staffCriteria, 
-  CriteriaGroup
+  staffCriteria
 } from '@/data/criteria';
 import { mockUsers, User } from '@/data/mock';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
-import ScoreSummary from '@/components/evaluation/ScoreSummary';
+import { calculateGrade, getGradeColor } from '@/lib/scoring';
 import { 
   ArrowLeft, 
-  Calendar, 
-  User as UserIcon, 
-  Briefcase, 
   ChevronRight,
-  ShieldCheck, 
-  Zap, 
-  Handshake, 
-  ClipboardCheck,
-  TrendingUp,
-  Target,
-  Award
+  CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 
-const groupIcons: Record<string, React.ReactNode> = {
-  'A': <ShieldCheck size={18} />,
-  'B': <Handshake size={18} />,
-  'C': <Zap size={18} />,
-  'D': <Target size={18} />,
-  'E': <ClipboardCheck size={18} />,
-  'F': <TrendingUp size={18} />,
-  'G': <Award size={18} />,
-};
 
 interface EvaluationPageProps {
   params: Promise<{ id: string }>;
@@ -49,11 +29,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [employee, setEmployee] = useState<User | null>(null);
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const found = mockUsers.find(u => u.id === id);
     if (found) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmployee(found);
     } else {
       // Redirect or show error
@@ -80,6 +62,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     }));
   };
 
+  const handleNoteChange = (criterionId: string, note: string) => {
+    setNotes(prev => ({
+      ...prev,
+      [criterionId]: note
+    }));
+  };
+
   const handleSave = async (status: 'Draft' | 'Submitted') => {
     setIsSaving(true);
     // Mock API call
@@ -95,74 +84,102 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   };
 
   return (
-    <div className="w-full space-y-8 p-4 md:p-8 animate-in fade-in duration-500">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header & Back Button */}
       <div className="flex flex-col gap-6">
-        <button 
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-outline hover:text-primary transition-colors group w-fit"
-        >
-          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Quay lại danh sách</span>
-        </button>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-outline hover:text-primary transition-colors group w-fit"
+          >
+            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Quay lại danh sách</span>
+          </button>
 
-        <div className="bg-white rounded-3xl border border-outline-variant p-6 md:p-8 shadow-sm">
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center text-primary overflow-hidden border-2 border-white shadow-lg">
-                {employee.avatar ? (
-                  <Image src={employee.avatar} alt={employee.name} width={96} height={96} className="object-cover" />
-                ) : (
-                  <UserIcon size={48} />
-                )}
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-white"></div>
-            </div>
-
-            <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-3xl font-black text-on-surface tracking-tight">{employee.name}</h1>
-                  <span className={`
-                    px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                    ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}
-                  `}>
-                    {employee.role}
-                  </span>
-                </div>
-                <p className="text-outline font-medium flex items-center gap-2 mt-1">
-                  Mã NV: <span className="text-on-surface">{employee.employeeCode}</span>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center text-outline">
-                    <Briefcase size={18} />
-                  </div>
-                  <div>
-                    <p className="text-outline font-medium">Bộ phận</p>
-                    <p className="font-bold text-on-surface">QAQC Line 1</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center text-outline">
-                    <Calendar size={18} />
-                  </div>
-                  <div>
-                    <p className="text-outline font-medium">Ngày vào làm</p>
-                    <p className="font-bold text-on-surface">{employee.joinDate || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex flex-row gap-3 w-full md:w-auto">
+            <button 
+              onClick={() => handleSave('Draft')}
+              disabled={isSaving}
+              className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+            >
+              Lưu bản nháp
+            </button>
+            <button 
+              onClick={() => handleSave('Submitted')}
+              disabled={isSaving}
+              className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-sm whitespace-nowrap"
+            >
+              <CheckCircle2 size={18} className="shrink-0" />
+              <span>{isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}</span>
+            </button>
           </div>
         </div>
+
+        {(() => {
+          const totalScore = Object.values(scores).reduce((sum, s) => sum + s, 0);
+          const totalCriteria = criteriaGroups.reduce((sum, g) => sum + g.criteria.length, 0);
+          const scoredCount = Object.keys(scores).length;
+          const grade = calculateGrade(totalScore, isLeader);
+          const gradeStyles = getGradeColor(grade);
+          const gradeColorClass = gradeStyles.split(' ')[0];
+          const gradeBgClass = gradeStyles.split(' ').slice(1).join(' ');
+
+          return (
+            <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden">
+              <div className="flex flex-col md:flex-row">
+                {/* Left: Employee Info */}
+                <div className="flex-1 p-6 md:p-8 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{employee.name}</h1>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {employee.role}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-8 md:gap-16 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-outline">Mã NV:</span>
+                      <span className="font-bold text-on-surface">{employee.employeeCode}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-outline">Bộ phận:</span>
+                      <span className="font-bold text-on-surface">QAQC Line 1</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-outline">Ngày vào làm:</span>
+                      <span className="font-bold text-on-surface">{employee.joinDate || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Score Panel */}
+                <div className={`flex items-center justify-between md:justify-end gap-8 md:gap-12 px-8 py-6 md:py-0 border-t md:border-t-0 md:border-l border-outline-variant/50 ${gradeBgClass}`}>
+                  {/* Grade */}
+                  <div className="flex flex-col items-center min-w-[60px]">
+                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Xếp loại</span>
+                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{grade}</span>
+                  </div>
+
+                  {/* Total Score */}
+                  <div className="flex flex-col items-center min-w-[60px]">
+                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Tổng điểm</span>
+                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{totalScore}</span>
+                  </div>
+
+                  {/* Criteria */}
+                  <div className="flex flex-col items-center min-w-[60px]">
+                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Tiêu chí</span>
+                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{scoredCount}<span className="text-on-surface/40 font-medium text-base">/{totalCriteria}</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        {/* Main Content */}
-        <div className="xl:col-span-3 space-y-8">
+      <div className="space-y-8">
+        <div className="space-y-8">
           {/* Navigation Tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
             {criteriaGroups.map((group) => {
@@ -206,12 +223,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                     />
                   )}
                   
-                  {/* Icon box */}
-                  <div className={`relative z-20 flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 shrink-0 ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                  }`}>
-                    {groupIcons[group.id] || <ShieldCheck size={18} />}
-                  </div>
+
                   
                   {/* Label */}
                   <div className="relative z-20 flex flex-col items-start">
@@ -261,7 +273,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <CriteriaTab 
             criteria={activeGroup.criteria} 
             scores={scores} 
+            notes={notes}
             onScoreChange={handleScoreChange} 
+            onNoteChange={handleNoteChange}
           />
           
           {/* Navigation between groups */}
@@ -274,13 +288,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             return (
               <div className="flex justify-between items-center pt-8 border-t border-outline-variant">
                 {currentIdx > 0 ? (
-                  <button onClick={() => navigateTo(currentIdx - 1)} className="flex items-center gap-2 font-bold text-primary hover:underline">
+                  <button onClick={() => navigateTo(currentIdx - 1)} className="flex items-center gap-2 font-bold text-primary hover:bg-primary/10 transition-colors bg-primary/5 px-6 py-3 rounded-2xl">
                     <ArrowLeft size={20} />
                     Nhóm trước
                   </button>
                 ) : <div />}
                 {currentIdx < criteriaGroups.length - 1 ? (
-                  <button onClick={() => navigateTo(currentIdx + 1)} className="flex items-center gap-2 font-bold text-primary hover:underline bg-primary/5 px-6 py-3 rounded-2xl">
+                  <button onClick={() => navigateTo(currentIdx + 1)} className="flex items-center gap-2 font-bold text-primary hover:bg-primary/10 transition-colors bg-primary/5 px-6 py-3 rounded-2xl">
                     Nhóm tiếp theo
                     <ChevronRight size={20} />
                   </button>
@@ -288,16 +302,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               </div>
             );
           })()}
-        </div>
-
-        {/* Sidebar Summary */}
-        <div className="xl:col-span-1">
-          <ScoreSummary 
-            scores={scores} 
-            isLeader={isLeader} 
-            onSave={handleSave}
-            isSaving={isSaving}
-          />
         </div>
       </div>
     </div>

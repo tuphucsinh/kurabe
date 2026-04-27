@@ -5,9 +5,7 @@ import {
   leaderCriteria, 
   staffCriteria, 
   gradingLeader, 
-  gradingStaff,
-  CriteriaGroup,
-  Criterion
+  gradingStaff
 } from '@/data/criteria';
 import Tabs from '@/components/ui/Tabs';
 import { 
@@ -76,7 +74,7 @@ export default function CriteriaPage() {
     : activeGroup.criteria;
 
   return (
-    <div className="w-full space-y-8 p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -219,7 +217,7 @@ export default function CriteriaPage() {
             </div>
           ) : (
             <div className="py-20 text-center bg-surface rounded-3xl border border-dashed border-outline-variant">
-              <p className="text-outline">Không tìm thấy tiêu chí nào khớp với "{searchQuery}"</p>
+              <p className="text-outline">Không tìm thấy tiêu chí nào khớp với &quot;{searchQuery}&quot;</p>
               <button 
                 onClick={() => setSearchQuery('')}
                 className="mt-4 text-primary font-medium hover:underline"

@@ -6,7 +6,7 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 export interface Column<T> {
   key: keyof T | string;
   header: string;
-  render?: (item: T) => React.ReactNode;
+  render?: (item: T, index?: number) => React.ReactNode;
   sortable?: boolean;
   hiddenOnMobile?: boolean;
 }
@@ -87,7 +87,7 @@ export default function DataTable<T extends { id: string | number }>({
                       key={column.key as string} 
                       className={`px-4 py-2 text-sm text-on-surface-variant ${column.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
                     >
-                      {column.render ? column.render(item) : (item[column.key as keyof T] as React.ReactNode)}
+                      {column.render ? column.render(item, index) : (item[column.key as keyof T] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>

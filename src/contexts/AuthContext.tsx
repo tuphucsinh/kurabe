@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (savedUserId) {
       const foundUser = mockUsers.find(u => u.id === savedUserId);
       if (foundUser) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUser(foundUser);
       }
     }

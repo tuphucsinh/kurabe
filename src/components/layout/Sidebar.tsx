@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@/data/mock';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -94,10 +95,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 }
 
 interface SidebarContentProps {
-  user: any;
+  user: User | null;
   logout: () => void;
-  mainLinks: any[];
-  bottomLinks: any[];
+  mainLinks: { label: string; href: string; icon: React.ElementType }[];
+  bottomLinks: { label: string; href: string; icon: React.ElementType }[];
   isActive: (href: string) => boolean;
   onClose?: () => void;
   isMobile?: boolean;

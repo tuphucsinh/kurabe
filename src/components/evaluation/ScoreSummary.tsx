@@ -1,6 +1,6 @@
 
-import { calculateGrade, getGradeColor, Grade } from '@/lib/scoring';
-import { CheckCircle2, TrendingUp, AlertCircle } from 'lucide-react';
+import { calculateGrade, getGradeColor } from '@/lib/scoring';
+import { TrendingUp, AlertCircle } from 'lucide-react';
 
 interface ScoreSummaryProps {
   scores: Record<string, number>;
@@ -9,7 +9,7 @@ interface ScoreSummaryProps {
   isSaving?: boolean;
 }
 
-export default function ScoreSummary({ scores, isLeader, onSave, isSaving }: ScoreSummaryProps) {
+export default function ScoreSummary({ scores, isLeader }: ScoreSummaryProps) {
   const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
   const grade = calculateGrade(totalScore, isLeader);
   const gradeStyles = getGradeColor(grade);
@@ -60,30 +60,10 @@ export default function ScoreSummary({ scores, isLeader, onSave, isSaving }: Sco
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-3">
-          <button 
-            onClick={() => onSave('Submitted')}
-            disabled={isSaving}
-            className="w-full py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
-          >
-            <CheckCircle2 size={20} />
-            {isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}
-          </button>
-          
-          <button 
-            onClick={() => onSave('Draft')}
-            disabled={isSaving}
-            className="w-full py-4 bg-white text-on-surface border border-outline-variant rounded-2xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            Lưu bản nháp
-          </button>
-        </div>
-
         {/* Footer Info */}
         <div className="flex gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100 text-amber-800 text-xs">
           <AlertCircle size={16} className="shrink-0" />
-          <p>Dữ liệu sẽ được gửi tới Ban Giám Đốc để phê duyệt sau khi bạn nhấn "Gửi Đánh giá".</p>
+          <p>Dữ liệu sẽ được gửi tới Ban Giám Đốc để phê duyệt sau khi bạn nhấn &quot;Gửi Đánh giá&quot;.</p>
         </div>
       </div>
     </div>

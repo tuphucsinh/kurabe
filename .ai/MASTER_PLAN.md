@@ -15,6 +15,9 @@
 | P6 | Criteria | Tiêu chuẩn đánh giá (6 nhóm A-F) | `[x]` |
 | P7 | Evaluation | Đánh giá chi tiết (core: tabs, tính điểm tự động, đa tầng) | `[x]` |
 | P8 | Polish | Responsive mobile, animation, final QA | `[x]` |
+| P9 | Polishing & Next Steps | UI polish | `[x]` |
+| P10 | Reports | Trang báo cáo tổng hợp QAQC (charts, heatmap, leaderboard) | `[x]` |
+| P11 | Polish & Refinement | Tinh chỉnh layout, padding, responsive cho hài hòa | `[/]` |
 
 ## Business Rules (Tóm tắt từ PRD)
 - **3 vai trò**: Manager → Leader → SubLeader

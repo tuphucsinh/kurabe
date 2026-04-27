@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, UsersRound, ClipboardCheck, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, UsersRound, ClipboardCheck } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
