@@ -26,7 +26,7 @@ export default function EmployeesPage() {
       const team = db.teams.find((t) => t.id === user.teamId);
       const latestEval = db.evaluations
         .filter((e) => e.employeeId === user.id && e.status === 'Approved')
-        .sort((a, b) => new Date(b.period).getTime() - new Date(a.period).getTime())[0];
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
       return {
         ...user,
@@ -279,13 +279,17 @@ export default function EmployeesPage() {
 }
 
 // Icons for Team select
-function TeamsIcon(props: React.SVGProps<SVGSVGElement>) {
+interface TeamsIconProps extends React.SVGProps<SVGSVGElement> {
+  size?: number;
+}
+
+function TeamsIcon({ size = 24, ...props }: TeamsIconProps) {
   return (
     <svg 
       {...props} 
       xmlns="http://www.w3.org/2000/svg" 
-      width="24" 
-      height="24" 
+      width={size} 
+      height={size} 
       viewBox="0 0 24 24" 
       fill="none" 
       stroke="currentColor" 
