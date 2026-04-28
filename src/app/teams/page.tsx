@@ -1,7 +1,7 @@
-
 'use client';
 
-import { db } from '@/data/mock';
+import { useUsers, useTeams, useEvaluations, useUpsertTeam } from '@/hooks/use-db';
+import { Team } from '@/types';
 import { 
   Users, 
   User as UserIcon, 
@@ -15,11 +15,15 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import TeamModal from '@/components/modals/TeamModal';
-import { Team } from '@/data/mock';
 
 export default function TeamsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+
+  const { data: users = [] } = useUsers();
+  const { data: teams = [] } = useTeams();
+  const { data: evaluations = [] } = useEvaluations();
+  const upsertTeam = useUpsertTeam();
 
   const handleAddTeam = () => {
     setEditingTeam(null);
@@ -32,19 +36,20 @@ export default function TeamsPage() {
   };
 
   const handleSaveTeam = (data: Partial<Team>) => {
-    console.log('Saving team data:', data);
-    // Logic cập nhật thực tế sẽ được thêm sau
+    upsertTeam.mutate({
+      ...editingTeam,
+      ...data,
+    });
   };
 
-  const teamsData = db.teams.map((team) => {
-    const members = db.users.filter((u) => u.teamId === team.id);
-    const leader = db.users.find((u) => u.id === team.leaderId);
-    const evaluations = db.evaluations.filter((e) => 
+  const teamsData = teams.map((team) => {
+    const members = users.filter((u) => u.teamId === team.id);
+    const leader = users.find((u) => u.id === team.leaderId);
+    const teamEvaluations = evaluations.filter((e) => 
       members.some((m) => m.id === e.employeeId)
     );
     
-    const completedCount = evaluations.filter(e => e.status === 'Approved').length;
-    const pendingCount = evaluations.filter(e => e.status === 'Submitted').length;
+    const completedCount = teamEvaluations.filter(e => e.status === 'Approved').length;
     const progress = members.length > 0 ? Math.round((completedCount / members.length) * 100) : 0;
     
     return {
@@ -54,7 +59,6 @@ export default function TeamsPage() {
       members,
       membersCount: members.length,
       completedCount,
-      pendingCount,
       progress,
       status: progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'
     };

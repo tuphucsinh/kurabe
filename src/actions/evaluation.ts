@@ -1,117 +1,160 @@
 'use server';
 
-import { db, RoundNumber, EvaluationRound } from '@/data/mock';
-import { calculateRoundScore } from '@/lib/scoring';
-import { isRoundLocked, getNextRound } from '@/data/workflow';
+import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { calculateRoundScore } from '@/lib/scoring';
+import { RoundNumber, EvaluationRound, Grade, EvalStatus } from '@/types';
 
 /**
- * Lưu bản nháp cho round hiện tại. Không khóa, không chuyển round.
+ * Lưu bản nháp (Draft) hoặc Gửi (Submit) kết quả đánh giá cho một Round.
  */
-export async function saveEvaluationRoundDraft(
+export async function saveEvaluationRound(
   evaluationId: string,
-  roundNumber: RoundNumber,
+  round: RoundNumber,
+  evaluatorId: string,
   scores: Record<string, number>,
   notes: Record<string, string>,
-  comment?: string,
-  additionalComment?: string
+  comment: string,
+  isSubmit: boolean = false
 ) {
-  const evaluation = db.evaluations.find(e => e.id === evaluationId);
-  if (!evaluation) {
-    return { success: false, error: 'Evaluation not found' };
-  }
+  try {
+    // 1. Lấy thông tin evaluator snapshot (role)
+    const { data: user, error: uError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', evaluatorId)
+      .single();
 
-  const round = evaluation.rounds.find(r => r.round === roundNumber);
-  if (!round) {
-    return { success: false, error: 'Round not found' };
-  }
+    if (uError || !user) {
+      return { success: false, error: 'Không tìm thấy thông tin người đánh giá.' };
+    }
 
-  if (isRoundLocked(round)) {
-    return { success: false, error: 'Round is locked and cannot be modified' };
-  }
+    // 2. Tính toán điểm và grade
+    const tempRound: Partial<EvaluationRound> = {
+      scores,
+      evaluatorRole: user.role
+    };
+    
+    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
 
-  // Cập nhật scores và notes
-  round.scores = { ...round.scores, ...scores };
-  round.notes = { ...round.notes, ...notes };
-  
-  if (comment !== undefined) {
-    round.comment = comment;
-  }
-
-  if (additionalComment !== undefined) {
-    round.additionalComment = additionalComment;
-  }
-
-  // Tính lại điểm và xếp loại cho round đó
-  const { totalScore, grade } = calculateRoundScore(round);
-  round.totalScore = totalScore;
-  round.grade = grade;
-
-  // Cập nhật thời gian update và trạng thái
-  evaluation.updatedAt = new Date().toISOString();
-  evaluation.status = 'Draft';
-
-  revalidatePath('/evaluations');
-  revalidatePath(`/evaluations/${evaluationId}`);
-
-  return { success: true, evaluation };
-}
-
-/**
- * Chốt kết quả round hiện tại. Khóa round, mở round tiếp theo nếu cần.
- */
-export async function submitEvaluationRound(evaluationId: string, roundNumber: RoundNumber) {
-  const evaluation = db.evaluations.find(e => e.id === evaluationId);
-  if (!evaluation) {
-    return { success: false, error: 'Evaluation not found' };
-  }
-
-  const round = evaluation.rounds.find(r => r.round === roundNumber);
-  if (!round) {
-    return { success: false, error: 'Round not found' };
-  }
-
-  if (isRoundLocked(round)) {
-    return { success: false, error: 'Round is already submitted' };
-  }
-
-  // Khóa round hiện tại
-  const now = new Date().toISOString();
-  round.submittedAt = now;
-  evaluation.updatedAt = now;
-
-  const nextRoundNum = getNextRound(roundNumber);
-
-  if (nextRoundNum) {
-    // Nếu còn round tiếp theo: Tạo round mới và copy baseline từ round cũ
-    const newRound: EvaluationRound = {
-      round: nextRoundNum,
-      evaluatorId: '', // Sẽ được gán khi người review mở ra
-      evaluatorRole: 'Employee', // Placeholder
-      scores: { ...round.scores },
-      notes: { ...(round.notes || {}) },
-      totalScore: round.totalScore,
-      grade: round.grade,
-      comment: '',
-      createdAt: now,
+    const now = new Date().toISOString();
+    
+    // 3. Cập nhật record round
+    const updateData: any = {
+      scores,
+      notes,
+      comment,
+      total_score: totalScore,
+      grade: grade,
+      updated_at: now
     };
 
-    evaluation.rounds.push(newRound);
-    evaluation.currentRound = nextRoundNum;
-    
-    // Logic trạng thái: 
-    // R1 -> R2: Submitted (Chờ Leader review)
-    // R2 -> R3: Reviewed (Chờ Manager review)
-    evaluation.status = nextRoundNum === 2 ? 'Submitted' : 'Reviewed';
-  } else {
-    // Nếu là round cuối cùng: Hoàn tất kỳ đánh giá
-    evaluation.status = 'Approved';
-    evaluation.finalScore = round.totalScore;
-    evaluation.finalGrade = round.grade;
+    if (isSubmit) {
+      updateData.submitted_at = now;
+    }
+
+    const { error: rError } = await supabase
+      .from('evaluation_rounds')
+      .update(updateData)
+      .eq('evaluation_id', evaluationId)
+      .eq('round', round);
+
+    if (rError) {
+      return { success: false, error: 'Lỗi cập nhật kết quả: ' + rError.message };
+    }
+
+    // 4. Nếu là Submit, xử lý logic chuyển Round tiếp theo hoặc kết thúc Evaluation
+    if (isSubmit) {
+      let nextStatus: EvalStatus = 'Draft';
+      let nextRound: number = round;
+
+      if (round === 1) {
+        nextRound = 2;
+        nextStatus = 'Submitted';
+      } else if (round === 2) {
+        nextRound = 3;
+        nextStatus = 'Reviewed';
+      } else if (round === 3) {
+        nextStatus = 'Approved';
+      }
+
+      const evalUpdate: any = {
+        status: nextStatus,
+        current_round: nextRound,
+        updated_at: now
+      };
+
+      if (nextStatus === 'Approved') {
+        evalUpdate.final_grade = grade;
+        evalUpdate.final_score = totalScore;
+      }
+
+      const { error: eError } = await supabase
+        .from('evaluations')
+        .update(evalUpdate)
+        .eq('id', evaluationId);
+
+      if (eError) {
+        return { success: false, error: 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message };
+      }
+
+      // 5. Nếu chưa phải round cuối, tạo record cho round tiếp theo
+      if (nextRound > round) {
+        // Round 2: Evaluator là Leader của team
+        // Round 3: Evaluator là Manager (admin)
+        let nextEvaluatorId = '';
+        let nextEvaluatorRole = '';
+
+        const { data: evalInfo } = await supabase
+          .from('evaluations')
+          .select('team_id')
+          .eq('id', evaluationId)
+          .single();
+
+        if (nextRound === 2 && evalInfo) {
+          const { data: leader } = await supabase
+            .from('users')
+            .select('id, role')
+            .eq('team_id', evalInfo.team_id)
+            .eq('role', 'Leader')
+            .single();
+          
+          if (leader) {
+            nextEvaluatorId = leader.id;
+            nextEvaluatorRole = leader.role;
+          }
+        } else if (nextRound === 3) {
+          const { data: manager } = await supabase
+            .from('users')
+            .select('id, role')
+            .eq('role', 'Manager')
+            .single();
+          
+          if (manager) {
+            nextEvaluatorId = manager.id;
+            nextEvaluatorRole = manager.role;
+          }
+        }
+
+        await supabase
+          .from('evaluation_rounds')
+          .insert({
+            evaluation_id: evaluationId,
+            round: nextRound,
+            evaluator_id: nextEvaluatorId || evaluatorId, // Fallback nếu không tìm thấy
+            evaluator_role: nextEvaluatorRole || 'Leader',
+            scores: {},
+            notes: {},
+            total_score: 0,
+            grade: 'Pending',
+            created_at: now
+          });
+      }
+    }
+
+    revalidatePath(`/evaluations/${evaluationId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
-
-  revalidatePath('/evaluations');
-  revalidatePath(`/evaluations/${evaluationId}`);
-
-  return { success: true, evaluation };
 }

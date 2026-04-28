@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { db, User } from '@/data/mock';
+import { useUsers, useTeams, useEvaluations, useUpsertUser } from '@/hooks/use-db';
+import { User } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
@@ -16,19 +17,27 @@ interface EmployeeTableItem extends User {
 }
 
 export default function EmployeesPage() {
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations();
+  const { mutate: upsertUser } = useUpsertUser();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
 
+  const isLoading = usersLoading || teamsLoading || evalsLoading;
+
   // Computed data
   const employeesData = useMemo(() => {
-    return db.users.map((user) => {
-      const team = db.teams.find((t) => t.id === user.teamId);
-      const latestEval = db.evaluations
-        .filter((e) => e.employeeId === user.id && e.rounds.length > 0)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+    return users.map((user) => {
+      const team = teams.find((t) => t.id === user.teamId);
+      const userEvals = evaluations.filter((e) => e.employeeId === user.id);
+      const latestEval = userEvals.length > 0
+        ? [...userEvals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
+        : null;
 
       const latestRound = latestEval?.rounds?.length
         ? latestEval.rounds.reduce((max, r) => r.round > max.round ? r : max, latestEval.rounds[0])
@@ -36,18 +45,20 @@ export default function EmployeesPage() {
 
       return {
         ...user,
-        teamName: team?.name || 'N/A',
+        teamName: user.role === 'Manager' ? 'Toàn bộ bộ phận' : (team?.name || 'Chưa gán'),
         grade: latestEval?.finalGrade || latestRound?.grade || '-',
         score: latestEval?.finalScore || latestRound?.totalScore || 0,
         gradeRound: latestRound?.round ?? null,
       };
     });
-  }, []);
+  }, [users, teams, evaluations]);
 
   // Filtered data
   const filteredEmployees = useMemo(() => {
     return employeesData.filter((emp) => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const codeMatch = emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = nameMatch || codeMatch;
       const matchesTeam = teamFilter === 'all' || emp.teamId === teamFilter;
       const matchesRole = roleFilter === 'all' || emp.role === roleFilter;
       return matchesSearch && matchesTeam && matchesRole;
@@ -59,10 +70,6 @@ export default function EmployeesPage() {
     key: 'name',
     direction: 'asc',
   });
-
-  const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
-    setSortConfig({ key, direction });
-  };
 
   const sortedEmployees = useMemo(() => {
     if (!sortConfig.direction) return filteredEmployees;
@@ -80,6 +87,18 @@ export default function EmployeesPage() {
     });
   }, [filteredEmployees, sortConfig]);
 
+  const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
+    setSortConfig({ key, direction });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   const handleEdit = (employee: User) => {
     setEditingEmployee(employee);
     setIsModalOpen(true);
@@ -88,6 +107,19 @@ export default function EmployeesPage() {
   const handleAdd = () => {
     setEditingEmployee(null);
     setIsModalOpen(true);
+  };
+
+  const handleSaveEmployee = (data: Partial<User>) => {
+    const payload = editingEmployee 
+      ? { ...editingEmployee, ...data } as User 
+      : { 
+          id: crypto.randomUUID(), 
+          ...data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        } as User;
+    
+    upsertUser(payload);
   };
 
   const columns: Column<EmployeeTableItem>[] = [
@@ -220,7 +252,7 @@ export default function EmployeesPage() {
               onChange={(e) => setTeamFilter(e.target.value)}
             >
               <option value="all">Tất cả Nhóm</option>
-              {db.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
             <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
@@ -238,6 +270,7 @@ export default function EmployeesPage() {
               <option value="Manager">Manager</option>
               <option value="Leader">Leader</option>
               <option value="SubLeader">SubLeader</option>
+              <option value="Employee">Nhân viên</option>
             </select>
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
@@ -281,10 +314,7 @@ export default function EmployeesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         employee={editingEmployee}
-        onSave={(data) => {
-          console.log('Save employee:', data);
-          // In a real app, this would update DB
-        }}
+        onSave={handleSaveEmployee}
       />
     </div>
   );

@@ -1,5 +1,4 @@
-import { User, EvaluationRound, Grade } from '@/data/mock';
-import { CriteriaGroup } from '@/data/criteria';
+import { User, EvaluationRound, Grade, CriteriaGroup } from '@/types';
 import { calculateGrade, getGradeColor } from '@/lib/scoring';
 
 interface EvaluationHeaderProps {
@@ -86,7 +85,7 @@ export default function EvaluationHeader({
               </tr>
               {/* Previous Rounds */}
               {allPreviousRounds.map(r => {
-                const rScore = Object.values(r.scores).reduce((sum, s) => sum + s, 0);
+                const rScore = Object.values(r.scores).reduce((sum: number, s: number) => sum + s, 0);
                 const rGrade = calculateGrade(rScore, isLeader);
                 const rScoredCount = Object.keys(r.scores).length;
                 const gradeClasses = getGradeColor(rGrade);

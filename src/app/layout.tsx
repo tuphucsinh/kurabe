@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
+import QueryProvider from "@/providers/query-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,11 +27,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-surface" suppressHydrationWarning>
-        <AuthProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

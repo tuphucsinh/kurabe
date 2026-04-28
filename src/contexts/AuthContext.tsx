@@ -1,14 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, mockUsers, EvaluationPeriod, db } from '@/data/mock';
+import { User, EvaluationPeriod } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (employeeId: string) => void;
+  login: (employeeId: string) => Promise<void>;
   logout: () => void;
-  // Computed helpers for workflow
   isManager: boolean;
   isLeader: boolean;
   isSubLeader: boolean;
@@ -19,26 +19,51 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [currentPeriod, setCurrentPeriod] = useState<EvaluationPeriod | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load from localStorage on mount
-    const savedUserId = localStorage.getItem('auth_user_id');
-    if (savedUserId) {
-      const foundUser = mockUsers.find(u => u.id === savedUserId);
-      if (foundUser) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setUser(foundUser);
+    async function loadAuth() {
+      const savedUserId = localStorage.getItem('auth_user_id');
+      
+      // Load current active period
+      const { data: periodData } = await supabase
+        .from('evaluation_periods')
+        .select('*')
+        .eq('status', 'Active')
+        .single();
+      
+      if (periodData) {
+        setCurrentPeriod(periodData as EvaluationPeriod);
       }
-    }
-    setIsLoading(false);
-  }, []);
 
-  const login = (employeeId: string) => {
-    const foundUser = mockUsers.find(u => u.id === employeeId);
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('auth_user_id', foundUser.id);
+      if (savedUserId) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', savedUserId)
+          .single();
+          
+        if (userData) {
+          setUser(userData as User);
+        }
+      }
+      setIsLoading(false);
+    }
+    
+    loadAuth();
+  }, [supabase]);
+
+  const login = async (employeeId: string) => {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', employeeId)
+      .single();
+      
+    if (userData) {
+      setUser(userData as User);
+      localStorage.setItem('auth_user_id', userData.id);
     } else {
       throw new Error('User not found');
     }
@@ -52,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isManager = user?.role === 'Manager';
   const isLeader = user?.role === 'Leader';
   const isSubLeader = user?.role === 'SubLeader';
-  const currentPeriod = db.periods.find(p => p.status === 'Active') || null;
 
   return (
     <AuthContext.Provider value={{ 

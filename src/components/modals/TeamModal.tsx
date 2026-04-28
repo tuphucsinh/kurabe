@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Users } from 'lucide-react';
-import { Team } from '@/data/mock';
+import { X, Users, User as UserIcon } from 'lucide-react';
+import { Team, User } from '@/types';
+import { useUsers } from '@/hooks/use-db';
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -12,19 +13,22 @@ interface TeamModalProps {
 }
 
 export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalProps) {
+  const { data: users = [] } = useUsers();
   const [formData, setFormData] = useState<Partial<Team>>({
     name: '',
+    leaderId: '',
   });
 
   useEffect(() => {
     if (team) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: team.name,
+        leaderId: team.leaderId || '',
       });
     } else {
       setFormData({
         name: '',
+        leaderId: '',
       });
     }
   }, [team, isOpen]);
@@ -74,6 +78,25 @@ export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalPr
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+              <UserIcon size={14} />
+              Trưởng nhóm (Leader)
+            </label>
+            <select
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
+              value={formData.leaderId || ''}
+              onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
+            >
+              <option value="">-- Chọn trưởng nhóm --</option>
+              {users.filter(u => u.role !== 'Employee').map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.role})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="pt-4 flex gap-3">

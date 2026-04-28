@@ -1,6 +1,5 @@
-import { gradingLeader, gradingStaff } from '../data/criteria';
-import { Evaluation, EvaluationRound, Grade, RoundNumber } from '../data/mock';
-import { Role } from '../types';
+import { gradingLeader, gradingStaff } from '@/data/criteria';
+import { Evaluation, EvaluationRound, Grade, RoundNumber, Role } from '@/types';
 
 /**
  * Tính score cho 1 round

@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/data/mock';
+import { User } from '@/types';
 
 interface SidebarProps {
   isOpen?: boolean;

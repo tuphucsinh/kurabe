@@ -1,23 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { mockUsers } from '@/data/mock';
 import { Lock, User as UserIcon } from 'lucide-react';
+import { getUsers } from '@/lib/db/users';
+import { User } from '@/types';
 
 export default function LoginPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [error, setError] = useState('');
+  const [demoUsers, setDemoUsers] = useState<User[]>([]);
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    getUsers().then(users => {
+      // Show first 5 users for demo convenience
+      setDemoUsers(users.slice(0, 5));
+    });
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
     try {
-      login(employeeId);
+      await login(employeeId);
       router.push('/dashboard');
     } catch {
       setError('Employee ID không hợp lệ hoặc không tồn tại.');
@@ -89,22 +98,25 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-outline-variant">
-            <h3 className="text-sm font-medium text-on-surface mb-3">Tài khoản test (Mock Data):</h3>
-            <div className="flex flex-wrap gap-2">
-              {mockUsers.map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => setEmployeeId(u.id)}
-                  className="text-xs bg-surface border border-outline-variant px-2 py-1 rounded hover:border-primary hover:text-primary transition-colors"
-                >
-                  <span className="font-semibold">{u.id}</span> - {u.role}
-                </button>
-              ))}
+          {demoUsers.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-outline-variant">
+              <h3 className="text-sm font-medium text-on-surface mb-3">Tài khoản test (Real Data):</h3>
+              <div className="flex flex-wrap gap-2">
+                {demoUsers.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => setEmployeeId(u.id)}
+                    className="text-xs bg-surface border border-outline-variant px-2 py-1 rounded hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <span className="font-semibold">{u.id}</span> - {u.role}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

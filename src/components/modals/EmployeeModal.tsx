@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
-import { db, User as UserType } from '@/data/mock';
-import { Role } from '@/types';
+import { User as UserType } from '@/types';
+import { useTeams } from '@/hooks/use-db';
+
 interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -12,17 +13,23 @@ interface EmployeeModalProps {
 }
 
 export default function EmployeeModal({ isOpen, onClose, onSave, employee }: EmployeeModalProps) {
+  const { data: teams = [] } = useTeams();
   const [formData, setFormData] = useState<Partial<UserType>>({
     name: '',
     employeeCode: '',
-    role: 'SubLeader',
-    teamId: db.teams[0]?.id || '',
+    role: 'Employee',
+    teamId: '',
     joinDate: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
+    if (teams.length > 0 && !formData.teamId && !employee) {
+      setFormData(prev => ({ ...prev, teamId: teams[0].id }));
+    }
+  }, [teams, employee, formData.teamId]);
+
+  useEffect(() => {
     if (employee) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: employee.name,
         employeeCode: employee.employeeCode || '',
@@ -34,18 +41,22 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
       setFormData({
         name: '',
         employeeCode: '',
-        role: 'SubLeader',
-        teamId: db.teams[0]?.id || '',
+        role: 'Employee',
+        teamId: teams[0]?.id || '',
         joinDate: new Date().toISOString().split('T')[0],
       });
     }
-  }, [employee, isOpen]);
+  }, [employee, isOpen, teams]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const finalData = { ...formData };
+    if (finalData.role === 'Manager') {
+      finalData.teamId = undefined; // Supabase upsert handles undefined as null/don't update if configured, but here we want to remove it
+    }
+    onSave(finalData);
     onClose();
   };
 
@@ -112,7 +123,7 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
               <select
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
               >
                 <option value="Manager">Manager</option>
                 <option value="Leader">Leader</option>
@@ -120,24 +131,27 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
                 <option value="Employee">Nhân viên</option>
               </select>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <TeamsIcon size={14} />
-                Nhóm
-              </label>
-              <select
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
-                value={formData.teamId}
-                onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-              >
-                {db.teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+ 
+            {formData.role !== 'Manager' && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <TeamsIcon size={14} />
+                  Nhóm
+                </label>
+                <select
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
+                  value={formData.teamId || ''}
+                  onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                >
+                  <option value="" disabled>Chọn nhóm...</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

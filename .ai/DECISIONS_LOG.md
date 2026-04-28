@@ -6,3 +6,6 @@
 | 2 | 2026-04-27 | Chọn **Supabase** cho Backend (phase sau) | User chốt; giao diện local mock data trước |
 | 3 | 2026-04-27 | Chọn **Next.js 15 App Router** | SSR/SSG sẵn, file-based routing, React Server Components |
 | 4 | 2026-04-27 | Design System lấy từ **Stitch Project 1003102391417666898** | Đảm bảo UI khớp 100% bản mẫu đã thiết kế |
+| 5 | 2026-04-28 | **Migrate criteria vào Supabase DB** | CRUD UI (Phase 22-23) cần DB thực tế; 34 tiêu chí + levels vào bảng `criteria`, `criterion_levels` |
+| 6 | 2026-04-28 | **Giữ fake login** (chọn user từ list), query từ Supabase | Chưa cần Supabase Auth; chuyển sang phase riêng khi cần |
+| 7 | 2026-04-28 | **Chưa enable RLS** — auth ở application level | RLS sẽ thêm sau khi có Supabase Auth thực sự |

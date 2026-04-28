@@ -1,74 +1,115 @@
 'use server';
 
-import { db, EvaluationPeriod, Evaluation } from '@/data/mock';
+import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { EvalStatus, Role } from '@/types';
 
 /**
- * Manager khởi tạo kỳ đánh giá mới cho tất cả nhân viên.
+ * Tạo một kỳ đánh giá mới và khởi tạo Evaluations cho TẤT CẢ nhân viên.
  */
-export async function initializeEvaluationPeriod(managerId: string, year: number, name: string) {
-  const manager = db.users.find(u => u.id === managerId);
-  if (!manager || manager.role !== 'Manager') {
-    return { success: false, error: 'Chỉ Manager mới có quyền khởi tạo kỳ đánh giá.' };
-  }
+export async function createEvaluationPeriod(name: string, year: number, managerId: string) {
+  try {
+    const now = new Date().toISOString();
 
-  // 1. Tạo period mới
-  const periodId = `p-${Date.now()}`;
-  const period: EvaluationPeriod = {
-    id: periodId,
-    year,
-    name,
-    status: 'Active',
-    createdBy: managerId,
-    createdAt: new Date().toISOString()
-  };
+    // 1. Tạo Evaluation Period
+    const { data: period, error: pError } = await supabase
+      .from('evaluation_periods')
+      .insert({
+        name,
+        year,
+        created_by: managerId,
+        status: 'active',
+        created_at: now
+      })
+      .select()
+      .single();
 
-  db.periods.push(period);
-
-  // 2. Tạo Evaluation cho từng user
-  db.users.forEach(user => {
-    // Round 1 logic:
-    // - Employee: evaluator = SubLeader cùng team (người đầu tiên tìm thấy)
-    // - Các role khác: evaluator = self (tự đánh giá)
-    let evaluatorId = user.id;
-    let evaluatorRole = user.role;
-
-    if (user.role === 'Employee') {
-      const subLeader = db.users.find(u => u.role === 'SubLeader' && u.teamId === user.teamId);
-      if (subLeader) {
-        evaluatorId = subLeader.id;
-        evaluatorRole = subLeader.role;
-      }
+    if (pError || !period) {
+      return { success: false, error: 'Lỗi tạo kỳ đánh giá: ' + (pError?.message || 'Unknown error') };
     }
 
-    const evaluation: Evaluation = {
-      id: `e-${user.id}-${Date.now()}`,
-      periodId: periodId,
-      employeeId: user.id,
-      employeeRole: user.role,
-      teamId: user.teamId,
-      rounds: [
-        {
-          round: 1,
-          evaluatorId,
-          evaluatorRole,
-          scores: {},
-          totalScore: 0,
-          grade: 'Pending',
-          createdAt: new Date().toISOString()
-        }
-      ],
-      currentRound: 1,
-      status: 'NotStarted',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    // 2. Lấy danh sách nhân viên cần được đánh giá (Employee, SubLeader, Leader)
+    const { data: employees, error: eError } = await supabase
+      .from('users')
+      .select('id, role, team_id')
+      .neq('role', 'Manager'); // Không đánh giá Manager
 
-    db.evaluations.push(evaluation);
-  });
+    if (eError) {
+      return { success: false, error: 'Lỗi lấy danh sách nhân viên: ' + eError.message };
+    }
 
-  revalidatePath('/evaluations');
-  revalidatePath('/dashboard');
+    if (!employees || employees.length === 0) {
+      return { success: true, message: 'Kỳ đánh giá đã được tạo nhưng không có nhân viên nào để khởi tạo.' };
+    }
 
-  return { success: true, periodId };
+    // 3. Chuẩn bị dữ liệu Evaluations (Bulk Insert)
+    const evaluationsData = employees.map(emp => ({
+      period_id: period.id,
+      employee_id: emp.id,
+      employee_role: emp.role,
+      team_id: emp.team_id,
+      status: 'Draft' as EvalStatus,
+      current_round: 1,
+      created_at: now,
+      updated_at: now
+    }));
+
+    const { data: insertedEvals, error: evError } = await supabase
+      .from('evaluations')
+      .insert(evaluationsData)
+      .select();
+
+    if (evError || !insertedEvals) {
+      return { success: false, error: 'Lỗi khởi tạo danh sách đánh giá: ' + evError.message };
+    }
+
+    // 4. Khởi tạo Round 1 cho mỗi Evaluation (Tự đánh giá)
+    const roundsData = insertedEvals.map(ev => ({
+      evaluation_id: ev.id,
+      round: 1,
+      evaluator_id: ev.employee_id, // Round 1 thường là tự đánh giá
+      evaluator_role: ev.employee_role,
+      scores: {},
+      notes: {},
+      total_score: 0,
+      grade: 'Pending',
+      created_at: now
+    }));
+
+    const { error: rError } = await supabase
+      .from('evaluation_rounds')
+      .insert(roundsData);
+
+    if (rError) {
+      console.error('Error creating initial rounds:', rError);
+      // Có thể không return fail ở đây nếu Evaluation đã tạo xong
+    }
+
+    revalidatePath('/admin/periods');
+    return { success: true, periodId: period.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Đóng một kỳ đánh giá.
+ */
+export async function closeEvaluationPeriod(periodId: string) {
+  try {
+    const { error } = await supabase
+      .from('evaluation_periods')
+      .update({
+        status: 'closed',
+        closed_at: new Date().toISOString()
+      })
+      .eq('id', periodId);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/admin/periods');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }

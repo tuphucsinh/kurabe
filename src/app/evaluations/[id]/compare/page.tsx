@@ -2,12 +2,9 @@
 
 import { use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  mockUsers,
-  mockEvaluations 
-} from '@/data/mock';
+import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
 import { getCriteriaForRole } from '@/data/criteria';
-import { calculateRoundScore, getGradeColor } from '@/lib/scoring';
+import { calculateRoundScore } from '@/lib/scoring';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -16,7 +13,8 @@ import {
   MessageSquare,
   History,
   AlertCircle,
-  ArrowRight 
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 
 interface ComparePageProps {
@@ -27,10 +25,11 @@ export default function ComparePage({ params }: ComparePageProps) {
   const router = useRouter();
   const { id } = use(params);
   
-  const employee = useMemo(() => mockUsers.find(u => u.id === id) || null, [id]);
-  const evaluation = useMemo(() => mockEvaluations.find(e => e.employeeId === id) || null, [id]);
+  const { data: employee, isLoading: loadingUser } = useUser(id);
+  const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id);
+
   const allRounds = useMemo(() => {
-    if (!evaluation) return [];
+    if (!evaluation || !evaluation.rounds) return [];
     return [...evaluation.rounds].sort((a, b) => a.round - b.round);
   }, [evaluation]);
 
@@ -61,10 +60,21 @@ export default function ComparePage({ params }: ComparePageProps) {
 
   const unchangedCriteria = allCriteria.filter(c => !changedCriteriaIds.has(c.id));
 
+  if (loadingUser || loadingEval) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-outline font-medium">Đang tải dữ liệu so sánh...</p>
+      </div>
+    );
+  }
+
   if (!employee || !evaluation) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <p className="text-on-surface font-bold">Không tìm thấy dữ liệu nhân viên hoặc đánh giá.</p>
+        <button onClick={() => router.back()} className="text-primary font-bold">Quay lại</button>
       </div>
     );
   }

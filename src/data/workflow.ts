@@ -1,4 +1,4 @@
-import { User, Evaluation, EvaluationRound, RoundNumber } from './mock';
+import { User, Evaluation, EvaluationRound, RoundNumber } from '@/types';
 
 /**
  * Kiểm tra quyền đánh giá (thường ở Round 1)

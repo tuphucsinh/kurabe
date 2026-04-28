@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { Criterion, CriteriaGroup, CriterionLevel, AppliesTo } from '@/data/criteria';
+import { Criterion, CriteriaGroup, CriteriaLevel, AppliesTo, Role } from '@/types';
 
 interface CriteriaModalProps {
   isOpen: boolean;
@@ -19,17 +19,18 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [appliesTo, setAppliesTo] = useState<AppliesTo>('both');
-  const [levels, setLevels] = useState<CriterionLevel[]>([{ label: '', points: 0 }]);
+  const [levels, setLevels] = useState<CriteriaLevel[]>([{ label: '', points: 0 }]);
 
   useEffect(() => {
     if (!isOpen) return;
     
     if (criterion) {
       const activeGroup = groupId || groups.find(g => g.criteria.some(c => c.id === criterion.id))?.id || groups[0]?.id || '';
+      const activeGroupCode = groups.find(g => g.id === activeGroup)?.code || '';
       
-      let suffix = criterion.id;
-      if (suffix.startsWith(activeGroup)) {
-        suffix = suffix.slice(activeGroup.length);
+      let suffix = criterion.code || '';
+      if (activeGroupCode && suffix.startsWith(activeGroupCode)) {
+        suffix = suffix.slice(activeGroupCode.length);
       }
       
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -37,7 +38,14 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
       setIdSuffix(suffix);
       setName(criterion.name);
       setDescription(criterion.description || '');
-      setAppliesTo(criterion.appliesTo);
+      
+      let mappedAppliesTo: AppliesTo = 'both';
+      if (criterion.appliesTo && criterion.appliesTo.length === 1) {
+        if (criterion.appliesTo.includes('Leader')) mappedAppliesTo = 'leader';
+        else if (criterion.appliesTo.includes('Employee')) mappedAppliesTo = 'staff';
+      }
+      setAppliesTo(mappedAppliesTo);
+
       setLevels(criterion.levels && criterion.levels.length > 0 
         ? criterion.levels.map(l => ({ ...l })) 
         : [{ label: '', points: 0 }]);
@@ -58,10 +66,17 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
     e.preventDefault();
     if (levels.length === 0) return;
     
+    const selectedGroupCode = groups.find(g => g.id === selectedGroupId)?.code || '';
+    
+    let roleAppliesTo: Role[] = ['Leader', 'Employee'];
+    if (appliesTo === 'leader') roleAppliesTo = ['Leader'];
+    if (appliesTo === 'staff') roleAppliesTo = ['Employee'];
+
     const newCriterion: Criterion = {
-      id: selectedGroupId + idSuffix,
+      id: criterion?.id || '',
+      code: selectedGroupCode + idSuffix,
       name,
-      appliesTo,
+      appliesTo: roleAppliesTo,
       levels,
       ...(description.trim() ? { description: description.trim() } : {})
     };
@@ -74,7 +89,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
     setLevels([...levels, { label: '', points: 0 }]);
   };
 
-  const updateLevel = (index: number, field: keyof CriterionLevel, value: string | number) => {
+  const updateLevel = (index: number, field: keyof CriteriaLevel, value: string | number) => {
     const newLevels = [...levels];
     newLevels[index] = { ...newLevels[index], [field]: value };
     setLevels(newLevels);
@@ -125,7 +140,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                 onChange={(e) => setSelectedGroupId(e.target.value)}
               >
                 {groups.map(g => (
-                  <option key={g.id} value={g.id}>[{g.id}] {g.name}</option>
+                  <option key={g.id} value={g.id}>[{g.code}] {g.name}</option>
                 ))}
               </select>
 
@@ -134,7 +149,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
               </label>
               <div className="relative w-full">
                 <span className="absolute left-0 inset-y-0 flex items-center font-bold text-slate-500 bg-slate-50 border border-r-0 border-slate-200 rounded-l-lg px-2 pointer-events-none select-none text-sm">
-                  {selectedGroupId}
+                  {groups.find(g => g.id === selectedGroupId)?.code || ''}
                 </span>
                 <input
                   type="text"

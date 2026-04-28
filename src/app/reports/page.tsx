@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { db, Grade } from '@/data/mock';
+import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
 import { allCriteria } from '@/data/criteria';
 import PageHeader from '@/components/layout/PageHeader';
 import { 
@@ -11,11 +11,13 @@ import {
   Clock,
   Filter,
   Download,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import dynamic from 'next/dynamic';
+import { Grade } from '@/types';
 
 const TeamComparison = dynamic(() => import('@/components/reports/TeamComparison'), { 
   ssr: false,
@@ -63,31 +65,39 @@ function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: {
 
 export default function ReportsPage() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-Q1');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
+
+  const { data: users = [], isLoading: loadingUsers } = useUsers();
+  const { data: teams = [], isLoading: loadingTeams } = useTeams();
+  const { data: evaluations = [], isLoading: loadingEvals } = useEvaluations();
+
+  const isLoading = loadingUsers || loadingTeams || loadingEvals;
 
   // 1. Data Aggregation
   const reportData = useMemo(() => {
+    if (isLoading) return null;
+
     // Filter by team
     const filteredUsers = selectedTeam === 'all' 
-      ? db.users.filter(u => u.role !== 'Manager') 
-      : db.users.filter(u => u.teamId === selectedTeam && u.role !== 'Manager');
+      ? users.filter(u => u.role !== 'Manager') 
+      : users.filter(u => u.teamId === selectedTeam && u.role !== 'Manager');
 
     const userIds = new Set(filteredUsers.map(u => u.id));
     
     // Filter evaluations
-    const filteredEvals = db.evaluations.filter(e => userIds.has(e.employeeId));
+    const filteredEvals = evaluations.filter(e => userIds.has(e.employeeId));
 
     // Stats
     const totalEmployees = filteredUsers.length;
     const evaluatedCount = filteredEvals.length;
     const pendingCount = totalEmployees - evaluatedCount;
     
-    const totalScore = filteredEvals.reduce((sum, e) => sum + (e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0), 0);
+    const totalScore = filteredEvals.reduce((sum, e) => sum + (e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0)), 0);
     const avgScore = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
     
     const highGrades = filteredEvals.filter(e => {
-      const g = e.finalGrade || e.rounds[e.rounds.length - 1]?.grade;
-      return g && ['S', 'A', 'AB'].includes(g);
+      const g = e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
+      return g && ['S', 'A', 'AB'].includes(g as string);
     }).length;
     const highGradeRate = evaluatedCount > 0 ? (highGrades / evaluatedCount) * 100 : 0;
 
@@ -104,16 +114,16 @@ export default function ReportsPage() {
     const grades: Grade[] = ['S', 'A', 'AB', 'B', 'C', 'D'];
     const gradeDistribution = grades.map(g => ({
       grade: g,
-      count: filteredEvals.filter(e => (e.finalGrade || e.rounds[e.rounds.length - 1]?.grade) === g).length,
+      count: filteredEvals.filter(e => (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null)) === g).length,
       color: gradeColorMap[g] || 'bg-slate-400'
     }));
 
     // Team Comparison
-    const teamStats = db.teams.map(t => {
-      const teamUsers = db.users.filter(u => u.teamId === t.id);
-      const teamEvals = db.evaluations.filter(e => teamUsers.some(u => u.id === e.employeeId));
+    const teamStats = teams.map(t => {
+      const teamUsers = users.filter(u => u.teamId === t.id);
+      const teamEvals = evaluations.filter(e => teamUsers.some(u => u.id === e.employeeId));
       const teamAvg = teamEvals.length > 0 
-        ? teamEvals.reduce((sum, e) => sum + (e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0), 0) / teamEvals.length 
+        ? teamEvals.reduce((sum, e) => sum + (e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0)), 0) / teamEvals.length 
         : 0;
       return {
         id: t.id,
@@ -132,7 +142,7 @@ export default function ReportsPage() {
       let count = 0;
 
       filteredEvals.forEach(e => {
-        const latestScores = e.rounds[e.rounds.length - 1]?.scores || {};
+        const latestScores = (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].scores : {}) as Record<string, number>;
         groupCriteriaIds.forEach(cid => {
           if (latestScores[cid] !== undefined) {
             totalGroupScore += latestScores[cid];
@@ -151,14 +161,14 @@ export default function ReportsPage() {
     // Top Performers
     const topPerformers = filteredEvals
       .map(e => {
-        const user = db.users.find(u => u.id === e.employeeId);
-        const team = db.teams.find(t => t.id === user?.teamId);
+        const user = users.find(u => u.id === e.employeeId);
+        const team = teams.find(t => t.id === user?.teamId);
         return {
           id: e.employeeId,
           name: user?.name || 'Unknown',
           teamName: team?.name || 'Unknown',
-          score: e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0,
-          grade: e.finalGrade || e.rounds[e.rounds.length - 1]?.grade || '-'
+          score: e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0),
+          grade: e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : '-') as string
         };
       })
       .sort((a, b) => b.score - a.score)
@@ -176,7 +186,18 @@ export default function ReportsPage() {
       criteriaAnalysis,
       topPerformers
     };
-  }, [selectedTeam]);
+  }, [isLoading, users, teams, evaluations, selectedTeam]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-outline font-medium">Đang tải dữ liệu báo cáo...</p>
+      </div>
+    );
+  }
+
+  if (!reportData) return null;
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
@@ -205,7 +226,7 @@ export default function ReportsPage() {
           className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
         >
           <option value="all">Tất cả nhóm</option>
-          {db.teams.map(t => (
+          {teams.map(t => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>

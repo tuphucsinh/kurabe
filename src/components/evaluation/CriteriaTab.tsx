@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Criterion } from '@/data/criteria';
-import { EvaluationRound } from '@/data/mock';
+import { Criterion, CriteriaGroup, EvaluationRound } from '@/types';
 import { Info, StickyNote, History } from 'lucide-react';
 
 interface CriteriaTabProps {
-  criteria: Criterion[];
+  group: CriteriaGroup;
   scores: Record<string, number>;
   notes: Record<string, string>;
   onScoreChange: (criterionId: string, points: number) => void;
@@ -14,7 +13,7 @@ interface CriteriaTabProps {
 }
 
 export default function CriteriaTab({ 
-  criteria, 
+  group, 
   scores, 
   notes, 
   onScoreChange, 
@@ -38,7 +37,7 @@ export default function CriteriaTab({
 
   return (
     <div className="space-y-2 animate-in fade-in slide-in-from-right-4 duration-300">
-      {criteria.map((criterion) => {
+      {group.criteria.map((criterion) => {
         const hasNote = !!notes[criterion.id];
         const isNoteVisible = activeNotes.has(criterion.id) || hasNote;
         const currentScore = scores[criterion.id];
@@ -59,7 +58,7 @@ export default function CriteriaTab({
               <div className="flex items-center gap-4">
                 <h3 className="font-bold text-on-surface flex items-center gap-2">
                   <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border transition-colors ${hasHistoryVariance ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-primary border-primary/20'}`}>
-                    {criterion.id}
+                    {criterion.code}
                   </span>
                   {criterion.name}
                 </h3>

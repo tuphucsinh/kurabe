@@ -4,25 +4,34 @@ import React, { useMemo } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import { Users, FileCheck, Clock, Activity } from 'lucide-react';
-import { db } from '@/data/mock';
+import { useUsers, useEvaluations, useTeams } from '@/hooks/use-db';
 
 export default function DashboardPage() {
-  // Aggregate data from mock db
+  const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations();
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+
+  const isLoading = usersLoading || evalsLoading || teamsLoading;
+
+  // Aggregate data from database
   const { totalEmployees, completedEvals, pendingEvals } = useMemo(() => {
-    const total = db.users.filter((u) => u.role === 'SubLeader' || u.role === 'Leader').length;
-    const completed = db.evaluations.filter((e) => e.status === 'Approved').length;
+    const total = users.filter((u) => u.role !== 'Manager').length;
+    const completed = evaluations.filter((e) => {
+      const employee = users.find(u => u.id === e.employeeId);
+      return e.status === 'Approved' && employee?.role !== 'Manager';
+    }).length;
     return {
       totalEmployees: total,
       completedEvals: completed,
       pendingEvals: total - completed
     };
-  }, []);
+  }, [users, evaluations]);
   
   // Aggregate grades
   const gradeData = useMemo(() => {
     const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-    db.evaluations.forEach((e) => {
-      // Lấy kết quả từ round cuối cùng đã submit hoặc round 1 nếu chưa submit
+    evaluations.forEach((e) => {
+      // Get result from finalGrade or latest round
       const latestRound = e.rounds[e.rounds.length - 1];
       const grade = e.finalGrade || latestRound?.grade;
       if (grade && counts[grade] !== undefined) {
@@ -38,14 +47,14 @@ export default function DashboardPage() {
       { grade: 'C', count: counts['C'], color: 'bg-amber-500' },
       { grade: 'D', count: counts['D'], color: 'bg-rose-500' },
     ];
-  }, []);
+  }, [evaluations]);
 
   // Team status data
   const teamStatus = useMemo(() => {
-    return db.teams.map((team) => {
-      const members = db.users.filter((u) => u.teamId === team.id);
+    return teams.map((team) => {
+      const members = users.filter((u) => u.teamId === team.id);
       const completedMembers = members.filter((m) => 
-        db.evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
+        evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
       ).length;
       const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
       
@@ -55,7 +64,15 @@ export default function DashboardPage() {
         progress
       };
     });
-  }, []);
+  }, [teams, users, evaluations]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
@@ -124,9 +141,9 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-2 2xl:col-span-1">
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Hoạt động gần đây</h3>
           <div className="space-y-4 flex-1">
-            {db.evaluations.slice(0, 5).map((evaluation) => {
-              const employee = db.users.find(u => u.id === evaluation.employeeId);
-              const evaluator = db.users.find(u => u.id === evaluation.rounds[evaluation.rounds.length - 1]?.evaluatorId);
+            {evaluations.slice(0, 5).map((evaluation) => {
+              const employee = users.find(u => u.id === evaluation.employeeId);
+              const evaluator = users.find(u => u.id === evaluation.rounds[evaluation.rounds.length - 1]?.evaluatorId);
               
               return (
                 <div key={evaluation.id} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
@@ -144,7 +161,7 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-            {db.evaluations.length === 0 && (
+            {evaluations.length === 0 && (
               <div className="text-center py-6 text-slate-500 text-sm">Chưa có hoạt động nào</div>
             )}
           </div>

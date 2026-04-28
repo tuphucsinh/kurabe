@@ -1,20 +1,20 @@
 'use client';
 
 import { m } from 'framer-motion';
-import { CriteriaGroup } from '@/data/criteria';
+import { CriteriaGroup } from '@/types';
 
 interface GroupNavTabsProps {
   groups: CriteriaGroup[];
   activeGroupId: string;
   scores: Record<string, number>;
-  onGroupChange: (groupId: string) => void;
+  onSelect: (groupId: string) => void;
 }
 
 export default function GroupNavTabs({
   groups,
   activeGroupId,
   scores,
-  onGroupChange
+  onSelect
 }: GroupNavTabsProps) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
@@ -43,7 +43,7 @@ export default function GroupNavTabs({
         return (
           <button
             key={group.id}
-            onClick={() => onGroupChange(group.id)}
+            onClick={() => onSelect(group.id)}
             className={`
               relative flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 shrink-0
               ${isActive 
@@ -63,7 +63,7 @@ export default function GroupNavTabs({
             {/* Label */}
             <div className="relative z-20 flex flex-col items-start">
               <span className={`text-[9px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
-                Nhóm {group.id}
+                Nhóm {group.code}
               </span>
               <span className={`text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
                 {shortName}

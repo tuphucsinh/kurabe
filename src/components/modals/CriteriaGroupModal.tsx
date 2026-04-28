@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Layers, Tag } from 'lucide-react';
-import { CriteriaGroup } from '@/data/criteria';
+import { CriteriaGroup } from '@/types';
 
 interface CriteriaGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (group: { id: string; name: string; shortName: string }) => void;
+  onSave: (group: { id: string; code: string; name: string; shortName: string }) => void;
   group?: CriteriaGroup | null;
   existingGroupIds?: string[];
 }
@@ -19,7 +19,7 @@ export default function CriteriaGroupModal({
   group,
   existingGroupIds = [] 
 }: CriteriaGroupModalProps) {
-  const [id, setId] = useState('');
+  const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [error, setError] = useState('');
@@ -28,11 +28,11 @@ export default function CriteriaGroupModal({
     if (!isOpen) return;
     
     if (group) {
-      setId(group.id);
+      setCode(group.code || '');
       setName(group.name);
       setShortName(group.shortName || '');
     } else {
-      setId('');
+      setCode('');
       setName('');
       setShortName('');
     }
@@ -46,28 +46,29 @@ export default function CriteriaGroupModal({
     setError('');
 
     // Validate 1 uppercase char
-    if (id.length !== 1 || !/^[A-Z]$/.test(id)) {
+    if (code.length !== 1 || !/^[A-Z]$/.test(code)) {
       setError('Mã nhóm phải là 1 ký tự chữ cái in hoa (A-Z).');
       return;
     }
 
     // Validate unique on Add
-    if (!group && existingGroupIds.includes(id)) {
+    if (!group && existingGroupIds.includes(code)) {
       setError('Mã nhóm đã tồn tại.');
       return;
     }
 
     onSave({ 
-      id, 
+      id: group?.id || '', // UUID - giữ nguyên khi edit, rỗng khi add (Supabase tự gen)
+      code,
       name: name.trim(), 
       shortName: shortName.trim() || name.trim().split(' ')[0] 
     });
     onClose();
   };
 
-  const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1);
-    setId(val);
+    setCode(val);
     setError('');
   };
 
@@ -113,8 +114,8 @@ export default function CriteriaGroupModal({
               autoFocus={!group}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 read-only:bg-slate-50 read-only:text-slate-500 read-only:cursor-not-allowed font-mono"
               placeholder="VD: A, B, C..."
-              value={id}
-              onChange={handleIdChange}
+              value={code}
+              onChange={handleCodeChange}
               maxLength={1}
             />
             {!group && (
