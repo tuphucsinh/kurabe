@@ -1,24 +1,70 @@
 
 'use client';
 
-import { useState, use, useEffect } from 'react';
+import { useState, useReducer, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   getCriteriaForRole
 } from '@/data/criteria';
 import { mockUsers, User, mockEvaluations, EvaluationRound } from '@/data/mock';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
-import { calculateGrade, getGradeColor } from '@/lib/scoring';
+import EvaluationHeader from '@/components/evaluation/EvaluationHeader';
+import GroupNavTabs from '@/components/evaluation/GroupNavTabs';
+import { calculateGrade } from '@/lib/scoring';
 import { 
-  ArrowLeft, 
   ChevronRight,
   CheckCircle2,
-  Lock
+  Lock,
+  MessageSquare,
+  ArrowLeftRight,
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
 import { isRoundLocked } from '@/data/workflow';
-import { motion } from 'framer-motion';
+import { m, LazyMotion, domAnimation } from 'framer-motion';
 import { saveEvaluationRoundDraft, submitEvaluationRound } from '@/actions/evaluation';
 
+
+interface EvaluationState {
+  employee: User | null;
+  evaluation: typeof mockEvaluations[0] | null;
+  currentRoundData: EvaluationRound | null;
+  allPreviousRounds: EvaluationRound[];
+  scores: Record<string, number>;
+  notes: Record<string, string>;
+  comment: string;
+}
+
+type EvaluationAction =
+  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState> }
+  | { type: 'SET_SCORE'; criterionId: string; points: number }
+  | { type: 'SET_NOTE'; criterionId: string; note: string }
+  | { type: 'SET_COMMENT'; comment: string };
+
+const initialState: EvaluationState = {
+  employee: null,
+  evaluation: null,
+  currentRoundData: null,
+  allPreviousRounds: [],
+  scores: {},
+  notes: {},
+  comment: '',
+};
+
+function evaluationReducer(state: EvaluationState, action: EvaluationAction): EvaluationState {
+  switch (action.type) {
+    case 'SET_INITIAL_DATA':
+      return { ...state, ...action.payload };
+    case 'SET_SCORE':
+      return { ...state, scores: { ...state.scores, [action.criterionId]: action.points } };
+    case 'SET_NOTE':
+      return { ...state, notes: { ...state.notes, [action.criterionId]: action.note } };
+    case 'SET_COMMENT':
+      return { ...state, comment: action.comment };
+    default:
+      return state;
+  }
+}
 
 interface EvaluationPageProps {
   params: Promise<{ id: string }>;
@@ -28,48 +74,63 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const router = useRouter();
   const { id } = use(params);
   
-  const [employee, setEmployee] = useState<User | null>(null);
+  const [state, dispatch] = useReducer(evaluationReducer, initialState);
+  const { employee, evaluation, currentRoundData, allPreviousRounds, scores, notes, comment } = state;
+
   const [activeGroupId, setActiveGroupId] = useState('A');
-  const [scores, setScores] = useState<Record<string, number>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [evaluation, setEvaluation] = useState<typeof mockEvaluations[0] | null>(null);
-  const [currentRoundData, setCurrentRoundData] = useState<EvaluationRound | null>(null);
-  const [previousRound, setPreviousRound] = useState<EvaluationRound | undefined>(undefined);
+
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
     const found = mockUsers.find(u => u.id === id);
     if (found) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEmployee(found);
-      
       // Get evaluation data
       const evalData = mockEvaluations.find(e => e.employeeId === id);
       if (evalData) {
-        setEvaluation(evalData);
-        
-        const current = evalData.rounds.find(r => r.round === evalData.currentRound);
-        if (current) {
-          setCurrentRoundData(current);
-          // Set initial scores and notes from current round if they exist
-          if (Object.keys(scores).length === 0 && current.scores) {
-            setScores(current.scores);
-          }
-          if (Object.keys(notes).length === 0 && current.notes) {
-            setNotes(current.notes);
-          }
+        const current = evalData.rounds.find(r => r.round === evalData.currentRound) || null;
+        const prevRounds = evalData.rounds
+          .filter(r => r.round < evalData.currentRound)
+          .sort((a, b) => a.round - b.round);
+
+        let initialScores: Record<string, number> = {};
+        let initialNotes: Record<string, string> = {};
+        let initialComment = '';
+
+        const hasCurrentDraft = current?.scores && Object.keys(current.scores).length > 0;
+
+        if (hasCurrentDraft) {
+          initialScores = current!.scores;
+          initialNotes = current!.notes || {};
+          initialComment = current!.comment || '';
+        } else if (prevRounds.length > 0) {
+          const lastPrev = prevRounds[prevRounds.length - 1];
+          initialScores = { ...lastPrev.scores };
+          initialNotes = { ...(lastPrev.notes || {}) };
         }
 
-        const prev = evalData.rounds.find(r => r.round === evalData.currentRound - 1);
-        if (prev) {
-          setPreviousRound(prev);
-        }
+        dispatch({
+          type: 'SET_INITIAL_DATA',
+          payload: {
+            employee: found,
+            evaluation: evalData,
+            currentRoundData: current,
+            allPreviousRounds: prevRounds,
+            scores: initialScores,
+            notes: initialNotes,
+            comment: initialComment
+          }
+        });
+      } else {
+        dispatch({ type: 'SET_INITIAL_DATA', payload: { employee: found } });
       }
     } else {
       // Redirect or show error
       console.error('Employee not found');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (!employee) {
@@ -86,17 +147,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const isLocked = currentRoundData ? isRoundLocked(currentRoundData) : false;
 
   const handleScoreChange = (criterionId: string, points: number) => {
-    setScores(prev => ({
-      ...prev,
-      [criterionId]: points
-    }));
+    dispatch({ type: 'SET_SCORE', criterionId, points });
   };
 
   const handleNoteChange = (criterionId: string, note: string) => {
-    setNotes(prev => ({
-      ...prev,
-      [criterionId]: note
-    }));
+    dispatch({ type: 'SET_NOTE', criterionId, note });
   };
   const handleSave = async (status: 'Draft' | 'Submitted') => {
     if (!evaluation || !currentRoundData) return;
@@ -109,7 +164,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           currentRoundData.round,
           scores,
           notes,
-          currentRoundData.comment
+          comment
         );
         if (res.success) {
           alert('Đã lưu bản nháp.');
@@ -123,7 +178,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           currentRoundData.round,
           scores,
           notes,
-          currentRoundData.comment
+          comment
         );
         const res = await submitEvaluationRound(evaluation.id, currentRoundData.round);
         if (res.success) {
@@ -142,34 +197,37 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   };
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <LazyMotion features={domAnimation}>
+      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header & Back Button */}
       <div className="flex flex-col gap-6">
-        {/* Breadcrumb / Progress */}
-        {evaluation && (
-          <div className="flex items-center gap-2 text-sm text-outline font-medium">
-            <span>Đánh giá</span>
-            <ChevronRight size={14} />
-            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Round {evaluation.currentRound} / 3</span>
-            {isLocked && (
-              <>
-                <ChevronRight size={14} />
-                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
-                  <Lock size={12} /> Đã khóa
-                </span>
-              </>
-            )}
-          </div>
-        )}
-
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <button 
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-outline hover:text-primary transition-colors group w-fit"
-          >
-            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Quay lại danh sách</span>
-          </button>
+          {/* Breadcrumb / Progress */}
+          {evaluation && (
+            <div className="flex items-center gap-2 text-sm text-outline font-medium">
+              <span>Đánh giá</span>
+              <ChevronRight size={14} />
+              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Lần {evaluation.currentRound} / 3</span>
+              {/* Compare Button moved here */}
+              {allPreviousRounds.length > 0 && (
+                <button 
+                  onClick={() => router.push(`/evaluations/${id}/compare`)}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-white border border-outline-variant rounded-xl text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 ml-2"
+                >
+                  <ArrowLeftRight size={16} />
+                  <span>Chi tiết so sánh</span>
+                </button>
+              )}
+              {isLocked && (
+                <>
+                  <ChevronRight size={14} />
+                  <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
+                    <Lock size={12} /> Đã khóa
+                  </span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-row gap-3 w-full md:w-auto">
@@ -194,7 +252,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             ) : (
               <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
                 <Lock size={16} />
-                Đã nộp {currentRoundData?.submittedAt && `lúc ${new Date(currentRoundData.submittedAt).toLocaleString('vi-VN')}`}
+                Đã nộp {isMounted && currentRoundData?.submittedAt && `lúc ${new Date(currentRoundData.submittedAt).toLocaleString('vi-VN')}`}
               </div>
             )}
           </div>
@@ -205,145 +263,113 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           const totalCriteria = criteriaGroups.reduce((sum, g) => sum + g.criteria.length, 0);
           const scoredCount = Object.keys(scores).length;
           const grade = calculateGrade(totalScore, isLeader);
-          const gradeStyles = getGradeColor(grade);
-          const gradeColorClass = gradeStyles.split(' ')[0];
-          const gradeBgClass = gradeStyles.split(' ').slice(1).join(' ');
 
           return (
-            <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden">
-              <div className="flex flex-col md:flex-row">
-                {/* Left: Employee Info */}
-                <div className="flex-1 p-6 md:p-8 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{employee.name}</h1>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {employee.role}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-8 md:gap-16 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-outline">Mã NV:</span>
-                      <span className="font-bold text-on-surface">{employee.employeeCode}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-outline">Bộ phận:</span>
-                      <span className="font-bold text-on-surface">QAQC Line 1</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-outline">Ngày vào làm:</span>
-                      <span className="font-bold text-on-surface">{employee.joinDate || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Score Panel */}
-                <div className={`flex items-center justify-between md:justify-end gap-8 md:gap-12 px-8 py-6 md:py-0 border-t md:border-t-0 md:border-l border-outline-variant/50 ${gradeBgClass}`}>
-                  {/* Grade */}
-                  <div className="flex flex-col items-center min-w-[60px]">
-                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Xếp loại</span>
-                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{grade}</span>
-                  </div>
-
-                  {/* Total Score */}
-                  <div className="flex flex-col items-center min-w-[60px]">
-                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Tổng điểm</span>
-                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{totalScore}</span>
-                  </div>
-
-                  {/* Criteria */}
-                  <div className="flex flex-col items-center min-w-[60px]">
-                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface/50 mb-1">Tiêu chí</span>
-                    <span className={`text-2xl font-black leading-none ${gradeColorClass}`}>{scoredCount}<span className="text-on-surface/40 font-medium text-base">/{totalCriteria}</span></span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EvaluationHeader
+              employee={employee}
+              isLeader={isLeader}
+              scores={scores}
+              criteriaGroups={criteriaGroups}
+              allPreviousRounds={allPreviousRounds}
+              grade={grade}
+              totalScore={totalScore}
+              scoredCount={scoredCount}
+              totalCriteria={totalCriteria}
+            />
           );
         })()}
+
+        {/* General Comment Section */}
+        <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden">
+          <button
+            onClick={() => setIsCommentOpen(prev => !prev)}
+            className="w-full px-6 py-4 bg-surface/30 flex items-center justify-between hover:bg-surface/50 transition-colors duration-200"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <MessageSquare size={18} />
+              </div>
+              <h2 className="font-black text-on-surface uppercase tracking-tight">Nhận xét chung</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-bold text-outline uppercase tracking-widest">
+                Lần {evaluation?.currentRound} / 3
+              </span>
+              <m.div
+                animate={{ rotate: isCommentOpen ? 180 : 0 }}
+                transition={{ duration: 0.25 }}
+                className="text-outline"
+              >
+                <ChevronDown size={18} />
+              </m.div>
+            </div>
+          </button>
+
+          <m.div
+            initial={false}
+            animate={{ height: isCommentOpen ? 'auto' : 0, opacity: isCommentOpen ? 1 : 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="p-6 space-y-6 border-t border-outline-variant/30">
+              {/* Previous Rounds Comments */}
+              {allPreviousRounds.length > 0 && (
+                <div className="space-y-3">
+                  <div className="grid gap-3">
+                    {allPreviousRounds.map(r => (
+                      <div key={r.round} className="bg-surface/50 rounded-xl p-4 border border-outline-variant/30 text-sm">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-black bg-outline-variant/50 text-outline px-1.5 py-0.5 rounded">L{r.round}</span>
+                          <span className="text-[10px] text-outline font-medium italic">Đã nộp: {isMounted && r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                        </div>
+                        <p className="text-on-surface/80 leading-relaxed">
+                          {r.comment || <span className="text-outline/50 italic">Không có nhận xét chung.</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current Round Comment Editor */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label htmlFor="general-comment" className="text-[10px] font-bold text-outline uppercase tracking-widest">
+                    Nhận xét hiện tại:
+                  </label>
+                  <span className={`text-[10px] font-bold ${comment.length > 900 ? 'text-red-500' : 'text-outline'}`}>
+                    {comment.length} / 1000
+                  </span>
+                </div>
+                <textarea
+                  id="general-comment"
+                  value={comment}
+                  onChange={(e) => dispatch({ type: 'SET_COMMENT', comment: e.target.value.substring(0, 1000) })}
+                  disabled={isLocked}
+                  placeholder={isLocked ? "Không có nhận xét cho vòng này." : "Nhập nhận xét tổng quan về năng lực, thái độ và đóng góp của nhân viên trong kỳ này..."}
+                  className={`
+                    w-full min-h-[150px] p-4 rounded-2xl border transition-all duration-300 text-sm leading-relaxed
+                    ${isLocked 
+                      ? 'bg-surface/50 border-outline-variant/50 cursor-not-allowed italic' 
+                      : 'bg-white border-outline-variant focus:border-primary focus:ring-4 focus:ring-primary/5 hover:border-outline'
+                    }
+                  `}
+                />
+              </div>
+            </div>
+          </m.div>
+        </div>
       </div>
 
       <div className="space-y-8">
         <div className="space-y-8">
           {/* Navigation Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
-            {criteriaGroups.map((group) => {
-              const isActive = activeGroupId === group.id;
-              const groupScore = group.criteria.reduce((sum, c) => sum + (scores[c.id] || 0), 0);
-              const hasScores = group.criteria.some(c => scores[c.id] !== undefined);
-              // Extract short name cleanly
-              let baseName = group.name.replace(/\s*\(.*?\)\s*/g, '').trim();
-              // Remove group letter prefix if present (e.g., "A. ", "B ")
-              baseName = baseName.replace(/^[A-Z][.\s]+/, '');
-              
-              let shortName = baseName;
-              if (shortName.toLowerCase().startsWith('tính ')) {
-                shortName = shortName.substring(5);
-              } else if (shortName.toLowerCase().startsWith('năng lực')) {
-                shortName = 'Năng lực';
-              } else if (shortName.toLowerCase().startsWith('thành tích')) {
-                shortName = 'Thành tích';
-              }
-              
-              // Capitalize first letter (e.g., "kỷ luật" -> "Kỷ luật")
-              shortName = shortName.charAt(0).toUpperCase() + shortName.slice(1);
-
-              return (
-                <button
-                  key={group.id}
-                  onClick={() => setActiveGroupId(group.id)}
-                  className={`
-                    relative flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 shrink-0
-                    ${isActive 
-                      ? 'border-transparent text-white z-10 shadow-lg shadow-primary/30' 
-                      : 'bg-white border-outline-variant/40 hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
-                    }
-                  `}
-                >
-                  {isActive && (
-                    <motion.div 
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-gradient-to-r from-[#0E4B66] to-[#1A6D91] rounded-2xl"
-                      transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
-                    />
-                  )}
-                  
-
-                  
-                  {/* Label */}
-                  <div className="relative z-20 flex flex-col items-start">
-                    <span className={`text-[9px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
-                      Nhóm {group.id}
-                    </span>
-                    <span className={`text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
-                      {shortName}
-                    </span>
-                  </div>
-
-                  {/* Badge */}
-                  <div className="relative z-20 ml-1">
-                    {hasScores ? (
-                      <motion.span 
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
-                          isActive ? 'bg-white/25 text-white' : 
-                          groupScore >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {groupScore > 0 ? `+${groupScore}` : groupScore}
-                      </motion.span>
-                    ) : (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                        isActive ? 'bg-white/20 text-white/70' : 'bg-surface text-outline'
-                      }`}>
-                        {group.criteria.length}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <GroupNavTabs
+            groups={criteriaGroups}
+            activeGroupId={activeGroupId}
+            scores={scores}
+            onGroupChange={setActiveGroupId}
+          />
 
           {/* Active Group Title */}
           <div className="flex items-center gap-4">
@@ -360,7 +386,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             notes={notes}
             onScoreChange={handleScoreChange} 
             onNoteChange={handleNoteChange}
-            previousRound={previousRound}
+            allPreviousRounds={allPreviousRounds}
             disabled={isLocked}
           />
           
@@ -390,6 +416,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           })()}
         </div>
       </div>
+
+
     </div>
+    </LazyMotion>
   );
 }

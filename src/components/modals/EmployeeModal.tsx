@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
-import { db, User as UserType, Role } from '@/data/mock';
-
+import { db, User as UserType } from '@/data/mock';
+import { Role } from '@/types';
 interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;

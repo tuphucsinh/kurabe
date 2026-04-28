@@ -1,7 +1,4 @@
-// Since I don't know where Role is imported from, I'll use a local string union if it fails, but the task says getCriteriaForRole(role: Role).
-// Let's assume role is 'Leader' | 'Employee' as per the task: getCriteriaForRole('Leader')
-
-export type Role = 'Leader' | 'Employee';
+export type CriteriaRole = 'Leader' | 'Employee';
 export type AppliesTo = 'both' | 'leader' | 'staff';
 
 export interface CriterionLevel {
@@ -474,7 +471,7 @@ export const allCriteria: CriteriaGroup[] = [
   }
 ];
 
-export function getCriteriaForRole(role: Role): CriteriaGroup[] {
+export function getCriteriaForRole(role: CriteriaRole): CriteriaGroup[] {
   const targetAppliesTo = role === 'Leader' ? 'leader' : 'staff';
   
   return allCriteria.map(group => {

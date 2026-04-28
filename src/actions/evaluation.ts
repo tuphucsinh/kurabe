@@ -13,7 +13,8 @@ export async function saveEvaluationRoundDraft(
   roundNumber: RoundNumber,
   scores: Record<string, number>,
   notes: Record<string, string>,
-  comment?: string
+  comment?: string,
+  additionalComment?: string
 ) {
   const evaluation = db.evaluations.find(e => e.id === evaluationId);
   if (!evaluation) {
@@ -35,6 +36,10 @@ export async function saveEvaluationRoundDraft(
   
   if (comment !== undefined) {
     round.comment = comment;
+  }
+
+  if (additionalComment !== undefined) {
+    round.additionalComment = additionalComment;
   }
 
   // Tính lại điểm và xếp loại cho round đó

@@ -171,12 +171,12 @@ export default function CriteriaPage() {
 
           {/* Criteria List - same style as evaluation detail */}
           {filteredCriteria.length > 0 ? (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="space-y-2 animate-in fade-in slide-in-from-right-4 duration-300">
               {filteredCriteria.map((criterion) => (
-                <div key={criterion.id} className="bg-white rounded-2xl border border-outline-variant overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 bg-surface border-b border-outline-variant flex justify-between items-center">
+                <div key={criterion.id} className="bg-white rounded-2xl border border-outline-variant overflow-hidden shadow-sm hover:border-primary/20 transition-all duration-300">
+                  <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center">
                     <h3 className="font-bold text-on-surface flex items-center gap-2">
-                      <span className="text-xs font-bold bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20">
+                      <span className="text-[10px] font-black bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20">
                         {criterion.id}
                       </span>
                       {criterion.name}
@@ -189,7 +189,7 @@ export default function CriteriaPage() {
                     </h3>
                   </div>
                   
-                  <div className="p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
+                  <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
                     {criterion.levels.map((level, idx) => (
                       <div
                         key={idx}

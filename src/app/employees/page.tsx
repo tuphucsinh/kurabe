@@ -5,13 +5,14 @@ import { db, User } from '@/data/mock';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
-import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown, Users } from 'lucide-react';
 import Link from 'next/link';
 
 interface EmployeeTableItem extends User {
   teamName: string;
   grade: string;
   score: number;
+  gradeRound: number | null;
 }
 
 export default function EmployeesPage() {
@@ -26,14 +27,19 @@ export default function EmployeesPage() {
     return db.users.map((user) => {
       const team = db.teams.find((t) => t.id === user.teamId);
       const latestEval = db.evaluations
-        .filter((e) => e.employeeId === user.id && e.status === 'Approved')
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        .filter((e) => e.employeeId === user.id && e.rounds.length > 0)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
+
+      const latestRound = latestEval?.rounds?.length
+        ? latestEval.rounds.reduce((max, r) => r.round > max.round ? r : max, latestEval.rounds[0])
+        : null;
 
       return {
         ...user,
         teamName: team?.name || 'N/A',
-        grade: latestEval?.finalGrade || latestEval?.rounds[0]?.grade || '-',
-        score: latestEval?.finalScore || latestEval?.rounds[0]?.totalScore || 0,
+        grade: latestEval?.finalGrade || latestRound?.grade || '-',
+        score: latestEval?.finalScore || latestRound?.totalScore || 0,
+        gradeRound: latestRound?.round ?? null,
       };
     });
   }, []);
@@ -143,7 +149,12 @@ export default function EmployeesPage() {
           }`}>
             {item.grade}
           </span>
-          <span className="text-xs text-slate-400 font-medium">{item.score}đ</span>
+          <div className="flex flex-col">
+            {item.gradeRound != null && (
+              <span className="text-[10px] text-slate-400 font-medium leading-none">L{item.gradeRound}</span>
+            )}
+            <span className="text-xs text-slate-400 font-medium">{item.score}</span>
+          </div>
         </div>
       ),
     },
@@ -189,7 +200,7 @@ export default function EmployeesPage() {
       </div>
 
       {/* Filters Section */}
-      <div className="flex flex-col xl:flex-row gap-4 bg-white p-5 rounded-2xl border border-outline-variant shadow-sm">
+      <div className="flex flex-col xl:flex-row gap-4">
         <div className="relative flex-1 min-w-[300px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={20} />
           <input
@@ -211,7 +222,7 @@ export default function EmployeesPage() {
               <option value="all">Tất cả Nhóm</option>
               {db.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-            <TeamsIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
+            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
               <ChevronDown size={16} />
             </div>
@@ -279,29 +290,3 @@ export default function EmployeesPage() {
   );
 }
 
-// Icons for Team select
-interface TeamsIconProps extends React.SVGProps<SVGSVGElement> {
-  size?: number;
-}
-
-function TeamsIcon({ size = 24, ...props }: TeamsIconProps) {
-  return (
-    <svg 
-      {...props} 
-      xmlns="http://www.w3.org/2000/svg" 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
-import BottomNav from '@/components/layout/BottomNav';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu } from 'lucide-react';
 
@@ -29,11 +28,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Close sidebar on pathname change
   useEffect(() => {
-    if (isSidebarOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsSidebarOpen(false);
-    }
-  }, [pathname, isSidebarOpen]);
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   // Conditional rendering
   if (isLoading) {
@@ -74,13 +70,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSidebarOpen(false)} 
         />
         
-        <main className="flex-1 min-w-0 md:pl-[240px] pb-20 md:pb-0">
+        <main className="flex-1 min-w-0 md:pl-[240px] overflow-y-auto">
           <PageTransition>
             {children}
           </PageTransition>
         </main>
       </div>
-      <BottomNav />
     </div>
   );
 }

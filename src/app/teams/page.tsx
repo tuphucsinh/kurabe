@@ -9,11 +9,33 @@ import {
   Clock, 
   ChevronRight, 
   Plus,
-  TrendingUp
+  TrendingUp,
+  Edit2
 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import TeamModal from '@/components/modals/TeamModal';
+import { Team } from '@/data/mock';
 
 export default function TeamsPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+
+  const handleAddTeam = () => {
+    setEditingTeam(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditTeam = (team: Team) => {
+    setEditingTeam(team);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveTeam = (data: Partial<Team>) => {
+    console.log('Saving team data:', data);
+    // Logic cập nhật thực tế sẽ được thêm sau
+  };
+
   const teamsData = db.teams.map((team) => {
     const members = db.users.filter((u) => u.teamId === team.id);
     const leader = db.users.find((u) => u.id === team.leaderId);
@@ -51,7 +73,10 @@ export default function TeamsPage() {
           <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhóm QAQC</h1>
           <p className="text-on-surface-variant mt-1 text-sm md:text-base">Theo dõi tiến độ đánh giá theo từng đơn vị</p>
         </div>
-        <button className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95">
+        <button 
+          onClick={handleAddTeam}
+          className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
+        >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
           Thêm nhóm mới
         </button>
@@ -112,9 +137,22 @@ export default function TeamsPage() {
                   <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Users size={22} />
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                    {team.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditTeam(team as unknown as Team);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                      title="Chỉnh sửa nhóm"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                      {team.status}
+                    </span>
+                  </div>
                 </div>
                 <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
                 <p className="text-sm text-outline flex items-center gap-1.5">
@@ -201,6 +239,13 @@ export default function TeamsPage() {
           );
         })}
       </div>
+
+      <TeamModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveTeam}
+        team={editingTeam}
+      />
     </div>
   );
 }

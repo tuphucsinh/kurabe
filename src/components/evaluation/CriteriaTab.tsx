@@ -9,7 +9,7 @@ interface CriteriaTabProps {
   notes: Record<string, string>;
   onScoreChange: (criterionId: string, points: number) => void;
   onNoteChange: (criterionId: string, note: string) => void;
-  previousRound?: EvaluationRound;
+  allPreviousRounds: EvaluationRound[];
   disabled?: boolean;
 }
 
@@ -19,7 +19,7 @@ export default function CriteriaTab({
   notes, 
   onScoreChange, 
   onNoteChange,
-  previousRound,
+  allPreviousRounds = [],
   disabled
 }: CriteriaTabProps) {
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
@@ -42,15 +42,23 @@ export default function CriteriaTab({
         const hasNote = !!notes[criterion.id];
         const isNoteVisible = activeNotes.has(criterion.id) || hasNote;
         const currentScore = scores[criterion.id];
-        const prevScore = previousRound?.scores?.[criterion.id];
-        const hasScoreChanged = prevScore !== undefined && currentScore !== undefined && prevScore !== currentScore;
+        
+        // Find if current score differs from any previous rounds
+        const mostRecentRound = allPreviousRounds.length > 0 
+          ? allPreviousRounds[allPreviousRounds.length - 1] 
+          : null;
+        
+        // Change logic: Highlight if current differs from ANY previous round
+        const hasHistoryVariance = allPreviousRounds.length > 0 && allPreviousRounds.some(r => r.scores?.[criterion.id] !== undefined && r.scores[criterion.id] !== currentScore);
+        const mostRecentScore = mostRecentRound?.scores?.[criterion.id];
+        const hasScoreChanged = mostRecentScore !== undefined && currentScore !== undefined && mostRecentScore !== currentScore;
 
         return (
-          <div key={criterion.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-colors ${hasScoreChanged ? 'border-amber-400 ring-1 ring-amber-400/50' : 'border-outline-variant'}`}>
+          <div key={criterion.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-300 ${hasScoreChanged ? 'border-amber-400 ring-1 ring-amber-400/50' : 'border-outline-variant hover:border-primary/20'}`}>
             <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center flex-wrap gap-2">
               <div className="flex items-center gap-4">
                 <h3 className="font-bold text-on-surface flex items-center gap-2">
-                  <span className="text-xs font-bold bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20">
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border transition-colors ${hasHistoryVariance ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-primary border-primary/20'}`}>
                     {criterion.id}
                   </span>
                   {criterion.name}
@@ -58,7 +66,7 @@ export default function CriteriaTab({
                 <button 
                   onClick={() => toggleNote(criterion.id)}
                   className={`
-                    flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all text-xs font-bold uppercase tracking-wider
+                    flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider
                     ${isNoteVisible 
                       ? 'bg-primary text-white shadow-sm' 
                       : 'text-outline hover:bg-primary/10 hover:text-primary border border-dashed border-outline-variant'
@@ -70,19 +78,29 @@ export default function CriteriaTab({
                 </button>
               </div>
               
-              <div className="flex items-center gap-2">
-                {prevScore !== undefined && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
-                    hasScoreChanged ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-outline-variant bg-surface border-outline-variant'
-                  }`}>
-                    <History size={10} />
-                    R{previousRound?.round}: {prevScore > 0 ? `+${prevScore}` : prevScore}
-                  </span>
-                )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {allPreviousRounds.map((round, rIdx) => {
+                  const rScore = round.scores?.[criterion.id];
+                  if (rScore === undefined) return null;
+                  
+                  // Highlight if different from ITS own previous round
+                  const prevRScore = rIdx > 0 ? allPreviousRounds[rIdx - 1].scores?.[criterion.id] : undefined;
+                  const scoreChangedAtThisRound = prevRScore !== undefined && prevRScore !== rScore;
+
+                  return (
+                    <span key={round.round} className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 transition-colors ${
+                      scoreChangedAtThisRound ? 'text-amber-700 bg-amber-50 border-amber-200 shadow-sm' : 'text-outline-variant bg-surface border-outline-variant/60'
+                    }`}>
+                      <History size={10} />
+                      L{round.round}: {rScore > 0 ? `+${rScore}` : rScore}
+                    </span>
+                  );
+                })}
+                
                 {currentScore !== undefined && (
-                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    currentScore > 0 ? 'bg-green-100 text-green-700' : 
-                    currentScore < 0 ? 'bg-red-100 text-red-700' : 'bg-surface text-outline'
+                  <span className={`text-xs font-black px-3 py-1 rounded-full shadow-sm transition-all ${
+                    currentScore > 0 ? 'bg-green-100 text-green-700 ring-1 ring-green-200' : 
+                    currentScore < 0 ? 'bg-red-100 text-red-700 ring-1 ring-red-200' : 'bg-surface text-outline border border-outline-variant'
                   }`}>
                     {currentScore > 0 ? `+${currentScore}` : currentScore} điểm
                   </span>
@@ -93,7 +111,7 @@ export default function CriteriaTab({
             <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
               {criterion.levels.map((level, idx) => {
                 const isSelected = currentScore === level.points;
-                const isPrevSelected = prevScore === level.points;
+                const selectedRounds = allPreviousRounds.filter(r => r.scores?.[criterion.id] === level.points);
                 
                 return (
                   <button
@@ -104,23 +122,25 @@ export default function CriteriaTab({
                       relative p-3 rounded-xl border text-left transition-all duration-300 group
                       ${isSelected 
                         ? 'border-primary ring-2 ring-primary/30 bg-primary/10 shadow-lg scale-[1.02] z-10' 
-                        : isPrevSelected
+                        : selectedRounds.length > 0
                           ? 'border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-400 scale-100'
                           : 'border-outline-variant hover:border-primary/40 hover:bg-surface scale-100'
                       }
                       ${disabled ? 'opacity-70 cursor-not-allowed hover:border-outline-variant hover:bg-transparent hover:scale-100' : ''}
                     `}
                   >
-                    {isPrevSelected && !isSelected && (
-                      <span className="absolute -top-2 -right-2 text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded shadow-sm z-20">
-                        R{previousRound?.round}
-                      </span>
+                    {selectedRounds.length > 0 && (
+                      <div className="absolute -top-2 -right-2 flex flex-col gap-0.5 items-end z-20">
+                        {selectedRounds.map(r => (
+                          <span key={r.round} className={`text-[9px] font-bold border px-1 py-0.5 rounded shadow-sm ${
+                            isSelected ? 'bg-primary text-white border-primary' : 'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}>
+                            L{r.round}
+                          </span>
+                        ))}
+                      </div>
                     )}
-                    {isPrevSelected && isSelected && (
-                      <span className="absolute -top-2 -right-2 text-[9px] font-bold bg-primary text-white border border-primary px-1.5 py-0.5 rounded shadow-sm z-20">
-                        R{previousRound?.round} & Hiện tại
-                      </span>
-                    )}
+                    
                     <div className="flex items-center gap-3">
                       <span className={`
                         shrink-0 text-sm font-black px-2 py-0.5 rounded
@@ -151,21 +171,36 @@ export default function CriteriaTab({
             </div>
 
             {isNoteVisible && (
-              <div className="px-6 pb-12 pt-1 animate-in slide-in-from-top-2 duration-300">
-                <div className="bg-surface/50 rounded-xl">
-                  <input 
-                    type="text"
-                    disabled={disabled}
-                    value={notes[criterion.id] || ''}
-                    onChange={(e) => onNoteChange(criterion.id, e.target.value)}
-                    className="w-full bg-white border border-outline-variant rounded-lg px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none h-[24px] min-h-[24px] shadow-inner leading-[24px] py-0 disabled:bg-surface disabled:cursor-not-allowed"
-                    placeholder={`Ghi chú cho ${criterion.name}...`}
-                  />
-                  {previousRound?.notes?.[criterion.id] && (
-                    <p className="mt-1 text-[10px] text-outline italic flex items-center gap-1 px-1">
-                      <History size={10} />
-                      Ghi chú cũ (R{previousRound.round}): {previousRound.notes?.[criterion.id]}
-                    </p>
+              <div className="px-6 pb-4 pt-1 animate-in slide-in-from-top-2 duration-300">
+                <div className="bg-surface/50 rounded-xl p-2 border border-outline-variant/30 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-wider shrink-0">Bản đánh giá:</span>
+                    <input 
+                      type="text"
+                      disabled={disabled}
+                      value={notes[criterion.id] || ''}
+                      onChange={(e) => onNoteChange(criterion.id, e.target.value)}
+                      className="flex-1 bg-white border border-outline-variant rounded-lg px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none py-2 disabled:bg-surface disabled:cursor-not-allowed shadow-sm"
+                      placeholder={`Ghi chú cho ${criterion.name}...`}
+                    />
+                  </div>
+                  
+                  {/* Historical Notes */}
+                  {allPreviousRounds.some(r => r.notes?.[criterion.id]) && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center gap-2 px-1">
+                        <History size={12} className="text-outline" />
+                        <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Lịch sử ghi chú</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1">
+                        {allPreviousRounds.map(round => round.notes?.[criterion.id] && (
+                          <div key={round.round} className="flex gap-2 items-start bg-white/60 px-3 py-1.5 rounded-lg border border-outline-variant/20 shadow-sm text-[11px]">
+                            <span className="font-black text-primary whitespace-nowrap">L{round.round}</span>
+                            <span className="text-on-surface-variant italic">&quot;{round.notes[criterion.id]}&quot;</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

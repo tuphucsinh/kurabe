@@ -1,6 +1,6 @@
-export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee';
-export type Grade = 'S' | 'A' | 'AB' | 'B' | 'C' | 'D' | 'Pending';
+import { Role } from '../types';
 
+export type Grade = 'S' | 'A' | 'AB' | 'B' | 'C' | 'D' | 'Pending';
 export interface User {
   id: string;
   employeeCode?: string;
@@ -40,6 +40,7 @@ export interface EvaluationRound {
   totalScore: number;
   grade: Grade;
   comment?: string;       // Nhận xét chung cho lần đánh giá này
+  additionalComment?: string; // Nhận xét bổ sung
   submittedAt?: string;   // null = Draft, có giá trị = Locked
   createdAt: string;
 }
