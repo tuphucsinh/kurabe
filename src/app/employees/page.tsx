@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import { db, User } from '@/data/mock';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import EmployeeModal from '@/components/modals/EmployeeModal';
+import dynamic from 'next/dynamic';
+const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
 import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,8 +32,8 @@ export default function EmployeesPage() {
       return {
         ...user,
         teamName: team?.name || 'N/A',
-        grade: latestEval?.grade || '-',
-        score: latestEval?.totalScore || 0,
+        grade: latestEval?.finalGrade || latestEval?.rounds[0]?.grade || '-',
+        score: latestEval?.finalScore || latestEval?.rounds[0]?.totalScore || 0,
       };
     });
   }, []);

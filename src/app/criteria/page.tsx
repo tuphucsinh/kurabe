@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { 
-  leaderCriteria, 
-  staffCriteria, 
+  getCriteriaForRole, 
   gradingLeader, 
   gradingStaff
 } from '@/data/criteria';
@@ -56,7 +55,7 @@ export default function CriteriaPage() {
     { id: 'staff', label: 'Nhân viên (Staff)', icon: <Users size={18} /> },
   ];
 
-  const currentCriteria = activeType === 'leader' ? leaderCriteria : staffCriteria;
+  const currentCriteria = activeType === 'leader' ? getCriteriaForRole('Leader') : getCriteriaForRole('Employee');
   const currentGrading = activeType === 'leader' ? gradingLeader : gradingStaff;
 
   // Reset activeGroupId when switching type if current id doesn't exist
@@ -181,6 +180,12 @@ export default function CriteriaPage() {
                         {criterion.id}
                       </span>
                       {criterion.name}
+                      {criterion.appliesTo === 'leader' && (
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full ml-2 shrink-0">Chỉ QL</span>
+                      )}
+                      {criterion.appliesTo === 'staff' && (
+                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full ml-2 shrink-0">Chỉ NV</span>
+                      )}
                     </h3>
                   </div>
                   

@@ -1,13 +1,18 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, mockUsers } from '@/data/mock';
+import { User, mockUsers, EvaluationPeriod, db } from '@/data/mock';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (employeeId: string) => void;
   logout: () => void;
+  // Computed helpers for workflow
+  isManager: boolean;
+  isLeader: boolean;
+  isSubLeader: boolean;
+  currentPeriod: EvaluationPeriod | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,8 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('auth_user_id');
   };
 
+  const isManager = user?.role === 'Manager';
+  const isLeader = user?.role === 'Leader';
+  const isSubLeader = user?.role === 'SubLeader';
+  const currentPeriod = db.periods.find(p => p.status === 'Active') || null;
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      login, 
+      logout,
+      isManager,
+      isLeader,
+      isSubLeader,
+      currentPeriod
+    }}>
       {children}
     </AuthContext.Provider>
   );

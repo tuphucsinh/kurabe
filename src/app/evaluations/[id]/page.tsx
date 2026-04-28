@@ -4,18 +4,20 @@
 import { useState, use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  leaderCriteria, 
-  staffCriteria
+  getCriteriaForRole
 } from '@/data/criteria';
-import { mockUsers, User } from '@/data/mock';
+import { mockUsers, User, mockEvaluations, EvaluationRound } from '@/data/mock';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
 import { calculateGrade, getGradeColor } from '@/lib/scoring';
 import { 
   ArrowLeft, 
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
+import { isRoundLocked } from '@/data/workflow';
 import { motion } from 'framer-motion';
+import { saveEvaluationRoundDraft, submitEvaluationRound } from '@/actions/evaluation';
 
 
 interface EvaluationPageProps {
@@ -31,16 +33,43 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [evaluation, setEvaluation] = useState<typeof mockEvaluations[0] | null>(null);
+  const [currentRoundData, setCurrentRoundData] = useState<EvaluationRound | null>(null);
+  const [previousRound, setPreviousRound] = useState<EvaluationRound | undefined>(undefined);
 
   useEffect(() => {
     const found = mockUsers.find(u => u.id === id);
     if (found) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmployee(found);
+      
+      // Get evaluation data
+      const evalData = mockEvaluations.find(e => e.employeeId === id);
+      if (evalData) {
+        setEvaluation(evalData);
+        
+        const current = evalData.rounds.find(r => r.round === evalData.currentRound);
+        if (current) {
+          setCurrentRoundData(current);
+          // Set initial scores and notes from current round if they exist
+          if (Object.keys(scores).length === 0 && current.scores) {
+            setScores(current.scores);
+          }
+          if (Object.keys(notes).length === 0 && current.notes) {
+            setNotes(current.notes);
+          }
+        }
+
+        const prev = evalData.rounds.find(r => r.round === evalData.currentRound - 1);
+        if (prev) {
+          setPreviousRound(prev);
+        }
+      }
     } else {
       // Redirect or show error
       console.error('Employee not found');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (!employee) {
@@ -52,8 +81,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   }
 
   const isLeader = employee.role !== 'Employee';
-  const criteriaGroups = isLeader ? leaderCriteria : staffCriteria;
+  const criteriaGroups = getCriteriaForRole(isLeader ? 'Leader' : 'Employee');
   const activeGroup = criteriaGroups.find(g => g.id === activeGroupId) || criteriaGroups[0];
+  const isLocked = currentRoundData ? isRoundLocked(currentRoundData) : false;
 
   const handleScoreChange = (criterionId: string, points: number) => {
     setScores(prev => ({
@@ -68,18 +98,46 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       [criterionId]: note
     }));
   };
-
   const handleSave = async (status: 'Draft' | 'Submitted') => {
+    if (!evaluation || !currentRoundData) return;
+
     setIsSaving(true);
-    // Mock API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSaving(false);
-    
-    if (status === 'Submitted') {
-      alert('Đánh giá đã được gửi thành công!');
-      router.push('/employees');
-    } else {
-      alert('Đã lưu bản nháp.');
+    try {
+      if (status === 'Draft') {
+        const res = await saveEvaluationRoundDraft(
+          evaluation.id,
+          currentRoundData.round,
+          scores,
+          notes,
+          currentRoundData.comment
+        );
+        if (res.success) {
+          alert('Đã lưu bản nháp.');
+        } else {
+          alert(`Lỗi: ${res.error}`);
+        }
+      } else {
+        // Save first just in case
+        await saveEvaluationRoundDraft(
+          evaluation.id,
+          currentRoundData.round,
+          scores,
+          notes,
+          currentRoundData.comment
+        );
+        const res = await submitEvaluationRound(evaluation.id, currentRoundData.round);
+        if (res.success) {
+          alert('Đánh giá đã được gửi thành công!');
+          router.push('/employees');
+        } else {
+          alert(`Lỗi: ${res.error}`);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Đã xảy ra lỗi khi lưu đánh giá.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -87,6 +145,23 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header & Back Button */}
       <div className="flex flex-col gap-6">
+        {/* Breadcrumb / Progress */}
+        {evaluation && (
+          <div className="flex items-center gap-2 text-sm text-outline font-medium">
+            <span>Đánh giá</span>
+            <ChevronRight size={14} />
+            <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Round {evaluation.currentRound} / 3</span>
+            {isLocked && (
+              <>
+                <ChevronRight size={14} />
+                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
+                  <Lock size={12} /> Đã khóa
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <button 
             onClick={() => router.back()}
@@ -98,21 +173,30 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
           {/* Action Buttons */}
           <div className="flex flex-row gap-3 w-full md:w-auto">
-            <button 
-              onClick={() => handleSave('Draft')}
-              disabled={isSaving}
-              className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
-            >
-              Lưu bản nháp
-            </button>
-            <button 
-              onClick={() => handleSave('Submitted')}
-              disabled={isSaving}
-              className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-sm whitespace-nowrap"
-            >
-              <CheckCircle2 size={18} className="shrink-0" />
-              <span>{isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}</span>
-            </button>
+            {!isLocked ? (
+              <>
+                <button 
+                  onClick={() => handleSave('Draft')}
+                  disabled={isSaving}
+                  className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                >
+                  Lưu bản nháp
+                </button>
+                <button 
+                  onClick={() => handleSave('Submitted')}
+                  disabled={isSaving}
+                  className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-sm whitespace-nowrap"
+                >
+                  <CheckCircle2 size={18} className="shrink-0" />
+                  <span>{isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}</span>
+                </button>
+              </>
+            ) : (
+              <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                <Lock size={16} />
+                Đã nộp {currentRoundData?.submittedAt && `lúc ${new Date(currentRoundData.submittedAt).toLocaleString('vi-VN')}`}
+              </div>
+            )}
           </div>
         </div>
 
@@ -276,6 +360,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             notes={notes}
             onScoreChange={handleScoreChange} 
             onNoteChange={handleNoteChange}
+            previousRound={previousRound}
+            disabled={isLocked}
           />
           
           {/* Navigation between groups */}

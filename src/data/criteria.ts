@@ -1,3 +1,8 @@
+// Since I don't know where Role is imported from, I'll use a local string union if it fails, but the task says getCriteriaForRole(role: Role).
+// Let's assume role is 'Leader' | 'Employee' as per the task: getCriteriaForRole('Leader')
+
+export type Role = 'Leader' | 'Employee';
+export type AppliesTo = 'both' | 'leader' | 'staff';
 
 export interface CriterionLevel {
   points: number;
@@ -9,7 +14,8 @@ export interface Criterion {
   id: string;
   name: string;
   levels: CriterionLevel[];
-  weight?: number; // Optional, can be used for total calculation
+  appliesTo: AppliesTo;
+  weight?: number;
 }
 
 export interface CriteriaGroup {
@@ -18,7 +24,7 @@ export interface CriteriaGroup {
   criteria: Criterion[];
 }
 
-export const leaderCriteria: CriteriaGroup[] = [
+export const allCriteria: CriteriaGroup[] = [
   {
     id: 'A',
     name: 'Tính kỷ luật (Discipline)',
@@ -26,6 +32,7 @@ export const leaderCriteria: CriteriaGroup[] = [
       {
         id: 'A1',
         name: 'Tỷ lệ hiện diện',
+        appliesTo: 'both',
         levels: [
           { points: 3, label: 'Trên 99%' },
           { points: 2, label: 'Trên 98%' },
@@ -37,6 +44,7 @@ export const leaderCriteria: CriteriaGroup[] = [
       {
         id: 'A2',
         name: 'Số lần vắng mặt không phép',
+        appliesTo: 'both',
         levels: [
           { points: 3, label: '0 lần' },
           { points: -3, label: '1 lần' },
@@ -46,6 +54,7 @@ export const leaderCriteria: CriteriaGroup[] = [
       {
         id: 'A3',
         name: 'Số lần đến trễ, về sớm',
+        appliesTo: 'both',
         levels: [
           { points: 3, label: '0 lần' },
           { points: 0, label: '1 lần' },
@@ -57,6 +66,7 @@ export const leaderCriteria: CriteriaGroup[] = [
       {
         id: 'A4',
         name: 'Vi phạm ATGT (Mũ bảo hiểm/Quai nón)',
+        appliesTo: 'both',
         levels: [
           { points: 0, label: '0 lần' },
           { points: -3, label: '1 lần' },
@@ -67,6 +77,7 @@ export const leaderCriteria: CriteriaGroup[] = [
       {
         id: 'A5',
         name: 'Thực hiện 6S',
+        appliesTo: 'both',
         levels: [
           { points: 3, label: 'Rất tốt' },
           { points: 2, label: 'Tốt' },
@@ -76,13 +87,35 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'A-Penalties',
-        name: 'Biên bản vi phạm',
+        id: 'A6',
+        name: 'Biên bản cảnh cáo',
+        appliesTo: 'both',
         levels: [
-          { points: -3, label: 'Biên bản cảnh cáo' },
-          { points: -10, label: 'Biên bản 1' },
-          { points: -15, label: 'Biên bản 2' },
-          { points: -30, label: 'Biên bản 3' },
+          { points: -3, label: 'Biên bản cảnh cáo' }
+        ]
+      },
+      {
+        id: 'A7',
+        name: 'Biên bản 1',
+        appliesTo: 'both',
+        levels: [
+          { points: -10, label: 'Biên bản 1' }
+        ]
+      },
+      {
+        id: 'A8',
+        name: 'Biên bản 2',
+        appliesTo: 'both',
+        levels: [
+          { points: -15, label: 'Biên bản 2' }
+        ]
+      },
+      {
+        id: 'A9',
+        name: 'Biên bản 3',
+        appliesTo: 'both',
+        levels: [
+          { points: -30, label: 'Biên bản 3' }
         ]
       }
     ]
@@ -92,8 +125,9 @@ export const leaderCriteria: CriteriaGroup[] = [
     name: 'Tính hợp tác (Cooperation)',
     criteria: [
       {
-        id: 'B10',
-        name: 'Thuận thảo và hợp tác với đồng nghiệp',
+        id: 'B1',
+        name: 'Thuận thảo và hợp tác',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -103,8 +137,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'B11',
-        name: 'Sẵn sàng tham gia công việc ngoài giờ/khác giờ',
+        id: 'B2',
+        name: 'Thái độ chuyển đổi/hỗ trợ BP',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -114,8 +149,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'B12',
-        name: 'Thái độ khi chuyển đổi/hỗ trợ bộ phận khác',
+        id: 'B3',
+        name: 'Sẵn sàng tham gia ngoài giờ',
+        appliesTo: 'leader',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -131,8 +167,9 @@ export const leaderCriteria: CriteriaGroup[] = [
     name: 'Tính tích cực (Proactivity)',
     criteria: [
       {
-        id: 'C13',
-        name: 'Nỗ lực nâng cao trình độ, kỹ năng',
+        id: 'C1',
+        name: 'Nỗ lực nâng cao trình độ',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -142,8 +179,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'C14',
-        name: 'Sẵn sàng nhận thêm việc khi người khác vắng',
+        id: 'C2',
+        name: 'Sẵn sàng nhận thêm việc',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Sẵn sàng nhận thêm nhiều việc' },
           { points: 4, label: 'Thêm 2 việc' },
@@ -153,12 +191,25 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'C15',
-        name: 'Tham gia hoạt động đề án (chi phí, leadtime...)',
+        id: 'C3',
+        name: 'Tham gia đề án (kaizen)',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Trên 3 vụ' },
           { points: 3, label: '2 vụ' },
           { points: 1, label: '1 vụ' },
+        ]
+      },
+      {
+        id: 'C4',
+        name: '"Hãy để việc đó cho tôi làm"',
+        appliesTo: 'staff',
+        levels: [
+          { points: 5, label: 'Luôn luôn' },
+          { points: 4, label: '3 lần' },
+          { points: 3, label: '2 lần' },
+          { points: 2, label: '1 lần' },
+          { points: 1, label: '0 lần' },
         ]
       }
     ]
@@ -168,19 +219,21 @@ export const leaderCriteria: CriteriaGroup[] = [
     name: 'Tính trách nhiệm (Responsibility)',
     criteria: [
       {
-        id: 'D16',
-        name: 'Sẵn sàng ứng phó với thất bại của cấp dưới',
+        id: 'D1',
+        name: 'Đùn đẩy trách nhiệm',
+        appliesTo: 'both',
         levels: [
-          { points: 5, label: 'Luôn luôn nhanh chóng' },
-          { points: 4, label: 'Nhanh' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Không' },
-          { points: 1, label: 'Luôn tránh né' },
+          { points: 5, label: 'Hoàn toàn không' },
+          { points: 4, label: '1 lần' },
+          { points: 3, label: '2 lần' },
+          { points: 2, label: 'Đôi khi' },
+          { points: 1, label: 'Luôn luôn' },
         ]
       },
       {
-        id: 'D17',
-        name: 'Đối ứng khiếu nại, phàn nàn',
+        id: 'D2',
+        name: 'Đối ứng khiếu nại',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất nhanh, rất tốt' },
           { points: 4, label: 'Nhanh, khá tốt' },
@@ -190,8 +243,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'D18',
-        name: 'Thực hiện HO-REN-SO (Báo cáo-Liên lạc-Thảo luận)',
+        id: 'D3',
+        name: 'HO-REN-SO',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -201,25 +255,27 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'D19',
-        name: 'Đùn đẩy trách nhiệm về thất bại bản thân',
+        id: 'D4',
+        name: 'Ứng phó thất bại cấp dưới',
+        appliesTo: 'leader',
         levels: [
-          { points: 5, label: 'Hoàn toàn không' },
-          { points: 4, label: '1 lần' },
-          { points: 3, label: '2 lần' },
-          { points: 2, label: 'Đôi khi' },
-          { points: 1, label: 'Luôn luôn' },
+          { points: 5, label: 'Luôn luôn nhanh chóng' },
+          { points: 4, label: 'Nhanh' },
+          { points: 3, label: 'Bình thường' },
+          { points: 2, label: 'Không' },
+          { points: 1, label: 'Luôn tránh né' },
         ]
       }
     ]
   },
   {
     id: 'E',
-    name: 'Năng lực thực hiện công việc (Competency)',
+    name: 'Năng lực thực hiện (Competency)',
     criteria: [
       {
-        id: 'E20',
-        name: 'Được trang bị đủ kỹ năng, kiến thức cho công việc',
+        id: 'E1',
+        name: 'Kỹ năng, kiến thức công việc',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -229,8 +285,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'E21',
-        name: 'Khả năng cải tiến trong công việc',
+        id: 'E2',
+        name: 'Khả năng cải tiến',
+        appliesTo: 'both',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -240,8 +297,45 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'E22',
+        id: 'E3',
+        name: 'Thương lượng, thuyết phục',
+        appliesTo: 'both',
+        levels: [
+          { points: 5, label: 'Rất tốt' },
+          { points: 4, label: 'Tốt' },
+          { points: 3, label: 'Bình thường' },
+          { points: 2, label: 'Kém' },
+          { points: 1, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'E4',
+        name: 'Lập kế hoạch công việc',
+        appliesTo: 'both',
+        levels: [
+          { points: 5, label: 'Rất tốt' },
+          { points: 4, label: 'Tốt' },
+          { points: 3, label: 'Bình thường' },
+          { points: 2, label: 'Kém' },
+          { points: 1, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'E5',
+        name: 'Thực hiện ISO QLCL',
+        appliesTo: 'both',
+        levels: [
+          { points: 5, label: 'Rất tốt' },
+          { points: 4, label: 'Tốt' },
+          { points: 3, label: 'Bình thường' },
+          { points: 2, label: 'Kém' },
+          { points: 1, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'E6',
         name: 'Khả năng quản lý',
+        appliesTo: 'leader',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -251,19 +345,9 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'E23',
+        id: 'E7',
         name: 'Khả năng đào tạo',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      },
-      {
-        id: 'E24',
-        name: 'Khả năng thương lượng, thuyết phục',
+        appliesTo: 'leader',
         levels: [
           { points: 5, label: 'Rất tốt' },
           { points: 4, label: 'Tốt' },
@@ -279,8 +363,9 @@ export const leaderCriteria: CriteriaGroup[] = [
     name: 'Thành tích (Achievements)',
     criteria: [
       {
-        id: 'F27',
-        name: 'Giảm hàng hư/sai sót trong bộ phận phụ trách',
+        id: 'F1',
+        name: 'Xử trí bất thường',
+        appliesTo: 'both',
         levels: [
           { points: 15, label: 'Rất tốt' },
           { points: 12, label: 'Tốt' },
@@ -290,8 +375,93 @@ export const leaderCriteria: CriteriaGroup[] = [
         ]
       },
       {
-        id: 'F28',
-        name: 'Quản lý công việc, giờ giấc của cấp dưới',
+        id: 'F2',
+        name: 'Khối lượng hoàn thành',
+        appliesTo: 'staff',
+        levels: [
+          { points: 15, label: 'Rất cao' },
+          { points: 12, label: 'Cao' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Thấp' },
+          { points: 3, label: 'Rất thấp' },
+        ]
+      },
+      {
+        id: 'F3',
+        name: 'Chất lượng hoàn thành',
+        appliesTo: 'staff',
+        levels: [
+          { points: 15, label: 'Rất tốt' },
+          { points: 12, label: 'Tốt' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Kém' },
+          { points: 3, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'F4',
+        name: 'Lặp lại sai sót',
+        appliesTo: 'staff',
+        levels: [
+          { points: 15, label: 'Không lặp lại' },
+          { points: 12, label: 'Rất ít' },
+          { points: 9, label: 'Thỉnh thoảng' },
+          { points: 6, label: 'Nhiều' },
+          { points: 3, label: 'Rất nhiều' },
+        ]
+      },
+      {
+        id: 'F5',
+        name: 'Nhân viên đa năng',
+        appliesTo: 'staff',
+        levels: [
+          { points: 15, label: 'Rất tốt' },
+          { points: 12, label: 'Tốt' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Kém' },
+          { points: 3, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'F6',
+        name: 'Giảm hàng hư BP phụ trách',
+        appliesTo: 'leader',
+        levels: [
+          { points: 15, label: 'Rất tốt' },
+          { points: 12, label: 'Tốt' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Kém' },
+          { points: 3, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'F7',
+        name: 'Quản lý giờ giấc cấp dưới',
+        appliesTo: 'leader',
+        levels: [
+          { points: 15, label: 'Rất tốt' },
+          { points: 12, label: 'Tốt' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Kém' },
+          { points: 3, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'F8',
+        name: 'Bố trí người khi cấp bách',
+        appliesTo: 'leader',
+        levels: [
+          { points: 15, label: 'Rất tốt' },
+          { points: 12, label: 'Tốt' },
+          { points: 9, label: 'Bình thường' },
+          { points: 6, label: 'Kém' },
+          { points: 3, label: 'Rất kém' },
+        ]
+      },
+      {
+        id: 'F9',
+        name: 'Đào tạo NV chủ chốt/đa năng',
+        appliesTo: 'leader',
         levels: [
           { points: 15, label: 'Rất tốt' },
           { points: 12, label: 'Tốt' },
@@ -304,185 +474,22 @@ export const leaderCriteria: CriteriaGroup[] = [
   }
 ];
 
-export const staffCriteria: CriteriaGroup[] = [
-  {
-    id: 'A',
-    name: 'Tính kỷ luật (Discipline)',
-    criteria: leaderCriteria[0].criteria
-  },
-  {
-    id: 'C',
-    name: 'Tính hợp tác (Cooperation)',
-    criteria: [
-      {
-        id: 'C10',
-        name: 'Thuận thảo và hợp tác với đồng nghiệp',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      },
-      {
-        id: 'C11',
-        name: 'Thái độ khi hỗ trợ bộ phận khác (tăng ca, chuyển đổi...)',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'D',
-    name: 'Tính tích cực (Proactivity)',
-    criteria: [
-      {
-        id: 'D12',
-        name: 'Nỗ lực nâng cao trình độ, kỹ năng',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      },
-      {
-        id: 'D13',
-        name: 'Đề nghị "Hãy để việc đó cho tôi làm"',
-        levels: [
-          { points: 5, label: 'Luôn luôn' },
-          { points: 4, label: '3 lần' },
-          { points: 3, label: '2 lần' },
-          { points: 2, label: '1 lần' },
-          { points: 1, label: '0 lần' },
-        ]
-      },
-      {
-        id: 'D14',
-        name: 'Sẵn sàng nhận thêm việc khi người khác vắng',
-        levels: [
-          { points: 5, label: 'Sẵn sàng nhận thêm nhiều việc' },
-          { points: 4, label: 'Thêm 2 việc' },
-          { points: 3, label: 'Thêm 1 việc' },
-          { points: 2, label: 'Từ chối 1 lần' },
-          { points: 1, label: 'Từ chối từ 2 lần' },
-        ]
-      },
-      {
-        id: 'D15',
-        name: 'Tham gia hoạt động đề án (chi phí, leadtime...)',
-        levels: [
-          { points: 5, label: 'Trên 3 vụ' },
-          { points: 3, label: '2 vụ' },
-          { points: 1, label: '1 vụ' },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'E',
-    name: 'Tính trách nhiệm (Responsibility)',
-    criteria: [
-      {
-        id: 'E16',
-        name: 'Đùn đẩy trách nhiệm về thất bại bản thân',
-        levels: [
-          { points: 5, label: 'Hoàn toàn không' },
-          { points: 4, label: '1 lần' },
-          { points: 3, label: '2 lần' },
-          { points: 2, label: 'Đôi khi' },
-          { points: 1, label: 'Luôn luôn' },
-        ]
-      },
-      {
-        id: 'E17',
-        name: 'Đối ứng khiếu nại, phàn nàn',
-        levels: [
-          { points: 5, label: 'Rất nhanh, rất tốt' },
-          { points: 4, label: 'Nhanh, khá tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Chậm, kém' },
-          { points: 1, label: 'Rất chậm, rất kém' },
-        ]
-      },
-      {
-        id: 'E18',
-        name: 'Thực hiện HO-REN-SO (Báo cáo-Liên lạc-Thảo luận)',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'F',
-    name: 'Năng lực thực hiện công việc (Competency)',
-    criteria: [
-      {
-        id: 'F19',
-        name: 'Được trang bị đủ kỹ năng, kiến thức cho công việc',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      },
-      {
-        id: 'F20',
-        name: 'Khả năng cải tiến trong công việc',
-        levels: [
-          { points: 5, label: 'Rất tốt' },
-          { points: 4, label: 'Tốt' },
-          { points: 3, label: 'Bình thường' },
-          { points: 2, label: 'Kém' },
-          { points: 1, label: 'Rất kém' },
-        ]
-      }
-      // Simplified for brevity, can be expanded
-    ]
-  },
-  {
-    id: 'G',
-    name: 'Thành tích (Achievements)',
-    criteria: [
-      {
-        id: 'G24',
-        name: 'Khối lượng hoàn thành công việc được giao',
-        levels: [
-          { points: 15, label: 'Rất cao' },
-          { points: 12, label: 'Cao' },
-          { points: 9, label: 'Bình thường' },
-          { points: 6, label: 'Thấp' },
-          { points: 3, label: 'Rất thấp' },
-        ]
-      },
-      {
-        id: 'G25',
-        name: 'Chất lượng công việc hoàn thành',
-        levels: [
-          { points: 15, label: 'Rất tốt' },
-          { points: 12, label: 'Tốt' },
-          { points: 9, label: 'Bình thường' },
-          { points: 6, label: 'Kém' },
-          { points: 3, label: 'Rất kém' },
-        ]
-      }
-    ]
-  }
-];
+export function getCriteriaForRole(role: Role): CriteriaGroup[] {
+  const targetAppliesTo = role === 'Leader' ? 'leader' : 'staff';
+  
+  return allCriteria.map(group => {
+    const filteredCriteria = group.criteria.filter(
+      c => c.appliesTo === 'both' || c.appliesTo === targetAppliesTo
+    );
+    
+    if (filteredCriteria.length === 0) return null;
+    
+    return {
+      ...group,
+      criteria: filteredCriteria
+    };
+  }).filter((group): group is CriteriaGroup => group !== null);
+}
 
 export const gradingLeader = [
   { grade: 'S', minScore: 170 },
@@ -501,3 +508,4 @@ export const gradingStaff = [
   { grade: 'C', minScore: 60, maxScore: 89 },
   { grade: 'D', maxScore: 60 },
 ];
+

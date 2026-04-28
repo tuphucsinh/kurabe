@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
@@ -56,40 +56,42 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </aside>
 
       {/* Mobile Drawer */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Mobile Overlay */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
-              onClick={onClose}
-            />
-
-            {/* Sidebar */}
-            <motion.aside 
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-screen w-[280px] bg-[#003449] z-[70] flex flex-col overflow-hidden shadow-2xl md:hidden"
-            >
-              <SidebarContent 
-                user={user} 
-                logout={logout} 
-                mainLinks={mainLinks} 
-                bottomLinks={bottomLinks} 
-                isActive={isActive} 
-                onClose={onClose}
-                isMobile 
+      <LazyMotion features={domAnimation}>
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Mobile Overlay */}
+              <m.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
+                onClick={onClose}
               />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+
+              {/* Sidebar */}
+              <m.aside 
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed left-0 top-0 h-screen w-[280px] bg-[#003449] z-[70] flex flex-col overflow-hidden shadow-2xl md:hidden"
+              >
+                <SidebarContent 
+                  user={user} 
+                  logout={logout} 
+                  mainLinks={mainLinks} 
+                  bottomLinks={bottomLinks} 
+                  isActive={isActive} 
+                  onClose={onClose}
+                  isMobile 
+                />
+              </m.aside>
+            </>
+          )}
+        </AnimatePresence>
+      </LazyMotion>
     </>
   );
 }

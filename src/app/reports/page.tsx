@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { db } from '@/data/mock';
-import { Grade } from '@/lib/scoring';
+import { db, Grade } from '@/data/mock';
+import { allCriteria } from '@/data/criteria';
 import PageHeader from '@/components/layout/PageHeader';
 import { 
   Users, 
@@ -15,9 +15,20 @@ import {
 } from 'lucide-react';
 
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
-import TeamComparison from '@/components/reports/TeamComparison';
-import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
-import TopPerformers from '@/components/reports/TopPerformers';
+import dynamic from 'next/dynamic';
+
+const TeamComparison = dynamic(() => import('@/components/reports/TeamComparison'), { 
+  ssr: false,
+  loading: () => <div className="animate-pulse h-40 bg-slate-100 rounded-2xl" />
+});
+const CriteriaHeatmap = dynamic(() => import('@/components/reports/CriteriaHeatmap'), { 
+  ssr: false,
+  loading: () => <div className="animate-pulse h-40 bg-slate-100 rounded-2xl" />
+});
+const TopPerformers = dynamic(() => import('@/components/reports/TopPerformers'), { 
+  ssr: false,
+  loading: () => <div className="animate-pulse h-40 bg-slate-100 rounded-2xl" />
+});
 
 function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: { 
   title: string, 
@@ -71,10 +82,13 @@ export default function ReportsPage() {
     const evaluatedCount = filteredEvals.length;
     const pendingCount = totalEmployees - evaluatedCount;
     
-    const totalScore = filteredEvals.reduce((sum, e) => sum + e.totalScore, 0);
+    const totalScore = filteredEvals.reduce((sum, e) => sum + (e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0), 0);
     const avgScore = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
     
-    const highGrades = filteredEvals.filter(e => ['S', 'A', 'AB'].includes(e.grade)).length;
+    const highGrades = filteredEvals.filter(e => {
+      const g = e.finalGrade || e.rounds[e.rounds.length - 1]?.grade;
+      return g && ['S', 'A', 'AB'].includes(g);
+    }).length;
     const highGradeRate = evaluatedCount > 0 ? (highGrades / evaluatedCount) * 100 : 0;
 
     // Grade Distribution
@@ -90,7 +104,7 @@ export default function ReportsPage() {
     const grades: Grade[] = ['S', 'A', 'AB', 'B', 'C', 'D'];
     const gradeDistribution = grades.map(g => ({
       grade: g,
-      count: filteredEvals.filter(e => e.grade === g).length,
+      count: filteredEvals.filter(e => (e.finalGrade || e.rounds[e.rounds.length - 1]?.grade) === g).length,
       color: gradeColorMap[g] || 'bg-slate-400'
     }));
 
@@ -99,7 +113,7 @@ export default function ReportsPage() {
       const teamUsers = db.users.filter(u => u.teamId === t.id);
       const teamEvals = db.evaluations.filter(e => teamUsers.some(u => u.id === e.employeeId));
       const teamAvg = teamEvals.length > 0 
-        ? teamEvals.reduce((sum, e) => sum + e.totalScore, 0) / teamEvals.length 
+        ? teamEvals.reduce((sum, e) => sum + (e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0), 0) / teamEvals.length 
         : 0;
       return {
         id: t.id,
@@ -111,15 +125,17 @@ export default function ReportsPage() {
 
     // Criteria Group Analysis (A-F)
     const groups: ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const flatCriteria = allCriteria.flatMap(g => g.criteria.map(c => ({ ...c, groupId: g.id })));
     const criteriaAnalysis = groups.map(group => {
-      const groupCriteriaIds = db.criteria.filter(c => c.groupId === group).map(c => c.id);
+      const groupCriteriaIds = flatCriteria.filter(c => c.groupId === group).map(c => c.id);
       let totalGroupScore = 0;
       let count = 0;
 
       filteredEvals.forEach(e => {
+        const latestScores = e.rounds[e.rounds.length - 1]?.scores || {};
         groupCriteriaIds.forEach(cid => {
-          if (e.scores[cid] !== undefined) {
-            totalGroupScore += e.scores[cid];
+          if (latestScores[cid] !== undefined) {
+            totalGroupScore += latestScores[cid];
             count++;
           }
         });
@@ -141,8 +157,8 @@ export default function ReportsPage() {
           id: e.employeeId,
           name: user?.name || 'Unknown',
           teamName: team?.name || 'Unknown',
-          score: e.totalScore,
-          grade: e.grade
+          score: e.finalScore || e.rounds[e.rounds.length - 1]?.totalScore || 0,
+          grade: e.finalGrade || e.rounds[e.rounds.length - 1]?.grade || '-'
         };
       })
       .sort((a, b) => b.score - a.score)

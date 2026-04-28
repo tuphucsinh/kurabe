@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import { Users, FileCheck, Clock, Activity } from 'lucide-react';
@@ -8,41 +8,54 @@ import { db } from '@/data/mock';
 
 export default function DashboardPage() {
   // Aggregate data from mock db
-  const totalEmployees = db.users.filter((u) => u.role === 'SubLeader' || u.role === 'Leader').length;
-  const completedEvals = db.evaluations.filter((e) => e.status === 'Approved').length;
-  const pendingEvals = totalEmployees - completedEvals;
+  const { totalEmployees, completedEvals, pendingEvals } = useMemo(() => {
+    const total = db.users.filter((u) => u.role === 'SubLeader' || u.role === 'Leader').length;
+    const completed = db.evaluations.filter((e) => e.status === 'Approved').length;
+    return {
+      totalEmployees: total,
+      completedEvals: completed,
+      pendingEvals: total - completed
+    };
+  }, []);
   
   // Aggregate grades
-  const gradesCount: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-  db.evaluations.forEach((e) => {
-    if (gradesCount[e.grade] !== undefined) {
-      gradesCount[e.grade]++;
-    }
-  });
+  const gradeData = useMemo(() => {
+    const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
+    db.evaluations.forEach((e) => {
+      // Lấy kết quả từ round cuối cùng đã submit hoặc round 1 nếu chưa submit
+      const latestRound = e.rounds[e.rounds.length - 1];
+      const grade = e.finalGrade || latestRound?.grade;
+      if (grade && counts[grade] !== undefined) {
+        counts[grade]++;
+      }
+    });
 
-  const gradeData = [
-    { grade: 'S', count: gradesCount['S'], color: 'bg-indigo-500' },
-    { grade: 'A', count: gradesCount['A'], color: 'bg-emerald-500' },
-    { grade: 'AB', count: gradesCount['AB'], color: 'bg-teal-500' },
-    { grade: 'B', count: gradesCount['B'], color: 'bg-blue-500' },
-    { grade: 'C', count: gradesCount['C'], color: 'bg-amber-500' },
-    { grade: 'D', count: gradesCount['D'], color: 'bg-rose-500' },
-  ];
+    return [
+      { grade: 'S', count: counts['S'], color: 'bg-indigo-500' },
+      { grade: 'A', count: counts['A'], color: 'bg-emerald-500' },
+      { grade: 'AB', count: counts['AB'], color: 'bg-teal-500' },
+      { grade: 'B', count: counts['B'], color: 'bg-blue-500' },
+      { grade: 'C', count: counts['C'], color: 'bg-amber-500' },
+      { grade: 'D', count: counts['D'], color: 'bg-rose-500' },
+    ];
+  }, []);
 
   // Team status data
-  const teamStatus = db.teams.map((team) => {
-    const members = db.users.filter((u) => u.teamId === team.id);
-    const completedMembers = members.filter((m) => 
-      db.evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
-    ).length;
-    const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
-    
-    return {
-      ...team,
-      membersCount: members.length,
-      progress
-    };
-  });
+  const teamStatus = useMemo(() => {
+    return db.teams.map((team) => {
+      const members = db.users.filter((u) => u.teamId === team.id);
+      const completedMembers = members.filter((m) => 
+        db.evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
+      ).length;
+      const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
+      
+      return {
+        ...team,
+        membersCount: members.length,
+        progress
+      };
+    });
+  }, []);
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
@@ -113,7 +126,7 @@ export default function DashboardPage() {
           <div className="space-y-4 flex-1">
             {db.evaluations.slice(0, 5).map((evaluation) => {
               const employee = db.users.find(u => u.id === evaluation.employeeId);
-              const evaluator = db.users.find(u => u.id === evaluation.evaluatorId);
+              const evaluator = db.users.find(u => u.id === evaluation.rounds[evaluation.rounds.length - 1]?.evaluatorId);
               
               return (
                 <div key={evaluation.id} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
@@ -125,7 +138,7 @@ export default function DashboardPage() {
                       <span className="font-semibold">{evaluator?.name || 'Unknown'}</span> đã {evaluation.status === 'Approved' ? 'phê duyệt' : 'gửi'} đánh giá cho <span className="font-semibold">{employee?.name || 'Unknown'}</span>
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Xếp loại: <span className="font-bold text-slate-600">{evaluation.grade}</span> • {new Date(evaluation.createdAt).toLocaleDateString('vi-VN')}
+                      Xếp loại: <span className="font-bold text-slate-600">{evaluation.finalGrade || evaluation.rounds[0]?.grade || '-'}</span> • {new Date(evaluation.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                 </div>

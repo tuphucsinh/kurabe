@@ -52,11 +52,43 @@
 - **Cấm gán persona/cá tính** vào task. Chỉ gán ràng buộc kỹ thuật (VD: "O(1) time", "Zero-dependency").
 
 **Format task bắt buộc** (ID có tiền tố Phase + file chịu tác động):
+
+```markdown
+## Phase X: [Tên Phase]
+
+### [#PxT01] [src/target-file.ts] `functionName(args): ReturnType`
+
+**Mục tiêu**: 1-2 câu mô tả rõ task này làm gì, tại sao cần làm.
+
+**Interface mới** (nếu tạo/thay đổi interface):
+~~~ts
+interface Example {
+  id: string;
+  newField: NewType; // MỚI
+}
+~~~
+
+**Thay đổi cụ thể** (nếu sửa file có sẵn):
+1. Bước cụ thể 1 — import gì, thay gì
+2. Bước cụ thể 2 — logic chính
+3. Bước cụ thể 3 — cleanup / side effects
+
+**Ràng buộc**:
+- Điều kiện kỹ thuật bắt buộc (VD: "Không thay đổi UI", "O(1) lookup")
+- Tương thích ngược (VD: "Giữ nguyên export cũ nếu có consumer")
+- Edge cases cần xử lý
+
+**Status**: `[ ]`
+
+---
 ```
-## Phase X: [Tên]
-- [ ] [#PxT01] [src/api.ts] `saveUser(data: UserDTO): Promise<User>` — Mô tả ngắn
-- [ ] [#PxT02] [src/db.ts] `createTable(): Migration` — Mô tả ngắn
-```
+
+**Nguyên tắc viết task chi tiết**:
+- **Mục tiêu**: Luôn có. 1-2 câu, trả lời "Task này giải quyết vấn đề gì?"
+- **Interface mới**: Chỉ khi task tạo/sửa interface/type. Ghi rõ field nào MỚI.
+- **Thay đổi cụ thể**: Liệt kê từng bước thay đổi theo thứ tự thực hiện. Đủ chi tiết để `/do` không cần hỏi lại.
+- **Ràng buộc**: Ghi rõ những gì KHÔNG ĐƯỢC làm, điều kiện biên, yêu cầu tương thích.
+- **Mapping/Bảng dữ liệu**: Nếu task liên quan data mapping (VD: 34 tiêu chí, enum values) → Bắt buộc ghi bảng đầy đủ vào task.
 
 **Dừng** sau khi ghi file. Báo cáo 1 dòng.
 
