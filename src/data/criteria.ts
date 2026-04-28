@@ -10,6 +10,7 @@ export interface CriterionLevel {
 export interface Criterion {
   id: string;
   name: string;
+  description?: string;
   levels: CriterionLevel[];
   appliesTo: AppliesTo;
   weight?: number;
@@ -18,6 +19,7 @@ export interface Criterion {
 export interface CriteriaGroup {
   id: string;
   name: string;
+  shortName?: string;
   criteria: Criterion[];
 }
 
@@ -25,6 +27,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'A',
     name: 'Tính kỷ luật (Discipline)',
+    shortName: 'Kỷ luật',
     criteria: [
       {
         id: 'A1',
@@ -63,6 +66,7 @@ export const allCriteria: CriteriaGroup[] = [
       {
         id: 'A4',
         name: 'Vi phạm ATGT (Mũ bảo hiểm/Quai nón)',
+        description: 'Đánh giá việc chấp hành luật an toàn giao thông đường bộ, đặc biệt là quy định đội mũ bảo hiểm và cài quai nón đúng cách khi vào bãi xe công ty.',
         appliesTo: 'both',
         levels: [
           { points: 0, label: '0 lần' },
@@ -120,6 +124,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'B',
     name: 'Tính hợp tác (Cooperation)',
+    shortName: 'Hợp tác',
     criteria: [
       {
         id: 'B1',
@@ -162,6 +167,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'C',
     name: 'Tính tích cực (Proactivity)',
+    shortName: 'Tích cực',
     criteria: [
       {
         id: 'C1',
@@ -214,6 +220,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'D',
     name: 'Tính trách nhiệm (Responsibility)',
+    shortName: 'Trách nhiệm',
     criteria: [
       {
         id: 'D1',
@@ -268,6 +275,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'E',
     name: 'Năng lực thực hiện (Competency)',
+    shortName: 'Năng lực',
     criteria: [
       {
         id: 'E1',
@@ -358,6 +366,7 @@ export const allCriteria: CriteriaGroup[] = [
   {
     id: 'F',
     name: 'Thành tích (Achievements)',
+    shortName: 'Thành tích',
     criteria: [
       {
         id: 'F1',

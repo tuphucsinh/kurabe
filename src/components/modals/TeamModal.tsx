@@ -18,6 +18,7 @@ export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalPr
 
   useEffect(() => {
     if (team) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: team.name,
       });

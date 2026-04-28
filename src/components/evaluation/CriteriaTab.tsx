@@ -108,6 +108,7 @@ export default function CriteriaTab({
               </div>
             </div>
             
+            {/* Card grid with radio dots & L badges — restored */}
             <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
               {criterion.levels.map((level, idx) => {
                 const isSelected = currentScore === level.points;
@@ -129,17 +130,7 @@ export default function CriteriaTab({
                       ${disabled ? 'opacity-70 cursor-not-allowed hover:border-outline-variant hover:bg-transparent hover:scale-100' : ''}
                     `}
                   >
-                    {selectedRounds.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex flex-col gap-0.5 items-end z-20">
-                        {selectedRounds.map(r => (
-                          <span key={r.round} className={`text-[9px] font-bold border px-1 py-0.5 rounded shadow-sm ${
-                            isSelected ? 'bg-primary text-white border-primary' : 'bg-amber-100 text-amber-700 border-amber-200'
-                          }`}>
-                            L{r.round}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+
                     
                     <div className="flex items-center gap-3">
                       <span className={`
@@ -153,6 +144,17 @@ export default function CriteriaTab({
                       <p className={`text-sm leading-snug flex-1 transition-colors ${isSelected ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>
                         {level.label}
                       </p>
+                      {selectedRounds.length > 0 && (
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          {selectedRounds.map(r => (
+                            <span key={r.round} className={`w-5 h-5 flex items-center justify-center text-[9px] font-bold border rounded shadow-sm ${
+                              isSelected ? 'bg-primary text-white border-primary' : 'bg-amber-100 text-amber-700 border-amber-200'
+                            }`}>
+                              L{r.round}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {isSelected && (
                         <div className="shrink-0 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center shadow-sm">
                           <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
@@ -171,35 +173,25 @@ export default function CriteriaTab({
             </div>
 
             {isNoteVisible && (
-              <div className="px-6 pb-4 pt-1 animate-in slide-in-from-top-2 duration-300">
-                <div className="bg-surface/50 rounded-xl p-2 border border-outline-variant/30 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-wider shrink-0">Bản đánh giá:</span>
-                    <input 
-                      type="text"
-                      disabled={disabled}
-                      value={notes[criterion.id] || ''}
-                      onChange={(e) => onNoteChange(criterion.id, e.target.value)}
-                      className="flex-1 bg-white border border-outline-variant rounded-lg px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none py-2 disabled:bg-surface disabled:cursor-not-allowed shadow-sm"
-                      placeholder={`Ghi chú cho ${criterion.name}...`}
-                    />
-                  </div>
-                  
-                  {/* Historical Notes */}
+              <div className="px-4 py-2 border-t border-outline-variant/30 animate-in slide-in-from-top-2 duration-200 bg-surface/30">
+                <div className="flex items-center gap-2">
+                  <StickyNote size={12} className="text-outline shrink-0" />
+                  <input
+                    type="text"
+                    autoFocus
+                    disabled={disabled}
+                    value={notes[criterion.id] || ''}
+                    onChange={(e) => onNoteChange(criterion.id, e.target.value)}
+                    className="flex-1 h-7 bg-white border border-outline-variant rounded-md px-3 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:bg-surface disabled:cursor-not-allowed"
+                    placeholder={`Ghi chú cho ${criterion.name}...`}
+                  />
                   {allPreviousRounds.some(r => r.notes?.[criterion.id]) && (
-                    <div className="space-y-1 pt-1">
-                      <div className="flex items-center gap-2 px-1">
-                        <History size={12} className="text-outline" />
-                        <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Lịch sử ghi chú</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {allPreviousRounds.map(round => round.notes?.[criterion.id] && (
-                          <div key={round.round} className="flex gap-2 items-start bg-white/60 px-3 py-1.5 rounded-lg border border-outline-variant/20 shadow-sm text-[11px]">
-                            <span className="font-black text-primary whitespace-nowrap">L{round.round}</span>
-                            <span className="text-on-surface-variant italic">&quot;{round.notes[criterion.id]}&quot;</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {allPreviousRounds.map(round => round.notes?.[criterion.id] && (
+                        <span key={round.round} title={`L${round.round}: ${round.notes[criterion.id]}`} className="flex items-center gap-1 text-[10px] text-outline-variant border border-outline-variant/40 rounded px-1.5 py-0.5 bg-white cursor-help">
+                          <History size={9} />L{round.round}
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>

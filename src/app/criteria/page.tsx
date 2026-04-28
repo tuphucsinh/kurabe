@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import { 
-  getCriteriaForRole, 
   gradingLeader, 
-  gradingStaff
+  gradingStaff,
+  allCriteria,
+  Criterion,
+  CriteriaGroup,
+  CriteriaRole
 } from '@/data/criteria';
 import Tabs from '@/components/ui/Tabs';
 import { 
@@ -18,9 +21,23 @@ import {
   ClipboardCheck,
   TrendingUp,
   Target,
-  Search
+  Search,
+  Pencil,
+  Plus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import CriteriaModal from '@/components/modals/CriteriaModal';
+import CriteriaGroupModal from '@/components/modals/CriteriaGroupModal';
+
+function getCriteriaForRoleLocal(criteria: CriteriaGroup[], role: CriteriaRole): CriteriaGroup[] {
+  const targetAppliesTo = role === 'Leader' ? 'leader' : 'staff';
+  return criteria.map(group => {
+    const filteredCriteria = group.criteria.filter(
+      c => c.appliesTo === 'both' || c.appliesTo === targetAppliesTo
+    );
+    return { ...group, criteria: filteredCriteria };
+  });
+}
 
 const groupIcons: Record<string, React.ReactNode> = {
   'A': <ShieldCheck size={18} />,
@@ -32,45 +49,67 @@ const groupIcons: Record<string, React.ReactNode> = {
   'G': <Award size={18} />,
 };
 
-/** Strip prefix & extract short display name from group.name */
-function getShortName(name: string): string {
-  let base = name.replace(/\s*\(.*?\)\s*/g, '').trim();
-  base = base.replace(/^[A-Z][.\s]+/, '');
 
-  let short = base;
-  if (short.toLowerCase().startsWith('tính ')) short = short.substring(5);
-  else if (short.toLowerCase().startsWith('năng lực')) short = 'Năng lực';
-  else if (short.toLowerCase().startsWith('thành tích')) short = 'Thành tích';
-
-  return short.charAt(0).toUpperCase() + short.slice(1);
-}
 
 export default function CriteriaPage() {
+  const [localCriteria, setLocalCriteria] = useState<CriteriaGroup[]>(allCriteria);
   const [activeType, setActiveType] = useState('leader');
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [editingCriterion, setEditingCriterion] = useState<Criterion | null>(null);
+  const [editingGroup, setEditingGroup] = useState<CriteriaGroup | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string>('');
 
   const tabs = [
     { id: 'leader', label: 'Quản lý / Có chức vụ', icon: <UserCheck size={18} /> },
     { id: 'staff', label: 'Nhân viên (Staff)', icon: <Users size={18} /> },
   ];
 
-  const currentCriteria = activeType === 'leader' ? getCriteriaForRole('Leader') : getCriteriaForRole('Employee');
+  const currentCriteria = activeType === 'leader' ? getCriteriaForRoleLocal(localCriteria, 'Leader') : getCriteriaForRoleLocal(localCriteria, 'Employee');
   const currentGrading = activeType === 'leader' ? gradingLeader : gradingStaff;
 
   // Reset activeGroupId when switching type if current id doesn't exist
   const validGroupIds = currentCriteria.map(g => g.id);
-  const safeGroupId = validGroupIds.includes(activeGroupId) ? activeGroupId : validGroupIds[0];
+  const safeGroupId = validGroupIds.includes(activeGroupId) ? activeGroupId : (validGroupIds[0] || '');
 
   const activeGroup = currentCriteria.find(g => g.id === safeGroupId) || currentCriteria[0];
 
+  const handleSaveCriterion = (criterion: Criterion, groupId: string) => {
+    setLocalCriteria(prev => prev.map(g => {
+      if (g.id === groupId) {
+        const exists = g.criteria.find(c => c.id === criterion.id);
+        if (exists) {
+          return { ...g, criteria: g.criteria.map(c => c.id === criterion.id ? criterion : c) };
+        } else {
+          return { ...g, criteria: [...g.criteria, criterion] };
+        }
+      }
+      return g;
+    }));
+  };
+
+  const handleSaveGroup = (group: { id: string; name: string; shortName: string }) => {
+    setLocalCriteria(prev => {
+      const exists = prev.find(g => g.id === group.id);
+      if (exists) {
+        return prev.map(g => g.id === group.id ? { ...g, name: group.name, shortName: group.shortName } : g);
+      } else {
+        return [...prev, { id: group.id, name: group.name, shortName: group.shortName, criteria: [] }];
+      }
+    });
+    setActiveGroupId(group.id);
+  };
+
   // Filter criteria within active group by search
-  const filteredCriteria = searchQuery
+  const filteredCriteria = searchQuery && activeGroup
     ? activeGroup.criteria.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.id.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : activeGroup.criteria;
+    : (activeGroup?.criteria || []);
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
@@ -80,12 +119,25 @@ export default function CriteriaPage() {
           <h1 className="text-3xl font-bold text-on-surface tracking-tight">Tiêu chuẩn Đánh giá</h1>
           <p className="text-outline mt-1 text-lg">Hệ thống tiêu chuẩn xếp loại và thang điểm Kurabe</p>
         </div>
-        <Tabs 
-          tabs={tabs} 
-          activeTab={activeType} 
-          onChange={(id) => { setActiveType(id); setActiveGroupId('A'); }}
-          className="w-full md:w-auto"
-        />
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
+          <Tabs 
+            tabs={tabs} 
+            activeTab={activeType} 
+            onChange={(id) => { setActiveType(id); setActiveGroupId('A'); }}
+            className="w-full md:w-auto"
+          />
+          <button
+            onClick={() => {
+              setEditingCriterion(null);
+              setEditingGroupId(safeGroupId);
+              setCriteriaModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors shrink-0"
+          >
+            <Plus size={18} />
+            Thêm tiêu chuẩn
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -109,7 +161,7 @@ export default function CriteriaPage() {
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
             {currentCriteria.map((group) => {
               const isActive = safeGroupId === group.id;
-              const shortName = getShortName(group.name);
+              const displayName = group.shortName || group.name;
 
               return (
                 <button
@@ -144,7 +196,7 @@ export default function CriteriaPage() {
                       Nhóm {group.id}
                     </span>
                     <span className={`text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
-                      {shortName}
+                      {displayName}
                     </span>
                   </div>
 
@@ -159,13 +211,37 @@ export default function CriteriaPage() {
                 </button>
               );
             })}
+            
+            {/* Add Group Button */}
+            <button
+              onClick={() => {
+                setEditingGroup(null);
+                setGroupModalOpen(true);
+              }}
+              className="flex items-center justify-center w-12 h-12 rounded-2xl border border-dashed border-outline-variant bg-surface hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-300 shrink-0 text-outline"
+              title="Thêm nhóm tiêu chuẩn"
+            >
+              <Plus size={20} />
+            </button>
           </div>
 
           {/* Active Group Title */}
           <div className="flex items-center gap-4">
             <div className="h-10 w-1.5 bg-primary rounded-full"></div>
-            <h2 className="text-2xl font-black text-on-surface">
-              Nhóm {safeGroupId}: {activeGroup.name}
+            <h2 className="text-2xl font-black text-on-surface flex items-center gap-3">
+              Nhóm {safeGroupId}: {activeGroup?.name}
+              {activeGroup && (
+                <button
+                  onClick={() => {
+                    setEditingGroup(activeGroup);
+                    setGroupModalOpen(true);
+                  }}
+                  className="p-1.5 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                  title="Sửa nhóm"
+                >
+                  <Pencil size={18} />
+                </button>
+              )}
             </h2>
           </div>
 
@@ -175,18 +251,34 @@ export default function CriteriaPage() {
               {filteredCriteria.map((criterion) => (
                 <div key={criterion.id} className="bg-white rounded-2xl border border-outline-variant overflow-hidden shadow-sm hover:border-primary/20 transition-all duration-300">
                   <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center">
-                    <h3 className="font-bold text-on-surface flex items-center gap-2">
-                      <span className="text-[10px] font-black bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20">
+                    <h3 className="font-bold text-on-surface flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-[10px] font-black bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20 shrink-0">
                         {criterion.id}
                       </span>
-                      {criterion.name}
+                      <span className="shrink-0">{criterion.name}</span>
                       {criterion.appliesTo === 'leader' && (
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full ml-2 shrink-0">Chỉ QL</span>
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Chỉ QL</span>
                       )}
                       {criterion.appliesTo === 'staff' && (
-                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full ml-2 shrink-0">Chỉ NV</span>
+                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full shrink-0">Chỉ NV</span>
+                      )}
+                      {criterion.description && (
+                        <span className="text-sm font-normal text-outline">
+                          — {criterion.description}
+                        </span>
                       )}
                     </h3>
+                    
+                    <button
+                      onClick={() => {
+                        setEditingCriterion(criterion);
+                        setEditingGroupId(safeGroupId);
+                        setCriteriaModalOpen(true);
+                      }}
+                      className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                    >
+                      <Pencil size={18} />
+                    </button>
                   </div>
                   
                   <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
@@ -281,6 +373,23 @@ export default function CriteriaPage() {
           </div>
         </div>
       </div>
+
+      <CriteriaModal
+        isOpen={criteriaModalOpen}
+        onClose={() => setCriteriaModalOpen(false)}
+        onSave={handleSaveCriterion}
+        criterion={editingCriterion}
+        groupId={editingGroupId}
+        groups={localCriteria}
+      />
+
+      <CriteriaGroupModal
+        isOpen={groupModalOpen}
+        onClose={() => setGroupModalOpen(false)}
+        onSave={handleSaveGroup}
+        group={editingGroup}
+        existingGroupIds={localCriteria.map(g => g.id)}
+      />
     </div>
   );
 }

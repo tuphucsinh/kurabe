@@ -21,3 +21,12 @@ Kurabe là hệ thống đánh giá hiệu suất nhân viên với giao diện 
   - Tách component (Header, Tabs) để tối ưu page.tsx.
   - State consolidation (useReducer).
   - Tối ưu bundle size (framer-motion lazy load).
+- [x] Phase 22: CRUD Tiêu chuẩn Đánh giá
+  - Hỗ trợ description cho Criterion.
+  - Thêm / Sửa Tiêu chuẩn qua CriteriaModal (auto-prefix mã, dynamic options).
+  - Thêm / Sửa Nhóm Tiêu chuẩn qua CriteriaGroupModal.
+  - Tích hợp in-memory CRUD vào CriteriaPage.
+- [x] Phase 23: UI Polish — Modal, Description & Group ShortName
+  - Thêm `shortName` cho CriteriaGroup, hỗ trợ hiển thị tên rút gọn trên Tab.
+  - Tối ưu layout `CriteriaModal` (compact layout, theme color sync).
+  - Hiển thị `description` tiêu chuẩn trực tiếp trên danh sách.
