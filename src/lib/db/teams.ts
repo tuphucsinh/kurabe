@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
 import { Team } from '@/types';
+import { Database } from '@/types/database';
+
+type DbTeam = Database['public']['Tables']['teams']['Row'];
 
 export async function upsertTeam(team: Partial<Team>): Promise<void> {
   const { error } = await supabase
@@ -8,7 +11,7 @@ export async function upsertTeam(team: Partial<Team>): Promise<void> {
       id: team.id,
       name: team.name,
       leader_id: team.leaderId
-    });
+    } as any);
 
   if (error) console.error('Error upserting team:', error.message || error);
 }
@@ -44,10 +47,10 @@ export async function getTeamById(id: string): Promise<Team | null> {
   return mapTeamFromDb(data);
 }
 
-function mapTeamFromDb(dbTeam: any): Team {
+function mapTeamFromDb(dbTeam: DbTeam): Team {
   return {
     id: dbTeam.id,
     name: dbTeam.name,
-    leaderId: dbTeam.leader_id,
+    leaderId: dbTeam.leader_id || null,
   };
 }

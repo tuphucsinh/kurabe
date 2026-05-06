@@ -3,67 +3,104 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, EvaluationPeriod } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { mapUserFromDb } from '@/lib/db/users';
+import { mapPeriodFromDb } from '@/lib/db/evaluations';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (employeeId: string) => Promise<void>;
+  login: (employeeCode: string) => Promise<void>;
   logout: () => void;
   isManager: boolean;
   isLeader: boolean;
   isSubLeader: boolean;
   currentPeriod: EvaluationPeriod | null;
+  allPeriods: EvaluationPeriod[];
+  setCurrentPeriod: (period: EvaluationPeriod) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [currentPeriod, setCurrentPeriod] = useState<EvaluationPeriod | null>(null);
+  const [currentPeriod, setCurrentPeriodState] = useState<EvaluationPeriod | null>(null);
+  const [allPeriods, setAllPeriods] = useState<EvaluationPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     async function loadAuth() {
-      const savedUserId = localStorage.getItem('auth_user_id');
-      
-      // Load current active period
-      const { data: periodData } = await supabase
-        .from('evaluation_periods')
-        .select('*')
-        .eq('status', 'Active')
-        .single();
-      
-      if (periodData) {
-        setCurrentPeriod(periodData as EvaluationPeriod);
-      }
-
-      if (savedUserId) {
-        const { data: userData } = await supabase
-          .from('users')
+      try {
+        const savedUserId = localStorage.getItem('auth_user_id');
+        const savedPeriodId = localStorage.getItem('selected_period_id');
+        
+        // 1. Load all periods
+        const { data: periodsData } = await supabase
+          .from('evaluation_periods')
           .select('*')
-          .eq('id', savedUserId)
-          .single();
+          .order('year', { ascending: false })
+          .order('created_at', { ascending: false });
+        
+        const periods = (periodsData || []).map(mapPeriodFromDb);
+        setAllPeriods(periods);
+
+        // 2. Determine current period
+        if (periods.length > 0) {
+          let targetPeriod = null;
           
-        if (userData) {
-          setUser(userData as User);
+          if (savedPeriodId) {
+            targetPeriod = periods.find(p => p.id === savedPeriodId);
+          }
+          
+          // Fallback to active period if no saved one or saved one not found
+          if (!targetPeriod) {
+            targetPeriod = periods.find(p => p.status === 'Active') || periods[0];
+          }
+
+          if (targetPeriod) {
+            setCurrentPeriodState(targetPeriod);
+          }
         }
+
+        // 3. Load user
+        if (savedUserId) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', savedUserId)
+            .single();
+            
+          if (userData) {
+            setUser(mapUserFromDb(userData));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading auth context:', error);
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
       }
-      setIsLoading(false);
     }
     
     loadAuth();
-  }, [supabase]);
+  }, []);
 
-  const login = async (employeeId: string) => {
+  const setCurrentPeriod = (period: EvaluationPeriod) => {
+    setCurrentPeriodState(period);
+    localStorage.setItem('selected_period_id', period.id);
+  };
+
+  const login = async (employeeCode: string) => {
     const { data: userData } = await supabase
       .from('users')
       .select('*')
-      .eq('id', employeeId)
+      .eq('employee_code', employeeCode)
       .single();
       
     if (userData) {
-      setUser(userData as User);
-      localStorage.setItem('auth_user_id', userData.id);
+      const user = mapUserFromDb(userData);
+      setUser(user);
+      localStorage.setItem('auth_user_id', user.id);
     } else {
       throw new Error('User not found');
     }
@@ -87,7 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isManager,
       isLeader,
       isSubLeader,
-      currentPeriod
+      currentPeriod,
+      allPeriods,
+      setCurrentPeriod
     }}>
       {children}
     </AuthContext.Provider>

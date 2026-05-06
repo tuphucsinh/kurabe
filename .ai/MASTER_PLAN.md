@@ -30,3 +30,22 @@ Kurabe là hệ thống đánh giá hiệu suất nhân viên với giao diện 
   - Thêm `shortName` cho CriteriaGroup, hỗ trợ hiển thị tên rút gọn trên Tab.
   - Tối ưu layout `CriteriaModal` (compact layout, theme color sync).
   - Hiển thị `description` tiêu chuẩn trực tiếp trên danh sách.
+- [x] Phase 24: Supabase Integration
+  - Foundation: SDK setup, schema DDL (8 bảng), seed data.
+  - DAL: Query functions cho Users, Teams, Evaluations, Criteria.
+  - Integration: Server Actions migrate, AuthContext + Pages refactor.
+  - Cleanup: Xóa mock data, consolidate types, verify build.
+- [x] Phase 25: Bug Fixes & Optimization
+  - Fix status case mismatch ('active' vs 'Active') & AuthContext dependencies.
+  - Type safety: Typed Supabase client & DAL mappers, replaced 'any' casts.
+  - Dead code: Cleaned ~500 lines of hardcoded data & unused components.
+  - UX/Perf: Added Error boundaries, LazyMotion, home redirect, and fixed UI placeholders.
+- [x] Phase 26: Login using Employee Code
+  - Changed login logic to query by `employee_code` instead of `id`.
+  - Updated Login UI to accept and display Employee Code.
+- [x] Phase 27: Multi-period Evaluation Management
+  - Expanded AuthContext to manage global evaluation periods.
+  - Implemented PeriodSelector in Sidebar for dynamic switching.
+  - Refactored Database Hooks and filtered Dashboard/Reports by selected period.
+  - Added Manager actions for creating and closing evaluation periods.
+

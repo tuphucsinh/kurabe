@@ -24,6 +24,7 @@ export type Database = {
           name: string
           sort_order: number | null
           weight: number | null
+          default_level_index: number | null
         }
         Insert: {
           applies_to?: string | null
@@ -34,6 +35,7 @@ export type Database = {
           name: string
           sort_order?: number | null
           weight?: number | null
+          default_level_index?: number | null
         }
         Update: {
           applies_to?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           name?: string
           sort_order?: number | null
           weight?: number | null
+          default_level_index?: number | null
         }
         Relationships: [
           {

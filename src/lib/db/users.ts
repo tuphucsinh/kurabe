@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
-import { User } from '@/types';
+import { User, Role } from '@/types';
+import { Database } from '@/types/database';
+
+type DbUser = Database['public']['Tables']['users']['Row'];
 
 export async function getUsers(): Promise<User[]> {
   const { data, error } = await supabase
@@ -60,7 +63,7 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
 
   const { data, error } = await supabase
     .from('users')
-    .upsert(dbUser)
+    .upsert(dbUser as any)
     .select()
     .single();
 
@@ -72,14 +75,14 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
   return mapUserFromDb(data);
 }
 
-function mapUserFromDb(dbUser: any): User {
+export function mapUserFromDb(dbUser: DbUser): User {
   return {
     id: dbUser.id,
-    employeeCode: dbUser.employee_code,
+    employeeCode: dbUser.employee_code || '',
     name: dbUser.name,
-    role: dbUser.role as any,
-    teamId: dbUser.team_id,
-    joinDate: dbUser.join_date,
-    avatar: dbUser.avatar_url,
+    role: dbUser.role as Role,
+    teamId: dbUser.team_id || '',
+    joinDate: dbUser.join_date || '',
+    avatar: dbUser.avatar_url || undefined,
   };
 }

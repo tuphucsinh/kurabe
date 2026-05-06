@@ -8,7 +8,7 @@ import { getUsers } from '@/lib/db/users';
 import { User } from '@/types';
 
 export default function LoginPage() {
-  const [employeeId, setEmployeeId] = useState('');
+  const [employeeCode, setEmployeeCode] = useState('');
   const [error, setError] = useState('');
   const [demoUsers, setDemoUsers] = useState<User[]>([]);
   const { login } = useAuth();
@@ -26,10 +26,10 @@ export default function LoginPage() {
     setError('');
     
     try {
-      await login(employeeId);
+      await login(employeeCode);
       router.push('/dashboard');
     } catch {
-      setError('Employee ID không hợp lệ hoặc không tồn tại.');
+      setError('Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }
   };
 
@@ -46,20 +46,20 @@ export default function LoginPage() {
           
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="employeeId" className="block text-sm font-medium text-on-surface mb-1">
-                Mã nhân viên (Employee ID)
+              <label htmlFor="employeeCode" className="block text-sm font-medium text-on-surface mb-1">
+                Mã nhân viên (Employee Code)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <UserIcon size={18} className="text-outline" />
                 </div>
                 <input
-                  id="employeeId"
+                  id="employeeCode"
                   type="text"
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
+                  value={employeeCode}
+                  onChange={(e) => setEmployeeCode(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-md leading-5 bg-white placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm"
-                  placeholder="Nhập mã NV (vd: u1, u2...)"
+                  placeholder="Nhập mã NV (vd: K0001, M0001...)"
                   required
                 />
               </div>
@@ -105,10 +105,10 @@ export default function LoginPage() {
                 {demoUsers.map(u => (
                   <button
                     key={u.id}
-                    onClick={() => setEmployeeId(u.id)}
+                    onClick={() => setEmployeeCode(u.employeeCode || '')}
                     className="text-xs bg-surface border border-outline-variant px-2 py-1 rounded hover:border-primary hover:text-primary transition-colors"
                   >
-                    <span className="font-semibold">{u.id}</span> - {u.role}
+                    <span className="font-semibold">{u.employeeCode}</span> - {u.role}
                   </button>
                 ))}
               </div>

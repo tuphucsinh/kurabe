@@ -292,22 +292,10 @@ export default function EmployeesPage() {
         />
       </div>
 
-      {/* Pagination */}
       <div className="mt-6 flex items-center justify-between px-2">
-        <p className="text-sm text-on-surface-variant">
-          Hiển thị <b>1</b> đến <b>{sortedEmployees.length}</b> trong tổng số <b>{sortedEmployees.length}</b> nhân viên
+        <p className="text-sm text-outline font-medium">
+          Tổng số: <b className="text-on-surface">{sortedEmployees.length}</b> nhân viên
         </p>
-        <div className="flex items-center gap-2">
-          <button disabled className="p-2 rounded-lg border border-outline-variant text-outline-variant cursor-not-allowed">
-            <ChevronLeft size={18} />
-          </button>
-          <div className="flex items-center gap-1">
-            <button className="w-9 h-9 rounded-lg bg-primary text-white font-bold text-sm">1</button>
-          </div>
-          <button disabled className="p-2 rounded-lg border border-outline-variant text-outline-variant cursor-not-allowed">
-            <ChevronRight size={18} />
-          </button>
-        </div>
       </div>
 
       <EmployeeModal

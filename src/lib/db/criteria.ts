@@ -1,5 +1,12 @@
 import { supabase } from '../supabase';
 import { CriteriaGroup, Role, Criterion } from '@/types';
+import { Database } from '@/types/database';
+
+type DbCriteriaGroup = Database['public']['Tables']['criteria_groups']['Row'] & {
+  criteria?: (Database['public']['Tables']['criteria']['Row'] & {
+    criterion_levels?: Database['public']['Tables']['criterion_levels']['Row'][]
+  })[]
+};
 
 export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
   const { data, error } = await supabase
@@ -19,7 +26,10 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
         weight,
         default_level_index,
         sort_order,
+        group_id,
         criterion_levels (
+          id,
+          criterion_id,
           points,
           label,
           description,
@@ -55,7 +65,10 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
         weight,
         default_level_index,
         sort_order,
+        group_id,
         criterion_levels (
+          id,
+          criterion_id,
           points,
           label,
           description,
@@ -91,8 +104,9 @@ export async function upsertCriteriaGroup(group: Partial<CriteriaGroup>): Promis
       id: group.id,
       code: group.code,
       name: group.name,
-      short_name: group.shortName
-    });
+      short_name: group.shortName,
+      sort_order: group.sortOrder
+    } as any);
 
   if (error) console.error('Error upserting criteria group:', error.message || error);
 }
@@ -121,8 +135,8 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
 
   const { data, error } = await supabase
     .from('criteria')
-    .upsert(row)
-    .select('id')
+    .upsert(row as any)
+    .select()
     .single();
 
   if (error) {
@@ -154,7 +168,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
 
     const { error: insErr } = await supabase
       .from('criterion_levels')
-      .insert(levelsToInsert);
+      .insert(levelsToInsert as any);
 
     if (insErr) console.error('Error inserting levels:', insErr.message || insErr);
   }
@@ -179,28 +193,28 @@ function mapAppliesToRoles(appliesTo: string): Role[] {
   }
 }
 
-function mapGroupFromDb(dbGroup: any): CriteriaGroup {
+function mapGroupFromDb(dbGroup: DbCriteriaGroup): CriteriaGroup {
   return {
     id: dbGroup.id,
     code: dbGroup.code,
     name: dbGroup.name,
-    shortName: dbGroup.short_name,
+    shortName: dbGroup.short_name || '',
     criteria: (dbGroup.criteria || [])
-      .sort((a: any, b: any) => a.sort_order - b.sort_order)
-      .map((c: any) => ({
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      .map(c => ({
         id: c.id,
         code: c.code,
         name: c.name,
-        description: c.description,
-        appliesTo: mapAppliesToRoles(c.applies_to),
-        weight: c.weight,
-        defaultLevelIndex: c.default_level_index,
+        description: c.description || undefined,
+        appliesTo: mapAppliesToRoles(c.applies_to || 'both'),
+        weight: c.weight || 0,
+        defaultLevelIndex: c.default_level_index ?? undefined,
         levels: (c.criterion_levels || [])
-          .sort((a: any, b: any) => a.sort_order - b.sort_order)
-          .map((l: any) => ({
+          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+          .map(l => ({
             points: l.points,
             label: l.label,
-            description: l.description
+            description: l.description || undefined
           }))
       }))
   };

@@ -7,9 +7,8 @@ import {
   useUpsertCriterion,
   useUpdateDefaultLevel
 } from '@/hooks/use-db';
-import { Criterion, CriteriaGroup, CriteriaRole } from '@/types';
+import { Criterion, CriteriaGroup } from '@/types';
 import { gradingLeader, gradingStaff } from '@/data/criteria';
-import Tabs from '@/components/ui/Tabs';
 import { 
   Award, 
   Info, 
@@ -17,18 +16,11 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 import CriteriaModal from '@/components/modals/CriteriaModal';
 import CriteriaGroupModal from '@/components/modals/CriteriaGroupModal';
 
-function getCriteriaForRoleLocal(groups: CriteriaGroup[], role: CriteriaRole): CriteriaGroup[] {
-  return groups.map(group => {
-    const filteredCriteria = group.criteria?.filter(
-      c => c.appliesTo.includes(role)
-    ) || [];
-    return { ...group, criteria: filteredCriteria };
-  });
-}
+
 
 
 
@@ -85,7 +77,8 @@ export default function CriteriaPage() {
   const filteredCriteria = activeGroup?.criteria || [];
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <LazyMotion features={domAnimation}>
+      <m.div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
@@ -131,7 +124,7 @@ export default function CriteriaPage() {
                   `}
                 >
                   {isActive && (
-                    <motion.div 
+                    <m.div 
                       layoutId="criteriaActiveTab"
                       className="absolute inset-0 bg-gradient-to-r from-[#0E4B66] to-[#1A6D91] rounded-2xl"
                       transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
@@ -387,6 +380,7 @@ export default function CriteriaPage() {
         group={editingGroup}
         existingGroupIds={groups.map(g => g.code)}
       />
-    </div>
+      </m.div>
+    </LazyMotion>
   );
 }

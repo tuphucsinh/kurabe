@@ -1,5 +1,5 @@
 export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee';
-export type CriteriaRole = 'Leader' | 'Employee';
+
 export type AppliesTo = 'leader' | 'staff' | 'both';
 export type Grade = 'S' | 'A' | 'AB' | 'B' | 'C' | 'D' | 'Pending';
 export type PeriodStatus = 'Active' | 'Closed';
@@ -80,6 +80,7 @@ export interface Criterion {
   groupId?: string;
   weight?: number;
   defaultLevelIndex?: number;
+  sortOrder?: number;
 }
 
 export interface CriteriaGroup {
@@ -88,4 +89,5 @@ export interface CriteriaGroup {
   name: string;
   shortName: string;
   criteria: Criterion[];
+  sortOrder?: number;
 }

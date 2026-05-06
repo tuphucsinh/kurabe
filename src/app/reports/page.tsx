@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
-import { allCriteria } from '@/data/criteria';
+import { useUsers, useTeams, useEvaluations, useCriteria } from '@/hooks/use-db';
 import PageHeader from '@/components/layout/PageHeader';
 import { 
   Users, 
@@ -63,15 +62,18 @@ function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: {
   );
 }
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function ReportsPage() {
+  const { currentPeriod } = useAuth();
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
 
   const { data: users = [], isLoading: loadingUsers } = useUsers();
   const { data: teams = [], isLoading: loadingTeams } = useTeams();
-  const { data: evaluations = [], isLoading: loadingEvals } = useEvaluations();
+  const { data: evaluations = [], isLoading: loadingEvals } = useEvaluations(currentPeriod?.id);
+  const { data: allCriteriaData = [], isLoading: loadingCriteria } = useCriteria();
 
-  const isLoading = loadingUsers || loadingTeams || loadingEvals;
+  const isLoading = loadingUsers || loadingTeams || loadingEvals || loadingCriteria;
 
   // 1. Data Aggregation
   const reportData = useMemo(() => {
@@ -134,9 +136,9 @@ export default function ReportsPage() {
     });
 
     // Criteria Group Analysis (A-F)
-    const groups: ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[] = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const flatCriteria = allCriteria.flatMap(g => g.criteria.map(c => ({ ...c, groupId: g.id })));
-    const criteriaAnalysis = groups.map(group => {
+    const groupCodes: string[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const flatCriteria = allCriteriaData.flatMap(g => g.criteria.map(c => ({ ...c, groupId: g.code })));
+    const criteriaAnalysis = groupCodes.map(group => {
       const groupCriteriaIds = flatCriteria.filter(c => c.groupId === group).map(c => c.id);
       let totalGroupScore = 0;
       let count = 0;
@@ -186,7 +188,7 @@ export default function ReportsPage() {
       criteriaAnalysis,
       topPerformers
     };
-  }, [isLoading, users, teams, evaluations, selectedTeam]);
+  }, [isLoading, users, teams, evaluations, allCriteriaData, selectedTeam]);
 
   if (isLoading) {
     return (
@@ -231,18 +233,14 @@ export default function ReportsPage() {
           ))}
         </select>
 
-        <select 
-          value={selectedPeriod}
-          onChange={(e) => setSelectedPeriod(e.target.value)}
-          className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-        >
-          <option value="2026-Q1">Quý 1 - 2026</option>
-          <option value="2025-Q4">Quý 4 - 2025</option>
-        </select>
+        <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-semibold text-indigo-600">
+          <Calendar className="w-4 h-4" />
+          <span>Kỳ {currentPeriod?.year}</span>
+        </div>
 
         <div className="ml-auto text-sm text-outline flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          Dữ liệu cập nhật: 27/04/2026
+          <Clock className="w-4 h-4" />
+          Dữ liệu thời gian thực
         </div>
       </div>
 
@@ -293,7 +291,7 @@ export default function ReportsPage() {
           <div className="bg-primary/5 p-8 rounded-3xl border border-primary/20 flex flex-col justify-center h-full">
             <h4 className="text-primary font-bold mb-3 flex items-center gap-2">
               <Target className="w-5 h-5" />
-              Mục tiêu Quý 1
+              Mục tiêu {currentPeriod ? `Kỳ ${currentPeriod.year}` : 'Kỳ này'}
             </h4>
             <p className="text-sm text-outline-variant font-medium leading-relaxed">
               Đạt tỉ lệ <strong className="text-primary font-bold">75%</strong> nhân sự xếp loại từ <strong className="text-primary font-bold">AB</strong> trở lên. 

@@ -5,6 +5,7 @@ import {
   getPeriods, 
   getActivePeriod, 
   getEvaluations, 
+  getEvaluationsByPeriod,
   getEvaluationById, 
   upsertEvaluation, 
   upsertEvaluationRound,
@@ -45,9 +46,24 @@ export const useUpsertTeam = () => {
 // Periods & Evaluations
 export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods });
 export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod });
-export const useEvaluations = () => useQuery({ queryKey: ['evaluations'], queryFn: getEvaluations });
-export const useEvaluation = (id: string) => useQuery({ queryKey: ['evaluation', id], queryFn: () => getEvaluationById(id), enabled: !!id });
-export const useEvaluationByEmployee = (employeeId: string) => useQuery({ queryKey: ['evaluation-by-employee', employeeId], queryFn: () => getEvaluationByEmployee(employeeId), enabled: !!employeeId });
+
+export const useEvaluations = (periodId?: string) => useQuery({ 
+  queryKey: ['evaluations', periodId], 
+  queryFn: () => periodId ? getEvaluationsByPeriod(periodId) : getEvaluations(),
+  enabled: !!periodId 
+});
+
+export const useEvaluation = (id: string) => useQuery({ 
+  queryKey: ['evaluation', id], 
+  queryFn: () => getEvaluationById(id), 
+  enabled: !!id 
+});
+
+export const useEvaluationByEmployee = (employeeId: string, periodId?: string) => useQuery({ 
+  queryKey: ['evaluation-by-employee', employeeId, periodId], 
+  queryFn: () => getEvaluationByEmployee(employeeId, periodId), 
+  enabled: !!employeeId && !!periodId 
+});
 
 export const useUpsertEvaluation = () => {
   const queryClient = useQueryClient();

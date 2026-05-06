@@ -2,8 +2,7 @@
 
 import { use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
-import { getCriteriaForRole } from '@/data/criteria';
+import { useUser, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
 import { calculateRoundScore } from '@/lib/scoring';
 import { 
   ArrowLeft, 
@@ -27,6 +26,7 @@ export default function ComparePage({ params }: ComparePageProps) {
   
   const { data: employee, isLoading: loadingUser } = useUser(id);
   const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id);
+  const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
 
   const allRounds = useMemo(() => {
     if (!evaluation || !evaluation.rounds) return [];
@@ -34,10 +34,17 @@ export default function ComparePage({ params }: ComparePageProps) {
   }, [evaluation]);
 
   const criteria = useMemo(() => {
-    if (!employee) return [];
+    if (!employee || groups.length === 0) return [];
     const isLeader = employee.role !== 'Employee';
-    return getCriteriaForRole(isLeader ? 'Leader' : 'Employee');
-  }, [employee]);
+    const role = isLeader ? 'Leader' : 'Employee';
+    
+    return groups.map(group => {
+      const filteredCriteria = group.criteria?.filter(
+        c => c.appliesTo.includes(role)
+      ) || [];
+      return { ...group, criteria: filteredCriteria };
+    }).filter(g => g.criteria.length > 0);
+  }, [employee, groups]);
 
   const allCriteria = useMemo(() => criteria.flatMap(g => g.criteria), [criteria]);
 
@@ -60,7 +67,7 @@ export default function ComparePage({ params }: ComparePageProps) {
 
   const unchangedCriteria = allCriteria.filter(c => !changedCriteriaIds.has(c.id));
 
-  if (loadingUser || loadingEval) {
+  if (loadingUser || loadingEval || loadingCriteria) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />

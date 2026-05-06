@@ -5,13 +5,9 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
 }
 
-export function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon }: StatCardProps) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-300 group">
       <div className="flex items-center justify-between mb-4">
@@ -22,12 +18,6 @@ export function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
       </div>
       <div className="flex items-end justify-between">
         <p className="text-3xl font-bold text-slate-800">{value}</p>
-        {trend && (
-          <div className={`flex items-center text-sm font-medium ${trend.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {trend.isPositive ? '+' : '-'}{Math.abs(trend.value)}%
-            <span className="text-slate-400 font-normal ml-1 text-xs">vs last month</span>
-          </div>
-        )}
       </div>
     </div>
   );

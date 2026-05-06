@@ -1,5 +1,10 @@
 import { supabase } from '../supabase';
-import { Evaluation, EvaluationPeriod, EvaluationRound } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber } from '@/types';
+import { Database } from '@/types/database';
+
+type DbPeriod = Database['public']['Tables']['evaluation_periods']['Row'];
+type DbEvaluation = Database['public']['Tables']['evaluations']['Row'] & { evaluation_rounds?: DbRound[] };
+type DbRound = Database['public']['Tables']['evaluation_rounds']['Row'];
 
 export async function getPeriods(): Promise<EvaluationPeriod[]> {
   const { data, error } = await supabase
@@ -115,7 +120,7 @@ export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<E
 
   const { data, error } = await supabase
     .from('evaluations')
-    .upsert(dbEval)
+    .upsert(dbEval as any)
     .select()
     .single();
 
@@ -145,55 +150,57 @@ export async function upsertEvaluationRound(evaluationId: string, round: Partial
 
   const { error } = await supabase
     .from('evaluation_rounds')
-    .upsert(dbRound, { onConflict: 'evaluation_id,round' });
+    .upsert(dbRound as any, { onConflict: 'evaluation_id,round' });
 
   if (error) console.error('Error upserting evaluation round:', error);
 }
 
 // Helpers
-function mapPeriodFromDb(db: any): EvaluationPeriod {
+export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
   return {
     id: db.id,
     year: db.year,
     name: db.name,
     status: db.status === 'active' ? 'Active' : 'Closed',
-    createdBy: db.created_by,
-    createdAt: db.created_at,
-    closedAt: db.closed_at,
+    createdBy: db.created_by || '',
+    createdAt: db.created_at || '',
+    closedAt: db.closed_at || undefined,
   };
 }
 
-function mapEvaluationFromDb(db: any): Evaluation {
+function mapEvaluationFromDb(db: DbEvaluation): Evaluation {
   return {
     id: db.id,
-    periodId: db.period_id,
-    employeeId: db.employee_id,
-    employeeRole: db.employee_role,
-    teamId: db.team_id,
+    periodId: db.period_id || '',
+    employeeId: db.employee_id || '',
+    employeeRole: db.employee_role as Role,
+    teamId: db.team_id || '',
     rounds: (db.evaluation_rounds || [])
       .map(mapRoundFromDb)
-      .sort((a: any, b: any) => a.round - b.round),
-    currentRound: db.current_round,
-    status: db.status as any,
-    finalGrade: db.final_grade,
-    finalScore: db.final_score,
-    createdAt: db.created_at,
-    updatedAt: db.updated_at,
+      .sort((a, b) => a.round - b.round),
+    currentRound: (db.current_round || 1) as RoundNumber,
+    status: db.status as EvalStatus,
+    finalGrade: db.final_grade as Grade || undefined,
+    finalScore: db.final_score || undefined,
+    createdAt: db.created_at || '',
+    updatedAt: db.updated_at || '',
   };
 }
 
-function mapRoundFromDb(db: any): EvaluationRound {
+function mapRoundFromDb(db: DbRound): EvaluationRound {
   return {
-    round: db.round,
-    evaluatorId: db.evaluator_id,
-    evaluatorRole: db.evaluator_role,
-    scores: db.scores || {},
-    notes: db.notes || {},
-    totalScore: db.total_score,
-    grade: db.grade as any,
-    comment: db.comment,
-    additionalComment: db.additional_comment,
-    submittedAt: db.submitted_at,
-    createdAt: db.created_at,
+    id: db.id,
+    evaluationId: db.evaluation_id || '',
+    round: db.round as RoundNumber,
+    evaluatorId: db.evaluator_id || '',
+    evaluatorRole: db.evaluator_role as Role,
+    scores: (db.scores as Record<string, number>) || {},
+    notes: (db.notes as Record<string, string>) || {},
+    totalScore: db.total_score || 0,
+    grade: db.grade as Grade,
+    comment: db.comment || undefined,
+    additionalComment: db.additional_comment || undefined,
+    submittedAt: db.submitted_at || undefined,
+    createdAt: db.created_at || '',
   };
 }

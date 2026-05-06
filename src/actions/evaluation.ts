@@ -3,7 +3,11 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { calculateRoundScore } from '@/lib/scoring';
-import { RoundNumber, EvaluationRound, Grade, EvalStatus } from '@/types';
+import { RoundNumber, EvaluationRound, Grade, EvalStatus, Role } from '@/types';
+import { Database } from '@/types/database';
+
+type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
+type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
 
 /**
  * Lưu bản nháp (Draft) hoặc Gửi (Submit) kết quả đánh giá cho một Round.
@@ -32,7 +36,7 @@ export async function saveEvaluationRound(
     // 2. Tính toán điểm và grade
     const tempRound: Partial<EvaluationRound> = {
       scores,
-      evaluatorRole: user.role
+      evaluatorRole: user.role as Role
     };
     
     const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
@@ -40,13 +44,12 @@ export async function saveEvaluationRound(
     const now = new Date().toISOString();
     
     // 3. Cập nhật record round
-    const updateData: any = {
+    const updateData: UpdateRound = {
       scores,
       notes,
       comment,
       total_score: totalScore,
-      grade: grade,
-      updated_at: now
+      grade: grade as Grade
     };
 
     if (isSubmit) {
@@ -78,7 +81,7 @@ export async function saveEvaluationRound(
         nextStatus = 'Approved';
       }
 
-      const evalUpdate: any = {
+      const evalUpdate: UpdateEvaluation = {
         status: nextStatus,
         current_round: nextRound,
         updated_at: now
@@ -115,7 +118,7 @@ export async function saveEvaluationRound(
           const { data: leader } = await supabase
             .from('users')
             .select('id, role')
-            .eq('team_id', evalInfo.team_id)
+            .eq('team_id', evalInfo.team_id || '')
             .eq('role', 'Leader')
             .single();
           

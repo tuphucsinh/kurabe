@@ -17,6 +17,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 
+import PeriodSelector from './PeriodSelector';
+
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -186,6 +188,9 @@ function SidebarContent({ user, logout, mainLinks, bottomLinks, isActive, onClos
           Đăng xuất
         </button>
       </div>
+
+      {/* Period Selector */}
+      <PeriodSelector />
 
       {/* User Info */}
       <div className="border-t border-white/10 px-4 py-4 bg-black/10">

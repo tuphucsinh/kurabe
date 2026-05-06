@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
-import { User as UserType } from '@/types';
+import { User as UserType, Role } from '@/types';
 import { useTeams } from '@/hooks/use-db';
 
 interface EmployeeModalProps {
@@ -123,7 +123,7 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
               <select
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
               >
                 <option value="Manager">Manager</option>
                 <option value="Leader">Leader</option>

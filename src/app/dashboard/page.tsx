@@ -3,12 +3,20 @@
 import React, { useMemo } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
-import { Users, FileCheck, Clock, Activity } from 'lucide-react';
+import { Users, FileCheck, Clock, Activity, Plus, Lock } from 'lucide-react';
 import { useUsers, useEvaluations, useTeams } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
+import { PeriodModal } from '@/components/modals/PeriodModal';
+import { closeEvaluationPeriod } from '@/actions/period';
+import { useState } from 'react';
 
 export default function DashboardPage() {
+  const { currentPeriod, isManager, allPeriods } = useAuth();
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  
   const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations();
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id);
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
 
   const isLoading = usersLoading || evalsLoading || teamsLoading;
@@ -66,6 +74,26 @@ export default function DashboardPage() {
     });
   }, [teams, users, evaluations]);
 
+  const handleClosePeriod = async () => {
+    if (!currentPeriod || !window.confirm('Sau khi đóng, tất cả đánh giá trong kỳ này sẽ không thể chỉnh sửa. Bạn có chắc chắn?')) return;
+    
+    setIsClosing(true);
+    try {
+      const result = await closeEvaluationPeriod(currentPeriod.id);
+      if (result.success) {
+        window.location.reload(); // Refresh to update context
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  const handlePeriodSuccess = () => {
+    window.location.reload();
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -79,9 +107,46 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tổng quan hệ thống</h1>
-          <p className="text-slate-500 mt-1">Theo dõi tiến độ đánh giá năng lực QAQC năm 2026</p>
+          <p className="text-slate-500 mt-1">
+            {currentPeriod ? (
+              <>Theo dõi tiến độ đánh giá năng lực QAQC — <span className="text-indigo-600 font-semibold">Kỳ {currentPeriod.year}</span></>
+            ) : (
+              'Chưa có kỳ đánh giá nào được chọn'
+            )}
+          </p>
         </div>
+
+        {isManager && (
+          <div className="flex items-center gap-3">
+            {currentPeriod?.status === 'Active' && (
+              <button
+                onClick={handleClosePeriod}
+                disabled={isClosing}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
+              >
+                <Lock size={16} />
+                {isClosing ? 'Đang đóng...' : 'Đóng kỳ'}
+              </button>
+            )}
+            
+            {(!currentPeriod || !allPeriods.some(p => p.status === 'Active')) && (
+              <button
+                onClick={() => setIsPeriodModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-95"
+              >
+                <Plus size={18} />
+                Tạo kỳ mới
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      <PeriodModal 
+        isOpen={isPeriodModalOpen} 
+        onClose={() => setIsPeriodModalOpen(false)} 
+        onSuccess={handlePeriodSuccess} 
+      />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -89,13 +154,11 @@ export default function DashboardPage() {
           title="Tổng nhân sự" 
           value={totalEmployees} 
           icon={Users} 
-          trend={{ value: 12, isPositive: true }} 
         />
         <StatCard 
           title="Đã đánh giá" 
           value={completedEvals} 
           icon={FileCheck} 
-          trend={{ value: 8, isPositive: true }} 
         />
         <StatCard 
           title="Chờ xử lý" 
@@ -106,7 +169,6 @@ export default function DashboardPage() {
           title="Tỉ lệ hoàn thành" 
           value={`${totalEmployees > 0 ? Math.round((completedEvals / totalEmployees) * 100) : 0}%`} 
           icon={Activity} 
-          trend={{ value: 5, isPositive: true }} 
         />
       </div>
 
