@@ -52,3 +52,14 @@ Kurabe là hệ thống đánh giá hiệu suất nhân viên với giao diện 
   - Added delete hooks for Users, Teams, CriteriaGroups, and Criterions.
   - Implemented delete buttons with confirmation across Employees, Teams, and Criteria pages.
   - Fixed an unclosed HTML tag in `criteria/page.tsx`.
+- [x] Phase 29: Performance Optimization & Cleanup
+  - Đã hoàn thành tối ưu hoá hooks (staleTime), AuthContext (giảm re-render), và xử lý dữ liệu Reports/Dashboard.
+- [x] Phase 30: Linting & Tech Debt Cleanup (TDD-First)
+  - Sửa lỗi type safety `error: any` sang `error: unknown` ở các file `src/actions/*`.
+  - Xóa các unused imports và variable unused để dọn dẹp code.
+  - Thêm `eslint-disable-next-line react-hooks/set-state-in-effect` cho các pattern SSR hydration guard.
+  - Cập nhật KNOWN_BUGS cho các lỗi `any` còn lại trong `src/lib/db/*`.
+- [x] Phase 31: Database Type Refactor & Safety
+  - Refactor `upsertUser`, `upsertTeam`, `upsertCriteriaGroup`, `upsertCriterion`, `upsertEvaluation` để thỏa mãn Supabase generated types.
+  - Loại bỏ hoàn toàn `as any` ép kiểu trong các hàm `upsert`, `insert`, `update` tại `src/lib/db/*.ts`.
+  - Định nghĩa chính xác nested relationship types cho Criteria và Evaluations (rounds, levels).

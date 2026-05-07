@@ -1,11 +1,13 @@
 import { supabase } from '../supabase';
 import { CriteriaGroup, Role, Criterion } from '@/types';
-import { Database } from '@/types/database';
+import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
-type DbCriteriaGroup = Database['public']['Tables']['criteria_groups']['Row'] & {
-  criteria?: (Database['public']['Tables']['criteria']['Row'] & {
-    criterion_levels?: Database['public']['Tables']['criterion_levels']['Row'][]
-  })[]
+type DbCriterionLevel = Tables<'criterion_levels'>;
+type DbCriterionRow = Tables<'criteria'> & {
+  criterion_levels?: DbCriterionLevel[]
+};
+type DbCriteriaGroup = Tables<'criteria_groups'> & {
+  criteria?: DbCriterionRow[]
 };
 
 export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
@@ -106,15 +108,17 @@ export async function getCriteriaForRole(role: Role): Promise<CriteriaGroup[]> {
 }
 
 export async function upsertCriteriaGroup(group: Partial<CriteriaGroup>): Promise<void> {
+  const dbGroup: TablesInsert<'criteria_groups'> = {
+    id: group.id,
+    code: group.code || '',
+    name: group.name || '',
+    short_name: group.shortName || null,
+    sort_order: group.sortOrder ?? 0
+  };
+
   const { error } = await supabase
     .from('criteria_groups')
-    .upsert({
-      id: group.id,
-      code: group.code,
-      name: group.name,
-      short_name: group.shortName,
-      sort_order: group.sortOrder
-    } as any);
+    .upsert(dbGroup);
 
   if (error) console.error('Error upserting criteria group:', error.message || error);
 }
@@ -129,21 +133,20 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
     else appliesToDb = 'both';
   }
 
-  // Build row — omit id for new inserts so Supabase auto-generates UUID
-  const row: Record<string, unknown> = {
+  const row: TablesInsert<'criteria'> = {
     group_id: groupId,
-    code: criterion.code,
-    name: criterion.name,
-    description: criterion.description,
+    code: criterion.code || '',
+    name: criterion.name || '',
+    description: criterion.description || null,
     applies_to: appliesToDb,
-    weight: criterion.weight,
-    default_level_index: criterion.defaultLevelIndex
+    weight: criterion.weight ?? 0,
+    default_level_index: criterion.defaultLevelIndex ?? null
   };
   if (criterion.id) row.id = criterion.id;
 
   const { data, error } = await supabase
     .from('criteria')
-    .upsert(row as any)
+    .upsert(row)
     .select()
     .single();
 
@@ -166,7 +169,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
       return;
     }
 
-    const levelsToInsert = criterion.levels.map((l, idx) => ({
+    const levelsToInsert: TablesInsert<'criterion_levels'>[] = criterion.levels.map((l, idx) => ({
       criterion_id: criterionId,
       points: l.points,
       label: l.label,
@@ -176,7 +179,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
 
     const { error: insErr } = await supabase
       .from('criterion_levels')
-      .insert(levelsToInsert as any);
+      .insert(levelsToInsert);
 
     if (insErr) console.error('Error inserting levels:', insErr.message || insErr);
   }
@@ -192,18 +195,20 @@ export async function updateDefaultLevel(criterionId: string, levelIndex: number
 }
 
 export async function softDeleteCriteriaGroup(id: string): Promise<void> {
+  const update: TablesUpdate<'criteria_groups'> = { is_active: false };
   const { error } = await supabase
     .from('criteria_groups')
-    .update({ is_active: false } as any)
+    .update(update)
     .eq('id', id);
 
   if (error) console.error('Error soft deleting criteria group:', error.message || error);
 }
 
 export async function softDeleteCriterion(id: string): Promise<void> {
+  const update: TablesUpdate<'criteria'> = { is_active: false };
   const { error } = await supabase
     .from('criteria')
-    .update({ is_active: false } as any)
+    .update(update)
     .eq('id', id);
 
   if (error) console.error('Error soft deleting criterion:', error.message || error);
@@ -245,3 +250,4 @@ function mapGroupFromDb(dbGroup: DbCriteriaGroup): CriteriaGroup {
       }))
   };
 }
+

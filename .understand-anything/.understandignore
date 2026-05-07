@@ -1,0 +1,47 @@
+# Default ignores
+node_modules/
+.next/
+.git/
+dist/
+build/
+coverage/
+.vercel/
+.DS_Store
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Environment and Logs
+.env*
+*.log
+
+# Antigravity & Agent specific
+.ai/
+.tmp/
+.gitnexus/
+.claude/
+HANDOFF.md
+tasks.md
+MASTER_PLAN.md
+DECISIONS_LOG.md
+KNOWN_BUGS.md
+SYSTEM_ALERT.md
+diary.md
+global_context.md
+
+# Documentations & Assets (not code logic)
+*.xlsx
+*.csv
+*.pdf
+*.md
+!README.md
+public/
+assets/
+static/
+
+# Configs that are not core to logic (optional, but keep for context)
+# .eslint*
+# .prettier*
+# tsconfig.json
+# next.config.*

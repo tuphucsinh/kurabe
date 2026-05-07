@@ -142,7 +142,7 @@ Bypass 4-Gate. Dùng `Sequential Thinking` + `systematic-debugging` skill.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **Kurabe** (286 symbols, 327 relationships, 0 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **kurabe** (709 symbols, 945 relationships, 9 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -165,10 +165,10 @@ This project is indexed by GitNexus as **Kurabe** (286 symbols, 327 relationship
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/Kurabe/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Kurabe/clusters` | All functional areas |
-| `gitnexus://repo/Kurabe/processes` | All execution flows |
-| `gitnexus://repo/Kurabe/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/kurabe/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/kurabe/clusters` | All functional areas |
+| `gitnexus://repo/kurabe/processes` | All execution flows |
+| `gitnexus://repo/kurabe/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 

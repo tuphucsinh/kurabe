@@ -1,0 +1,2021 @@
+{
+  "nodes": [
+    {
+      "id": ".env.local",
+      "type": "file",
+      "ext": ".local",
+      "size": 305,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".gitignore",
+      "type": "file",
+      "ext": "",
+      "size": 523,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\.understandignore",
+      "type": "file",
+      "ext": "",
+      "size": 575,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\project_tree.txt",
+      "type": "file",
+      "ext": ".txt",
+      "size": 954106,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\scanner.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 2225,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "AGENTS.md",
+      "type": "file",
+      "ext": ".md",
+      "size": 8966,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "CLAUDE.md",
+      "type": "file",
+      "ext": ".md",
+      "size": 8966,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "eslint.config.mjs",
+      "type": "file",
+      "ext": ".mjs",
+      "size": 465,
+      "exports": [],
+      "imports": [
+        "eslint/config",
+        "eslint-config-next/core-web-vitals",
+        "eslint-config-next/typescript"
+      ]
+    },
+    {
+      "id": "GEMINI.md",
+      "type": "file",
+      "ext": ".md",
+      "size": 8966,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "lint.txt",
+      "type": "file",
+      "ext": ".txt",
+      "size": 12175,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "lint_output.txt",
+      "type": "file",
+      "ext": ".txt",
+      "size": 24424,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "next-env.d.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 251,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "next.config.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 174,
+      "exports": [],
+      "imports": [
+        "next"
+      ]
+    },
+    {
+      "id": "package.json",
+      "type": "file",
+      "ext": ".json",
+      "size": 679,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "postcss.config.mjs",
+      "type": "file",
+      "ext": ".mjs",
+      "size": 94,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "README.md",
+      "type": "file",
+      "ext": ".md",
+      "size": 1450,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "README.txt",
+      "type": "file",
+      "ext": ".txt",
+      "size": 3612,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "src\\actions\\criteria.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 742,
+      "exports": [],
+      "imports": [
+        "@/lib/db/criteria",
+        "next/cache"
+      ]
+    },
+    {
+      "id": "src\\actions\\evaluation.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 4702,
+      "exports": [],
+      "imports": [
+        "@/lib/supabase",
+        "next/cache",
+        "@/lib/scoring",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\actions\\period.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 3708,
+      "exports": [],
+      "imports": [
+        "@/lib/supabase",
+        "next/cache",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\actions\\teams.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 392,
+      "exports": [],
+      "imports": [
+        "@/lib/db/teams",
+        "next/cache"
+      ]
+    },
+    {
+      "id": "src\\actions\\users.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 392,
+      "exports": [],
+      "imports": [
+        "@/lib/db/users",
+        "next/cache"
+      ]
+    },
+    {
+      "id": "src\\contexts\\AuthContext.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 4341,
+      "exports": [
+        "AuthProvider",
+        "useAuth"
+      ],
+      "imports": [
+        "react",
+        "@/types",
+        "@/lib/supabase",
+        "@/lib/db/users",
+        "@/lib/db/evaluations"
+      ]
+    },
+    {
+      "id": "src\\data\\criteria.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 579,
+      "exports": [
+        "gradingLeader",
+        "gradingStaff"
+      ],
+      "imports": []
+    },
+    {
+      "id": "src\\data\\workflow.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 2804,
+      "exports": [
+        "canEvaluate",
+        "canReview",
+        "getEvaluatableEmployees",
+        "canSubmitRound",
+        "getNextRound",
+        "isRoundLocked",
+        "canViewEvaluation"
+      ],
+      "imports": [
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\hooks\\use-db.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 5743,
+      "exports": [
+        "useUsers",
+        "useUser",
+        "useTeamUsers",
+        "useUpsertUser",
+        "useDeleteUser",
+        "useTeams",
+        "useTeam",
+        "useUpsertTeam",
+        "useDeleteTeam",
+        "usePeriods",
+        "useActivePeriod",
+        "useEvaluations",
+        "useEvaluation",
+        "useEvaluationByEmployee",
+        "useUpsertEvaluation",
+        "useUpsertEvaluationRound",
+        "useCriteria",
+        "useUpsertCriteriaGroup",
+        "useDeleteCriteriaGroup",
+        "useUpsertCriterion",
+        "useDeleteCriterion",
+        "useUpdateDefaultLevel"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "@/lib/db/users",
+        "@/lib/db/teams",
+        "@/lib/db/criteria",
+        "@/actions/users",
+        "@/actions/teams",
+        "@/actions/criteria",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\lib\\db\\criteria.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 7030,
+      "exports": [],
+      "imports": [
+        "../supabase",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\lib\\db\\evaluations.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 6242,
+      "exports": [
+        "mapPeriodFromDb"
+      ],
+      "imports": [
+        "../supabase",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\lib\\db\\teams.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1667,
+      "exports": [],
+      "imports": [
+        "../supabase",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\lib\\db\\users.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 2424,
+      "exports": [
+        "mapUserFromDb"
+      ],
+      "imports": [
+        "../supabase",
+        "@/types",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\lib\\scoring.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 2820,
+      "exports": [
+        "calculateRoundScore",
+        "diffRounds",
+        "getFinalResult",
+        "getGradeFromScore",
+        "calculateGrade",
+        "getGradeColor"
+      ],
+      "imports": [
+        "@/data/criteria",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\lib\\supabase.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 306,
+      "exports": [
+        "supabase"
+      ],
+      "imports": [
+        "@supabase/supabase-js",
+        "@/types/database"
+      ]
+    },
+    {
+      "id": "src\\types\\database.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 16448,
+      "exports": [
+        "Constants"
+      ],
+      "imports": []
+    },
+    {
+      "id": "src\\types\\index.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1926,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "TCDG.xlsx",
+      "type": "file",
+      "ext": ".xlsx",
+      "size": 19763,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "tsconfig.json",
+      "type": "file",
+      "ext": ".json",
+      "size": 670,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "tsconfig.tsbuildinfo",
+      "type": "file",
+      "ext": ".tsbuildinfo",
+      "size": 122838,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "src\\components\\charts\\GradeDistribution.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1893,
+      "exports": [
+        "GradeDistribution"
+      ],
+      "imports": [
+        "react"
+      ]
+    },
+    {
+      "id": "src\\components\\evaluation\\CriteriaTab.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 10603,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/types",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\components\\evaluation\\EvaluationHeader.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 5191,
+      "exports": [],
+      "imports": [
+        "@/types",
+        "@/lib/scoring"
+      ]
+    },
+    {
+      "id": "src\\components\\evaluation\\GroupNavTabs.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 3777,
+      "exports": [],
+      "imports": [
+        "framer-motion",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\components\\layout\\AppLayout.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 2486,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/contexts/AuthContext",
+        "@/components/layout/Sidebar",
+        "next/navigation",
+        "lucide-react",
+        "@/components/layout/PageTransition"
+      ]
+    },
+    {
+      "id": "src\\components\\layout\\PageHeader.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 642,
+      "exports": [],
+      "imports": [
+        "react"
+      ]
+    },
+    {
+      "id": "src\\components\\layout\\PageTransition.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 846,
+      "exports": [],
+      "imports": [
+        "framer-motion",
+        "next/navigation",
+        "react"
+      ]
+    },
+    {
+      "id": "src\\components\\layout\\PeriodSelector.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 5432,
+      "exports": [],
+      "imports": [
+        "react",
+        "react-dom",
+        "@/contexts/AuthContext",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\components\\layout\\Sidebar.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 7041,
+      "exports": [],
+      "imports": [
+        "next/link",
+        "next/navigation",
+        "framer-motion",
+        "@/contexts/AuthContext",
+        "@/types",
+        "./PeriodSelector"
+      ]
+    },
+    {
+      "id": "src\\components\\modals\\CriteriaGroupModal.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 6183,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\components\\modals\\CriteriaModal.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 12143,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\components\\modals\\EmployeeModal.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 7625,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/types",
+        "@/hooks/use-db"
+      ]
+    },
+    {
+      "id": "src\\components\\modals\\PeriodModal.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 3698,
+      "exports": [
+        "PeriodModal"
+      ],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/actions/period",
+        "@/contexts/AuthContext"
+      ]
+    },
+    {
+      "id": "src\\components\\modals\\TeamModal.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 4198,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/types",
+        "@/hooks/use-db"
+      ]
+    },
+    {
+      "id": "src\\components\\reports\\CriteriaHeatmap.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 3528,
+      "exports": [],
+      "imports": [
+        "react"
+      ]
+    },
+    {
+      "id": "src\\components\\reports\\TeamComparison.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 2375,
+      "exports": [],
+      "imports": [
+        "react"
+      ]
+    },
+    {
+      "id": "src\\components\\reports\\TopPerformers.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 3430,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react",
+        "@/components/ui/DataTable",
+        "@/lib/scoring"
+      ]
+    },
+    {
+      "id": "src\\components\\ui\\Accordion.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 2237,
+      "exports": [
+        "AccordionItem"
+      ],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\components\\ui\\DataTable.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 3877,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\components\\ui\\StatCard.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 853,
+      "exports": [
+        "StatCard"
+      ],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\components\\ui\\Tabs.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1082,
+      "exports": [],
+      "imports": [
+        "react"
+      ]
+    },
+    {
+      "id": "src\\app\\criteria\\error.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1144,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\app\\criteria\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 19679,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/types",
+        "@/data/criteria",
+        "framer-motion",
+        "@/components/modals/CriteriaModal",
+        "@/components/modals/CriteriaGroupModal"
+      ]
+    },
+    {
+      "id": "src\\app\\dashboard\\error.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1144,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\app\\dashboard\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 10153,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/components/ui/StatCard",
+        "@/components/charts/GradeDistribution",
+        "lucide-react",
+        "@/hooks/use-db",
+        "@/contexts/AuthContext",
+        "@/components/modals/PeriodModal",
+        "@/actions/period",
+        "react",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\app\\employees\\error.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1144,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\app\\employees\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 12686,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/hooks/use-db",
+        "@/types",
+        "@/components/ui/DataTable",
+        "next/dynamic",
+        "lucide-react",
+        "next/link"
+      ]
+    },
+    {
+      "id": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 18652,
+      "exports": [],
+      "imports": [
+        "react",
+        "next/navigation",
+        "@/hooks/use-db",
+        "@/lib/scoring"
+      ]
+    },
+    {
+      "id": "src\\app\\evaluations\\[id]\\error.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1144,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\app\\evaluations\\[id]\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 12076,
+      "exports": [],
+      "imports": [
+        "react",
+        "next/navigation",
+        "@/lib/db/criteria",
+        "@/hooks/use-db",
+        "@/types",
+        "@tanstack/react-query",
+        "@/components/evaluation/CriteriaTab",
+        "@/components/evaluation/EvaluationHeader",
+        "@/components/evaluation/GroupNavTabs",
+        "@/lib/scoring",
+        "@/data/workflow",
+        "framer-motion",
+        "@/actions/evaluation"
+      ]
+    },
+    {
+      "id": "src\\app\\favicon.ico",
+      "type": "file",
+      "ext": ".ico",
+      "size": 25593,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "src\\app\\globals.css",
+      "type": "file",
+      "ext": ".css",
+      "size": 772,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": "src\\app\\layout.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 989,
+      "exports": [
+        "metadata"
+      ],
+      "imports": [
+        "next",
+        "next/font/google",
+        "@/contexts/AuthContext",
+        "@/components/layout/AppLayout",
+        "@/providers/query-provider"
+      ]
+    },
+    {
+      "id": "src\\app\\login\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 4968,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/contexts/AuthContext",
+        "next/navigation",
+        "lucide-react",
+        "@/lib/db/users",
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\app\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 106,
+      "exports": [],
+      "imports": [
+        "next/navigation"
+      ]
+    },
+    {
+      "id": "src\\app\\reports\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 13678,
+      "exports": [],
+      "imports": [
+        "react",
+        "@/hooks/use-db",
+        "@/components/layout/PageHeader",
+        "@/components/charts/GradeDistribution",
+        "next/dynamic",
+        "@/types",
+        "@/contexts/AuthContext"
+      ]
+    },
+    {
+      "id": "src\\app\\teams\\error.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 1144,
+      "exports": [],
+      "imports": [
+        "react",
+        "lucide-react"
+      ]
+    },
+    {
+      "id": "src\\app\\teams\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 11978,
+      "exports": [],
+      "imports": [
+        "@/hooks/use-db",
+        "@/types",
+        "next/link",
+        "react",
+        "@/components/modals/TeamModal"
+      ]
+    },
+    {
+      "id": "src\\providers\\query-provider.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 485,
+      "exports": [
+        "default"
+      ],
+      "imports": [
+        "@tanstack/react-query",
+        "react"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "eslint.config.mjs",
+      "to": "eslint/config",
+      "type": "import"
+    },
+    {
+      "from": "eslint.config.mjs",
+      "to": "eslint-config-next/core-web-vitals",
+      "type": "import"
+    },
+    {
+      "from": "eslint.config.mjs",
+      "to": "eslint-config-next/typescript",
+      "type": "import"
+    },
+    {
+      "from": "next.config.ts",
+      "to": "next",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\criteria.ts",
+      "to": "@/lib/db/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\criteria.ts",
+      "to": "next/cache",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "@/lib/supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "next/cache",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\period.ts",
+      "to": "@/lib/supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\period.ts",
+      "to": "next/cache",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\period.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\period.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\teams.ts",
+      "to": "@/lib/db/teams",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\teams.ts",
+      "to": "next/cache",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\users.ts",
+      "to": "@/lib/db/users",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\users.ts",
+      "to": "next/cache",
+      "type": "import"
+    },
+    {
+      "from": "src\\contexts\\AuthContext.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\contexts\\AuthContext.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\contexts\\AuthContext.tsx",
+      "to": "@/lib/supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\contexts\\AuthContext.tsx",
+      "to": "@/lib/db/users",
+      "type": "import"
+    },
+    {
+      "from": "src\\contexts\\AuthContext.tsx",
+      "to": "@/lib/db/evaluations",
+      "type": "import"
+    },
+    {
+      "from": "src\\data\\workflow.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@tanstack/react-query",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/lib/db/users",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/lib/db/teams",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/lib/db/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/actions/users",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/actions/teams",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/actions/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\hooks\\use-db.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\criteria.ts",
+      "to": "../supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\criteria.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\criteria.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\evaluations.ts",
+      "to": "../supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\evaluations.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\evaluations.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\teams.ts",
+      "to": "../supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\teams.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\teams.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\users.ts",
+      "to": "../supabase",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\users.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\users.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\scoring.ts",
+      "to": "@/data/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\scoring.ts",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\supabase.ts",
+      "to": "@supabase/supabase-js",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\supabase.ts",
+      "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\charts\\GradeDistribution.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\CriteriaTab.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\CriteriaTab.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\CriteriaTab.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\EvaluationHeader.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\EvaluationHeader.tsx",
+      "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\GroupNavTabs.tsx",
+      "to": "framer-motion",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\evaluation\\GroupNavTabs.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "@/components/layout/Sidebar",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\AppLayout.tsx",
+      "to": "@/components/layout/PageTransition",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PageHeader.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PageTransition.tsx",
+      "to": "framer-motion",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PageTransition.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PageTransition.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PeriodSelector.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PeriodSelector.tsx",
+      "to": "react-dom",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PeriodSelector.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\PeriodSelector.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "next/link",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "framer-motion",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\layout\\Sidebar.tsx",
+      "to": "./PeriodSelector",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaGroupModal.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaGroupModal.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaGroupModal.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaModal.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaModal.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\CriteriaModal.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\EmployeeModal.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\EmployeeModal.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\EmployeeModal.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\EmployeeModal.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\PeriodModal.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\PeriodModal.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\PeriodModal.tsx",
+      "to": "@/actions/period",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\PeriodModal.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\TeamModal.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\TeamModal.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\TeamModal.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\TeamModal.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\CriteriaHeatmap.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\TeamComparison.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\TopPerformers.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\TopPerformers.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\TopPerformers.tsx",
+      "to": "@/components/ui/DataTable",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\reports\\TopPerformers.tsx",
+      "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\Accordion.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\Accordion.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\DataTable.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\DataTable.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\StatCard.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\StatCard.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\ui\\Tabs.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\error.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\error.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "@/data/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "framer-motion",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "@/components/modals/CriteriaModal",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\criteria\\page.tsx",
+      "to": "@/components/modals/CriteriaGroupModal",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\error.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\error.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/components/ui/StatCard",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/components/charts/GradeDistribution",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/components/modals/PeriodModal",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/actions/period",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\dashboard\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\error.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\error.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "@/components/ui/DataTable",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "next/dynamic",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "next/link",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\error.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\error.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/lib/db/criteria",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@tanstack/react-query",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/components/evaluation/CriteriaTab",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/components/evaluation/EvaluationHeader",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/components/evaluation/GroupNavTabs",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/data/workflow",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "framer-motion",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/actions/evaluation",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\layout.tsx",
+      "to": "next",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\layout.tsx",
+      "to": "next/font/google",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\layout.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\layout.tsx",
+      "to": "@/components/layout/AppLayout",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\layout.tsx",
+      "to": "@/providers/query-provider",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "@/lib/db/users",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\login\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\page.tsx",
+      "to": "next/navigation",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "@/components/layout/PageHeader",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "@/components/charts/GradeDistribution",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "next/dynamic",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\reports\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\error.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\error.tsx",
+      "to": "lucide-react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "next/link",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "react",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "@/components/modals/TeamModal",
+      "type": "import"
+    },
+    {
+      "from": "src\\providers\\query-provider.tsx",
+      "to": "@tanstack/react-query",
+      "type": "import"
+    },
+    {
+      "from": "src\\providers\\query-provider.tsx",
+      "to": "react",
+      "type": "import"
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer_presentation",
+      "name": "Presentation (Pages)",
+      "description": "App Router pages and layouts defining the UI structure.",
+      "nodeIds": [
+        "src\\app\\criteria\\error.tsx",
+        "src\\app\\criteria\\page.tsx",
+        "src\\app\\dashboard\\error.tsx",
+        "src\\app\\dashboard\\page.tsx",
+        "src\\app\\employees\\error.tsx",
+        "src\\app\\employees\\page.tsx",
+        "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+        "src\\app\\evaluations\\[id]\\error.tsx",
+        "src\\app\\evaluations\\[id]\\page.tsx",
+        "src\\app\\favicon.ico",
+        "src\\app\\globals.css",
+        "src\\app\\layout.tsx",
+        "src\\app\\login\\page.tsx",
+        "src\\app\\page.tsx",
+        "src\\app\\reports\\page.tsx",
+        "src\\app\\teams\\error.tsx",
+        "src\\app\\teams\\page.tsx"
+      ]
+    },
+    {
+      "id": "layer_components",
+      "name": "UI Components",
+      "description": "Reusable UI elements and business components.",
+      "nodeIds": [
+        "src\\components\\charts\\GradeDistribution.tsx",
+        "src\\components\\evaluation\\CriteriaTab.tsx",
+        "src\\components\\evaluation\\EvaluationHeader.tsx",
+        "src\\components\\evaluation\\GroupNavTabs.tsx",
+        "src\\components\\layout\\AppLayout.tsx",
+        "src\\components\\layout\\PageHeader.tsx",
+        "src\\components\\layout\\PageTransition.tsx",
+        "src\\components\\layout\\PeriodSelector.tsx",
+        "src\\components\\layout\\Sidebar.tsx",
+        "src\\components\\modals\\CriteriaGroupModal.tsx",
+        "src\\components\\modals\\CriteriaModal.tsx",
+        "src\\components\\modals\\EmployeeModal.tsx",
+        "src\\components\\modals\\PeriodModal.tsx",
+        "src\\components\\modals\\TeamModal.tsx",
+        "src\\components\\reports\\CriteriaHeatmap.tsx",
+        "src\\components\\reports\\TeamComparison.tsx",
+        "src\\components\\reports\\TopPerformers.tsx",
+        "src\\components\\ui\\Accordion.tsx",
+        "src\\components\\ui\\DataTable.tsx",
+        "src\\components\\ui\\StatCard.tsx",
+        "src\\components\\ui\\Tabs.tsx"
+      ]
+    },
+    {
+      "id": "layer_logic",
+      "name": "Business Logic (Actions)",
+      "description": "Server actions and core business logic handlers.",
+      "nodeIds": [
+        "src\\actions\\criteria.ts",
+        "src\\actions\\evaluation.ts",
+        "src\\actions\\period.ts",
+        "src\\actions\\teams.ts",
+        "src\\actions\\users.ts"
+      ]
+    },
+    {
+      "id": "layer_data",
+      "name": "Data Access & Hooks",
+      "description": "Custom hooks, DB wrappers, and API clients (Supabase).",
+      "nodeIds": [
+        "src\\hooks\\use-db.ts",
+        "src\\lib\\db\\criteria.ts",
+        "src\\lib\\db\\evaluations.ts",
+        "src\\lib\\db\\teams.ts",
+        "src\\lib\\db\\users.ts"
+      ]
+    },
+    {
+      "id": "layer_types",
+      "name": "Types & Definitions",
+      "description": "TypeScript interfaces and database type definitions.",
+      "nodeIds": [
+        "src\\types\\database.ts",
+        "src\\types\\index.ts"
+      ]
+    },
+    {
+      "id": "layer_infrastructure",
+      "name": "Infrastructure & State",
+      "description": "Context providers, auth, and base library utilities.",
+      "nodeIds": [
+        "src\\contexts\\AuthContext.tsx",
+        "src\\lib\\scoring.ts",
+        "src\\lib\\supabase.ts",
+        "src\\providers\\query-provider.tsx"
+      ]
+    },
+    {
+      "id": "layer_config",
+      "name": "Configuration",
+      "description": "Project-level config files (Next.js, TS, ESLint).",
+      "nodeIds": [
+        ".env.local",
+        ".gitignore",
+        ".understand-anything\\.understandignore",
+        ".understand-anything\\tmp\\project_tree.txt",
+        ".understand-anything\\tmp\\scanner.js",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "eslint.config.mjs",
+        "GEMINI.md",
+        "lint.txt",
+        "lint_output.txt",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package.json",
+        "postcss.config.mjs",
+        "README.md",
+        "README.txt",
+        "TCDG.xlsx",
+        "tsconfig.json",
+        "tsconfig.tsbuildinfo"
+      ]
+    }
+  ],
+  "tour": {
+    "name": "Kurabe Codebase Tour",
+    "description": "Hướng dẫn khám phá cấu trúc và luồng xử lý chính của dự án Kurabe.",
+    "entryPoints": [
+      {
+        "file": "src/app/layout.tsx",
+        "description": "Root layout chứa cấu trúc khung, AuthContext, QueryProvider và Sidebar."
+      },
+      {
+        "file": "src/app/page.tsx",
+        "description": "Điểm bắt đầu của ứng dụng, thường điều hướng đến Dashboard hoặc Login."
+      }
+    ],
+    "highlights": [
+      {
+        "title": "Authentication System",
+        "files": [
+          "src/contexts/AuthContext.tsx",
+          "src/app/login/page.tsx"
+        ],
+        "description": "Quản lý trạng thái đăng nhập và bảo mật các routes."
+      },
+      {
+        "title": "Criteria Management",
+        "files": [
+          "src/app/criteria/page.tsx",
+          "src/actions/criteria.ts",
+          "src/lib/db/criteria.ts"
+        ],
+        "description": "Quản lý các tiêu chí đánh giá (CRUD) thông qua Server Actions và Supabase."
+      },
+      {
+        "title": "Evaluation Engine",
+        "files": [
+          "src/app/evaluations/[id]/page.tsx",
+          "src/actions/evaluation.ts",
+          "src/lib/scoring.ts"
+        ],
+        "description": "Logic cốt lõi để thực hiện và tính toán điểm đánh giá nhân viên."
+      },
+      {
+        "title": "Reporting & Charts",
+        "files": [
+          "src/app/reports/page.tsx",
+          "src/components/charts/GradeDistribution.tsx"
+        ],
+        "description": "Trực quan hóa dữ liệu đánh giá thông qua các biểu đồ."
+      }
+    ],
+    "techStack": [
+      "Next.js (App Router)",
+      "TypeScript",
+      "Supabase",
+      "TailwindCSS",
+      "Lucide React"
+    ]
+  },
+  "metadata": {
+    "generatedAt": "2026-05-07T06:17:33.127Z",
+    "version": "3.0",
+    "stats": {
+      "nodes": 76,
+      "edges": 183,
+      "layers": 7
+    }
+  }
+}

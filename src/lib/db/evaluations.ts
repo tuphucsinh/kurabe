@@ -1,10 +1,10 @@
 import { supabase } from '../supabase';
 import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber } from '@/types';
-import { Database } from '@/types/database';
+import { Tables, TablesInsert, Json } from '@/types/database';
 
-type DbPeriod = Database['public']['Tables']['evaluation_periods']['Row'];
-type DbEvaluation = Database['public']['Tables']['evaluations']['Row'] & { evaluation_rounds?: DbRound[] };
-type DbRound = Database['public']['Tables']['evaluation_rounds']['Row'];
+type DbPeriod = Tables<'evaluation_periods'>;
+type DbRound = Tables<'evaluation_rounds'>;
+type DbEvaluation = Tables<'evaluations'> & { evaluation_rounds?: DbRound[] };
 
 export async function getPeriods(): Promise<EvaluationPeriod[]> {
   const { data, error } = await supabase
@@ -105,22 +105,22 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
 }
 
 export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<Evaluation | null> {
-  const dbEval = {
+  const dbEval: TablesInsert<'evaluations'> = {
     id: evalData.id,
-    period_id: evalData.periodId,
-    employee_id: evalData.employeeId,
-    employee_role: evalData.employeeRole,
-    team_id: evalData.teamId,
-    current_round: evalData.currentRound,
-    status: evalData.status,
-    final_grade: evalData.finalGrade,
-    final_score: evalData.finalScore,
+    period_id: evalData.periodId || '',
+    employee_id: evalData.employeeId || '',
+    employee_role: evalData.employeeRole || 'Employee',
+    team_id: evalData.teamId || null,
+    current_round: evalData.currentRound ?? 1,
+    status: evalData.status || 'NotStarted',
+    final_grade: evalData.finalGrade || null,
+    final_score: evalData.finalScore ?? null,
     updated_at: new Date().toISOString()
   };
 
   const { data, error } = await supabase
     .from('evaluations')
-    .upsert(dbEval as any)
+    .upsert(dbEval)
     .select()
     .single();
 
@@ -133,24 +133,23 @@ export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<E
 }
 
 export async function upsertEvaluationRound(evaluationId: string, round: Partial<EvaluationRound>): Promise<void> {
-  const dbRound = {
+  const dbRound: TablesInsert<'evaluation_rounds'> = {
     evaluation_id: evaluationId,
-    round: round.round,
-    evaluator_id: round.evaluatorId,
-    evaluator_role: round.evaluatorRole,
-    scores: round.scores,
-    notes: round.notes,
-    total_score: round.totalScore,
-    grade: round.grade,
-    comment: round.comment,
-    additional_comment: round.additionalComment,
+    round: round.round || 1,
+    evaluator_id: round.evaluatorId || null,
+    evaluator_role: round.evaluatorRole || 'Employee',
+    scores: (round.scores as Json) || null,
+    notes: (round.notes as Json) || null,
+    total_score: round.totalScore ?? 0,
+    grade: round.grade || 'Pending',
+    comment: round.comment || null,
+    additional_comment: round.additionalComment || null,
     submitted_at: round.submittedAt || new Date().toISOString(),
-    updated_at: new Date().toISOString()
   };
 
   const { error } = await supabase
     .from('evaluation_rounds')
-    .upsert(dbRound as any, { onConflict: 'evaluation_id,round' });
+    .upsert(dbRound, { onConflict: 'evaluation_id,round' });
 
   if (error) console.error('Error upserting evaluation round:', error);
 }
@@ -204,3 +203,4 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
     createdAt: db.created_at || '',
   };
 }
+

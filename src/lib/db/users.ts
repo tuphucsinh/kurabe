@@ -1,8 +1,8 @@
 import { supabase } from '../supabase';
 import { User, Role } from '@/types';
-import { Database } from '@/types/database';
+import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
-type DbUser = Database['public']['Tables']['users']['Row'];
+type DbUser = Tables<'users'>;
 
 export async function getUsers(): Promise<User[]> {
   const { data, error } = await supabase
@@ -54,19 +54,19 @@ export async function getUsersByTeam(teamId: string): Promise<User[]> {
 }
 
 export async function upsertUser(user: Partial<User>): Promise<User | null> {
-  const dbUser = {
+  const dbUser: TablesInsert<'users'> = {
     id: user.id,
-    employee_code: user.employeeCode,
-    name: user.name,
-    role: user.role,
-    team_id: user.teamId,
-    join_date: user.joinDate,
-    avatar_url: user.avatar
+    employee_code: user.employeeCode || '',
+    name: user.name || '',
+    role: user.role || 'Employee',
+    team_id: user.teamId || null,
+    join_date: user.joinDate || null,
+    avatar_url: user.avatar || null
   };
 
   const { data, error } = await supabase
     .from('users')
-    .upsert(dbUser as any)
+    .upsert(dbUser)
     .select()
     .single();
 
@@ -79,9 +79,10 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
 }
 
 export async function softDeleteUser(id: string): Promise<void> {
+  const update: TablesUpdate<'users'> = { is_active: false };
   const { error } = await supabase
     .from('users')
-    .update({ is_active: false })
+    .update(update)
     .eq('id', id);
 
   if (error) console.error('Error soft deleting user:', error);
@@ -98,3 +99,4 @@ export function mapUserFromDb(dbUser: DbUser): User {
     avatar: dbUser.avatar_url || undefined,
   };
 }
+

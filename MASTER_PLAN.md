@@ -1,23 +1,17 @@
-# MASTER PLAN - KURABE DELETE FUNCTIONALITY
+# MASTER PLAN - KURABE (Personnel Evaluation System)
 
-## Phase 1: Infrastructure & Hooks
-- [ ] [#P1T01] [src/hooks/use-db.ts]: Thêm các hooks xóa sử dụng server actions.
-- [ ] [#P1T02] [.ai/DECISIONS_LOG.md]: Ghi nhận việc thêm chức năng xóa.
+## Phase 31: Database Type Refactor & Safety
+Refactor database library files to remove `as any` casts, implement proper mapping between camelCase and snake_case, and ensure full type safety using Supabase generated types.
 
-## Phase 2: Employees Page
-- [ ] [#P2T01] [src/app/employees/page.tsx]: Thêm cột thao tác với nút xóa nhân viên.
+## Phase 32: Understand Anything Tool (Emulation) [DONE]
+Emulated Cursor's 'Understand Anything' tool by scanning the codebase, analyzing file dependencies, identifying architectural layers, and generating a tour guide.
 
-## Phase 3: Teams Page
-- [ ] [#P3T02] [src/app/teams/page.tsx]: Thêm nút xóa vào thẻ nhóm.
+## Current Progress
+- Phase 1-30: [x] Core features, UI, Basic Supabase integration.
+- Phase 31: [ ] Database Type Refactor & Safety
+- Phase 32: [x] Understand Anything Tool (Emulation)
 
-## Phase 4: Criteria Page
-- [ ] [#P4T03] [src/app/criteria/page.tsx]: Thêm nút xóa cho tiêu chí và nhóm tiêu chí.
-
-## Phase 29: Performance Optimization & Cleanup
-- [x] Đã hoàn thành tối ưu hoá hooks (staleTime), AuthContext (giảm re-render), và xử lý dữ liệu Reports/Dashboard.
-
-## Phase 30: Linting & Tech Debt Cleanup
-- [x] Sửa lỗi type safety `error: any` sang `error: unknown` ở các file `src/actions/*`
-- [x] Xóa các unused imports và variable unused để dọn dẹp code
-- [x] Thêm `eslint-disable-next-line react-hooks/set-state-in-effect` cho các pattern SSR hydration guard và prop→state sync hợp lệ
-- [x] Cập nhật KNOWN_BUGS cho các lỗi `any` còn lại trong `src/lib/db/*` (Sẽ xử lý trong Phase Refactor riêng)
+## Technical Stack
+- Frontend: Next.js (App Router), TypeScript, Vanilla CSS.
+- Backend/DB: Supabase (PostgreSQL).
+- Deployment: Vercel.

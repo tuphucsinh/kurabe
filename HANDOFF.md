@@ -1,9 +1,22 @@
-# HANDOFF - Kurabe
-## Tiến độ
-- Hoàn thành Phase 30: Linting & Tech Debt Cleanup (TDD-First).
-- Đã xử lý các lỗi ESLint warning/error (unused vars, no-explicit-any ở src/actions, set-state-in-effect hợp lệ).
-- Cập nhật KNOWN_BUGS cho các issue chưa được giải quyết triệt để (như `any` type ở database layer `src/lib/db/*`).
+# HANDOFF - 2026-05-07
 
-## Blocker / Next Steps
-- Database layer (`src/lib/db/*`) vẫn còn một số lỗi `any` type do TypeScript không suy luận được type trả về từ hàm Supabase khi select nested data. Cần tạo riêng 1 Phase Refactor cho Database Types nếu cần thiết.
-- Hệ thống đã sẵn sàng cho các phase tính năng tiếp theo hoặc deploy.
+## 🎯 Mục tiêu đã hoàn thành
+- [x] Re-index GitNexus (commit `67aff7d`).
+- [x] Tạo báo cáo so sánh chi tiết UA vs GitNexus (`artifacts/kg_vs_gitnexus_v2.md`).
+- [x] Cập nhật `AGENTS.md` tích hợp workflow Dual-Tool (UA + GitNexus).
+
+## 🧠 Context hiện tại
+- GitNexus index đã khớp với codebase hiện tại (709 symbols).
+- Workflow mới yêu cầu đọc UA đầu phiên và dùng GitNexus `impact()` trước khi sửa code.
+- Master Plan và tasks đang ở trạng thái sẵn sàng cho Phase tiếp theo.
+
+## 🚧 Blockers / Next Steps
+- **Blockers**: Không có.
+- **Next steps**: Bắt đầu `/plan` cho feature tiếp theo dựa trên kiến trúc đã clear.
+
+## 🛠️ Trạng thái Tool
+- GitNexus: `Stale: false`.
+- UA Graph: `Stale: false` (chưa thay đổi folder).
+
+---
+*Session snapshot by Antigravity*
