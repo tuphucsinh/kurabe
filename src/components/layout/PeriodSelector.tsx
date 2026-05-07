@@ -39,14 +39,16 @@ export default function PeriodSelector() {
           bottom: window.innerHeight - rect.top + 8,
           left: 12,
           right: 12,
-          position: 'fixed'
+          position: 'fixed',
+          backgroundColor: '#0E4B66'
         });
       } else {
         setDropdownStyle({
-          bottom: window.innerHeight - rect.bottom, // align bottom with button
-          left: rect.right + 12, // flyout to the right
+          bottom: window.innerHeight - rect.bottom, 
+          left: rect.right + 12,
           width: '260px',
-          position: 'fixed'
+          position: 'fixed',
+          backgroundColor: '#0E4B66'
         });
       }
     }
@@ -86,12 +88,12 @@ export default function PeriodSelector() {
         <div 
           id="period-flyout-menu"
           style={dropdownStyle}
-          className="bg-[#0E4B66] border border-white/10 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
+          className="bg-[#0E4B66] backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
         >
-          <div className="px-4 py-3 border-b border-white/10 bg-black/20">
-            <h4 className="text-xs font-bold text-white/60 uppercase tracking-wider">Chọn kỳ đánh giá</h4>
+          <div className="px-4 py-3 border-b border-white/10 bg-black/30">
+            <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Chọn kỳ đánh giá</h4>
           </div>
-          <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+          <div className="max-h-[300px] overflow-y-auto custom-scrollbar bg-[#0E4B66]/50">
             {allPeriods.map((period) => {
               const isActive = period.id === currentPeriod.id;
               const isClosed = period.status === 'Closed';
@@ -103,8 +105,8 @@ export default function PeriodSelector() {
                     setCurrentPeriod(period);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors border-b border-white/5 last:border-0 ${
-                    isActive ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                  className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all border-b border-white/5 last:border-0 ${
+                    isActive ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <div className="min-w-0">

@@ -161,7 +161,7 @@ export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
     id: db.id,
     year: db.year,
     name: db.name,
-    status: db.status === 'active' ? 'Active' : 'Closed',
+    status: db.status?.toLowerCase() === 'active' ? 'Active' : 'Closed',
     createdBy: db.created_by || '',
     createdAt: db.created_at || '',
     closedAt: db.closed_at || undefined,

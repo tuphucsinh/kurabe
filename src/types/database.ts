@@ -18,35 +18,38 @@ export type Database = {
         Row: {
           applies_to: string | null
           code: string
+          default_level_index: number | null
           description: string | null
           group_id: string | null
           id: string
+          is_active: boolean | null
           name: string
           sort_order: number | null
           weight: number | null
-          default_level_index: number | null
         }
         Insert: {
           applies_to?: string | null
           code: string
+          default_level_index?: number | null
           description?: string | null
           group_id?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           sort_order?: number | null
           weight?: number | null
-          default_level_index?: number | null
         }
         Update: {
           applies_to?: string | null
           code?: string
+          default_level_index?: number | null
           description?: string | null
           group_id?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           sort_order?: number | null
           weight?: number | null
-          default_level_index?: number | null
         }
         Relationships: [
           {
@@ -62,6 +65,7 @@ export type Database = {
         Row: {
           code: string
           id: string
+          is_active: boolean | null
           name: string
           short_name: string | null
           sort_order: number | null
@@ -69,6 +73,7 @@ export type Database = {
         Insert: {
           code: string
           id?: string
+          is_active?: boolean | null
           name: string
           short_name?: string | null
           sort_order?: number | null
@@ -76,6 +81,7 @@ export type Database = {
         Update: {
           code?: string
           id?: string
+          is_active?: boolean | null
           name?: string
           short_name?: string | null
           sort_order?: number | null
@@ -341,18 +347,21 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          is_active: boolean | null
           leader_id: string | null
           name: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
           leader_id?: string | null
           name: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          is_active?: boolean | null
           leader_id?: string | null
           name?: string
         }
@@ -372,6 +381,7 @@ export type Database = {
           created_at: string | null
           employee_code: string
           id: string
+          is_active: boolean | null
           join_date: string | null
           name: string
           role: string
@@ -382,6 +392,7 @@ export type Database = {
           created_at?: string | null
           employee_code: string
           id?: string
+          is_active?: boolean | null
           join_date?: string | null
           name: string
           role: string
@@ -392,6 +403,7 @@ export type Database = {
           created_at?: string | null
           employee_code?: string
           id?: string
+          is_active?: boolean | null
           join_date?: string | null
           name?: string
           role?: string

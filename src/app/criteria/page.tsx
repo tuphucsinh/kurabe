@@ -5,7 +5,9 @@ import {
   useCriteria, 
   useUpsertCriteriaGroup, 
   useUpsertCriterion,
-  useUpdateDefaultLevel
+  useUpdateDefaultLevel,
+  useDeleteCriteriaGroup,
+  useDeleteCriterion
 } from '@/hooks/use-db';
 import { Criterion, CriteriaGroup } from '@/types';
 import { gradingLeader, gradingStaff } from '@/data/criteria';
@@ -14,7 +16,8 @@ import {
   Info, 
   Pencil, 
   Plus,
-  Star
+  Star,
+  Trash2
 } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import CriteriaModal from '@/components/modals/CriteriaModal';
@@ -31,6 +34,8 @@ export default function CriteriaPage() {
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();
   const updateDefaultLevel = useUpdateDefaultLevel();
+  const { mutate: deleteGroup } = useDeleteCriteriaGroup();
+  const { mutate: deleteCriterion } = useDeleteCriterion();
 
   const [activeGroupId, setActiveGroupId] = useState('A');
 
@@ -59,6 +64,18 @@ export default function CriteriaPage() {
   const handleSaveGroup = (group: { id: string; code: string; name: string; shortName: string }) => {
     upsertGroup.mutate(group);
     setActiveGroupId(group.code);
+  };
+
+  const handleDeleteGroup = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa nhóm tiêu chuẩn "${name}"? Tất cả tiêu chí trong nhóm này cũng sẽ bị xóa.`)) {
+      deleteGroup(id);
+    }
+  };
+
+  const handleDeleteCriterion = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tiêu chí "${name}"?`)) {
+      deleteCriterion(id);
+    }
   };
 
   const handleSetDefaultLevel = (criterionId: string, levelIndex: number, currentDefault: number | undefined) => {
@@ -174,16 +191,25 @@ export default function CriteriaPage() {
             <h2 className="text-2xl font-black text-on-surface flex items-center gap-3">
               Nhóm {safeGroupCode}: {activeGroup?.name}
               {activeGroup && (
-                <button
-                  onClick={() => {
-                    setEditingGroup(activeGroup);
-                    setGroupModalOpen(true);
-                  }}
-                  className="p-1.5 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                  title="Sửa nhóm"
-                >
-                  <Pencil size={18} />
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingGroup(activeGroup);
+                      setGroupModalOpen(true);
+                    }}
+                    className="p-1.5 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    title="Sửa nhóm"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGroup(activeGroup.id!, activeGroup.name)}
+                    className="p-1.5 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Xóa nhóm"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </>
               )}
             </h2>
           </div>
@@ -212,16 +238,24 @@ export default function CriteriaPage() {
                       )}
                     </h3>
                     
-                    <button
-                      onClick={() => {
-                        setEditingCriterion(criterion);
-                        setEditingGroupId(safeGroupId);
-                        setCriteriaModalOpen(true);
-                      }}
-                      className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
-                    >
-                      <Pencil size={18} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingCriterion(criterion);
+                          setEditingGroupId(safeGroupId);
+                          setCriteriaModalOpen(true);
+                        }}
+                        className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCriterion(criterion.id!, criterion.name)}
+                        className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">

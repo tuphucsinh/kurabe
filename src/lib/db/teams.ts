@@ -20,6 +20,7 @@ export async function getTeams(): Promise<Team[]> {
   const { data, error } = await supabase
     .from('teams')
     .select('*')
+    .eq('is_active', true)
     .order('name');
 
   if (error) {
@@ -35,6 +36,7 @@ export async function getTeamById(id: string): Promise<Team | null> {
     .from('teams')
     .select('*')
     .eq('id', id)
+    .eq('is_active', true)
     .single();
 
   if (error) {
@@ -45,6 +47,15 @@ export async function getTeamById(id: string): Promise<Team | null> {
   }
 
   return mapTeamFromDb(data);
+}
+
+export async function softDeleteTeam(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('teams')
+    .update({ is_active: false } as any)
+    .eq('id', id);
+
+  if (error) console.error('Error soft deleting team:', error.message || error);
 }
 
 function mapTeamFromDb(dbTeam: DbTeam): Team {

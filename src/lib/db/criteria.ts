@@ -17,6 +17,7 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
       name,
       short_name,
       sort_order,
+      is_active,
       criteria (
         id,
         code,
@@ -27,6 +28,7 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
         default_level_index,
         sort_order,
         group_id,
+        is_active,
         criterion_levels (
           id,
           criterion_id,
@@ -37,6 +39,8 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
         )
       )
     `)
+    .eq('is_active', true)
+    .eq('criteria.is_active', true)
     .order('sort_order');
 
   if (error) {
@@ -56,6 +60,7 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
       name,
       short_name,
       sort_order,
+      is_active,
       criteria (
         id,
         code,
@@ -66,6 +71,7 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
         default_level_index,
         sort_order,
         group_id,
+        is_active,
         criterion_levels (
           id,
           criterion_id,
@@ -77,6 +83,8 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
       )
     `)
     .eq('id', id)
+    .eq('is_active', true)
+    .eq('criteria.is_active', true)
     .single();
 
   if (error) {
@@ -181,6 +189,24 @@ export async function updateDefaultLevel(criterionId: string, levelIndex: number
     .eq('id', criterionId);
 
   if (error) console.error('Error updating default level:', error.message || error);
+}
+
+export async function softDeleteCriteriaGroup(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('criteria_groups')
+    .update({ is_active: false } as any)
+    .eq('id', id);
+
+  if (error) console.error('Error soft deleting criteria group:', error.message || error);
+}
+
+export async function softDeleteCriterion(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('criteria')
+    .update({ is_active: false } as any)
+    .eq('id', id);
+
+  if (error) console.error('Error soft deleting criterion:', error.message || error);
 }
 
 // Helpers

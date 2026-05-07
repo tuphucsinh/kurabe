@@ -48,4 +48,7 @@ Kurabe là hệ thống đánh giá hiệu suất nhân viên với giao diện 
   - Implemented PeriodSelector in Sidebar for dynamic switching.
   - Refactored Database Hooks and filtered Dashboard/Reports by selected period.
   - Added Manager actions for creating and closing evaluation periods.
-
+- [x] Phase 28: Implement Delete Functionalities
+  - Added delete hooks for Users, Teams, CriteriaGroups, and Criterions.
+  - Implemented delete buttons with confirmation across Employees, Teams, and Criteria pages.
+  - Fixed an unclosed HTML tag in `criteria/page.tsx`.

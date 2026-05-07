@@ -33,10 +33,11 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
       return { success: false, error: 'Lỗi tạo kỳ đánh giá: ' + (pError?.message || 'Unknown error') };
     }
 
-    // 2. Lấy danh sách TẤT CẢ nhân viên
+    // 2. Lấy danh sách TẤT CẢ nhân viên active
     const { data: employees, error: eError } = await supabase
       .from('users')
-      .select('id, role, team_id');
+      .select('id, role, team_id')
+      .eq('is_active', true);
 
     if (eError) {
       return { success: false, error: 'Lỗi lấy danh sách nhân viên: ' + eError.message };

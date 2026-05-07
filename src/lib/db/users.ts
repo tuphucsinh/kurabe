@@ -8,6 +8,7 @@ export async function getUsers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
     .select('*')
+    .eq('is_active', true)
     .order('name');
 
   if (error) {
@@ -23,6 +24,7 @@ export async function getUserById(id: string): Promise<User | null> {
     .from('users')
     .select('*')
     .eq('id', id)
+    .eq('is_active', true)
     .single();
 
   if (error) {
@@ -40,6 +42,7 @@ export async function getUsersByTeam(teamId: string): Promise<User[]> {
     .from('users')
     .select('*')
     .eq('team_id', teamId)
+    .eq('is_active', true)
     .order('name');
 
   if (error) {
@@ -73,6 +76,15 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
   }
 
   return mapUserFromDb(data);
+}
+
+export async function softDeleteUser(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({ is_active: false })
+    .eq('id', id);
+
+  if (error) console.error('Error soft deleting user:', error);
 }
 
 export function mapUserFromDb(dbUser: DbUser): User {

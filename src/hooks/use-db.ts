@@ -12,10 +12,14 @@ import {
   getEvaluationByEmployee
 } from '@/lib/db/evaluations';
 import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefaultLevel } from '@/lib/db/criteria';
+import { deleteUserAction } from '@/actions/users';
+import { deleteTeamAction } from '@/actions/teams';
+import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
+
 import { EvaluationRound, CriteriaGroup, Criterion } from '@/types';
 
 // Users
-export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: getUsers });
+export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: getUsers, staleTime: 5 * 60 * 1000 });
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserById(id), enabled: !!id });
 export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeam(teamId), enabled: !!teamId });
 
@@ -29,8 +33,19 @@ export const useUpsertUser = () => {
   });
 };
 
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteUserAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+
 // Teams
-export const useTeams = () => useQuery({ queryKey: ['teams'], queryFn: getTeams });
+export const useTeams = () => useQuery({ queryKey: ['teams'], queryFn: getTeams, staleTime: 5 * 60 * 1000 });
 export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamById(id), enabled: !!id });
 
 export const useUpsertTeam = () => {
@@ -43,14 +58,26 @@ export const useUpsertTeam = () => {
   });
 };
 
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteTeamAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+};
+
+
 // Periods & Evaluations
-export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods });
-export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod });
+export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods, staleTime: 10 * 60 * 1000 });
+export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod, staleTime: 10 * 60 * 1000 });
 
 export const useEvaluations = (periodId?: string) => useQuery({ 
   queryKey: ['evaluations', periodId], 
   queryFn: () => periodId ? getEvaluationsByPeriod(periodId) : getEvaluations(),
-  enabled: !!periodId 
+  enabled: !!periodId,
+  staleTime: 2 * 60 * 1000
 });
 
 export const useEvaluation = (id: string) => useQuery({ 
@@ -62,7 +89,7 @@ export const useEvaluation = (id: string) => useQuery({
 export const useEvaluationByEmployee = (employeeId: string, periodId?: string) => useQuery({ 
   queryKey: ['evaluation-by-employee', employeeId, periodId], 
   queryFn: () => getEvaluationByEmployee(employeeId, periodId), 
-  enabled: !!employeeId && !!periodId 
+  enabled: !!employeeId 
 });
 
 export const useUpsertEvaluation = () => {
@@ -89,7 +116,7 @@ export const useUpsertEvaluationRound = () => {
 };
 
 // Criteria
-export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: getAllCriteriaGroups });
+export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: getAllCriteriaGroups, staleTime: 5 * 60 * 1000 });
 
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
@@ -101,6 +128,17 @@ export const useUpsertCriteriaGroup = () => {
   });
 };
 
+export const useDeleteCriteriaGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteCriteriaGroupAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+    },
+  });
+};
+
+
 export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -111,6 +149,17 @@ export const useUpsertCriterion = () => {
     },
   });
 };
+
+export const useDeleteCriterion = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteCriterionAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+    },
+  });
+};
+
 
 export const useUpdateDefaultLevel = () => {
   const queryClient = useQueryClient();

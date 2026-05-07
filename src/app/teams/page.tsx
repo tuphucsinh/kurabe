@@ -1,6 +1,6 @@
 'use client';
 
-import { useUsers, useTeams, useEvaluations, useUpsertTeam } from '@/hooks/use-db';
+import { useUsers, useTeams, useEvaluations, useUpsertTeam, useDeleteTeam } from '@/hooks/use-db';
 import { Team } from '@/types';
 import { 
   Users, 
@@ -10,7 +10,8 @@ import {
   ChevronRight, 
   Plus,
   TrendingUp,
-  Edit2
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -24,6 +25,7 @@ export default function TeamsPage() {
   const { data: teams = [] } = useTeams();
   const { data: evaluations = [] } = useEvaluations();
   const upsertTeam = useUpsertTeam();
+  const { mutate: deleteTeam } = useDeleteTeam();
 
   const handleAddTeam = () => {
     setEditingTeam(null);
@@ -33,6 +35,12 @@ export default function TeamsPage() {
   const handleEditTeam = (team: Team) => {
     setEditingTeam(team);
     setIsModalOpen(true);
+  };
+
+  const handleDeleteTeam = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa nhóm "${name}"? Các nhân viên trong nhóm sẽ bị gán là "Chưa gán".`)) {
+      deleteTeam(id);
+    }
   };
 
   const handleSaveTeam = (data: Partial<Team>) => {
@@ -152,6 +160,17 @@ export default function TeamsPage() {
                       title="Chỉnh sửa nhóm"
                     >
                       <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteTeam(team.id, team.name);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                      title="Xóa nhóm"
+                    >
+                      <Trash2 size={16} />
                     </button>
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
                       {team.status}

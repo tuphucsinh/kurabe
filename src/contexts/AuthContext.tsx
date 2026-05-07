@@ -42,12 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .order('created_at', { ascending: false });
         
         const periods = (periodsData || []).map(mapPeriodFromDb);
-        setAllPeriods(periods);
+        let targetPeriod = null;
 
         // 2. Determine current period
         if (periods.length > 0) {
-          let targetPeriod = null;
-          
           if (savedPeriodId) {
             targetPeriod = periods.find(p => p.id === savedPeriodId);
           }
@@ -56,13 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!targetPeriod) {
             targetPeriod = periods.find(p => p.status === 'Active') || periods[0];
           }
-
-          if (targetPeriod) {
-            setCurrentPeriodState(targetPeriod);
-          }
         }
 
         // 3. Load user
+        let loadedUser = null;
         if (savedUserId) {
           const { data: userData } = await supabase
             .from('users')
@@ -71,19 +66,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single();
             
           if (userData) {
-            setUser(mapUserFromDb(userData));
+            loadedUser = mapUserFromDb(userData);
+          }
+        }
+        
+        // Batch state updates and check isInitialized to prevent Strict Mode double-render
+        if (!isInitialized) {
+          setAllPeriods(periods);
+          if (targetPeriod) {
+            setCurrentPeriodState(targetPeriod);
+          }
+          if (loadedUser) {
+            setUser(loadedUser);
           }
         }
       } catch (error) {
         console.error('Error loading auth context:', error);
       } finally {
-        setIsLoading(false);
-        setIsInitialized(true);
+        if (!isInitialized) {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
       }
     }
     
     loadAuth();
-  }, []);
+  }, [isInitialized]);
 
   const setCurrentPeriod = (period: EvaluationPeriod) => {
     setCurrentPeriodState(period);

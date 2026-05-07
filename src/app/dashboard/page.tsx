@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PeriodModal } from '@/components/modals/PeriodModal';
 import { closeEvaluationPeriod } from '@/actions/period';
 import { useState } from 'react';
-
+import { User } from '@/types';
 export default function DashboardPage() {
   const { currentPeriod, isManager, allPeriods } = useAuth();
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
@@ -21,11 +21,26 @@ export default function DashboardPage() {
 
   const isLoading = usersLoading || evalsLoading || teamsLoading;
 
+  const { userMap, usersByTeam } = useMemo(() => {
+    const map = new Map<string, User>();
+    const byTeam = new Map<string, User[]>();
+    users.forEach(u => {
+      map.set(u.id, u);
+      if (u.teamId) {
+        if (!byTeam.has(u.teamId)) {
+          byTeam.set(u.teamId, []);
+        }
+        byTeam.get(u.teamId)!.push(u);
+      }
+    });
+    return { userMap: map, usersByTeam: byTeam };
+  }, [users]);
+
   // Aggregate data from database
   const { totalEmployees, completedEvals, pendingEvals } = useMemo(() => {
     const total = users.filter((u) => u.role !== 'Manager').length;
     const completed = evaluations.filter((e) => {
-      const employee = users.find(u => u.id === e.employeeId);
+      const employee = userMap.get(e.employeeId);
       return e.status === 'Approved' && employee?.role !== 'Manager';
     }).length;
     return {
@@ -33,7 +48,7 @@ export default function DashboardPage() {
       completedEvals: completed,
       pendingEvals: total - completed
     };
-  }, [users, evaluations]);
+  }, [users, evaluations, userMap]);
   
   // Aggregate grades
   const gradeData = useMemo(() => {
@@ -60,7 +75,7 @@ export default function DashboardPage() {
   // Team status data
   const teamStatus = useMemo(() => {
     return teams.map((team) => {
-      const members = users.filter((u) => u.teamId === team.id);
+      const members = usersByTeam.get(team.id) || [];
       const completedMembers = members.filter((m) => 
         evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
       ).length;
@@ -72,7 +87,16 @@ export default function DashboardPage() {
         progress
       };
     });
-  }, [teams, users, evaluations]);
+  }, [teams, usersByTeam, evaluations]);
+
+  const recentActivities = useMemo(() => {
+    return evaluations.slice(0, 5).map((evaluation) => {
+      const employee = userMap.get(evaluation.employeeId);
+      const latestRound = evaluation.rounds[evaluation.rounds.length - 1];
+      const evaluator = latestRound ? userMap.get(latestRound.evaluatorId) : undefined;
+      return { evaluation, employee, evaluator };
+    });
+  }, [evaluations, userMap]);
 
   const handleClosePeriod = async () => {
     if (!currentPeriod || !window.confirm('Sau khi đóng, tất cả đánh giá trong kỳ này sẽ không thể chỉnh sửa. Bạn có chắc chắn?')) return;
@@ -203,26 +227,21 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-2 2xl:col-span-1">
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Hoạt động gần đây</h3>
           <div className="space-y-4 flex-1">
-            {evaluations.slice(0, 5).map((evaluation) => {
-              const employee = users.find(u => u.id === evaluation.employeeId);
-              const evaluator = users.find(u => u.id === evaluation.rounds[evaluation.rounds.length - 1]?.evaluatorId);
-              
-              return (
-                <div key={evaluation.id} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold flex-shrink-0">
-                    {evaluator?.name?.charAt(0) || '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-700">
-                      <span className="font-semibold">{evaluator?.name || 'Unknown'}</span> đã {evaluation.status === 'Approved' ? 'phê duyệt' : 'gửi'} đánh giá cho <span className="font-semibold">{employee?.name || 'Unknown'}</span>
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Xếp loại: <span className="font-bold text-slate-600">{evaluation.finalGrade || evaluation.rounds[0]?.grade || '-'}</span> • {new Date(evaluation.createdAt).toLocaleDateString('vi-VN')}
-                    </p>
-                  </div>
+            {recentActivities.map(({ evaluation, employee, evaluator }) => (
+              <div key={evaluation.id} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold flex-shrink-0">
+                  {evaluator?.name?.charAt(0) || '?'}
                 </div>
-              );
-            })}
+                <div>
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold">{evaluator?.name || 'Unknown'}</span> đã {evaluation.status === 'Approved' ? 'phê duyệt' : 'gửi'} đánh giá cho <span className="font-semibold">{employee?.name || 'Unknown'}</span>
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Xếp loại: <span className="font-bold text-slate-600">{evaluation.finalGrade || evaluation.rounds[0]?.grade || '-'}</span> • {new Date(evaluation.createdAt).toLocaleDateString('vi-VN')}
+                  </p>
+                </div>
+              </div>
+            ))}
             {evaluations.length === 0 && (
               <div className="text-center py-6 text-slate-500 text-sm">Chưa có hoạt động nào</div>
             )}

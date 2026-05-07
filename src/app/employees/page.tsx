@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUsers, useTeams, useEvaluations, useUpsertUser } from '@/hooks/use-db';
+import { useUsers, useTeams, useEvaluations, useUpsertUser, useDeleteUser } from '@/hooks/use-db';
 import { User } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
-import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown, Users } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown, Users, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface EmployeeTableItem extends User {
@@ -21,6 +21,7 @@ export default function EmployeesPage() {
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations();
   const { mutate: upsertUser } = useUpsertUser();
+  const { mutate: deleteUser } = useDeleteUser();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<string>('all');
@@ -107,6 +108,12 @@ export default function EmployeesPage() {
   const handleAdd = () => {
     setEditingEmployee(null);
     setIsModalOpen(true);
+  };
+  
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${name}"?`)) {
+      deleteUser(id);
+    }
   };
 
   const handleSaveEmployee = (data: Partial<User>) => {
@@ -208,6 +215,13 @@ export default function EmployeesPage() {
             title="Sửa"
           >
             <Edit2 size={18} />
+          </button>
+          <button
+            onClick={() => handleDelete(item.id, item.name)}
+            className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+            title="Xóa"
+          >
+            <Trash2 size={18} />
           </button>
         </div>
       ),

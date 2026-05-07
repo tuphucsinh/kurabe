@@ -16,7 +16,7 @@ import {
 
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import dynamic from 'next/dynamic';
-import { Grade } from '@/types';
+import { Grade, User } from '@/types';
 
 const TeamComparison = dynamic(() => import('@/components/reports/TeamComparison'), { 
   ssr: false,
@@ -79,28 +79,77 @@ export default function ReportsPage() {
   const reportData = useMemo(() => {
     if (isLoading) return null;
 
+    // Pre-build Maps for O(1) lookups
+    const userMap = new Map<string, User>();
+    const usersByTeam = new Map<string, User[]>();
+    
+    users.forEach(u => {
+      userMap.set(u.id, u);
+      if (!usersByTeam.has(u.teamId)) {
+        usersByTeam.set(u.teamId, []);
+      }
+      usersByTeam.get(u.teamId)!.push(u);
+    });
+
+    const teamMap = new Map(teams.map(t => [t.id, t]));
+
     // Filter by team
     const filteredUsers = selectedTeam === 'all' 
       ? users.filter(u => u.role !== 'Manager') 
-      : users.filter(u => u.teamId === selectedTeam && u.role !== 'Manager');
+      : (usersByTeam.get(selectedTeam) || []).filter(u => u.role !== 'Manager');
 
     const userIds = new Set(filteredUsers.map(u => u.id));
     
     // Filter evaluations
     const filteredEvals = evaluations.filter(e => userIds.has(e.employeeId));
 
+    // Single-pass Grade & Criteria Counting
+    let totalScore = 0;
+    let highGrades = 0;
+    const gradeCounts: Record<string, number> = {
+      'S': 0, 'A': 0, 'AB': 0, 'B': 0, 'C': 0, 'D': 0
+    };
+
+    const criteriaGroupIdMap = new Map<string, string>();
+    allCriteriaData.forEach(g => {
+      g.criteria.forEach(c => criteriaGroupIdMap.set(c.id, g.code));
+    });
+
+    const criteriaGroupScores: Record<string, { totalGroupScore: number, count: number }> = {
+      'A': { totalGroupScore: 0, count: 0 },
+      'B': { totalGroupScore: 0, count: 0 },
+      'C': { totalGroupScore: 0, count: 0 },
+      'D': { totalGroupScore: 0, count: 0 },
+      'E': { totalGroupScore: 0, count: 0 },
+      'F': { totalGroupScore: 0, count: 0 }
+    };
+
+    filteredEvals.forEach(e => {
+      const score = e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0);
+      const grade = (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null)) as string;
+      
+      totalScore += score;
+      
+      if (grade) {
+        if (['S', 'A', 'AB'].includes(grade)) highGrades++;
+        if (gradeCounts[grade] !== undefined) gradeCounts[grade]++;
+      }
+
+      const latestScores = (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].scores : {}) as Record<string, number>;
+      Object.entries(latestScores).forEach(([cid, s]) => {
+        const groupId = criteriaGroupIdMap.get(cid);
+        if (groupId && criteriaGroupScores[groupId]) {
+          criteriaGroupScores[groupId].totalGroupScore += s;
+          criteriaGroupScores[groupId].count++;
+        }
+      });
+    });
+
     // Stats
     const totalEmployees = filteredUsers.length;
     const evaluatedCount = filteredEvals.length;
     const pendingCount = totalEmployees - evaluatedCount;
-    
-    const totalScore = filteredEvals.reduce((sum, e) => sum + (e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0)), 0);
     const avgScore = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
-    
-    const highGrades = filteredEvals.filter(e => {
-      const g = e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
-      return g && ['S', 'A', 'AB'].includes(g as string);
-    }).length;
     const highGradeRate = evaluatedCount > 0 ? (highGrades / evaluatedCount) * 100 : 0;
 
     // Grade Distribution
@@ -116,20 +165,29 @@ export default function ReportsPage() {
     const grades: Grade[] = ['S', 'A', 'AB', 'B', 'C', 'D'];
     const gradeDistribution = grades.map(g => ({
       grade: g,
-      count: filteredEvals.filter(e => (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null)) === g).length,
-      color: gradeColorMap[g] || 'bg-slate-400'
+      count: gradeCounts[g as string] || 0,
+      color: gradeColorMap[g as string] || 'bg-slate-400'
     }));
 
     // Team Comparison
-    const teamStats = teams.map(t => {
-      const teamUsers = users.filter(u => u.teamId === t.id);
-      const teamEvals = evaluations.filter(e => teamUsers.some(u => u.id === e.employeeId));
-      const teamAvg = teamEvals.length > 0 
-        ? teamEvals.reduce((sum, e) => sum + (e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0)), 0) / teamEvals.length 
-        : 0;
+    const teamStatsMap = new Map<string, { id: string, name: string, totalScore: number, count: number }>();
+    teams.forEach(t => teamStatsMap.set(t.id, { id: t.id, name: t.name, totalScore: 0, count: 0 }));
+
+    evaluations.forEach(e => {
+      const user = userMap.get(e.employeeId);
+      if (user && teamStatsMap.has(user.teamId)) {
+        const score = e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0);
+        const teamStat = teamStatsMap.get(user.teamId)!;
+        teamStat.totalScore += score;
+        teamStat.count++;
+      }
+    });
+
+    const teamStats = Array.from(teamStatsMap.values()).map(ts => {
+      const teamAvg = ts.count > 0 ? ts.totalScore / ts.count : 0;
       return {
-        id: t.id,
-        name: t.name,
+        id: ts.id,
+        name: ts.name,
         avgScore: teamAvg,
         progress: (teamAvg / 150) * 100 // Assume 150 is max
       };
@@ -137,34 +195,20 @@ export default function ReportsPage() {
 
     // Criteria Group Analysis (A-F)
     const groupCodes: string[] = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const flatCriteria = allCriteriaData.flatMap(g => g.criteria.map(c => ({ ...c, groupId: g.code })));
     const criteriaAnalysis = groupCodes.map(group => {
-      const groupCriteriaIds = flatCriteria.filter(c => c.groupId === group).map(c => c.id);
-      let totalGroupScore = 0;
-      let count = 0;
-
-      filteredEvals.forEach(e => {
-        const latestScores = (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].scores : {}) as Record<string, number>;
-        groupCriteriaIds.forEach(cid => {
-          if (latestScores[cid] !== undefined) {
-            totalGroupScore += latestScores[cid];
-            count++;
-          }
-        });
-      });
-
+      const stats = criteriaGroupScores[group] || { totalGroupScore: 0, count: 0 };
       return {
         group,
-        avgScore: count > 0 ? totalGroupScore / count : 0,
-        percentage: count > 0 ? (totalGroupScore / (count * 5)) * 100 : 0 
+        avgScore: stats.count > 0 ? stats.totalGroupScore / stats.count : 0,
+        percentage: stats.count > 0 ? (stats.totalGroupScore / (stats.count * 5)) * 100 : 0 
       };
     });
 
     // Top Performers
     const topPerformers = filteredEvals
       .map(e => {
-        const user = users.find(u => u.id === e.employeeId);
-        const team = teams.find(t => t.id === user?.teamId);
+        const user = userMap.get(e.employeeId);
+        const team = teamMap.get(user?.teamId);
         return {
           id: e.employeeId,
           name: user?.name || 'Unknown',
