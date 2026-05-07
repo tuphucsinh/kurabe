@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Criterion, CriteriaGroup, EvaluationRound } from '@/types';
+import { CriteriaGroup, EvaluationRound } from '@/types';
 import { Info, StickyNote, History } from 'lucide-react';
 
 interface CriteriaTabProps {

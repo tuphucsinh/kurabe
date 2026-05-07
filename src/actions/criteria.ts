@@ -8,8 +8,8 @@ export async function deleteCriteriaGroupAction(id: string) {
     await softDeleteCriteriaGroup(id);
     revalidatePath('/criteria');
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -18,7 +18,7 @@ export async function deleteCriterionAction(id: string) {
     await softDeleteCriterion(id);
     revalidatePath('/criteria');
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

@@ -6,7 +6,7 @@ import { User } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
-import { Search, Filter, Plus, Edit2, FileText, ChevronLeft, ChevronRight, ChevronDown, Users, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface EmployeeTableItem extends User {

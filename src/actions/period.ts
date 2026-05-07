@@ -2,7 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
-import { EvalStatus, Role, Grade } from '@/types';
+import { Grade } from '@/types';
 import { Database } from '@/types/database';
 
 type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
@@ -92,8 +92,8 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
 
     revalidatePath('/admin/periods');
     return { success: true, periodId: period.id };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 
@@ -114,7 +114,7 @@ export async function closeEvaluationPeriod(periodId: string) {
 
     revalidatePath('/admin/periods');
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }

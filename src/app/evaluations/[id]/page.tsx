@@ -83,6 +83,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
     async function loadData() {
       if (employee && evaluation) {

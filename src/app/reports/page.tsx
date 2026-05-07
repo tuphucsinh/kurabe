@@ -208,7 +208,7 @@ export default function ReportsPage() {
     const topPerformers = filteredEvals
       .map(e => {
         const user = userMap.get(e.employeeId);
-        const team = teamMap.get(user?.teamId);
+        const team = teamMap.get(user?.teamId ?? '');
         return {
           id: e.employeeId,
           name: user?.name || 'Unknown',

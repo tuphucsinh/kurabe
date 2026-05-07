@@ -50,7 +50,6 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
         ? criterion.levels.map(l => ({ ...l })) 
         : [{ label: '', points: 0 }]);
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGroupId(groupId || groups[0]?.id || '');
       setIdSuffix('');
       setName('');

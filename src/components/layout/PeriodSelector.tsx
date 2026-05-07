@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDown, Calendar, Check } from 'lucide-react';
-import { EvaluationPeriod } from '@/types';
 
 export default function PeriodSelector() {
   const { currentPeriod, allPeriods, setCurrentPeriod } = useAuth();
@@ -14,6 +13,7 @@ export default function PeriodSelector() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

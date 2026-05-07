@@ -28,6 +28,7 @@ export default function CriteriaGroupModal({
     if (!isOpen) return;
     
     if (group) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCode(group.code || '');
       setName(group.name);
       setShortName(group.shortName || '');

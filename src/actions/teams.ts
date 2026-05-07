@@ -8,7 +8,7 @@ export async function deleteTeamAction(id: string) {
     await softDeleteTeam(id);
     revalidatePath('/teams');
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

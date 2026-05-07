@@ -16,8 +16,6 @@ interface EvaluationHeaderProps {
 export default function EvaluationHeader({
   employee,
   isLeader,
-  scores,
-  criteriaGroups,
   allPreviousRounds,
   grade,
   totalScore,

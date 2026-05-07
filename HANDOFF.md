@@ -1,13 +1,9 @@
-# HANDOFF
+# HANDOFF - Kurabe
+## Tiến độ
+- Hoàn thành Phase 30: Linting & Tech Debt Cleanup (TDD-First).
+- Đã xử lý các lỗi ESLint warning/error (unused vars, no-explicit-any ở src/actions, set-state-in-effect hợp lệ).
+- Cập nhật KNOWN_BUGS cho các issue chưa được giải quyết triệt để (như `any` type ở database layer `src/lib/db/*`).
 
-## Progress
-- Implemented `useDeleteUser`, `useDeleteTeam`, `useDeleteCriteriaGroup`, `useDeleteCriterion` hooks in `src/hooks/use-db.ts` to call Supabase server actions.
-- Verified that delete actions are fully implemented in `employees/page.tsx`, `teams/page.tsx`, and `criteria/page.tsx`.
-- All delete features include a `window.confirm` dialog.
-- Found and fixed an unclosed HTML `div` tag in `src/app/criteria/page.tsx`.
-
-## Blockers
-- None.
-
-## Next Steps
-- Continue with other feature development as directed by user.
+## Blocker / Next Steps
+- Database layer (`src/lib/db/*`) vẫn còn một số lỗi `any` type do TypeScript không suy luận được type trả về từ hàm Supabase khi select nested data. Cần tạo riêng 1 Phase Refactor cho Database Types nếu cần thiết.
+- Hệ thống đã sẵn sàng cho các phase tính năng tiếp theo hoặc deploy.

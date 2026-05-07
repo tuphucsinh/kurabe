@@ -24,6 +24,7 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
 
   useEffect(() => {
     if (teams.length > 0 && !formData.teamId && !employee) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(prev => ({ ...prev, teamId: teams[0].id }));
     }
   }, [teams, employee, formData.teamId]);
