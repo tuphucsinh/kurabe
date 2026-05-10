@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
 import { User as UserType, Role } from '@/types';
 import { useTeams } from '@/hooks/use-db';
@@ -14,42 +14,44 @@ interface EmployeeModalProps {
 
 export default function EmployeeModal({ isOpen, onClose, onSave, employee }: EmployeeModalProps) {
   const { data: teams = [] } = useTeams();
-  const [formData, setFormData] = useState<Partial<UserType>>({
-    name: '',
-    employeeCode: '',
-    role: 'Employee',
-    teamId: '',
-    joinDate: new Date().toISOString().split('T')[0],
-  });
-
-  useEffect(() => {
-    if (teams.length > 0 && !formData.teamId && !employee) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormData(prev => ({ ...prev, teamId: teams[0].id }));
-    }
-  }, [teams, employee, formData.teamId]);
-
-  useEffect(() => {
-    if (employee) {
-      setFormData({
-        name: employee.name,
-        employeeCode: employee.employeeCode || '',
-        role: employee.role,
-        teamId: employee.teamId,
-        joinDate: employee.joinDate || new Date().toISOString().split('T')[0],
-      });
-    } else {
-      setFormData({
-        name: '',
-        employeeCode: '',
-        role: 'Employee',
-        teamId: teams[0]?.id || '',
-        joinDate: new Date().toISOString().split('T')[0],
-      });
-    }
-  }, [employee, isOpen, teams]);
+  const firstTeamId = teams[0]?.id || '';
 
   if (!isOpen) return null;
+
+  return (
+    <EmployeeModalContent
+      key={`${employee?.id || 'new'}-${firstTeamId}`}
+      onClose={onClose}
+      onSave={onSave}
+      employee={employee}
+      teams={teams}
+      firstTeamId={firstTeamId}
+    />
+  );
+}
+
+interface EmployeeModalContentProps {
+  onClose: () => void;
+  onSave: (employee: Partial<UserType>) => void;
+  employee?: UserType | null;
+  teams: { id: string; name: string }[];
+  firstTeamId: string;
+}
+
+function EmployeeModalContent({
+  onClose,
+  onSave,
+  employee,
+  teams,
+  firstTeamId
+}: EmployeeModalContentProps) {
+  const [formData, setFormData] = useState<Partial<UserType>>({
+    name: employee?.name || '',
+    employeeCode: employee?.employeeCode || '',
+    role: employee?.role || 'Employee',
+    teamId: employee?.teamId || firstTeamId,
+    joinDate: employee?.joinDate || new Date().toISOString().split('T')[0],
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

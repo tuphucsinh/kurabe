@@ -1,21 +1,37 @@
-import { User, Evaluation, EvaluationRound, RoundNumber } from '@/types';
+import { User, Evaluation, EvaluationRound, Role, RoundNumber } from '@/types';
+import {
+  EvaluatorSelector,
+  getEvaluationFlow,
+  getNextEvaluationStep,
+} from '@/lib/evaluation-workflow';
+
+function matchesEvaluatorSelector(
+  selector: EvaluatorSelector,
+  evaluator: User,
+  target: User | Evaluation
+): boolean {
+  if (selector === 'SELF') {
+    const targetId = 'employeeId' in target ? target.employeeId : target.id;
+    return evaluator.id === targetId;
+  }
+
+  if (selector === 'SubLeader') {
+    return evaluator.role === 'SubLeader' && evaluator.teamId === target.teamId;
+  }
+
+  if (selector === 'Leader') {
+    return evaluator.role === 'Leader' && evaluator.teamId === target.teamId;
+  }
+
+  return evaluator.role === 'Manager';
+}
 
 /**
  * Kiểm tra quyền đánh giá (thường ở Round 1)
  */
 export function canEvaluate(evaluator: User, target: User): boolean {
-  // Tự đánh giá
-  if (evaluator.id === target.id) return true;
-
-  // SubLeader đánh giá nhân viên cùng team
-  if (evaluator.role === 'SubLeader' && evaluator.teamId === target.teamId) {
-    return target.role === 'Employee';
-  }
-
-  // Leader không đánh giá trực tiếp nhân viên ở R1 (nhân viên tự đánh giá hoặc SubLeader đánh giá)
-  // Nhưng Leader tự đánh giá mình
-  
-  return false;
+  const [firstStep] = getEvaluationFlow(target.role);
+  return matchesEvaluatorSelector(firstStep.evaluator, evaluator, target);
 }
 
 /**
@@ -25,23 +41,14 @@ export function canReview(reviewer: User, evaluation: Evaluation, allUsers: User
   const targetEmployee = allUsers.find(u => u.id === evaluation.employeeId);
   if (!targetEmployee) return false;
 
-  // Round 2: Leader review SubLeader và Employee cùng team, Manager review Leader
-  if (evaluation.currentRound === 2) {
-    if (reviewer.role === 'Leader' && reviewer.teamId === evaluation.teamId) {
-      return targetEmployee.role === 'Employee' || targetEmployee.role === 'SubLeader';
-    }
-    if (reviewer.role === 'Manager') {
-      return targetEmployee.role === 'Leader';
-    }
+  const currentStep = getEvaluationFlow(targetEmployee.role)
+    .find(step => step.round === evaluation.currentRound);
+
+  if (!currentStep || currentStep.evaluator === 'SELF') {
     return false;
   }
 
-  // Round 3: Manager review tất cả
-  if (evaluation.currentRound === 3) {
-    return reviewer.role === 'Manager';
-  }
-
-  return false;
+  return matchesEvaluatorSelector(currentStep.evaluator, reviewer, evaluation);
 }
 
 /**
@@ -63,12 +70,21 @@ export function canSubmitRound(evaluation: Evaluation, round: RoundNumber): bool
 }
 
 /**
- * Lấy round tiếp theo
+ * Lấy round tiếp theo theo role người được đánh giá
+ */
+export function getNextRoundForEmployeeRole(
+  employeeRole: Role,
+  currentRound: RoundNumber
+): RoundNumber | null {
+  const nextStep = getNextEvaluationStep(employeeRole, currentRound);
+  return nextStep.isFinal ? null : nextStep.round;
+}
+
+/**
+ * @deprecated Dùng getNextRoundForEmployeeRole(employeeRole, currentRound).
  */
 export function getNextRound(currentRound: RoundNumber): RoundNumber | null {
-  if (currentRound === 1) return 2;
-  if (currentRound === 2) return 3;
-  return null;
+  return getNextRoundForEmployeeRole('Employee', currentRound);
 }
 
 /**
@@ -87,9 +103,6 @@ export function canViewEvaluation(user: User, evaluation: Evaluation): boolean {
   
   // Chủ sở hữu xem của mình
   if (user.id === evaluation.employeeId) return true;
-  
-  // Leader xem team của mình
-  if (user.role === 'Leader' && user.teamId === evaluation.teamId) return true;
   
   // Người đang đánh giá/review
   if (evaluation.rounds.some(r => r.evaluatorId === user.id)) return true;

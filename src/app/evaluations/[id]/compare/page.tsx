@@ -3,7 +3,9 @@
 import { use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
+import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -23,9 +25,10 @@ interface ComparePageProps {
 export default function ComparePage({ params }: ComparePageProps) {
   const router = useRouter();
   const { id } = use(params);
+  const { user } = useAuth();
   
   const { data: employee, isLoading: loadingUser } = useUser(id);
-  const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id);
+  const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id, undefined, user);
   const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
 
   const allRounds = useMemo(() => {
@@ -35,8 +38,7 @@ export default function ComparePage({ params }: ComparePageProps) {
 
   const criteria = useMemo(() => {
     if (!employee || groups.length === 0) return [];
-    const isLeader = employee.role !== 'Employee';
-    const role = isLeader ? 'Leader' : 'Employee';
+    const role = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
     
     return groups.map(group => {
       const filteredCriteria = group.criteria?.filter(
@@ -49,10 +51,15 @@ export default function ComparePage({ params }: ComparePageProps) {
   const allCriteria = useMemo(() => criteria.flatMap(g => g.criteria), [criteria]);
 
   // Score results for each round
-  const roundResults = useMemo(() => 
-    allRounds.map(r => ({ round: r, result: calculateRoundScore(r) })), 
-    [allRounds]
-  );
+  const roundResults = useMemo(() => {
+    if (!employee) return [];
+    const evaluatorRole = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
+
+    return allRounds.map(r => ({
+      round: r,
+      result: calculateRoundScore({ ...r, evaluatorRole }),
+    }));
+  }, [allRounds, employee]);
 
   // Tìm tiêu chí có thay đổi giữa BẤT KỲ 2 round nào
   const changedCriteriaIds = useMemo(() => {
@@ -343,7 +350,9 @@ export default function ComparePage({ params }: ComparePageProps) {
                   <h3 className="text-xs font-black text-outline uppercase tracking-widest">
                     Tiêu chí giữ nguyên ({unchangedCriteria.length})
                   </h3>
-                  <span className="text-[10px] font-bold text-outline/50 uppercase">R1 = R2 = R3</span>
+                  <span className="text-[10px] font-bold text-outline/50 uppercase">
+                    {allRounds.length > 1 ? `Không đổi qua ${allRounds.length} vòng` : 'Chưa có vòng để so sánh'}
+                  </span>
                 </div>
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {unchangedCriteria.map(criterion => {

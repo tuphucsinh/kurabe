@@ -16,7 +16,7 @@ import { deleteUserAction } from '@/actions/users';
 import { deleteTeamAction } from '@/actions/teams';
 import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
 
-import { EvaluationRound, CriteriaGroup, Criterion, User } from '@/types';
+import { EvaluationRound, Criterion, User } from '@/types';
 
 // Users
 export const useUsers = (requester?: User | null) => useQuery({ 

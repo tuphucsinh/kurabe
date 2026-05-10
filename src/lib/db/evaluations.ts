@@ -43,24 +43,14 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
     .select('*, evaluation_rounds(*)');
 
   if (user && user.role !== 'Manager') {
-    // 1. Lấy IDs của evaluations mà user là người đánh giá
     const { data: rounds } = await supabase
       .from('evaluation_rounds')
       .select('evaluation_id')
       .eq('evaluator_id', user.id);
     const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
 
-    // 2. Xác định các vai trò thấp hơn trong team
-    const rolesBelow: Role[] = [];
-    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
-    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
-
-    // 3. Xây dựng bộ lọc OR
-    let orFilters = [`employee_id.eq.${user.id}`]; // Bản thân
-    if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`); // Được gán đánh giá
-    if (user.teamId && rolesBelow.length > 0) {
-      orFilters.push(`and(team_id.eq.${user.teamId},employee_role.in.(${rolesBelow.join(',')}))`); // Cấp dưới trong team
-    }
+    const orFilters = [`employee_id.eq.${user.id}`];
+    if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
 
     query = query.or(orFilters.join(','));
   }
@@ -95,18 +85,8 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
   if (user && user.role !== 'Manager') {
     const isOwner = evaluation.employeeId === user.id;
     const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
-    
-    // Kiểm tra cấp dưới trong cùng team
-    const rolesBelow: Role[] = [];
-    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
-    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
-    
-    const isTeamMemberBelow = 
-      user.teamId && 
-      evaluation.teamId === user.teamId && 
-      rolesBelow.includes(evaluation.employeeRole);
-    
-    if (!isOwner && !isEvaluator && !isTeamMemberBelow) {
+
+    if (!isOwner && !isEvaluator) {
       return null;
     }
   }
@@ -127,15 +107,8 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
       .eq('evaluator_id', user.id);
     const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
 
-    const rolesBelow: Role[] = [];
-    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
-    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
-
-    let orFilters = [`employee_id.eq.${user.id}`];
+    const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
-    if (user.teamId && rolesBelow.length > 0) {
-      orFilters.push(`and(team_id.eq.${user.teamId},employee_role.in.(${rolesBelow.join(',')}))`);
-    }
 
     query = query.or(orFilters.join(','));
   }
@@ -175,17 +148,8 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
   if (user && user.role !== 'Manager') {
     const isOwner = evaluation.employeeId === user.id;
     const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
-    
-    const rolesBelow: Role[] = [];
-    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
-    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
-    
-    const isTeamMemberBelow = 
-      user.teamId && 
-      evaluation.teamId === user.teamId && 
-      rolesBelow.includes(evaluation.employeeRole);
-    
-    if (!isOwner && !isEvaluator && !isTeamMemberBelow) {
+
+    if (!isOwner && !isEvaluator) {
       return null;
     }
   }
@@ -292,5 +256,4 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
     createdAt: db.created_at || '',
   };
 }
-
 

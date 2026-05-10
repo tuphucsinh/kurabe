@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
 import { User, Evaluation, EvaluationRound, CriteriaGroup } from '@/types';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
 import EvaluationHeader from '@/components/evaluation/EvaluationHeader';
@@ -21,6 +21,10 @@ import {
 import { isRoundLocked } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
 import { saveEvaluationRound } from '@/actions/evaluation';
+import {
+  getMaxEvaluationRound,
+  isLeaderGradingRole,
+} from '@/lib/evaluation-workflow';
 
 interface EvaluationState {
   employee: User | null;
@@ -90,7 +94,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     async function loadData() {
       if (employee && evaluation) {
         // Fetch criteria from DB
-        const roleForCriteria = employee.role === 'Employee' ? 'Employee' : 'Leader';
+        const roleForCriteria = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
         const dbCriteria = await getCriteriaForRole(roleForCriteria);
         setCriteriaGroups(dbCriteria);
 
@@ -154,6 +158,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   const activeGroup = criteriaGroups.find(g => g.id === activeGroupId) || criteriaGroups[0];
   const isLocked = currentRoundData ? isRoundLocked(currentRoundData) : false;
+  const usesLeaderGrading = isLeaderGradingRole(employee.role);
+  const maxRound = getMaxEvaluationRound(employee.role);
 
   const handleSave = async (isSubmit: boolean) => {
     if (!evaluation || !currentRoundData) return;
@@ -171,7 +177,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       );
 
       if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] });
         if (isSubmit) {
           alert('Đánh giá đã được gửi thành công!');
           router.push('/employees');
@@ -195,7 +201,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     evaluationId: evaluation.id,
     round: evaluation.currentRound,
     evaluatorId: currentRoundData?.evaluatorId || '',
-    evaluatorRole: employee.role === 'Employee' ? 'Employee' : 'Leader',
+    evaluatorRole: usesLeaderGrading ? 'Leader' : 'Employee',
     scores,
     notes,
     totalScore: 0,
@@ -215,7 +221,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             <div className="flex items-center gap-2 text-sm text-outline font-medium">
               <span>Đánh giá</span>
               <ChevronRight size={14} />
-              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Lần {evaluation.currentRound} / 3</span>
+              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Lần {evaluation.currentRound} / {maxRound}</span>
               {allPreviousRounds.length > 0 && (
                 <button 
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
@@ -265,7 +271,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
           <EvaluationHeader
             employee={employee}
-            isLeader={employee.role !== 'Employee'}
+            isLeader={usesLeaderGrading}
             scores={scores}
             criteriaGroups={criteriaGroups}
             allPreviousRounds={allPreviousRounds}
