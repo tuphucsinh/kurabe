@@ -1,6 +1,7 @@
 'use client';
 
 import { useUsers, useTeams, useEvaluations, useUpsertTeam, useDeleteTeam } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
 import { Team } from '@/types';
 import { 
   Users, 
@@ -21,9 +22,10 @@ export default function TeamsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
-  const { data: users = [] } = useUsers();
-  const { data: teams = [] } = useTeams();
-  const { data: evaluations = [] } = useEvaluations();
+  const { user } = useAuth();
+  const { data: users = [] } = useUsers(user);
+  const { data: teams = [] } = useTeams(user);
+  const { data: evaluations = [] } = useEvaluations(undefined, user);
   const upsertTeam = useUpsertTeam();
   const { mutate: deleteTeam } = useDeleteTeam();
 

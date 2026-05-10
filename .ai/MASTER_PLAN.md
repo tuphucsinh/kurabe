@@ -1,65 +1,9 @@
-# MASTER PLAN - Kurabe
+# MASTER_PLAN.md
 
-## Project Overview
-Kurabe là hệ thống đánh giá hiệu suất nhân viên với giao diện hiện đại, tập trung vào trải nghiệm người dùng và so sánh kết quả giữa các vòng đánh giá.
+## Completed Phases
+### Phase 32: Data Management & Reset 2026
+- Xóa thành công dữ liệu kỳ đánh giá 2026 (ID: `818f9273-2f73-49be-9463-9d82a1719797`) khỏi Database.
+- Bổ sung Server Action `deleteEvaluationPeriod` để hỗ trợ xóa kỳ đánh giá từ UI.
 
-## Phase Progress
-
-- [x] Phase 1-17: Initial development (Core features, UI design, mock data)
-- [x] Phase 18: Optimization & Comparison Page
-  - Chuyển logic so sánh các vòng sang trang riêng biệt (`/evaluations/[id]/compare`)
-  - Tối ưu hóa UI trang chi tiết đánh giá
-  - Cleanup mã nguồn (xóa các component cũ không dùng)
-- [x] Phase 19: Cập nhật quản lý Nhóm (Modal Thêm/Sửa)
-  - Thêm TeamModal để quản lý thông tin nhóm.
-  - Tích hợp modal vào TeamsPage (Thêm/Sửa).
-
-
-- [x] Phase 21: Refactor & Optimization
-  - Unify Role types.
-  - Dead code cleanup.
-  - Tách component (Header, Tabs) để tối ưu page.tsx.
-  - State consolidation (useReducer).
-  - Tối ưu bundle size (framer-motion lazy load).
-- [x] Phase 22: CRUD Tiêu chuẩn Đánh giá
-  - Hỗ trợ description cho Criterion.
-  - Thêm / Sửa Tiêu chuẩn qua CriteriaModal (auto-prefix mã, dynamic options).
-  - Thêm / Sửa Nhóm Tiêu chuẩn qua CriteriaGroupModal.
-  - Tích hợp in-memory CRUD vào CriteriaPage.
-- [x] Phase 23: UI Polish — Modal, Description & Group ShortName
-  - Thêm `shortName` cho CriteriaGroup, hỗ trợ hiển thị tên rút gọn trên Tab.
-  - Tối ưu layout `CriteriaModal` (compact layout, theme color sync).
-  - Hiển thị `description` tiêu chuẩn trực tiếp trên danh sách.
-- [x] Phase 24: Supabase Integration
-  - Foundation: SDK setup, schema DDL (8 bảng), seed data.
-  - DAL: Query functions cho Users, Teams, Evaluations, Criteria.
-  - Integration: Server Actions migrate, AuthContext + Pages refactor.
-  - Cleanup: Xóa mock data, consolidate types, verify build.
-- [x] Phase 25: Bug Fixes & Optimization
-  - Fix status case mismatch ('active' vs 'Active') & AuthContext dependencies.
-  - Type safety: Typed Supabase client & DAL mappers, replaced 'any' casts.
-  - Dead code: Cleaned ~500 lines of hardcoded data & unused components.
-  - UX/Perf: Added Error boundaries, LazyMotion, home redirect, and fixed UI placeholders.
-- [x] Phase 26: Login using Employee Code
-  - Changed login logic to query by `employee_code` instead of `id`.
-  - Updated Login UI to accept and display Employee Code.
-- [x] Phase 27: Multi-period Evaluation Management
-  - Expanded AuthContext to manage global evaluation periods.
-  - Implemented PeriodSelector in Sidebar for dynamic switching.
-  - Refactored Database Hooks and filtered Dashboard/Reports by selected period.
-  - Added Manager actions for creating and closing evaluation periods.
-- [x] Phase 28: Implement Delete Functionalities
-  - Added delete hooks for Users, Teams, CriteriaGroups, and Criterions.
-  - Implemented delete buttons with confirmation across Employees, Teams, and Criteria pages.
-  - Fixed an unclosed HTML tag in `criteria/page.tsx`.
-- [x] Phase 29: Performance Optimization & Cleanup
-  - Đã hoàn thành tối ưu hoá hooks (staleTime), AuthContext (giảm re-render), và xử lý dữ liệu Reports/Dashboard.
-- [x] Phase 30: Linting & Tech Debt Cleanup (TDD-First)
-  - Sửa lỗi type safety `error: any` sang `error: unknown` ở các file `src/actions/*`.
-  - Xóa các unused imports và variable unused để dọn dẹp code.
-  - Thêm `eslint-disable-next-line react-hooks/set-state-in-effect` cho các pattern SSR hydration guard.
-  - Cập nhật KNOWN_BUGS cho các lỗi `any` còn lại trong `src/lib/db/*`.
-- [x] Phase 31: Database Type Refactor & Safety
-  - Refactor `upsertUser`, `upsertTeam`, `upsertCriteriaGroup`, `upsertCriterion`, `upsertEvaluation` để thỏa mãn Supabase generated types.
-  - Loại bỏ hoàn toàn `as any` ép kiểu trong các hàm `upsert`, `insert`, `update` tại `src/lib/db/*.ts`.
-  - Định nghĩa chính xác nested relationship types cho Criteria và Evaluations (rounds, levels).
+## Next Phases
+- [ ] Phase 33: New Feature Development

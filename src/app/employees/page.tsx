@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useUsers, useTeams, useEvaluations, useUpsertUser, useDeleteUser } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
@@ -17,9 +18,10 @@ interface EmployeeTableItem extends User {
 }
 
 export default function EmployeesPage() {
-  const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { data: teams = [], isLoading: teamsLoading } = useTeams();
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations();
+  const { user } = useAuth();
+  const { data: users = [], isLoading: usersLoading } = useUsers(user);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
   const { mutate: upsertUser } = useUpsertUser();
   const { mutate: deleteUser } = useDeleteUser();
 

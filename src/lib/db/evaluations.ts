@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber, User, PeriodStatus } from '@/types';
 import { Tables, TablesInsert, Json } from '@/types/database';
 
 type DbPeriod = Tables<'evaluation_periods'>;
@@ -37,11 +37,35 @@ export async function getActivePeriod(): Promise<EvaluationPeriod | null> {
   return mapPeriodFromDb(data);
 }
 
-export async function getEvaluations(): Promise<Evaluation[]> {
-  const { data, error } = await supabase
+export async function getEvaluations(user?: User | null): Promise<Evaluation[]> {
+  let query = supabase
     .from('evaluations')
-    .select('*, evaluation_rounds(*)')
-    .order('created_at', { ascending: false });
+    .select('*, evaluation_rounds(*)');
+
+  if (user && user.role !== 'Manager') {
+    // 1. Lấy IDs của evaluations mà user là người đánh giá
+    const { data: rounds } = await supabase
+      .from('evaluation_rounds')
+      .select('evaluation_id')
+      .eq('evaluator_id', user.id);
+    const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
+
+    // 2. Xác định các vai trò thấp hơn trong team
+    const rolesBelow: Role[] = [];
+    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
+    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
+
+    // 3. Xây dựng bộ lọc OR
+    let orFilters = [`employee_id.eq.${user.id}`]; // Bản thân
+    if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`); // Được gán đánh giá
+    if (user.teamId && rolesBelow.length > 0) {
+      orFilters.push(`and(team_id.eq.${user.teamId},employee_role.in.(${rolesBelow.join(',')}))`); // Cấp dưới trong team
+    }
+
+    query = query.or(orFilters.join(','));
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching evaluations:', error);
@@ -51,7 +75,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
   return (data || []).map(mapEvaluationFromDb);
 }
 
-export async function getEvaluationById(id: string): Promise<Evaluation | null> {
+export async function getEvaluationById(id: string, user?: User | null): Promise<Evaluation | null> {
   const { data, error } = await supabase
     .from('evaluations')
     .select('*, evaluation_rounds(*)')
@@ -59,19 +83,64 @@ export async function getEvaluationById(id: string): Promise<Evaluation | null> 
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching evaluation:', error);
+    if (error.code !== 'PGRST116') {
+      console.error('Error fetching evaluation:', error);
+    }
     return null;
   }
 
-  return mapEvaluationFromDb(data);
+  const evaluation = mapEvaluationFromDb(data);
+
+  // Security check cho non-managers
+  if (user && user.role !== 'Manager') {
+    const isOwner = evaluation.employeeId === user.id;
+    const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
+    
+    // Kiểm tra cấp dưới trong cùng team
+    const rolesBelow: Role[] = [];
+    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
+    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
+    
+    const isTeamMemberBelow = 
+      user.teamId && 
+      evaluation.teamId === user.teamId && 
+      rolesBelow.includes(evaluation.employeeRole);
+    
+    if (!isOwner && !isEvaluator && !isTeamMemberBelow) {
+      return null;
+    }
+  }
+
+  return evaluation;
 }
 
-export async function getEvaluationsByPeriod(periodId: string): Promise<Evaluation[]> {
-  const { data, error } = await supabase
+export async function getEvaluationsByPeriod(periodId: string, user?: User | null): Promise<Evaluation[]> {
+  let query = supabase
     .from('evaluations')
     .select('*, evaluation_rounds(*)')
-    .eq('period_id', periodId)
-    .order('created_at', { ascending: false });
+    .eq('period_id', periodId);
+
+  if (user && user.role !== 'Manager') {
+    const { data: rounds } = await supabase
+      .from('evaluation_rounds')
+      .select('evaluation_id')
+      .eq('evaluator_id', user.id);
+    const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
+
+    const rolesBelow: Role[] = [];
+    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
+    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
+
+    let orFilters = [`employee_id.eq.${user.id}`];
+    if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
+    if (user.teamId && rolesBelow.length > 0) {
+      orFilters.push(`and(team_id.eq.${user.teamId},employee_role.in.(${rolesBelow.join(',')}))`);
+    }
+
+    query = query.or(orFilters.join(','));
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching evaluations by period:', error);
@@ -81,7 +150,7 @@ export async function getEvaluationsByPeriod(periodId: string): Promise<Evaluati
   return (data || []).map(mapEvaluationFromDb);
 }
 
-export async function getEvaluationByEmployee(employeeId: string, periodId?: string): Promise<Evaluation | null> {
+export async function getEvaluationByEmployee(employeeId: string, periodId?: string, user?: User | null): Promise<Evaluation | null> {
   let query = supabase
     .from('evaluations')
     .select('*, evaluation_rounds(*)')
@@ -89,19 +158,39 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
 
   if (periodId) {
     query = query.eq('period_id', periodId);
-  } else {
-    // Nếu không truyền periodId, lấy bản ghi mới nhất
-    query = query.order('created_at', { ascending: false });
   }
 
-  const { data, error } = await query.limit(1).single();
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching employee evaluation:', error);
+    console.error('Error fetching evaluation by employee:', error);
     return null;
   }
 
-  return mapEvaluationFromDb(data);
+  if (!data) return null;
+
+  const evaluation = mapEvaluationFromDb(data);
+
+  // Authorization check cho non-managers
+  if (user && user.role !== 'Manager') {
+    const isOwner = evaluation.employeeId === user.id;
+    const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
+    
+    const rolesBelow: Role[] = [];
+    if (user.role === 'Leader') rolesBelow.push('SubLeader', 'Employee');
+    else if (user.role === 'SubLeader') rolesBelow.push('Employee');
+    
+    const isTeamMemberBelow = 
+      user.teamId && 
+      evaluation.teamId === user.teamId && 
+      rolesBelow.includes(evaluation.employeeRole);
+    
+    if (!isOwner && !isEvaluator && !isTeamMemberBelow) {
+      return null;
+    }
+  }
+
+  return evaluation;
 }
 
 export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<Evaluation | null> {
@@ -160,7 +249,7 @@ export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
     id: db.id,
     year: db.year,
     name: db.name,
-    status: db.status?.toLowerCase() === 'active' ? 'Active' : 'Closed',
+    status: (db.status?.charAt(0).toUpperCase() + db.status?.slice(1).toLowerCase()) as PeriodStatus || 'Closed',
     createdBy: db.created_by || '',
     createdAt: db.created_at || '',
     closedAt: db.closed_at || undefined,
@@ -203,4 +292,5 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
     createdAt: db.created_at || '',
   };
 }
+
 

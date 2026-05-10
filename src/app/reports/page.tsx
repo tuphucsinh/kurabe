@@ -65,12 +65,12 @@ function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: {
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ReportsPage() {
-  const { currentPeriod } = useAuth();
+  const { currentPeriod, user } = useAuth();
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
 
-  const { data: users = [], isLoading: loadingUsers } = useUsers();
-  const { data: teams = [], isLoading: loadingTeams } = useTeams();
-  const { data: evaluations = [], isLoading: loadingEvals } = useEvaluations(currentPeriod?.id);
+  const { data: users = [], isLoading: loadingUsers } = useUsers(user);
+  const { data: teams = [], isLoading: loadingTeams } = useTeams(user);
+  const { data: evaluations = [], isLoading: loadingEvals } = useEvaluations(currentPeriod?.id, user);
   const { data: allCriteriaData = [], isLoading: loadingCriteria } = useCriteria();
 
   const isLoading = loadingUsers || loadingTeams || loadingEvals || loadingCriteria;

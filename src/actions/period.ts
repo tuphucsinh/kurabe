@@ -118,3 +118,37 @@ export async function closeEvaluationPeriod(periodId: string) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+
+/**
+ * Xóa một kỳ đánh giá và toàn bộ dữ liệu liên quan.
+ */
+export async function deleteEvaluationPeriod(periodId: string) {
+  try {
+    // 1. Xóa rounds liên quan
+    const { data: evals } = await supabase
+      .from('evaluations')
+      .select('id')
+      .eq('period_id', periodId);
+
+    if (evals && evals.length > 0) {
+      const evalIds = evals.map(e => e.id);
+      await supabase.from('evaluation_rounds').delete().in('evaluation_id', evalIds);
+      // 2. Xóa evaluations
+      await supabase.from('evaluations').delete().eq('period_id', periodId);
+    }
+
+    // 3. Xóa period
+    const { error } = await supabase
+      .from('evaluation_periods')
+      .delete()
+      .eq('id', periodId);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/admin/periods');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}

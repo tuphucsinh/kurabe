@@ -4,12 +4,21 @@ import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
 type DbUser = Tables<'users'>;
 
-export async function getUsers(): Promise<User[]> {
-  const { data, error } = await supabase
+export async function getUsers(requester?: User | null): Promise<User[]> {
+  let query = supabase
     .from('users')
     .select('*')
-    .eq('is_active', true)
-    .order('name');
+    .eq('is_active', true);
+
+  if (requester && requester.role !== 'Manager') {
+    if (requester.role === 'Employee') {
+      query = query.eq('id', requester.id);
+    } else if ((requester.role === 'Leader' || requester.role === 'SubLeader') && requester.teamId) {
+      query = query.eq('team_id', requester.teamId);
+    }
+  }
+
+  const { data, error } = await query.order('name');
 
   if (error) {
     console.error('Error fetching users:', error);

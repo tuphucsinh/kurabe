@@ -135,33 +135,106 @@ Bypass 4-Gate. Dùng `Sequential Thinking` + `systematic-debugging` skill.
 
 | Trigger | Hành vi |
 |---|---|
-| **Mở conversation mới** | Đọc `HANDOFF.md` + `tasks.md` + `.ai/KNOWN_BUGS.md`. Set context. Báo 1 dòng mục tiêu. |
+| **Mở conversation mới** | Đọc `HANDOFF.md` + `tasks.md` + `.ai/KNOWN_BUGS.md`. Đọc UA layers (`.understand-anything/knowledge-graph.json` → mục `layers` + `tour`). Set context. Báo 1 dòng mục tiêu. |
 | **`.tmp/SYSTEM_ALERT.md` tồn tại** | ĐỌC NGAY, cảnh báo user trước mọi thứ. |
-| **Phase 100% done** | Auto-sweep → `MASTER_PLAN.md`. |
+| **Phase 100% done** | Auto-sweep → `MASTER_PLAN.md`. Chạy `npx gitnexus analyze` để re-index. |
+| **Trước `/plan`** | Đọc UA layers để hiểu kiến trúc tổng thể trước khi băm task. |
+| **Trước `/do` (sửa code)** | Chạy `gitnexus_impact()` trên symbol sắp sửa. Báo risk level. |
+| **Trước commit** | Chạy `gitnexus_detect_changes()` để verify scope. |
 
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+---
 
-This project is indexed by GitNexus as **kurabe** (709 symbols, 945 relationships, 9 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+<!-- code-intelligence:start -->
+# Code Intelligence — Dual-Tool Workflow
+
+Dự án dùng **2 tool bổ trợ** với vai trò rõ ràng:
+
+| Tool | Vai trò | Dữ liệu |
+|---|---|---|
+| **Understand Anything (UA)** | 📐 Bản đồ kiến trúc (high-level) | 76 files, 7 layers, tour guide |
+| **GitNexus** | 🔍 Symbol intelligence (low-level) | 709 symbols, 945 edges, 9 flows |
+
+## AI Session Workflow
+
+```
+┌─────────────────────────────────────────┐
+│          AI Session Workflow            │
+├─────────────────────────────────────────┤
+│                                         │
+│  📐 Đầu phiên / Lập kế hoạch (/plan)   │
+│  └→ Đọc UA: layers + tour guide        │
+│     (kiến trúc tổng thể, file nào      │
+│      thuộc layer nào, entry points)     │
+│                                         │
+│  🔍 Trước khi sửa code (/do)           │
+│  └→ GitNexus: impact() + context()     │
+│     (blast radius, callers, risk level) │
+│                                         │
+│  ✅ Trước khi commit                    │
+│  └→ GitNexus: detect_changes()         │
+│     (verify chỉ affect expected scope) │
+│                                         │
+│  🔄 Sau mỗi Phase hoàn thành           │
+│  └→ `npx gitnexus analyze` (bắt buộc) │
+│  └→ UA rebuild CHỈ KHI thay đổi        │
+│     cấu trúc folder hoặc kiến trúc lớn │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+## Understand Anything (UA) — Architecture Map
+
+**File**: `.understand-anything/knowledge-graph.json`
+
+**Khi nào đọc**:
+- Đầu phiên mới (mục `layers` + `tour` — ~50 dòng, tiết kiệm token)
+- Trước `/plan` để hiểu file nào thuộc layer nào
+- Khi onboard hoặc cần overview kiến trúc
+
+**Khi nào rebuild**:
+- Thêm/xóa/đổi tên thư mục
+- Thay đổi kiến trúc lớn (VD: tách module, thêm layer mới)
+- **KHÔNG cần rebuild** khi chỉ sửa logic trong file có sẵn
+
+**7 Layers**:
+1. Presentation (Pages) — `src/app/**`
+2. UI Components — `src/components/**`
+3. Business Logic (Actions) — `src/actions/**`
+4. Data Access & Hooks — `src/hooks/**`, `src/lib/db/**`
+5. Types & Definitions — `src/types/**`
+6. Infrastructure & State — `src/contexts/**`, `src/lib/**`, `src/providers/**`
+7. Configuration — root config files
+
+## GitNexus — Symbol Intelligence
+
+Indexed as **kurabe** (709 symbols, 945 relationships, 9 execution flows).
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
-## Always Do
+### Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+- **MUST run `gitnexus_impact()` before editing any symbol.** Report blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify scope.
+- **MUST warn the user** if impact returns HIGH or CRITICAL risk.
+- Use `gitnexus_context({name: "symbolName"})` for full 360° view (callers, callees, process participation).
+- Use `gitnexus_impact()` for blast radius before refactoring.
 
-## Never Do
+### Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+- NEVER edit a function/class/method without first running `gitnexus_impact`.
+- NEVER ignore HIGH or CRITICAL risk warnings.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename`.
+- NEVER commit without `gitnexus_detect_changes()`.
 
-## Resources
+### Update Triggers
+
+| Khi nào | Hành động |
+|---|---|
+| Phase hoàn thành | `npx gitnexus analyze` (bắt buộc) |
+| >5 commits mới kể từ lần index cuối | `npx gitnexus analyze` |
+| Tool cảnh báo "index is stale" | `npx gitnexus analyze` ngay |
+
+### Resources
 
 | Resource | Use for |
 |----------|---------|
@@ -170,15 +243,4 @@ This project is indexed by GitNexus as **kurabe** (709 symbols, 945 relationship
 | `gitnexus://repo/kurabe/processes` | All execution flows |
 | `gitnexus://repo/kurabe/process/{name}` | Step-by-step execution trace |
 
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+<!-- code-intelligence:end -->

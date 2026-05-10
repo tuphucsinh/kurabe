@@ -11,13 +11,13 @@ import { closeEvaluationPeriod } from '@/actions/period';
 import { useState } from 'react';
 import { User } from '@/types';
 export default function DashboardPage() {
-  const { currentPeriod, isManager, allPeriods } = useAuth();
+  const { currentPeriod, isManager, allPeriods, user } = useAuth();
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   
-  const { data: users = [], isLoading: usersLoading } = useUsers();
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id);
-  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: users = [], isLoading: usersLoading } = useUsers(user);
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id, user);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
 
   const isLoading = usersLoading || evalsLoading || teamsLoading;
 

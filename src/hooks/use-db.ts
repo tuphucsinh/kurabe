@@ -16,10 +16,14 @@ import { deleteUserAction } from '@/actions/users';
 import { deleteTeamAction } from '@/actions/teams';
 import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
 
-import { EvaluationRound, CriteriaGroup, Criterion } from '@/types';
+import { EvaluationRound, CriteriaGroup, Criterion, User } from '@/types';
 
 // Users
-export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: getUsers, staleTime: 5 * 60 * 1000 });
+export const useUsers = (requester?: User | null) => useQuery({ 
+  queryKey: ['users', requester?.id], 
+  queryFn: () => getUsers(requester), 
+  staleTime: 5 * 60 * 1000 
+});
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserById(id), enabled: !!id });
 export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeam(teamId), enabled: !!teamId });
 
@@ -45,7 +49,11 @@ export const useDeleteUser = () => {
 
 
 // Teams
-export const useTeams = () => useQuery({ queryKey: ['teams'], queryFn: getTeams, staleTime: 5 * 60 * 1000 });
+export const useTeams = (requester?: User | null) => useQuery({ 
+  queryKey: ['teams', requester?.id], 
+  queryFn: () => getTeams(requester), 
+  staleTime: 5 * 60 * 1000 
+});
 export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamById(id), enabled: !!id });
 
 export const useUpsertTeam = () => {
@@ -73,22 +81,21 @@ export const useDeleteTeam = () => {
 export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods, staleTime: 10 * 60 * 1000 });
 export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod, staleTime: 10 * 60 * 1000 });
 
-export const useEvaluations = (periodId?: string) => useQuery({ 
-  queryKey: ['evaluations', periodId], 
-  queryFn: () => periodId ? getEvaluationsByPeriod(periodId) : getEvaluations(),
-  enabled: !!periodId,
+export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({ 
+  queryKey: ['evaluations', periodId, user?.id], 
+  queryFn: () => periodId ? getEvaluationsByPeriod(periodId, user) : getEvaluations(user),
   staleTime: 2 * 60 * 1000
 });
 
-export const useEvaluation = (id: string) => useQuery({ 
-  queryKey: ['evaluation', id], 
-  queryFn: () => getEvaluationById(id), 
+export const useEvaluation = (id: string, user?: User | null) => useQuery({ 
+  queryKey: ['evaluation', id, user?.id], 
+  queryFn: () => getEvaluationById(id, user), 
   enabled: !!id 
 });
 
-export const useEvaluationByEmployee = (employeeId: string, periodId?: string) => useQuery({ 
-  queryKey: ['evaluation-by-employee', employeeId, periodId], 
-  queryFn: () => getEvaluationByEmployee(employeeId, periodId), 
+export const useEvaluationByEmployee = (employeeId: string, periodId?: string, user?: User | null) => useQuery({ 
+  queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id], 
+  queryFn: () => getEvaluationByEmployee(employeeId, periodId, user), 
   enabled: !!employeeId 
 });
 

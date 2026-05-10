@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
 import { User, Evaluation, EvaluationRound, CriteriaGroup } from '@/types';
+import { useAuth } from '@/contexts/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
 import EvaluationHeader from '@/components/evaluation/EvaluationHeader';
@@ -71,8 +72,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { id } = use(params);
   
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data: employee = null, isLoading: isLoadingUser } = useUser(id);
-  const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id);
+  const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id, undefined, user);
 
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
   const { scores, notes, comment, currentRoundData, allPreviousRounds } = state;
@@ -109,6 +111,17 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           const lastRound = prevRounds[prevRounds.length - 1];
           initialScores = { ...lastRound.scores };
           initialNotes = lastRound.notes || {};
+        }
+
+        // Pre-fill defaults from criteria when no scores exist yet
+        if (Object.keys(initialScores).length === 0) {
+          for (const group of dbCriteria) {
+            for (const criterion of group.criteria) {
+              if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
+                initialScores[criterion.id!] = criterion.levels[criterion.defaultLevelIndex].points;
+              }
+            }
+          }
         }
 
         dispatch({
@@ -158,7 +171,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       );
 
       if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id] });
+        queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, user?.id] });
         if (isSubmit) {
           alert('Đánh giá đã được gửi thành công!');
           router.push('/employees');
