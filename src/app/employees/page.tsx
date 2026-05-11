@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useUsers, useTeams, useEvaluations, useUpsertUser, useDeleteUser } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
+import { hasRoundDraft } from '@/data/workflow';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
@@ -15,6 +16,7 @@ interface EmployeeTableItem extends User {
   grade: string;
   score: number;
   gradeRound: number | null;
+  previousRoundScores: Array<{ round: number; score: number }>;
 }
 
 export default function EmployeesPage() {
@@ -30,6 +32,9 @@ export default function EmployeesPage() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
+  const canManageEmployees = user?.role === 'Manager' || user?.role === 'Leader';
+  const canDeleteEmployees = user?.role === 'Manager';
+  const isLeader = user?.role === 'Leader';
 
   const isLoading = usersLoading || teamsLoading || evalsLoading;
 
@@ -42,16 +47,22 @@ export default function EmployeesPage() {
         ? [...userEvals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
         : null;
 
-      const latestRound = latestEval?.rounds?.length
-        ? latestEval.rounds.reduce((max, r) => r.round > max.round ? r : max, latestEval.rounds[0])
+      const latestScoredRound = latestEval?.rounds?.filter(hasRoundDraft) || [];
+      const latestRound = latestScoredRound.length
+        ? latestScoredRound.reduce((max, r) => r.round > max.round ? r : max, latestScoredRound[0])
         : null;
+      const previousRoundScores = latestScoredRound
+        .filter(r => latestRound ? r.round !== latestRound.round : true)
+        .sort((a, b) => b.round - a.round)
+        .map(r => ({ round: r.round, score: r.totalScore }));
 
       return {
         ...user,
         teamName: user.role === 'Manager' ? 'Toàn bộ bộ phận' : (team?.name || 'Chưa gán'),
-        grade: latestEval?.finalGrade || latestRound?.grade || '-',
-        score: latestEval?.finalScore || latestRound?.totalScore || 0,
+        grade: latestEval?.finalGrade ?? latestRound?.grade ?? '-',
+        score: latestEval?.finalScore ?? latestRound?.totalScore ?? 0,
         gradeRound: latestRound?.round ?? null,
+        previousRoundScores,
       };
     });
   }, [users, teams, evaluations]);
@@ -103,22 +114,67 @@ export default function EmployeesPage() {
   }
 
   const handleEdit = (employee: User) => {
+    if (!canManageEmployees) {
+      alert('Bạn không có quyền sửa nhân viên.');
+      return;
+    }
+    if (isLeader) {
+      if (!user?.teamId || employee.teamId !== user.teamId) {
+        alert('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.');
+        return;
+      }
+      if (employee.role === 'Manager' || employee.role === 'Leader') {
+        alert('Leader không được sửa tài khoản Manager/Leader.');
+        return;
+      }
+    }
     setEditingEmployee(employee);
     setIsModalOpen(true);
   };
 
   const handleAdd = () => {
+    if (!canManageEmployees) {
+      alert('Bạn không có quyền thêm nhân viên.');
+      return;
+    }
     setEditingEmployee(null);
     setIsModalOpen(true);
   };
   
   const handleDelete = (id: string, name: string) => {
+    if (!canDeleteEmployees) {
+      alert('Bạn không có quyền xóa nhân viên.');
+      return;
+    }
     if (window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${name}"?`)) {
       deleteUser(id);
     }
   };
 
   const handleSaveEmployee = (data: Partial<User>) => {
+    if (!canManageEmployees) {
+      alert('Bạn không có quyền lưu thay đổi nhân viên.');
+      return;
+    }
+
+    if (isLeader) {
+      if (!user?.teamId) {
+        alert('Leader chưa được gán nhóm nên không thể thêm/sửa nhân viên.');
+        return;
+      }
+
+      const targetRole = data.role || editingEmployee?.role || 'Employee';
+      if (targetRole === 'Manager' || targetRole === 'Leader') {
+        alert('Leader chỉ được thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý.');
+        return;
+      }
+
+      if (editingEmployee && editingEmployee.teamId !== user.teamId) {
+        alert('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.');
+        return;
+      }
+    }
+
     const payload = editingEmployee 
       ? { ...editingEmployee, ...data } as User 
       : { 
@@ -127,6 +183,10 @@ export default function EmployeesPage() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         } as User;
+
+    if (isLeader && user?.teamId) {
+      payload.teamId = user.teamId;
+    }
     
     upsertUser(payload);
   };
@@ -179,24 +239,32 @@ export default function EmployeesPage() {
       header: 'Xếp loại gần nhất',
       sortable: true,
       render: (item) => (
-        <div className="flex items-center gap-2">
-          <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-            item.grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-            item.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-            item.grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-            item.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-            item.grade === 'C' ? 'bg-amber-100 text-amber-700' :
-            item.grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-          }`}>
-            {item.grade}
-          </span>
-          <div className="flex flex-col">
-            {item.gradeRound != null && (
-              <span className="text-[10px] text-slate-400 font-medium leading-none">L{item.gradeRound}</span>
-            )}
-            <span className="text-xs text-slate-400 font-medium">{item.score}</span>
+          <div className="flex items-center gap-2">
+            <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+              item.grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+              item.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+              item.grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+              item.grade === 'B' ? 'bg-blue-100 text-blue-700' :
+              item.grade === 'C' ? 'bg-amber-100 text-amber-700' :
+              item.grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+            }`}>
+              {item.grade}
+            </span>
+            <div className="flex items-end gap-2 tabular-nums">
+              {item.gradeRound != null && (
+                <div className="w-12 flex flex-col items-center leading-none">
+                  <span className="text-xs text-slate-700 font-bold">L{item.gradeRound}</span>
+                  <span className="text-base text-slate-800 font-bold mt-1">{item.score}</span>
+                </div>
+              )}
+              {item.previousRoundScores.map((roundData) => (
+                <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
+                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
       ),
     },
     {
@@ -211,20 +279,24 @@ export default function EmployeesPage() {
           >
             <FileText size={18} />
           </Link>
-          <button
-            onClick={() => handleEdit(item)}
-            className="p-2 text-outline hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
-            title="Sửa"
-          >
-            <Edit2 size={18} />
-          </button>
-          <button
-            onClick={() => handleDelete(item.id, item.name)}
-            className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-            title="Xóa"
-          >
-            <Trash2 size={18} />
-          </button>
+          {canManageEmployees && (!isLeader || (item.teamId === user?.teamId && item.role !== 'Manager' && item.role !== 'Leader')) && (
+            <button
+              onClick={() => handleEdit(item)}
+              className="p-2 text-outline hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+              title="Sửa"
+            >
+              <Edit2 size={18} />
+            </button>
+          )}
+          {canDeleteEmployees && (
+            <button
+              onClick={() => handleDelete(item.id, item.name)}
+              className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              title="Xóa"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
         </div>
       ),
     },
@@ -238,13 +310,15 @@ export default function EmployeesPage() {
           <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhân sự QAQC</h1>
           <p className="text-on-surface-variant mt-1 text-sm md:text-base">Danh sách chi tiết nhân viên và kết quả đánh giá năng lực</p>
         </div>
-        <button 
-          onClick={handleAdd}
-          className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
-        >
-          <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          Thêm nhân viên mới
-        </button>
+        {canManageEmployees && (
+          <button 
+            onClick={handleAdd}
+            className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
+          >
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            Thêm nhân viên mới
+          </button>
+        )}
       </div>
 
       {/* Filters Section */}
@@ -319,8 +393,9 @@ export default function EmployeesPage() {
         onClose={() => setIsModalOpen(false)}
         employee={editingEmployee}
         onSave={handleSaveEmployee}
+        restrictToTeamId={isLeader ? (user?.teamId || null) : null}
+        roleOptions={isLeader ? ['SubLeader', 'Employee'] : ['Manager', 'Leader', 'SubLeader', 'Employee']}
       />
     </div>
   );
 }
-

@@ -3,17 +3,18 @@
 import React, { useMemo } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
-import { Users, FileCheck, Clock, Activity, Plus, Lock } from 'lucide-react';
+import { Users, FileCheck, Clock, Activity, Plus, Lock, Trash2 } from 'lucide-react';
 import { useUsers, useEvaluations, useTeams } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { PeriodModal } from '@/components/modals/PeriodModal';
-import { closeEvaluationPeriod } from '@/actions/period';
+import { closeEvaluationPeriod, deleteEvaluationPeriod } from '@/actions/period';
 import { useState } from 'react';
 import { User } from '@/types';
 export default function DashboardPage() {
   const { currentPeriod, isManager, allPeriods, user } = useAuth();
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id, user);
@@ -118,6 +119,38 @@ export default function DashboardPage() {
     window.location.reload();
   };
 
+  const handleDeletePeriod = async () => {
+    if (!currentPeriod) return;
+
+    const confirmed = window.confirm(
+      `Bạn sắp xóa vĩnh viễn Kỳ ${currentPeriod.year}. Hành động này sẽ xóa toàn bộ evaluations và rounds của kỳ này. Bạn có chắc chắn muốn tiếp tục?`
+    );
+    if (!confirmed) return;
+
+    const expectedText = `XOA KY ${currentPeriod.year}`;
+    const typedText = window.prompt(
+      `Để xác nhận lần cuối, vui lòng nhập chính xác: ${expectedText}`
+    );
+
+    if (typedText !== expectedText) {
+      alert('Xác nhận không khớp. Hủy thao tác xóa kỳ.');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteEvaluationPeriod(currentPeriod.id);
+      if (result.success) {
+        alert(`Đã xóa Kỳ ${currentPeriod.year} thành công.`);
+        window.location.reload();
+      } else {
+        alert(result.error || 'Không thể xóa kỳ.');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -150,6 +183,17 @@ export default function DashboardPage() {
               >
                 <Lock size={16} />
                 {isClosing ? 'Đang đóng...' : 'Đóng kỳ'}
+              </button>
+            )}
+
+            {currentPeriod && (
+              <button
+                onClick={handleDeletePeriod}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 border border-rose-700 rounded-xl hover:bg-rose-700 transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+                {isDeleting ? 'Đang xóa...' : 'Xóa kỳ'}
               </button>
             )}
             

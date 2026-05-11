@@ -15,5 +15,13 @@
 - Đồng bộ khởi tạo kỳ, submit round, helper quyền, detail UI và compare UI theo rule: Manager tự đánh giá 1 vòng; Leader tự đánh giá rồi Manager; SubLeader tự đánh giá rồi Leader rồi Manager; Employee do SubLeader, Leader, Manager đánh giá.
 - Chuẩn hóa grade theo role người được đánh giá và loại bỏ giả định UI mọi evaluation đều có 3 vòng.
 
+### Phase 35: Draft-Gated Evaluation Visibility
+- Bổ sung `EvaluationRoundStatus` + `EvaluationAccessState` để tách rõ `edit/readonly/blocked`.
+- Đồng bộ quyền xem/sửa theo draft-gated workflow cho Employee/SubLeader/Leader/Manager, gồm guard Manager chỉ edit khi round trước đã submitted.
+- Chuẩn hóa mapping trạng thái round từ DB (`submitted_at` ưu tiên cao nhất), thêm fallback legacy dữ liệu nháp.
+- Siết server action submit/draft: dùng `actorId`, chặn save draft vào round đã submit, cập nhật status round/evaluation đúng flow, thêm rollback best-effort khi submit flow lỗi.
+- Hoàn thiện UI detail/compare theo access-state; compare chỉ hiển thị visible rounds và empty state `Chưa có đánh giá.`.
+- Cập nhật `tsconfig` loại `scratch/` khỏi typecheck để giữ baseline build sạch.
+
 ## Next Phases
-- [ ] Phase 35: TBD
+- [ ] Phase 31: Database Type Refactor & Safety

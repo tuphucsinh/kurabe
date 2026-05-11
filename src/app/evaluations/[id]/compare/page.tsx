@@ -6,6 +6,7 @@ import { useUser, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
 import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
+import { getEvaluationAccessState } from '@/data/workflow';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -15,7 +16,8 @@ import {
   History,
   AlertCircle,
   ArrowRight,
-  Loader2
+  Loader2,
+  Lock
 } from 'lucide-react';
 
 interface ComparePageProps {
@@ -31,10 +33,17 @@ export default function ComparePage({ params }: ComparePageProps) {
   const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id, undefined, user);
   const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
 
+  const accessState = useMemo(() => 
+    evaluation ? getEvaluationAccessState(user, evaluation) : null,
+  [user, evaluation]);
+
   const allRounds = useMemo(() => {
-    if (!evaluation || !evaluation.rounds) return [];
-    return [...evaluation.rounds].sort((a, b) => a.round - b.round);
-  }, [evaluation]);
+    if (!evaluation || !evaluation.rounds || !accessState) return [];
+    return [...evaluation.rounds]
+      .filter(r => accessState.visibleRounds.some(vr => vr.round === r.round))
+      .sort((a, b) => a.round - b.round);
+  }, [evaluation, accessState]);
+  const activeVisibleRound = allRounds.length > 0 ? allRounds[allRounds.length - 1].round : null;
 
   const criteria = useMemo(() => {
     if (!employee || groups.length === 0) return [];
@@ -83,12 +92,35 @@ export default function ComparePage({ params }: ComparePageProps) {
     );
   }
 
-  if (!employee || !evaluation) {
+  if (!employee || !evaluation || !accessState) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <AlertCircle className="w-12 h-12 text-red-500" />
         <p className="text-on-surface font-bold">Không tìm thấy dữ liệu nhân viên hoặc đánh giá.</p>
         <button onClick={() => router.back()} className="text-primary font-bold">Quay lại</button>
+      </div>
+    );
+  }
+
+  // Blocked UI
+  if (accessState.mode === 'blocked') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-red-50 rounded-full text-red-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Quyền truy cập bị từ chối</h2>
+        <p className="text-slate-500 max-w-md">
+          {accessState.reason === 'NO_DRAFT' 
+            ? 'Chưa có đánh giá.'
+            : 'Bạn không có quyền xem dữ liệu so sánh này.'}
+        </p>
+        <button 
+          onClick={() => router.back()}
+          className="px-8 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+        >
+          Quay lại trang đánh giá
+        </button>
       </div>
     );
   }
@@ -120,7 +152,7 @@ export default function ComparePage({ params }: ComparePageProps) {
           <div className="hidden md:flex items-center gap-3">
             <div className="flex flex-col items-end">
               <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Trạng thái hiện tại</span>
-              <span className="text-sm font-black text-on-surface">Lần {evaluation.currentRound}</span>
+              <span className="text-sm font-black text-on-surface">Lần {activeVisibleRound ?? '-'}</span>
             </div>
             <div className="p-3 bg-primary/10 rounded-2xl text-primary">
               <History size={24} />
@@ -138,6 +170,11 @@ export default function ComparePage({ params }: ComparePageProps) {
               <AlertCircle size={14} className="text-primary" />
               Tổng quan kết quả
             </h2>
+            {allRounds.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-[2rem] border border-dashed border-outline-variant shadow-sm">
+                <p className="text-sm text-outline font-medium">Chưa có đánh giá.</p>
+              </div>
+            ) : (
             <div className="flex items-center gap-4 overflow-x-auto pb-4 scrollbar-hide">
               {roundResults.map(({ round: r, result }, idx) => {
                 const prevResult = idx > 0 ? roundResults[idx - 1].result : null;
@@ -193,6 +230,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                 );
               })}
             </div>
+            )}
           </section>
 
           {/* ═══════ Main Comparison Table ═══════ */}

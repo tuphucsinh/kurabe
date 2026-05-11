@@ -20,13 +20,11 @@ type EvaluatorResolution = {
   role: Role;
 };
 
-function resolveInitialEvaluator(
+function resolveEvaluatorBySelector(
+  selector: EvaluatorSelector,
   employee: PeriodEmployee,
   employees: PeriodEmployee[]
 ): EvaluatorResolution | null {
-  const [firstStep] = getEvaluationFlow(employee.role);
-  const selector = firstStep.evaluator;
-
   if (selector === 'SELF') {
     return { id: employee.id, role: employee.role };
   }
@@ -47,14 +45,13 @@ function resolveInitialEvaluator(
     return leader ? { id: leader.id, role: leader.role } : null;
   }
 
+  // Mặc định tìm Manager đầu tiên nếu không có chỉ định khác
   const manager = employees.find(candidate => candidate.role === 'Manager');
   return manager ? { id: manager.id, role: manager.role } : null;
 }
 
-function getMissingInitialEvaluatorError(employee: PeriodEmployee): string {
-  const [firstStep] = getEvaluationFlow(employee.role);
-  const selector: EvaluatorSelector = firstStep.evaluator;
-  return `Không tìm thấy ${selector} phù hợp cho nhân viên ${employee.id} ở Round 1.`;
+function getMissingEvaluatorError(employeeId: string, selector: string, round: number): string {
+  return `Không tìm thấy ${selector} phù hợp cho nhân viên ${employeeId} ở Round ${round}.`;
 }
 
 /**
@@ -82,15 +79,17 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
     }));
     const initialEvaluators = new Map<string, EvaluatorResolution>();
 
+    // Validate evaluator round 1 trước khi tạo bất kỳ record nào.
     for (const employee of periodEmployees) {
-      const evaluator = resolveInitialEvaluator(employee, periodEmployees);
+      const [firstStep] = getEvaluationFlow(employee.role);
+      const evaluator = resolveEvaluatorBySelector(firstStep.evaluator, employee, periodEmployees);
       if (!evaluator) {
-        return { success: false, error: getMissingInitialEvaluatorError(employee) };
+        return { success: false, error: getMissingEvaluatorError(employee.id, firstStep.evaluator, firstStep.round) };
       }
       initialEvaluators.set(employee.id, evaluator);
     }
 
-    // 2. Tạo Evaluation Period sau khi validate được evaluator Round 1
+    // 2. Tạo Evaluation Period
     const { data: period, error: pError } = await supabase
       .from('evaluation_periods')
       .insert({
@@ -117,7 +116,7 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
       employee_id: emp.id,
       employee_role: emp.role,
       team_id: emp.team_id,
-      status: 'Draft',
+      status: 'NotStarted',
       current_round: 1,
       created_at: now,
       updated_at: now
@@ -134,38 +133,38 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
 
     const employeeMap = new Map(periodEmployees.map(emp => [emp.id, emp]));
 
-    // 4. Khởi tạo Round 1 theo hierarchy của vai trò nhân viên
-    const roundsData: InsertRound[] = insertedEvals.map((ev: { id: string; employee_id: string; employee_role: string }) => {
-      const employee = employeeMap.get(ev.employee_id) || {
-        id: ev.employee_id,
-        role: ev.employee_role as Role,
-        team_id: null
-      };
+    // 4. Khởi tạo Round 1 cho từng nhân viên
+    const roundsData: InsertRound[] = [];
+    
+    for (const ev of insertedEvals) {
+      const employee = employeeMap.get(ev.employee_id);
+      if (!employee) continue;
+
+      const flow = getEvaluationFlow(employee.role);
+      const firstStep = flow[0]; // Chỉ lấy Round 1
       const evaluator = initialEvaluators.get(employee.id);
+      if (!evaluator) continue;
 
-      if (!evaluator) {
-        throw new Error(getMissingInitialEvaluatorError(employee));
-      }
-
-      return {
+      roundsData.push({
         evaluation_id: ev.id,
-        round: 1,
+        round: firstStep.round,
         evaluator_id: evaluator.id,
         evaluator_role: evaluator.role,
         scores: {},
         notes: {},
         total_score: 0,
         grade: 'Pending' as Grade,
+        status: 'NotStarted',
         created_at: now
-      };
-    });
+      });
+    }
 
     const { error: rError } = await supabase
       .from('evaluation_rounds')
       .insert(roundsData);
 
     if (rError) {
-      return { success: false, error: 'Lỗi tạo vòng đánh giá đầu tiên: ' + rError.message };
+      return { success: false, error: 'Lỗi tạo các vòng đánh giá: ' + rError.message };
     }
 
     revalidatePath('/admin/periods');

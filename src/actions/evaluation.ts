@@ -10,6 +10,7 @@ import {
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
 import { Database } from '@/types/database';
+import { composeRoundNotes, SelectedLevelIndexes } from '@/lib/round-level-selection';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -107,9 +108,10 @@ async function resolveEvaluator(
 export async function saveEvaluationRound(
   evaluationId: string,
   round: RoundNumber,
-  evaluatorId: string,
+  actorId: string,
   scores: Record<string, number>,
   notes: Record<string, string>,
+  selectedLevelIndexes: SelectedLevelIndexes,
   comment: string,
   isSubmit: boolean = false
 ) {
@@ -132,18 +134,22 @@ export async function saveEvaluationRound(
 
     const { data: currentRound, error: currentRoundError } = await supabase
       .from('evaluation_rounds')
-      .select('submitted_at')
+      .select('submitted_at, status')
       .eq('evaluation_id', evaluationId)
       .eq('round', round)
-      .eq('evaluator_id', evaluatorId)
+      .eq('evaluator_id', actorId)
       .single();
 
     if (currentRoundError || !currentRound) {
       return { success: false, error: 'Không tìm thấy vòng đánh giá hiện tại.' };
     }
 
-    if (isSubmit && currentRound.submitted_at) {
+    if (isSubmit && (currentRound.submitted_at || currentRound.status === 'Submitted')) {
       return { success: true };
+    }
+
+    if (!isSubmit && (currentRound.submitted_at || currentRound.status === 'Submitted')) {
+      return { success: false, error: 'Vòng đánh giá đã khóa.' };
     }
 
     // 2. Tính toán điểm và grade theo role người được đánh giá
@@ -170,9 +176,10 @@ export async function saveEvaluationRound(
     }
     
     // 3. Cập nhật record round
+    const composedNotes = composeRoundNotes(notes, selectedLevelIndexes);
     const updateData: UpdateRound = {
       scores,
-      notes,
+      notes: composedNotes,
       comment,
       total_score: totalScore,
       grade: grade as Grade
@@ -180,6 +187,9 @@ export async function saveEvaluationRound(
 
     if (isSubmit) {
       updateData.submitted_at = now;
+      updateData.status = 'Submitted';
+    } else if (currentRound.status === 'NotStarted') {
+      updateData.status = 'Draft';
     }
 
     const { error: rError } = await supabase
@@ -187,14 +197,35 @@ export async function saveEvaluationRound(
       .update(updateData)
       .eq('evaluation_id', evaluationId)
       .eq('round', round)
-      .eq('evaluator_id', evaluatorId);
+      .eq('evaluator_id', actorId);
 
     if (rError) {
       return { success: false, error: 'Lỗi cập nhật kết quả: ' + rError.message };
     }
 
+    if (!isSubmit) {
+      const { data: evalState } = await supabase
+        .from('evaluations')
+        .select('status')
+        .eq('id', evaluationId)
+        .single();
+
+      if (evalState?.status === 'NotStarted') {
+        const { error: statusError } = await supabase
+          .from('evaluations')
+          .update({ status: 'Draft', updated_at: now })
+          .eq('id', evaluationId);
+
+        if (statusError) {
+          return { success: false, error: 'Lỗi cập nhật trạng thái bản nháp: ' + statusError.message };
+        }
+      }
+    }
+
     // 4. Nếu là Submit, xử lý logic chuyển Round tiếp theo hoặc kết thúc Evaluation
     if (isSubmit && nextStep) {
+      let submitFlowError: string | null = null;
+
       // 5. Nếu chưa phải round cuối, tạo record cho round tiếp theo trước khi advance evaluation
       if (!nextStep.isFinal && nextEvaluator) {
         const nextRoundData: InsertRound = {
@@ -206,36 +237,62 @@ export async function saveEvaluationRound(
           notes: {},
           total_score: 0,
           grade: 'Pending',
+          status: 'NotStarted',
           created_at: now
         };
 
-        const { error: nextRoundError } = await supabase
+        const { data: existingNextRound, error: existingNextRoundError } = await supabase
           .from('evaluation_rounds')
-          .insert(nextRoundData);
+          .select('id')
+          .eq('evaluation_id', evaluationId)
+          .eq('round', nextStep.round)
+          .maybeSingle();
 
-        if (nextRoundError) {
-          return { success: false, error: 'Lỗi tạo vòng đánh giá tiếp theo: ' + nextRoundError.message };
+        if (existingNextRoundError) {
+          submitFlowError = 'Lỗi kiểm tra vòng đánh giá tiếp theo: ' + existingNextRoundError.message;
+        } else if (!existingNextRound) {
+          const { error: nextRoundError } = await supabase
+            .from('evaluation_rounds')
+            .insert(nextRoundData);
+
+          if (nextRoundError) {
+            submitFlowError = 'Lỗi tạo vòng đánh giá tiếp theo: ' + nextRoundError.message;
+          }
         }
       }
 
-      const evalUpdate: UpdateEvaluation = {
-        status: nextStep.status,
-        current_round: nextStep.round,
-        updated_at: now
-      };
+      if (!submitFlowError) {
+        const evalUpdate: UpdateEvaluation = {
+          status: nextStep.status,
+          current_round: nextStep.round,
+          updated_at: now
+        };
 
-      if (nextStep.isFinal) {
-        evalUpdate.final_grade = grade;
-        evalUpdate.final_score = totalScore;
+        if (nextStep.isFinal) {
+          evalUpdate.final_grade = grade;
+          evalUpdate.final_score = totalScore;
+        }
+
+        const { error: eError } = await supabase
+          .from('evaluations')
+          .update(evalUpdate)
+          .eq('id', evaluationId);
+
+        if (eError) {
+          submitFlowError = 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message;
+        }
       }
 
-      const { error: eError } = await supabase
-        .from('evaluations')
-        .update(evalUpdate)
-        .eq('id', evaluationId);
+      if (submitFlowError) {
+        // Best-effort rollback để giảm trạng thái nửa chừng nếu submit flow fail.
+        await supabase
+          .from('evaluation_rounds')
+          .update({ submitted_at: null, status: 'Draft' })
+          .eq('evaluation_id', evaluationId)
+          .eq('round', round)
+          .eq('evaluator_id', actorId);
 
-      if (eError) {
-        return { success: false, error: 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message };
+        return { success: false, error: submitFlowError };
       }
     }
 

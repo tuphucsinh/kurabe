@@ -5,8 +5,9 @@ import { Info, StickyNote, History } from 'lucide-react';
 interface CriteriaTabProps {
   group: CriteriaGroup;
   scores: Record<string, number>;
+  selectedLevelIndexes: Record<string, number>;
   notes: Record<string, string>;
-  onScoreChange: (criterionId: string, points: number) => void;
+  onScoreChange: (criterionId: string, points: number, levelIndex: number) => void;
   onNoteChange: (criterionId: string, note: string) => void;
   allPreviousRounds: EvaluationRound[];
   disabled?: boolean;
@@ -15,6 +16,7 @@ interface CriteriaTabProps {
 export default function CriteriaTab({ 
   group, 
   scores, 
+  selectedLevelIndexes,
   notes, 
   onScoreChange, 
   onNoteChange,
@@ -35,12 +37,25 @@ export default function CriteriaTab({
     });
   };
 
+  const handleLevelSelect = (criterionId: string, levelIndex: number, points: number) => {
+    onScoreChange(criterionId, points, levelIndex);
+  };
+
   return (
     <div className="space-y-2 animate-in fade-in slide-in-from-right-4 duration-300">
       {group.criteria.map((criterion) => {
         const hasNote = !!notes[criterion.id];
         const isNoteVisible = activeNotes.has(criterion.id) || hasNote;
         const currentScore = scores[criterion.id];
+        const overrideIndex = selectedLevelIndexes[criterion.id];
+        const hasValidOverride = overrideIndex !== undefined
+          && criterion.levels[overrideIndex] !== undefined
+          && criterion.levels[overrideIndex].points === currentScore;
+        const selectedLevelIndex = hasValidOverride
+          ? overrideIndex
+          : currentScore === undefined
+            ? -1
+            : criterion.levels.findIndex(level => level.points === currentScore);
         
         // Find if current score differs from any previous rounds
         const mostRecentRound = allPreviousRounds.length > 0 
@@ -110,14 +125,14 @@ export default function CriteriaTab({
             {/* Card grid with radio dots & L badges — restored */}
             <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
               {criterion.levels.map((level, idx) => {
-                const isSelected = currentScore === level.points;
+                const isSelected = idx === selectedLevelIndex;
                 const selectedRounds = allPreviousRounds.filter(r => r.scores?.[criterion.id] === level.points);
                 
                 return (
                   <button
                     key={idx}
                     disabled={disabled}
-                    onClick={() => onScoreChange(criterion.id, level.points)}
+                    onClick={() => handleLevelSelect(criterion.id, idx, level.points)}
                     className={`
                       relative p-3 rounded-xl border text-left transition-all duration-300 group
                       ${isSelected 

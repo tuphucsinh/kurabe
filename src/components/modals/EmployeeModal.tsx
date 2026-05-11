@@ -4,16 +4,20 @@ import React, { useState } from 'react';
 import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
 import { User as UserType, Role } from '@/types';
 import { useTeams } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (employee: Partial<UserType>) => void;
   employee?: UserType | null;
+  restrictToTeamId?: string | null;
+  roleOptions?: Role[];
 }
 
-export default function EmployeeModal({ isOpen, onClose, onSave, employee }: EmployeeModalProps) {
-  const { data: teams = [] } = useTeams();
+export default function EmployeeModal({ isOpen, onClose, onSave, employee, restrictToTeamId, roleOptions }: EmployeeModalProps) {
+  const { user } = useAuth();
+  const { data: teams = [] } = useTeams(user);
   const firstTeamId = teams[0]?.id || '';
 
   if (!isOpen) return null;
@@ -26,6 +30,8 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee }: Emp
       employee={employee}
       teams={teams}
       firstTeamId={firstTeamId}
+      restrictToTeamId={restrictToTeamId}
+      roleOptions={roleOptions}
     />
   );
 }
@@ -36,6 +42,8 @@ interface EmployeeModalContentProps {
   employee?: UserType | null;
   teams: { id: string; name: string }[];
   firstTeamId: string;
+  restrictToTeamId?: string | null;
+  roleOptions?: Role[];
 }
 
 function EmployeeModalContent({
@@ -43,19 +51,29 @@ function EmployeeModalContent({
   onSave,
   employee,
   teams,
-  firstTeamId
+  firstTeamId,
+  restrictToTeamId,
+  roleOptions
 }: EmployeeModalContentProps) {
+  const allowedRoles: Role[] = roleOptions && roleOptions.length > 0 ? roleOptions : ['Manager', 'Leader', 'SubLeader', 'Employee'];
+  const defaultRole = employee?.role && allowedRoles.includes(employee.role) ? employee.role : (allowedRoles[0] || 'Employee');
+  const initialTeamId = employee?.teamId || restrictToTeamId || firstTeamId;
   const [formData, setFormData] = useState<Partial<UserType>>({
     name: employee?.name || '',
     employeeCode: employee?.employeeCode || '',
-    role: employee?.role || 'Employee',
-    teamId: employee?.teamId || firstTeamId,
+    role: defaultRole,
+    teamId: initialTeamId,
     joinDate: employee?.joinDate || new Date().toISOString().split('T')[0],
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalData = { ...formData };
+    const finalData: Partial<UserType> = { ...formData };
+
+    if (restrictToTeamId) {
+      finalData.teamId = restrictToTeamId;
+    }
+
     if (finalData.role === 'Manager') {
       finalData.teamId = undefined; // Supabase upsert handles undefined as null/don't update if configured, but here we want to remove it
     }
@@ -128,10 +146,11 @@ function EmployeeModalContent({
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
               >
-                <option value="Manager">Manager</option>
-                <option value="Leader">Leader</option>
-                <option value="SubLeader">SubLeader</option>
-                <option value="Employee">Nhân viên</option>
+                {allowedRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role === 'Employee' ? 'Nhân viên' : role}
+                  </option>
+                ))}
               </select>
             </div>
  
@@ -145,6 +164,7 @@ function EmployeeModalContent({
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
                   value={formData.teamId || ''}
                   onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                  disabled={!!restrictToTeamId}
                 >
                   <option value="" disabled>Chọn nhóm...</option>
                   {teams.map((team) => (

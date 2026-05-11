@@ -6,6 +6,18 @@ export type PeriodStatus = 'Active' | 'Closed';
 export type EvalStatus = 'NotStarted' | 'Draft' | 'Submitted' | 'Reviewed' | 'Approved';
 export type RoundNumber = 1 | 2 | 3;
 
+export type EvaluationRoundStatus = 'NotStarted' | 'Draft' | 'Submitted';
+export type EvaluationPageMode = 'edit' | 'readonly' | 'blocked';
+export type EvaluationAccessReason = 'NO_DRAFT' | 'NOT_AUTHORIZED' | 'ROUND_LOCKED';
+
+export interface EvaluationAccessState {
+  mode: EvaluationPageMode;
+  displayRound: RoundNumber | null;
+  editableRound: RoundNumber | null;
+  visibleRounds: EvaluationRound[];
+  reason?: EvaluationAccessReason;
+}
+
 export interface User {
   id: string;
   employeeCode: string;
@@ -39,7 +51,9 @@ export interface EvaluationRound {
   round: RoundNumber;
   evaluatorId: string;
   evaluatorRole: Role;
+  status: EvaluationRoundStatus;
   scores: Record<string, number>;
+  selectedLevelIndexes?: Record<string, number>;
   notes?: Record<string, string>;
   totalScore: number;
   grade: Grade;

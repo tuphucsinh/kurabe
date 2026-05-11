@@ -1,29 +1,27 @@
-# MASTER PLAN - KURABE (Personnel Evaluation System)
+# MASTER_PLAN.md
 
-## Phase 31: Database Type Refactor & Safety
-Refactor database library files to remove `as any` casts, implement proper mapping between camelCase and snake_case, and ensure full type safety using Supabase generated types.
+## Completed Phases
+### Phase 32: Data Management & Reset 2026
+- Xóa thành công dữ liệu kỳ đánh giá 2026 (ID: `818f9273-2f73-49be-9463-9d82a1719797`) khỏi Database.
+- Bổ sung Server Action `deleteEvaluationPeriod` để hỗ trợ xóa kỳ đánh giá từ UI.
 
-## Phase 32: Understand Anything Tool (Emulation) [DONE]
-Emulated Cursor's 'Understand Anything' tool by scanning the codebase, analyzing file dependencies, identifying architectural layers, and generating a tour guide.
+### Phase 33: Visibility & Authorization Refinement
+- Lọc evaluations theo owner/evaluator, không mở rộng quyền theo toàn team.
+- Đồng bộ React Query key và UI hooks với user context.
+- Cập nhật approval flow động theo role: Employee qua SubLeader/Leader/Manager, SubLeader qua Leader/Manager, Leader qua Manager.
 
-## Phase 33: Visibility & Authorization Refinement [DONE]
-Implement strict role-based evaluation visibility, ensuring Leaders/Sub-leaders only see evaluations they are part of as employees or evaluators.
+### Phase 34: Workflow Correction
+- Tạo shared workflow contract tại `src/lib/evaluation-workflow.ts`.
+- Đồng bộ khởi tạo kỳ, submit round, helper quyền, detail UI và compare UI theo rule: Manager tự đánh giá 1 vòng; Leader tự đánh giá rồi Manager; SubLeader tự đánh giá rồi Leader rồi Manager; Employee do SubLeader, Leader, Manager đánh giá.
+- Chuẩn hóa grade theo role người được đánh giá và loại bỏ giả định UI mọi evaluation đều có 3 vòng.
 
-Summary: Restricted evaluation visibility to owner/evaluator access, propagated user context through evaluation hooks/pages, and implemented dynamic approval flow by role: Employee -> SubLeader/Leader/Manager, SubLeader -> Leader/Manager, Leader -> Manager.
+### Phase 35: Draft-Gated Evaluation Visibility
+- Bổ sung `EvaluationRoundStatus` + `EvaluationAccessState` để tách rõ `edit/readonly/blocked`.
+- Đồng bộ quyền xem/sửa theo draft-gated workflow cho Employee/SubLeader/Leader/Manager, gồm guard Manager chỉ edit khi round trước đã submitted.
+- Chuẩn hóa mapping trạng thái round từ DB (`submitted_at` ưu tiên cao nhất), thêm fallback legacy dữ liệu nháp.
+- Siết server action submit/draft: dùng `actorId`, chặn save draft vào round đã submit, cập nhật status round/evaluation đúng flow, thêm rollback best-effort khi submit flow lỗi.
+- Hoàn thiện UI detail/compare theo access-state; compare chỉ hiển thị visible rounds và empty state `Chưa có đánh giá.`.
+- Cập nhật `tsconfig` loại `scratch/` khỏi typecheck để giữ baseline build sạch.
 
-## Phase 34: Workflow Correction [DONE]
-Correct the approval workflow to match the confirmed business rule: Manager one self round; Leader self round then Manager; SubLeader self round then Leader then Manager; Employee SubLeader then Leader then Manager.
-
-Summary: Added a shared workflow contract, corrected period initialization and submit transitions, synchronized frontend permission helpers, and updated detail/compare UI to use role-aware round count and grading.
-
-## Current Progress
-- Phase 1-30: [x] Core features, UI, Basic Supabase integration.
-- Phase 31: [ ] Database Type Refactor & Safety
-- Phase 32: [x] Understand Anything Tool (Emulation)
-- Phase 33: [x] Visibility & Authorization Refinement
-- Phase 34: [x] Workflow Correction
-
-## Technical Stack
-- Frontend: Next.js (App Router), TypeScript, Vanilla CSS.
-- Backend/DB: Supabase (PostgreSQL).
-- Deployment: Vercel.
+## Next Phases
+- [ ] Phase 31: Database Type Refactor & Safety

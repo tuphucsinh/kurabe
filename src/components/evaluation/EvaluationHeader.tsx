@@ -11,6 +11,7 @@ interface EvaluationHeaderProps {
   totalScore: number;
   scoredCount: number;
   totalCriteria: number;
+  currentRound: number;
 }
 
 export default function EvaluationHeader({
@@ -20,7 +21,8 @@ export default function EvaluationHeader({
   grade,
   totalScore,
   scoredCount,
-  totalCriteria
+  totalCriteria,
+  currentRound
 }: EvaluationHeaderProps) {
   const gradeStyles = getGradeColor(grade);
   const gradeColorClass = gradeStyles.split(' ')[0];
@@ -67,7 +69,7 @@ export default function EvaluationHeader({
             <tbody>
               {/* Current Round */}
               <tr>
-                <td></td>
+                <td className="px-2 py-1 text-[10px] font-bold text-black/45 uppercase">L{currentRound}</td>
                 <td className="px-3 py-1">
                   <span className={`${gradeColorClass} text-2xl font-black`}>{grade}</span>
                 </td>

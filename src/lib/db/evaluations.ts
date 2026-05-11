@@ -1,6 +1,8 @@
 import { supabase } from '../supabase';
-import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber, User, PeriodStatus } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
+import { canViewEvaluation } from '@/data/workflow';
 import { Tables, TablesInsert, Json } from '@/types/database';
+import { composeRoundNotes, splitRoundNotes } from '@/lib/round-level-selection';
 
 type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
@@ -37,6 +39,11 @@ export async function getActivePeriod(): Promise<EvaluationPeriod | null> {
   return mapPeriodFromDb(data);
 }
 
+export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: User | null): Evaluation[] {
+  if (!viewer) return [];
+  return evaluations.filter(ev => canViewEvaluation(viewer, ev));
+}
+
 export async function getEvaluations(user?: User | null): Promise<Evaluation[]> {
   let query = supabase
     .from('evaluations')
@@ -51,6 +58,11 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
 
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
+    
+    // Hỗ trợ Leader/SubLeader xem evaluations trong team
+    if ((user.role === 'Leader' || user.role === 'SubLeader') && user.teamId) {
+      orFilters.push(`team_id.eq.${user.teamId}`);
+    }
 
     query = query.or(orFilters.join(','));
   }
@@ -62,7 +74,8 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
     return [];
   }
 
-  return (data || []).map(mapEvaluationFromDb);
+  const evaluations = (data || []).map(mapEvaluationFromDb);
+  return filterEvaluationsForViewer(evaluations, user);
 }
 
 export async function getEvaluationById(id: string, user?: User | null): Promise<Evaluation | null> {
@@ -81,14 +94,8 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
 
   const evaluation = mapEvaluationFromDb(data);
 
-  // Security check cho non-managers
-  if (user && user.role !== 'Manager') {
-    const isOwner = evaluation.employeeId === user.id;
-    const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
-
-    if (!isOwner && !isEvaluator) {
-      return null;
-    }
+  if (!canViewEvaluation(user, evaluation)) {
+    return null;
   }
 
   return evaluation;
@@ -110,6 +117,11 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
 
+    // Hỗ trợ Leader/SubLeader xem evaluations trong team
+    if ((user.role === 'Leader' || user.role === 'SubLeader') && user.teamId) {
+      orFilters.push(`team_id.eq.${user.teamId}`);
+    }
+
     query = query.or(orFilters.join(','));
   }
 
@@ -120,7 +132,8 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
     return [];
   }
 
-  return (data || []).map(mapEvaluationFromDb);
+  const evaluations = (data || []).map(mapEvaluationFromDb);
+  return filterEvaluationsForViewer(evaluations, user);
 }
 
 export async function getEvaluationByEmployee(employeeId: string, periodId?: string, user?: User | null): Promise<Evaluation | null> {
@@ -144,14 +157,8 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
 
   const evaluation = mapEvaluationFromDb(data);
 
-  // Authorization check cho non-managers
-  if (user && user.role !== 'Manager') {
-    const isOwner = evaluation.employeeId === user.id;
-    const isEvaluator = evaluation.rounds.some(r => r.evaluatorId === user.id);
-
-    if (!isOwner && !isEvaluator) {
-      return null;
-    }
+  if (!canViewEvaluation(user, evaluation)) {
+    return null;
   }
 
   return evaluation;
@@ -186,18 +193,20 @@ export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<E
 }
 
 export async function upsertEvaluationRound(evaluationId: string, round: Partial<EvaluationRound>): Promise<void> {
+  const composedNotes = composeRoundNotes(round.notes || {}, round.selectedLevelIndexes || {});
   const dbRound: TablesInsert<'evaluation_rounds'> = {
     evaluation_id: evaluationId,
     round: round.round || 1,
     evaluator_id: round.evaluatorId || null,
     evaluator_role: round.evaluatorRole || 'Employee',
+    status: round.status || 'Draft',
     scores: (round.scores as Json) || null,
-    notes: (round.notes as Json) || null,
+    notes: (composedNotes as Json) || null,
     total_score: round.totalScore ?? 0,
     grade: round.grade || 'Pending',
     comment: round.comment || null,
     additional_comment: round.additionalComment || null,
-    submitted_at: round.submittedAt || new Date().toISOString(),
+    submitted_at: round.status === 'Submitted' ? (round.submittedAt || new Date().toISOString()) : null,
   };
 
   const { error } = await supabase
@@ -240,14 +249,17 @@ function mapEvaluationFromDb(db: DbEvaluation): Evaluation {
 }
 
 function mapRoundFromDb(db: DbRound): EvaluationRound {
+  const { userNotes, selectedLevelIndexes } = splitRoundNotes((db.notes as Record<string, string>) || {});
   return {
     id: db.id,
     evaluationId: db.evaluation_id || '',
     round: db.round as RoundNumber,
     evaluatorId: db.evaluator_id || '',
     evaluatorRole: db.evaluator_role as Role,
+    status: normalizeRoundStatus(db),
     scores: (db.scores as Record<string, number>) || {},
-    notes: (db.notes as Record<string, string>) || {},
+    selectedLevelIndexes,
+    notes: userNotes,
     totalScore: db.total_score || 0,
     grade: db.grade as Grade,
     comment: db.comment || undefined,
@@ -257,3 +269,24 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
   };
 }
 
+/**
+ * Chuẩn hóa trạng thái round từ dữ liệu DB (hỗ trợ legacy)
+ */
+function normalizeRoundStatus(db: DbRound): EvaluationRoundStatus {
+  // submitted_at luôn ưu tiên cao nhất để tránh stale status.
+  if (db.submitted_at) return 'Submitted';
+
+  if (db.status === 'Submitted' || db.status === 'Draft' || db.status === 'NotStarted') {
+    return db.status as EvaluationRoundStatus;
+  }
+
+  // Legacy fallback: Kiểm tra xem có dữ liệu nháp không.
+  const hasScores = db.scores && typeof db.scores === 'object' && Object.keys(db.scores as object).length > 0;
+  const hasNotes = db.notes && typeof db.notes === 'object' && Object.keys(db.notes as object).length > 0;
+
+  if (hasScores || hasNotes || db.comment) {
+    return 'Draft';
+  }
+
+  return 'NotStarted';
+}

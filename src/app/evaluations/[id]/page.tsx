@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useReducer, use, useEffect } from 'react';
+import { useState, useReducer, use, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
@@ -18,7 +18,7 @@ import {
   Lock,
   ArrowLeftRight,
 } from 'lucide-react';
-import { isRoundLocked } from '@/data/workflow';
+import { getEvaluationAccessState } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
 import { saveEvaluationRound } from '@/actions/evaluation';
 import {
@@ -32,13 +32,14 @@ interface EvaluationState {
   currentRoundData: EvaluationRound | null;
   allPreviousRounds: EvaluationRound[];
   scores: Record<string, number>;
+  selectedLevelIndexes: Record<string, number>;
   notes: Record<string, string>;
   comment: string;
 }
 
 type EvaluationAction =
   | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState> }
-  | { type: 'SET_SCORE'; criterionId: string; points: number }
+  | { type: 'SET_SCORE'; criterionId: string; points: number; levelIndex: number }
   | { type: 'SET_NOTE'; criterionId: string; note: string }
   | { type: 'SET_COMMENT'; comment: string };
 
@@ -48,6 +49,7 @@ const initialState: EvaluationState = {
   currentRoundData: null,
   allPreviousRounds: [],
   scores: {},
+  selectedLevelIndexes: {},
   notes: {},
   comment: '',
 };
@@ -57,7 +59,14 @@ function evaluationReducer(state: EvaluationState, action: EvaluationAction): Ev
     case 'SET_INITIAL_DATA':
       return { ...state, ...action.payload };
     case 'SET_SCORE':
-      return { ...state, scores: { ...state.scores, [action.criterionId]: action.points } };
+      return {
+        ...state,
+        scores: { ...state.scores, [action.criterionId]: action.points },
+        selectedLevelIndexes: {
+          ...state.selectedLevelIndexes,
+          [action.criterionId]: action.levelIndex,
+        }
+      };
     case 'SET_NOTE':
       return { ...state, notes: { ...state.notes, [action.criterionId]: action.note } };
     case 'SET_COMMENT':
@@ -71,6 +80,13 @@ interface EvaluationPageProps {
   params: Promise<{ id: string }>;
 }
 
+const ROLE_RANK: Record<User['role'], number> = {
+  Employee: 1,
+  SubLeader: 2,
+  Leader: 3,
+  Manager: 4,
+};
+
 export default function EvaluationPage({ params }: EvaluationPageProps) {
   const router = useRouter();
   const { id } = use(params);
@@ -81,44 +97,63 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id, undefined, user);
 
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
-  const { scores, notes, comment, currentRoundData, allPreviousRounds } = state;
+  const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
 
   const [criteriaGroups, setCriteriaGroups] = useState<CriteriaGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [showDraftSavedToast, setShowDraftSavedToast] = useState(false);
+  const [showSubmitSuccessToast, setShowSubmitSuccessToast] = useState(false);
+
+  // New access control logic
+  const accessState = useMemo(() => 
+    evaluation ? getEvaluationAccessState(user, evaluation) : null,
+  [evaluation, user]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
     async function loadData() {
-      if (employee && evaluation) {
+      if (employee && evaluation && accessState) {
+        if (accessState.mode === 'blocked') return;
+
         // Fetch criteria from DB
         const roleForCriteria = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
         const dbCriteria = await getCriteriaForRole(roleForCriteria);
         setCriteriaGroups(dbCriteria);
 
-        const current = evaluation.rounds.find(r => r.round === evaluation.currentRound) || null;
+        // Identify which round to show/edit
+        const targetRoundNum = accessState.editableRound || accessState.displayRound;
+        const targetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
+        
         const prevRounds = evaluation.rounds
-          .filter(r => r.round < evaluation.currentRound)
+          .filter(r => accessState.visibleRounds.some((vr: EvaluationRound) => vr.round === r.round) && r.round < (targetRoundNum || 0))
           .sort((a, b) => a.round - b.round);
 
         let initialScores: Record<string, number> = {};
+        let initialSelectedLevelIndexes: Record<string, number> = {};
         let initialNotes: Record<string, string> = {};
         let initialComment = '';
 
-        if (current?.scores && Object.keys(current.scores).length > 0) {
-          initialScores = { ...current.scores };
-          initialNotes = current.notes || {};
-          initialComment = current.comment || '';
-        } else if (prevRounds.length > 0) {
+        if (targetRound?.scores && Object.keys(targetRound.scores).length > 0) {
+          initialScores = { ...targetRound.scores };
+          initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
+          initialNotes = targetRound.notes || {};
+          initialComment = targetRound.comment || '';
+        } else if (!accessState.editableRound && targetRound) {
+          initialScores = { ...targetRound.scores };
+          initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
+          initialNotes = targetRound.notes || {};
+          initialComment = targetRound.comment || '';
+        } else if (prevRounds.length > 0 && accessState.editableRound) {
+          // Carry forward from previous round if we are starting a new round
           const lastRound = prevRounds[prevRounds.length - 1];
           initialScores = { ...lastRound.scores };
+          initialSelectedLevelIndexes = lastRound.selectedLevelIndexes || {};
           initialNotes = lastRound.notes || {};
         }
 
-        // Pre-fill defaults from criteria when no scores exist yet
-        if (Object.keys(initialScores).length === 0) {
+        // Pre-fill defaults chỉ khi đang edit round và chưa có dữ liệu.
+        if (Object.keys(initialScores).length === 0 && !!accessState.editableRound) {
           for (const group of dbCriteria) {
             for (const criterion of group.criteria) {
               if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
@@ -133,9 +168,10 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           payload: {
             employee,
             evaluation,
-            currentRoundData: current,
+            currentRoundData: targetRound,
             allPreviousRounds: prevRounds,
             scores: initialScores,
+            selectedLevelIndexes: initialSelectedLevelIndexes,
             notes: initialNotes,
             comment: initialComment,
           }
@@ -143,9 +179,30 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       }
     }
     loadData();
-  }, [employee, evaluation]);
+  }, [employee, evaluation, accessState]);
 
-  if (!isMounted || isLoadingUser || isLoadingEval || !employee || !evaluation) {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!showDraftSavedToast) return;
+    const timeoutId = window.setTimeout(() => {
+      setShowDraftSavedToast(false);
+    }, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [showDraftSavedToast]);
+
+  useEffect(() => {
+    if (!showSubmitSuccessToast) return;
+    const timeoutId = window.setTimeout(() => {
+      setShowSubmitSuccessToast(false);
+    }, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [showSubmitSuccessToast]);
+
+  if (!isMounted || isLoadingUser || isLoadingEval) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
@@ -156,33 +213,170 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     );
   }
 
+  if (!employee) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-red-50 rounded-full text-red-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
+        <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
+  if (!evaluation) {
+    const isViewerLowerThanTarget = !!user && ROLE_RANK[user.role] < ROLE_RANK[employee.role];
+
+    if (isViewerLowerThanTarget) {
+      return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+          <div className="p-4 bg-red-50 rounded-full text-red-500">
+            <Lock size={48} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
+          <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
+          <button
+            onClick={() => router.back()}
+            className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+          >
+            Quay lại
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-amber-50 rounded-full text-amber-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Chưa có dữ liệu đánh giá</h2>
+        <p className="text-slate-500 max-w-md">Không có dữ liệu evaluation tương ứng cho nhân viên này.</p>
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
+  if (!accessState) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-red-50 rounded-full text-red-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
+        <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
+  // Blocked UI
+  if (accessState.mode === 'blocked') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-red-50 rounded-full text-red-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
+        <p className="text-slate-500 max-w-md">
+          {accessState.reason === 'NO_DRAFT' 
+            ? 'Chưa có đánh giá.'
+            : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.'}
+        </p>
+        <button 
+          onClick={() => router.back()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
+
   const activeGroup = criteriaGroups.find(g => g.id === activeGroupId) || criteriaGroups[0];
-  const isLocked = currentRoundData ? isRoundLocked(currentRoundData) : false;
+  const isReadOnly = accessState.mode === 'readonly';
   const usesLeaderGrading = isLeaderGradingRole(employee.role);
   const maxRound = getMaxEvaluationRound(employee.role);
+  const activeRound = accessState.editableRound || accessState.displayRound;
+  const activeRoundExists = activeRound
+    ? evaluation.rounds.some(r => r.round === activeRound)
+    : false;
+  const activeRoundData = currentRoundData?.round === activeRound ? currentRoundData : null;
+
+  if (activeRound && activeRoundExists && !activeRoundData) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 rounded-full"></div>
+          <div className="text-slate-400 font-medium">Đang tải dữ liệu...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeRound || !activeRoundExists || !activeRoundData) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <div className="p-4 bg-red-50 rounded-full text-red-500">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Không thể tải vòng đánh giá</h2>
+        <p className="text-slate-500 max-w-md">Vòng đánh giá hiện tại chưa sẵn sàng hoặc đã bị khóa.</p>
+        <button
+          onClick={() => router.back()}
+          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+        >
+          Quay lại
+        </button>
+      </div>
+    );
+  }
 
   const handleSave = async (isSubmit: boolean) => {
-    if (!evaluation || !currentRoundData) return;
+    if (!evaluation || !accessState.editableRound || !user?.id) return;
 
     setIsSaving(true);
     try {
       const res = await saveEvaluationRound(
         evaluation.id,
-        evaluation.currentRound,
-        currentRoundData.evaluatorId,
+        accessState.editableRound,
+        user.id,
         scores,
         notes,
+        selectedLevelIndexes,
         comment,
         isSubmit
       );
 
       if (res.success) {
-        queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
+          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
+        ]);
         if (isSubmit) {
-          alert('Đánh giá đã được gửi thành công!');
-          router.push('/employees');
+          setShowSubmitSuccessToast(true);
+          window.setTimeout(() => {
+            router.push('/employees');
+          }, 900);
         } else {
-          alert('Đã lưu bản nháp.');
+          setShowDraftSavedToast(true);
         }
       } else {
         alert(`Lỗi: ${res.error}`);
@@ -197,31 +391,45 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   // Helper for type-safe round data
   const currentSummaryRound: EvaluationRound = {
-    id: currentRoundData?.id || '',
+    id: activeRoundData.id || '',
     evaluationId: evaluation.id,
-    round: evaluation.currentRound,
-    evaluatorId: currentRoundData?.evaluatorId || '',
+    round: activeRound,
+    evaluatorId: activeRoundData.evaluatorId || user?.id || '',
     evaluatorRole: usesLeaderGrading ? 'Leader' : 'Employee',
     scores,
+    selectedLevelIndexes,
     notes,
     totalScore: 0,
     grade: 'Pending',
     comment,
-    submittedAt: currentRoundData?.submittedAt,
-    createdAt: currentRoundData?.createdAt || '',
+    status: activeRoundData.status || 'Draft',
+    submittedAt: activeRoundData.submittedAt,
+    createdAt: activeRoundData.createdAt || '',
   };
 
   const { totalScore, grade } = calculateRoundScore(currentSummaryRound);
 
   return (
-    <LazyMotion features={domAnimation}>
+      <LazyMotion features={domAnimation}>
+      {showDraftSavedToast && (
+        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-xl">
+          <p className="text-sm font-semibold text-emerald-700">Đã lưu bản nháp.</p>
+        </div>
+      )}
+      {showSubmitSuccessToast && (
+        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 shadow-xl">
+          <p className="text-sm font-semibold text-blue-700">Đánh giá đã được gửi thành công!</p>
+        </div>
+      )}
       <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-outline font-medium">
               <span>Đánh giá</span>
               <ChevronRight size={14} />
-              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">Lần {evaluation.currentRound} / {maxRound}</span>
+              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">
+                Lần {accessState.editableRound || accessState.displayRound} / {maxRound}
+              </span>
               {allPreviousRounds.length > 0 && (
                 <button 
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
@@ -231,18 +439,18 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                   <span>Chi tiết so sánh</span>
                 </button>
               )}
-              {isLocked && (
+              {isReadOnly && (
                 <>
                   <ChevronRight size={14} />
                   <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
-                    <Lock size={12} /> Đã khóa
+                    <Lock size={12} /> {activeRoundData.status === 'Submitted' ? 'Đã nộp' : 'Chỉ xem'}
                   </span>
                 </>
               )}
             </div>
 
             <div className="flex flex-row gap-3 w-full md:w-auto">
-              {!isLocked ? (
+              {!isReadOnly ? (
                 <>
                   <button 
                     onClick={() => handleSave(false)}
@@ -263,7 +471,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               ) : (
                 <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
                   <Lock size={16} />
-                  Đã nộp {isMounted && currentRoundData?.submittedAt && `lúc ${new Date(currentRoundData.submittedAt).toLocaleString('vi-VN')}`}
+                  {activeRoundData.status === 'Submitted'
+                    ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
+                    : 'Đang xem bản nháp của vòng này'}
                 </div>
               )}
             </div>
@@ -279,6 +489,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             totalScore={totalScore}
             scoredCount={Object.keys(scores).length}
             totalCriteria={criteriaGroups.reduce((sum, g) => sum + g.criteria.length, 0)}
+            currentRound={activeRound}
           />
         </div>
 
@@ -295,11 +506,12 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               <CriteriaTab
                 group={activeGroup}
                 scores={scores}
+                selectedLevelIndexes={selectedLevelIndexes}
                 notes={notes}
-                onScoreChange={(id, val) => dispatch({ type: 'SET_SCORE', criterionId: id, points: val })}
+                onScoreChange={(id, val, levelIndex) => dispatch({ type: 'SET_SCORE', criterionId: id, points: val, levelIndex })}
                 onNoteChange={(id, val) => dispatch({ type: 'SET_NOTE', criterionId: id, note: val })}
                 allPreviousRounds={allPreviousRounds}
-                disabled={isLocked || isSaving}
+                disabled={isReadOnly || isSaving}
               />
             )}
           </div>
@@ -311,7 +523,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 value={comment}
                 onChange={(e) => dispatch({ type: 'SET_COMMENT', comment: e.target.value })}
                 placeholder="Nhập nhận xét tổng quát cho kỳ đánh giá này..."
-                disabled={isLocked || isSaving}
+                disabled={isReadOnly || isSaving}
                 className="w-full h-40 p-4 bg-surface border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
               />
               <p className="mt-2 text-xs text-outline leading-relaxed">
