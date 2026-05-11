@@ -24,4 +24,4 @@
 - Cập nhật `tsconfig` loại `scratch/` khỏi typecheck để giữ baseline build sạch.
 
 ## Next Phases
-- [ ] Phase 31: Database Type Refactor & Safety
+

@@ -25,10 +25,90 @@
       "imports": []
     },
     {
+      "id": ".understand-anything\\knowledge-graph.json",
+      "type": "file",
+      "ext": ".json",
+      "size": 45677,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\analyzer.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 2283,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\audit_codebase.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1733,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\batch_runner.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1325,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\final_save.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1681,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\gen_layers.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 2076,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\gen_tour.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1676,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\merger.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1054,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\patch_graph.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 781,
+      "exports": [],
+      "imports": []
+    },
+    {
       "id": ".understand-anything\\tmp\\project_tree.txt",
       "type": "file",
       "ext": ".txt",
       "size": 954106,
+      "exports": [],
+      "imports": []
+    },
+    {
+      "id": ".understand-anything\\tmp\\review_script.js",
+      "type": "file",
+      "ext": ".js",
+      "size": 1978,
       "exports": [],
       "imports": []
     },
@@ -44,7 +124,7 @@
       "id": "AGENTS.md",
       "type": "file",
       "ext": ".md",
-      "size": 8966,
+      "size": 10936,
       "exports": [],
       "imports": []
     },
@@ -52,7 +132,7 @@
       "id": "CLAUDE.md",
       "type": "file",
       "ext": ".md",
-      "size": 8966,
+      "size": 10521,
       "exports": [],
       "imports": []
     },
@@ -72,7 +152,7 @@
       "id": "GEMINI.md",
       "type": "file",
       "ext": ".md",
-      "size": 8966,
+      "size": 10521,
       "exports": [],
       "imports": []
     },
@@ -96,7 +176,7 @@
       "id": "next-env.d.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 251,
+      "size": 247,
       "exports": [],
       "imports": []
     },
@@ -143,6 +223,72 @@
       "imports": []
     },
     {
+      "id": "scratch\\delete_period_2026.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1850,
+      "exports": [],
+      "imports": [
+        "@supabase/supabase-js"
+      ]
+    },
+    {
+      "id": "scratch\\find_period_2026.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 739,
+      "exports": [],
+      "imports": [
+        "@supabase/supabase-js",
+        "dotenv",
+        "path"
+      ]
+    },
+    {
+      "id": "scratch\\phase35_verify_matrix.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 5432,
+      "exports": [],
+      "imports": [
+        "../src/types",
+        "../src/data/workflow"
+      ]
+    },
+    {
+      "id": "scratch\\test_eval_visibility.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 689,
+      "exports": [],
+      "imports": [
+        "../src/lib/db/evaluations",
+        "../src/lib/db/users"
+      ]
+    },
+    {
+      "id": "scratch\\test_workflow_p35.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1280,
+      "exports": [],
+      "imports": [
+        "../src/types",
+        "../src/data/workflow"
+      ]
+    },
+    {
+      "id": "scratch\\verify_access_state.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1849,
+      "exports": [],
+      "imports": [
+        "../src/types",
+        "../src/data/workflow"
+      ]
+    },
+    {
       "id": "src\\actions\\criteria.ts",
       "type": "file",
       "ext": ".ts",
@@ -157,26 +303,28 @@
       "id": "src\\actions\\evaluation.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 4702,
+      "size": 9104,
       "exports": [],
       "imports": [
         "@/lib/supabase",
         "next/cache",
         "@/lib/scoring",
         "@/types",
-        "@/types/database"
+        "@/types/database",
+        "@/lib/round-level-selection"
       ]
     },
     {
       "id": "src\\actions\\period.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 3708,
+      "size": 7152,
       "exports": [],
       "imports": [
         "@/lib/supabase",
         "next/cache",
         "@/types",
+        "@/lib/evaluation-workflow",
         "@/types/database"
       ]
     },
@@ -234,25 +382,27 @@
       "id": "src\\data\\workflow.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 2804,
+      "size": 9343,
       "exports": [
+        "hasRoundDraft",
+        "isRoundSubmitted",
         "canEvaluate",
         "canReview",
         "getEvaluatableEmployees",
         "canSubmitRound",
+        "getNextRoundForEmployeeRole",
         "getNextRound",
         "isRoundLocked",
-        "canViewEvaluation"
+        "canViewEvaluation",
+        "getEvaluationAccessState"
       ],
-      "imports": [
-        "@/types"
-      ]
+      "imports": []
     },
     {
       "id": "src\\hooks\\use-db.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 5743,
+      "size": 5953,
       "exports": [
         "useUsers",
         "useUser",
@@ -304,21 +454,24 @@
       "id": "src\\lib\\db\\evaluations.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 6242,
+      "size": 9374,
       "exports": [
+        "filterEvaluationsForViewer",
         "mapPeriodFromDb"
       ],
       "imports": [
         "../supabase",
         "@/types",
-        "@/types/database"
+        "@/data/workflow",
+        "@/types/database",
+        "@/lib/round-level-selection"
       ]
     },
     {
       "id": "src\\lib\\db\\teams.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 1667,
+      "size": 2093,
       "exports": [],
       "imports": [
         "../supabase",
@@ -330,7 +483,7 @@
       "id": "src\\lib\\db\\users.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 2424,
+      "size": 2766,
       "exports": [
         "mapUserFromDb"
       ],
@@ -339,6 +492,33 @@
         "@/types",
         "@/types/database"
       ]
+    },
+    {
+      "id": "src\\lib\\evaluation-workflow.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 2038,
+      "exports": [
+        "getEvaluationFlow",
+        "getMaxEvaluationRound",
+        "getNextEvaluationStep",
+        "isLeaderGradingRole"
+      ],
+      "imports": [
+        "@/types"
+      ]
+    },
+    {
+      "id": "src\\lib\\round-level-selection.ts",
+      "type": "file",
+      "ext": ".ts",
+      "size": 1753,
+      "exports": [
+        "ROUND_LEVEL_INDEXES_NOTE_KEY",
+        "splitRoundNotes",
+        "composeRoundNotes"
+      ],
+      "imports": []
     },
     {
       "id": "src\\lib\\scoring.ts",
@@ -385,7 +565,7 @@
       "id": "src\\types\\index.ts",
       "type": "file",
       "ext": ".ts",
-      "size": 1926,
+      "size": 2450,
       "exports": [],
       "imports": []
     },
@@ -401,7 +581,7 @@
       "id": "tsconfig.json",
       "type": "file",
       "ext": ".json",
-      "size": 670,
+      "size": 681,
       "exports": [],
       "imports": []
     },
@@ -409,7 +589,7 @@
       "id": "tsconfig.tsbuildinfo",
       "type": "file",
       "ext": ".tsbuildinfo",
-      "size": 122838,
+      "size": 125230,
       "exports": [],
       "imports": []
     },
@@ -429,7 +609,7 @@
       "id": "src\\components\\evaluation\\CriteriaTab.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 10603,
+      "size": 11322,
       "exports": [],
       "imports": [
         "react",
@@ -441,7 +621,7 @@
       "id": "src\\components\\evaluation\\EvaluationHeader.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 5191,
+      "size": 5314,
       "exports": [],
       "imports": [
         "@/types",
@@ -552,13 +732,14 @@
       "id": "src\\components\\modals\\EmployeeModal.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 7625,
+      "size": 8298,
       "exports": [],
       "imports": [
         "react",
         "lucide-react",
         "@/types",
-        "@/hooks/use-db"
+        "@/hooks/use-db",
+        "@/contexts/AuthContext"
       ]
     },
     {
@@ -710,7 +891,7 @@
       "id": "src\\app\\dashboard\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 10153,
+      "size": 11693,
       "exports": [],
       "imports": [
         "react",
@@ -740,12 +921,14 @@
       "id": "src\\app\\employees\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 12686,
+      "size": 15864,
       "exports": [],
       "imports": [
         "react",
         "@/hooks/use-db",
+        "@/contexts/AuthContext",
         "@/types",
+        "@/data/workflow",
         "@/components/ui/DataTable",
         "next/dynamic",
         "lucide-react",
@@ -756,13 +939,16 @@
       "id": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 18652,
+      "size": 20723,
       "exports": [],
       "imports": [
         "react",
         "next/navigation",
         "@/hooks/use-db",
-        "@/lib/scoring"
+        "@/contexts/AuthContext",
+        "@/lib/scoring",
+        "@/lib/evaluation-workflow",
+        "@/data/workflow"
       ]
     },
     {
@@ -780,7 +966,7 @@
       "id": "src\\app\\evaluations\\[id]\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 12076,
+      "size": 21235,
       "exports": [],
       "imports": [
         "react",
@@ -788,6 +974,7 @@
         "@/lib/db/criteria",
         "@/hooks/use-db",
         "@/types",
+        "@/contexts/AuthContext",
         "@tanstack/react-query",
         "@/components/evaluation/CriteriaTab",
         "@/components/evaluation/EvaluationHeader",
@@ -859,7 +1046,7 @@
       "id": "src\\app\\reports\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 13678,
+      "size": 13698,
       "exports": [],
       "imports": [
         "react",
@@ -868,6 +1055,17 @@
         "@/components/charts/GradeDistribution",
         "next/dynamic",
         "@/types",
+        "@/contexts/AuthContext"
+      ]
+    },
+    {
+      "id": "src\\app\\support\\page.tsx",
+      "type": "file",
+      "ext": ".tsx",
+      "size": 23453,
+      "exports": [],
+      "imports": [
+        "next/link",
         "@/contexts/AuthContext"
       ]
     },
@@ -886,27 +1084,15 @@
       "id": "src\\app\\teams\\page.tsx",
       "type": "file",
       "ext": ".tsx",
-      "size": 11978,
+      "size": 12081,
       "exports": [],
       "imports": [
         "@/hooks/use-db",
+        "@/contexts/AuthContext",
         "@/types",
         "next/link",
         "react",
         "@/components/modals/TeamModal"
-      ]
-    },
-    {
-      "id": "src\\providers\\query-provider.tsx",
-      "type": "file",
-      "ext": ".tsx",
-      "size": 485,
-      "exports": [
-        "default"
-      ],
-      "imports": [
-        "@tanstack/react-query",
-        "react"
       ]
     }
   ],
@@ -929,6 +1115,66 @@
     {
       "from": "next.config.ts",
       "to": "next",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\delete_period_2026.ts",
+      "to": "@supabase/supabase-js",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\find_period_2026.ts",
+      "to": "@supabase/supabase-js",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\find_period_2026.ts",
+      "to": "dotenv",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\find_period_2026.ts",
+      "to": "path",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\phase35_verify_matrix.ts",
+      "to": "../src/types",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\phase35_verify_matrix.ts",
+      "to": "../src/data/workflow",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\test_eval_visibility.ts",
+      "to": "../src/lib/db/evaluations",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\test_eval_visibility.ts",
+      "to": "../src/lib/db/users",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\test_workflow_p35.ts",
+      "to": "../src/types",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\test_workflow_p35.ts",
+      "to": "../src/data/workflow",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\verify_access_state.ts",
+      "to": "../src/types",
+      "type": "import"
+    },
+    {
+      "from": "scratch\\verify_access_state.ts",
+      "to": "../src/data/workflow",
       "type": "import"
     },
     {
@@ -967,6 +1213,11 @@
       "type": "import"
     },
     {
+      "from": "src\\actions\\evaluation.ts",
+      "to": "@/lib/round-level-selection",
+      "type": "import"
+    },
+    {
       "from": "src\\actions\\period.ts",
       "to": "@/lib/supabase",
       "type": "import"
@@ -979,6 +1230,11 @@
     {
       "from": "src\\actions\\period.ts",
       "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\actions\\period.ts",
+      "to": "@/lib/evaluation-workflow",
       "type": "import"
     },
     {
@@ -1029,11 +1285,6 @@
     {
       "from": "src\\contexts\\AuthContext.tsx",
       "to": "@/lib/db/evaluations",
-      "type": "import"
-    },
-    {
-      "from": "src\\data\\workflow.ts",
-      "to": "@/types",
       "type": "import"
     },
     {
@@ -1103,7 +1354,17 @@
     },
     {
       "from": "src\\lib\\db\\evaluations.ts",
+      "to": "@/data/workflow",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\evaluations.ts",
       "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\db\\evaluations.ts",
+      "to": "@/lib/round-level-selection",
       "type": "import"
     },
     {
@@ -1134,6 +1395,11 @@
     {
       "from": "src\\lib\\db\\users.ts",
       "to": "@/types/database",
+      "type": "import"
+    },
+    {
+      "from": "src\\lib\\evaluation-workflow.ts",
+      "to": "@/types",
       "type": "import"
     },
     {
@@ -1344,6 +1610,11 @@
     {
       "from": "src\\components\\modals\\EmployeeModal.tsx",
       "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\components\\modals\\EmployeeModal.tsx",
+      "to": "@/contexts/AuthContext",
       "type": "import"
     },
     {
@@ -1568,7 +1839,17 @@
     },
     {
       "from": "src\\app\\employees\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
       "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\employees\\page.tsx",
+      "to": "@/data/workflow",
       "type": "import"
     },
     {
@@ -1608,7 +1889,22 @@
     },
     {
       "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
       "to": "@/lib/scoring",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "@/lib/evaluation-workflow",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\compare\\page.tsx",
+      "to": "@/data/workflow",
       "type": "import"
     },
     {
@@ -1644,6 +1940,11 @@
     {
       "from": "src\\app\\evaluations\\[id]\\page.tsx",
       "to": "@/types",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\evaluations\\[id]\\page.tsx",
+      "to": "@/contexts/AuthContext",
       "type": "import"
     },
     {
@@ -1782,6 +2083,16 @@
       "type": "import"
     },
     {
+      "from": "src\\app\\support\\page.tsx",
+      "to": "next/link",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\support\\page.tsx",
+      "to": "@/contexts/AuthContext",
+      "type": "import"
+    },
+    {
       "from": "src\\app\\teams\\error.tsx",
       "to": "react",
       "type": "import"
@@ -1794,6 +2105,11 @@
     {
       "from": "src\\app\\teams\\page.tsx",
       "to": "@/hooks/use-db",
+      "type": "import"
+    },
+    {
+      "from": "src\\app\\teams\\page.tsx",
+      "to": "@/contexts/AuthContext",
       "type": "import"
     },
     {
@@ -1814,16 +2130,6 @@
     {
       "from": "src\\app\\teams\\page.tsx",
       "to": "@/components/modals/TeamModal",
-      "type": "import"
-    },
-    {
-      "from": "src\\providers\\query-provider.tsx",
-      "to": "@tanstack/react-query",
-      "type": "import"
-    },
-    {
-      "from": "src\\providers\\query-provider.tsx",
-      "to": "react",
       "type": "import"
     }
   ],
@@ -1848,6 +2154,7 @@
         "src\\app\\login\\page.tsx",
         "src\\app\\page.tsx",
         "src\\app\\reports\\page.tsx",
+        "src\\app\\support\\page.tsx",
         "src\\app\\teams\\error.tsx",
         "src\\app\\teams\\page.tsx"
       ]
@@ -1919,9 +2226,10 @@
       "description": "Context providers, auth, and base library utilities.",
       "nodeIds": [
         "src\\contexts\\AuthContext.tsx",
+        "src\\lib\\evaluation-workflow.ts",
+        "src\\lib\\round-level-selection.ts",
         "src\\lib\\scoring.ts",
-        "src\\lib\\supabase.ts",
-        "src\\providers\\query-provider.tsx"
+        "src\\lib\\supabase.ts"
       ]
     },
     {
@@ -1932,7 +2240,17 @@
         ".env.local",
         ".gitignore",
         ".understand-anything\\.understandignore",
+        ".understand-anything\\knowledge-graph.json",
+        ".understand-anything\\tmp\\analyzer.js",
+        ".understand-anything\\tmp\\audit_codebase.js",
+        ".understand-anything\\tmp\\batch_runner.js",
+        ".understand-anything\\tmp\\final_save.js",
+        ".understand-anything\\tmp\\gen_layers.js",
+        ".understand-anything\\tmp\\gen_tour.js",
+        ".understand-anything\\tmp\\merger.js",
+        ".understand-anything\\tmp\\patch_graph.js",
         ".understand-anything\\tmp\\project_tree.txt",
+        ".understand-anything\\tmp\\review_script.js",
         ".understand-anything\\tmp\\scanner.js",
         "AGENTS.md",
         "CLAUDE.md",
@@ -1946,6 +2264,12 @@
         "postcss.config.mjs",
         "README.md",
         "README.txt",
+        "scratch\\delete_period_2026.ts",
+        "scratch\\find_period_2026.ts",
+        "scratch\\phase35_verify_matrix.ts",
+        "scratch\\test_eval_visibility.ts",
+        "scratch\\test_workflow_p35.ts",
+        "scratch\\verify_access_state.ts",
         "TCDG.xlsx",
         "tsconfig.json",
         "tsconfig.tsbuildinfo"
@@ -2010,11 +2334,11 @@
     ]
   },
   "metadata": {
-    "generatedAt": "2026-05-07T06:17:33.127Z",
+    "generatedAt": "2026-05-11T13:48:09.125Z",
     "version": "3.0",
     "stats": {
-      "nodes": 76,
-      "edges": 183,
+      "nodes": 94,
+      "edges": 207,
       "layers": 7
     }
   }
