@@ -24,4 +24,8 @@
 - Cập nhật `tsconfig` loại `scratch/` khỏi typecheck để giữ baseline build sạch.
 
 ## Next Phases
-
+### Phase 36: Vercel Deployment & Production Readiness
+- Verify local production build to catch environment/type issues.
+- Configure Environment Variables on Vercel Dashboard.
+- Connect GitHub repository to Vercel for Automated Deployment.
+- Final production smoke test.
