@@ -28,7 +28,7 @@
 **Ràng buộc**:
 - Đảm bảo repo trên GitHub đã được tạo và remote đúng.
 
-**Status**: `[x]` (Đã cấu hình PAT và push thành công)
+**Status**: `[x]` (Đã cấu hình PAT và đồng bộ code lên GitHub)
 
 ---
 
@@ -39,13 +39,13 @@
 **Thay đổi cụ thể**:
 1. Hướng dẫn Anh vào [vercel.com](https://vercel.com).
 2. Chọn "Add New" -> "Project".
-3. Import repo `Kurabe`.
+3. Import repo `kurabe`.
 4. Cấu hình Environment Variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 5. Nhấn "Deploy".
 
-**Status**: `[ ]`
+**Status**: `[/]` (Đang chờ Anh thực hiện trên web)
 
 ---
 
