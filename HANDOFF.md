@@ -1,23 +1,19 @@
 # HANDOFF - 2026-05-14
 
-## Status
-- **Phase 36: Vercel Deployment & Production Readiness** đã HOÀN THÀNH.
-- Ứng dụng đã chạy ổn định trên Production: `https://lykiv.vercel.app/dashboard`.
-- Đã kiểm tra Smoke Test: Đăng nhập thành công, dữ liệu Supabase load chính xác, UI hiển thị đúng thiết kế.
+## Context
+- Đã hoàn thành các tính năng phân tích (Radar Chart, Skill Gap) và tối ưu UI Mobile.
+- Đã cập nhật đầy đủ trang Hỗ trợ (Support) với hướng dẫn đọc báo cáo.
+- Đã đồng bộ toàn bộ codebase lên GitHub (05acb05).
 
-## Changes Made
-- **Documentation**: 
-  - Cập nhật `MASTER_PLAN.md`: Chuyển Phase 36 sang mục Completed.
-  - Dọn dẹp `tasks.md`: Xóa các task đã hoàn thành để chuẩn bị cho Phase tiếp theo.
+## Hoạt động gần đây
+- [/do P42T01] Triển khai RadarChart và Skill Gap Analysis trên Dashboard.
+- [/do P42T02] Cập nhật trang Support với hướng dẫn phân tích chuyên sâu.
+- [Sweep] Đã cập nhật MASTER_PLAN.md và tasks.md (mở Phase 43).
 
-## Verification
-- URL Production: `https://lykiv.vercel.app/dashboard` [PASS].
-- Login flow: Manager (Ngô Thảo Ly) access [PASS].
-- Data integrity: Dashboard stats (6 Staff, 3 Evaluated) [PASS].
+## Trạng thái Phase
+- **Phase 42**: Done (100%)
+- **Phase 43**: Active (0%) - Kế hoạch rà soát Index DB và Security.
 
-## Pending / Next Steps
-- Chờ Anh cung cấp yêu cầu cho Phase 37 (Dự kiến: Export PDF/Excel hoặc tính năng mới).
-- Lưu ý: Lần chạy `gitnexus analyze` gần nhất gặp lỗi EPERM tại local cache, cần kiểm tra lại môi trường nếu cần re-index sâu.
-
-## Blockers
-- None.
+## Lưu ý
+- Lệnh `npx gitnexus analyze` gặp lỗi npm (EPERM/null destructure). Cần kiểm tra lại môi trường nếu cần re-index code intelligence.
+- Đã push thành công lên repo `tuphucsinh/kurabe`.
