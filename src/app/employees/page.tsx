@@ -246,13 +246,10 @@ export default function EmployeesPage() {
       const userMap = new Map(users.map(u => [u.employeeCode?.toLowerCase(), u.id]));
       
       const payloads: User[] = result.data.map(item => {
-        const existingId = userMap.get(item.employeeCode?.toLowerCase());
+        const existingId = userMap.get((item.employeeCode ?? '').toLowerCase());
         return {
           ...item,
           id: existingId || crypto.randomUUID(),
-          createdAt: item.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          is_active: true
         } as User;
       });
 
