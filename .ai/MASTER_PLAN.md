@@ -38,8 +38,6 @@
 - Tạo component `PeriodSummary` trực quan hóa tiến độ và phân bổ xếp loại (S/A/AB/B/C/D).
 - Tích hợp quyền Manager xuất Excel, Manager/Leader xem thống kê trên Dashboard.
 
-## Next Phases
-
 ### Phase 40: Admin Enhancement & UI Feedback
 - Triển khai `Toast` notification và `ConfirmDialog` component đồng nhất toàn hệ thống.
 - Phân quyền trang Quản lý Nhóm (chỉ Manager được sửa/xóa).
@@ -54,9 +52,15 @@
 - Bổ sung biểu đồ Radar (Skill Profile) và phân tích Skill Gap trên Dashboard.
 - Cập nhật hướng dẫn đọc báo cáo và phân tích chuyên sâu (Skill Gap Analysis) vào trang Hỗ trợ.
 
-## Next Phases (Proposed)
 ### Phase 43: Performance & Security Audit
-- Rà soát chỉ mục Database (Supabase) để tối ưu truy vấn báo cáo lớn.
-- Kiểm tra lại các Policy RLS trên Supabase để đảm bảo bảo mật tầng dữ liệu.
+- Rà soát và bổ sung 7 chỉ mục (Index) trên Supabase cho các bảng Evaluations, Responses, Teams.
+- Kích hoạt RLS (Row Level Security) cho toàn bộ schema public và fix bảo mật function search path.
+- Tối ưu hóa hiệu năng truy vấn cho Dashboard và báo cáo tổng hợp.
+
+## Next Phases (Proposed)
+### Phase 44: Final Polish & Maintenance
 - Tinh chỉnh bundle size và tối ưu hình ảnh/icons.
+- Rà soát lại log lỗi trên Production (Vercel).
+- Hướng dẫn vận hành định kỳ cho Admin.
+
 

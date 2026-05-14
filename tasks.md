@@ -1,15 +1,15 @@
 # Active Tasks
 
-## Phase 43: Performance & Security Audit
+## Phase 44: Final Polish & Maintenance
 
-### [#P43T01] [Supabase] `auditDatabaseIndexes()`
+### [#P44T01] [Build] `optimizeBundleSize()`
 
-**Mục tiêu**: Tối ưu hóa hiệu năng truy vấn cho các báo cáo lớn và Dashboard.
+**Mục tiêu**: Tối ưu hóa tốc độ tải trang trên môi trường Production.
 
 **Thay đổi cụ thể**:
-1. Rà soát các bảng `evaluations`, `evaluation_rounds`, `evaluation_criteria`.
-2. Tạo index cho các cột thường xuyên dùng trong `WHERE` và `JOIN` (period_id, user_id, team_id).
-3. Sử dụng Supabase Advisor để tìm các truy vấn chậm.
+1. Kiểm tra kích thước bundle bằng `next-bundle-analyzer`.
+2. Tối ưu hóa việc import các thư viện nặng (icons, charts).
+3. Cấu hình Image optimization nếu cần.
 
 **Status**: `[ ]`
 
