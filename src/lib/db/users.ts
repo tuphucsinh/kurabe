@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { User, Role } from '@/types';
+import { DatabaseError } from '../errors';
 import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
 type DbUser = Tables<'users'>;
@@ -21,8 +22,7 @@ export async function getUsers(requester?: User | null): Promise<User[]> {
   const { data, error } = await query.order('name');
 
   if (error) {
-    console.error('Error fetching users:', error);
-    return [];
+    throw new DatabaseError('Error fetching users', error);
   }
 
   return (data || []).map(mapUserFromDb);
@@ -37,10 +37,8 @@ export async function getUserById(id: string): Promise<User | null> {
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') { // Not found
-      console.error('Error fetching user:', error);
-    }
-    return null;
+    if (error.code === 'PGRST116') return null; // Not found
+    throw new DatabaseError('Error fetching user', error);
   }
 
   return mapUserFromDb(data);
@@ -55,8 +53,7 @@ export async function getUsersByTeam(teamId: string): Promise<User[]> {
     .order('name');
 
   if (error) {
-    console.error('Error fetching users by team:', error);
-    return [];
+    throw new DatabaseError('Error fetching users by team', error);
   }
 
   return (data || []).map(mapUserFromDb);
@@ -80,11 +77,34 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
     .single();
 
   if (error) {
-    console.error('Error upserting user:', error);
-    return null;
+    throw new DatabaseError('Error upserting user', error);
   }
 
   return mapUserFromDb(data);
+}
+
+export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
+  const dbUsers: TablesInsert<'users'>[] = users.map(user => ({
+    id: user.id,
+    employee_code: user.employeeCode || '',
+    name: user.name || '',
+    role: user.role || 'Employee',
+    team_id: user.teamId || null,
+    join_date: user.joinDate || null,
+    avatar_url: user.avatar || null,
+    is_active: true
+  }));
+
+  const { data, error } = await supabase
+    .from('users')
+    .upsert(dbUsers)
+    .select();
+
+  if (error) {
+    throw new DatabaseError('Error batch upserting users', error);
+  }
+
+  return (data || []).map(mapUserFromDb);
 }
 
 export async function softDeleteUser(id: string): Promise<void> {
@@ -94,7 +114,7 @@ export async function softDeleteUser(id: string): Promise<void> {
     .update(update)
     .eq('id', id);
 
-  if (error) console.error('Error soft deleting user:', error);
+  if (error) throw new DatabaseError('Error soft deleting user', error);
 }
 
 export function mapUserFromDb(dbUser: DbUser): User {

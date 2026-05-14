@@ -5,10 +5,13 @@ import { revalidatePath } from 'next/cache';
 import { calculateRoundScore } from '@/lib/scoring';
 import { RoundNumber, EvaluationRound, Grade, Role } from '@/types';
 import {
-  EvaluatorSelector,
   getNextEvaluationStep,
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
+import {
+  resolveEvaluatorFromDb,
+  EvaluationSubject,
+} from '@/lib/evaluator-resolver';
 import { Database } from '@/types/database';
 import { composeRoundNotes, SelectedLevelIndexes } from '@/lib/round-level-selection';
 
@@ -22,85 +25,7 @@ interface EvaluationSnapshot {
   teamId: string | null;
 }
 
-type EvaluatorResolution = {
-  id: string;
-  role: Role;
-};
 
-async function resolveEvaluator(
-  selector: EvaluatorSelector,
-  evaluation: EvaluationSnapshot
-): Promise<EvaluatorResolution | null> {
-  if (selector === 'SELF') {
-    return { id: evaluation.employeeId, role: evaluation.employeeRole };
-  }
-
-  if (selector === 'SubLeader' && evaluation.teamId) {
-    const { data: subLeader } = await supabase
-      .from('users')
-      .select('id, role')
-      .eq('team_id', evaluation.teamId)
-      .eq('role', 'SubLeader')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (subLeader) {
-      return { id: subLeader.id, role: subLeader.role as Role };
-    }
-  }
-
-  if (selector === 'Leader' && evaluation.teamId) {
-    const { data: team } = await supabase
-      .from('teams')
-      .select('leader_id')
-      .eq('id', evaluation.teamId)
-      .single();
-
-    if (team?.leader_id) {
-      const { data: teamLeader } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('id', team.leader_id)
-        .eq('role', 'Leader')
-        .eq('is_active', true)
-        .single();
-
-      if (teamLeader) {
-        return { id: teamLeader.id, role: teamLeader.role as Role };
-      }
-    }
-
-    const { data: fallbackLeader } = await supabase
-      .from('users')
-      .select('id, role')
-      .eq('team_id', evaluation.teamId)
-      .eq('role', 'Leader')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (fallbackLeader) {
-      return { id: fallbackLeader.id, role: fallbackLeader.role as Role };
-    }
-  }
-
-  if (selector === 'Manager') {
-    const { data: manager } = await supabase
-      .from('users')
-      .select('id, role')
-      .eq('role', 'Manager')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (manager) {
-      return { id: manager.id, role: manager.role as Role };
-    }
-  }
-
-  return null;
-}
 
 /**
  * Lưu bản nháp (Draft) hoặc Gửi (Submit) kết quả đánh giá cho một Round.
@@ -118,7 +43,7 @@ export async function saveEvaluationRound(
   try {
     const { data: evalInfo, error: evalInfoError } = await supabase
       .from('evaluations')
-      .select('employee_id, employee_role, team_id')
+      .select('employee_id, employee_role, team_id, status')
       .eq('id', evaluationId)
       .single();
 
@@ -132,26 +57,6 @@ export async function saveEvaluationRound(
       teamId: evalInfo.team_id,
     };
 
-    const { data: currentRound, error: currentRoundError } = await supabase
-      .from('evaluation_rounds')
-      .select('submitted_at, status')
-      .eq('evaluation_id', evaluationId)
-      .eq('round', round)
-      .eq('evaluator_id', actorId)
-      .single();
-
-    if (currentRoundError || !currentRound) {
-      return { success: false, error: 'Không tìm thấy vòng đánh giá hiện tại.' };
-    }
-
-    if (isSubmit && (currentRound.submitted_at || currentRound.status === 'Submitted')) {
-      return { success: true };
-    }
-
-    if (!isSubmit && (currentRound.submitted_at || currentRound.status === 'Submitted')) {
-      return { success: false, error: 'Vòng đánh giá đã khóa.' };
-    }
-
     // 2. Tính toán điểm và grade theo role người được đánh giá
     const tempRound: Partial<EvaluationRound> = {
       scores,
@@ -162,10 +67,16 @@ export async function saveEvaluationRound(
 
     const now = new Date().toISOString();
     const nextStep = isSubmit ? getNextEvaluationStep(evaluation.employeeRole, round) : null;
-    let nextEvaluator: EvaluatorResolution | null = null;
+    let nextEvaluator = null;
 
     if (nextStep && !nextStep.isFinal && nextStep.evaluator) {
-      nextEvaluator = await resolveEvaluator(nextStep.evaluator, evaluation);
+      const subject: EvaluationSubject = {
+        id: evaluation.employeeId,
+        role: evaluation.employeeRole,
+        teamId: evaluation.teamId,
+      };
+      
+      nextEvaluator = await resolveEvaluatorFromDb(nextStep.evaluator, subject);
 
       if (!nextEvaluator) {
         return {
@@ -175,51 +86,69 @@ export async function saveEvaluationRound(
       }
     }
     
-    // 3. Cập nhật record round
+    // 3. Cập nhật record round (Atomic)
     const composedNotes = composeRoundNotes(notes, selectedLevelIndexes);
     const updateData: UpdateRound = {
       scores,
       notes: composedNotes,
       comment,
       total_score: totalScore,
-      grade: grade as Grade
+      grade: grade as Grade,
+      status: isSubmit ? 'Submitted' : 'Draft'
     };
 
     if (isSubmit) {
       updateData.submitted_at = now;
-      updateData.status = 'Submitted';
-    } else if (currentRound.status === 'NotStarted') {
-      updateData.status = 'Draft';
     }
 
-    const { error: rError } = await supabase
+    const roundQuery = supabase
       .from('evaluation_rounds')
       .update(updateData)
       .eq('evaluation_id', evaluationId)
       .eq('round', round)
-      .eq('evaluator_id', actorId);
+      .eq('evaluator_id', actorId)
+      .select('id');
+
+    if (isSubmit) {
+      roundQuery.is('submitted_at', null);
+    } else {
+      roundQuery.neq('status', 'Submitted');
+    }
+
+    const { data: updatedRounds, error: rError } = await roundQuery;
 
     if (rError) {
       return { success: false, error: 'Lỗi cập nhật kết quả: ' + rError.message };
     }
 
-    if (!isSubmit) {
-      const { data: evalState } = await supabase
-        .from('evaluations')
+    // Nếu không có row nào được update, có nghĩa là record đã được submit (lock) hoặc không tồn tại hoặc sai evaluator
+    if (!updatedRounds || updatedRounds.length === 0) {
+      const { data: checkRound } = await supabase
+        .from('evaluation_rounds')
         .select('status')
-        .eq('id', evaluationId)
-        .single();
+        .eq('evaluation_id', evaluationId)
+        .eq('round', round)
+        .eq('evaluator_id', actorId)
+        .maybeSingle();
 
-      if (evalState?.status === 'NotStarted') {
-        const { error: statusError } = await supabase
-          .from('evaluations')
-          .update({ status: 'Draft', updated_at: now })
-          .eq('id', evaluationId);
-
-        if (statusError) {
-          return { success: false, error: 'Lỗi cập nhật trạng thái bản nháp: ' + statusError.message };
-        }
+      if (!checkRound) {
+        return { success: false, error: 'Không tìm thấy vòng đánh giá hoặc bạn không có quyền.' };
       }
+      
+      if (isSubmit && checkRound.status === 'Submitted') {
+        return { success: true }; // Idempotent: đã submit trước đó
+      }
+      
+      return { success: false, error: 'Vòng đánh giá đã khóa.' };
+    }
+
+    // Cập nhật trạng thái evaluation nếu là Draft và đang ở NotStarted
+    if (!isSubmit && evalInfo.status === 'NotStarted') {
+      await supabase
+        .from('evaluations')
+        .update({ status: 'Draft', updated_at: now })
+        .eq('id', evaluationId)
+        .eq('status', 'NotStarted');
     }
 
     // 4. Nếu là Submit, xử lý logic chuyển Round tiếp theo hoặc kết thúc Evaluation

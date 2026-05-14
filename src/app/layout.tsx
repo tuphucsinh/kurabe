@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import QueryProvider from "@/providers/query-provider";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialog";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,9 +31,13 @@ export default function RootLayout({
       <body className="min-h-full bg-surface" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
+            <ToastProvider>
+              <ConfirmDialogProvider>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              </ConfirmDialogProvider>
+            </ToastProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

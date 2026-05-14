@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { Team, User } from '@/types';
+import { DatabaseError } from '../errors';
 import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
 type DbTeam = Tables<'teams'>;
@@ -15,7 +16,7 @@ export async function upsertTeam(team: Partial<Team>): Promise<void> {
     .from('teams')
     .upsert(dbTeam);
 
-  if (error) console.error('Error upserting team:', error.message || error);
+  if (error) throw new DatabaseError('Error upserting team', error);
 }
 
 export async function getTeams(requester?: User | null): Promise<Team[]> {
@@ -36,8 +37,7 @@ export async function getTeams(requester?: User | null): Promise<Team[]> {
   const { data, error } = await query.order('name');
 
   if (error) {
-    console.error('Error fetching teams:', error);
-    return [];
+    throw new DatabaseError('Error fetching teams', error);
   }
 
   return (data || []).map(mapTeamFromDb);
@@ -52,10 +52,8 @@ export async function getTeamById(id: string): Promise<Team | null> {
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') {
-      console.error('Error fetching team:', error);
-    }
-    return null;
+    if (error.code === 'PGRST116') return null;
+    throw new DatabaseError('Error fetching team', error);
   }
 
   return mapTeamFromDb(data);
@@ -68,7 +66,7 @@ export async function softDeleteTeam(id: string): Promise<void> {
     .update(update)
     .eq('id', id);
 
-  if (error) console.error('Error soft deleting team:', error.message || error);
+  if (error) throw new DatabaseError('Error soft deleting team', error);
 }
 
 function mapTeamFromDb(dbTeam: DbTeam): Team {

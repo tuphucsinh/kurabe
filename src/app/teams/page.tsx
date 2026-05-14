@@ -17,30 +17,59 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import TeamModal from '@/components/modals/TeamModal';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function TeamsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const { user } = useAuth();
-  const { data: users = [] } = useUsers(user);
-  const { data: teams = [] } = useTeams(user);
-  const { data: evaluations = [] } = useEvaluations(undefined, user);
+  const { data: users = [], isLoading: usersLoading } = useUsers(user);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
   const upsertTeam = useUpsertTeam();
   const { mutate: deleteTeam } = useDeleteTeam();
+  const { toast } = useToast();
+  const confirm = useConfirm();
+  
+  const isLoading = usersLoading || teamsLoading || evalsLoading;
+  const isManager = user?.role === 'Manager';
 
   const handleAddTeam = () => {
+    if (!isManager) {
+      toast('Chỉ Quản lý mới có quyền thêm nhóm.', 'warning');
+      return;
+    }
     setEditingTeam(null);
     setIsModalOpen(true);
   };
 
   const handleEditTeam = (team: Team) => {
+    if (!isManager) {
+      toast('Chỉ Quản lý mới có quyền chỉnh sửa nhóm.', 'warning');
+      return;
+    }
     setEditingTeam(team);
     setIsModalOpen(true);
   };
 
-  const handleDeleteTeam = (id: string, name: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhóm "${name}"? Các nhân viên trong nhóm sẽ bị gán là "Chưa gán".`)) {
+  const handleDeleteTeam = async (id: string, name: string) => {
+    if (!isManager) {
+      toast('Chỉ Quản lý mới có quyền xóa nhóm.', 'error');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: 'Xóa nhóm',
+      message: `Bạn có chắc chắn muốn xóa nhóm "${name}"? Các nhân viên trong nhóm sẽ bị gán là "Chưa gán".`,
+      confirmText: 'Xóa nhóm',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
       deleteTeam(id);
     }
   };
@@ -51,6 +80,29 @@ export default function TeamsPage() {
       ...data,
     });
   };
+  
+  if (isLoading) {
+    return (
+      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 w-full max-w-[1600px] mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="space-y-2">
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={300} height={20} />
+          </div>
+          <Skeleton variant="rectangular" width={140} height={40} className="rounded-xl" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   const teamsData = teams.map((team) => {
     const members = users.filter((u) => u.teamId === team.id);
@@ -87,13 +139,15 @@ export default function TeamsPage() {
           <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhóm QAQC</h1>
           <p className="text-on-surface-variant mt-1 text-sm md:text-base">Theo dõi tiến độ đánh giá theo từng đơn vị</p>
         </div>
-        <button 
-          onClick={handleAddTeam}
-          className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
-        >
-          <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          Thêm nhóm mới
-        </button>
+        {isManager && (
+          <button 
+            onClick={handleAddTeam}
+            className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
+          >
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            Thêm nhóm mới
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -128,142 +182,161 @@ export default function TeamsPage() {
       </div>
 
       {/* Team Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        {teamsData.map((team) => {
-          const statusColor = team.progress === 100 
-            ? 'bg-green-100 text-green-700' 
-            : team.progress > 0 
-              ? 'bg-amber-100 text-amber-700' 
-              : 'bg-surface text-outline';
+      {teamsData.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+          {teamsData.map((team) => {
+            const statusColor = team.progress === 100 
+              ? 'bg-green-100 text-green-700' 
+              : team.progress > 0 
+                ? 'bg-amber-100 text-amber-700' 
+                : 'bg-surface text-outline';
 
-          const progressColor = team.progress === 100 
-            ? 'bg-green-500' 
-            : 'bg-primary';
+            const progressColor = team.progress === 100 
+              ? 'bg-green-500' 
+              : 'bg-primary';
 
-          return (
-            <div 
-              key={team.id} 
-              className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden"
-            >
-              {/* Card Header */}
-              <div className="p-6 pb-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                    <Users size={22} />
+            return (
+              <div 
+                key={team.id} 
+                className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden"
+              >
+                {/* Card Header */}
+                <div className="p-6 pb-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                      <Users size={22} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isManager && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditTeam(team as unknown as Team);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                            title="Chỉnh sửa nhóm"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteTeam(team.id, team.name);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            title="Xóa nhóm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                        {team.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleEditTeam(team as unknown as Team);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
-                      title="Chỉnh sửa nhóm"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDeleteTeam(team.id, team.name);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                      title="Xóa nhóm"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                      {team.status}
-                    </span>
-                  </div>
-                </div>
-                <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
-                <p className="text-sm text-outline flex items-center gap-1.5">
-                  <UserIcon size={14} />
-                  Leader: <span className="font-bold text-on-surface">{team.leaderName}</span>
-                </p>
-              </div>
-
-              {/* Card Body */}
-              <div className="px-6 pb-5 flex-1 space-y-5">
-                {/* Stats Row */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 rounded-xl bg-surface">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
-                    <p className="text-xl font-black text-on-surface">{team.membersCount}</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-surface">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
-                    <p className="text-xl font-black text-green-600">{team.completedCount}</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-surface">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
-                    <p className="text-xl font-black text-amber-600">{team.membersCount - team.completedCount}</p>
-                  </div>
+                  <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
+                  <p className="text-sm text-outline flex items-center gap-1.5">
+                    <UserIcon size={14} />
+                    Leader: <span className="font-bold text-on-surface">{team.leaderName}</span>
+                  </p>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
-                    <span className="text-sm font-black text-primary">{team.progress}%</span>
+                {/* Card Body */}
+                <div className="px-6 pb-5 flex-1 space-y-5">
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 rounded-xl bg-surface">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
+                      <p className="text-xl font-black text-on-surface">{team.membersCount}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-surface">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
+                      <p className="text-xl font-black text-green-600">{team.completedCount}</p>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-surface">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
+                      <p className="text-xl font-black text-amber-600">{team.membersCount - team.completedCount}</p>
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full ${progressColor} rounded-full transition-all duration-1000 ease-out`}
-                      style={{ width: `${team.progress}%` }}
-                    />
-                  </div>
-                </div>
 
-                {/* Member Avatars */}
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {team.members.slice(0, 4).map((member) => (
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
+                      <span className="text-sm font-black text-primary">{team.progress}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-surface rounded-full overflow-hidden">
                       <div 
-                        key={member.id}
-                        className="w-7 h-7 rounded-full bg-primary/10 border-2 border-white flex items-center justify-center text-[10px] font-bold text-primary"
-                        title={member.name}
-                      >
-                        {member.name.charAt(0)}
-                      </div>
-                    ))}
-                    {team.membersCount > 4 && (
-                      <div className="w-7 h-7 rounded-full bg-surface border-2 border-white flex items-center justify-center text-[10px] font-bold text-outline">
-                        +{team.membersCount - 4}
-                      </div>
-                    )}
+                        className={`h-full ${progressColor} rounded-full transition-all duration-1000 ease-out`}
+                        style={{ width: `${team.progress}%` }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-[11px] text-outline">{team.membersCount} thành viên</span>
-                </div>
-              </div>
 
-              {/* Card Footer */}
-              <div className="px-6 py-4 bg-surface/50 border-t border-outline-variant/50 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                    <CheckCircle2 size={14} />
-                    <span>{team.completedCount}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
-                    <Clock size={14} />
-                    <span>{team.membersCount - team.completedCount}</span>
+                  {/* Member Avatars */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {team.members.slice(0, 4).map((member) => (
+                        <div 
+                          key={member.id}
+                          className="w-7 h-7 rounded-full bg-primary/10 border-2 border-white flex items-center justify-center text-[10px] font-bold text-primary"
+                          title={member.name}
+                        >
+                          {member.name.charAt(0)}
+                        </div>
+                      ))}
+                      {team.membersCount > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-surface border-2 border-white flex items-center justify-center text-[10px] font-bold text-outline">
+                          +{team.membersCount - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-outline">{team.membersCount} thành viên</span>
                   </div>
                 </div>
-                <Link 
-                  href={`/teams/${team.id}`}
-                  className="text-primary text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
-                >
-                  Chi tiết
-                  <ChevronRight size={16} />
-                </Link>
+
+                {/* Card Footer */}
+                <div className="px-6 py-4 bg-surface/50 border-t border-outline-variant/50 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                      <CheckCircle2 size={14} />
+                      <span>{team.completedCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                      <Clock size={14} />
+                      <span>{team.membersCount - team.completedCount}</span>
+                    </div>
+                  </div>
+                  <Link 
+                    href={`/teams/${team.id}`}
+                    className="text-primary text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
+                  >
+                    Chi tiết
+                    <ChevronRight size={16} />
+                  </Link>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-dashed border-outline-variant p-12 min-h-[400px] flex items-center justify-center">
+          <EmptyState 
+            icon={Users}
+            title="Chưa có nhóm nào"
+            description="Hệ thống hiện chưa có nhóm QAQC nào. Hãy tạo nhóm mới để bắt đầu quản lý nhân sự và đánh giá."
+            action={isManager ? {
+              label: "Tạo nhóm mới",
+              onClick: handleAddTeam,
+              icon: Plus
+            } : undefined}
+          />
+        </div>
+      )}
 
       <TeamModal 
         isOpen={isModalOpen}

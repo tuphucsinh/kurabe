@@ -1,26 +1,33 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { StatCard } from '@/components/ui/StatCard';
-import { GradeDistribution } from '@/components/charts/GradeDistribution';
-import { Users, FileCheck, Clock, Activity, Plus, Lock, Trash2 } from 'lucide-react';
-import { useUsers, useEvaluations, useTeams } from '@/hooks/use-db';
+import React, { useMemo, useState } from 'react';
+import { Plus, Lock, Trash2, FileDown, Activity } from 'lucide-react';
+import { exportEvaluationsToExcel } from '@/lib/export';
+import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
+import { useUsers, useEvaluations, useTeams, useCriteria } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { PeriodModal } from '@/components/modals/PeriodModal';
 import { closeEvaluationPeriod, deleteEvaluationPeriod } from '@/actions/period';
-import { useState } from 'react';
+import { Skeleton, CardSkeleton, StatCardSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkillGapRadar } from '@/components/charts/SkillGapRadar';
+
 import { User } from '@/types';
 export default function DashboardPage() {
-  const { currentPeriod, isManager, allPeriods, user } = useAuth();
+  const { currentPeriod, isManager, isLeader, allPeriods, user } = useAuth();
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   
-  const { data: users = [], isLoading: usersLoading } = useUsers(user);
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id, user);
-  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useUsers(user);
+  const { data: evaluations = [], isLoading: evalsLoading, error: evalsError } = useEvaluations(currentPeriod?.id, user);
+  const { data: teams = [], isLoading: teamsLoading, error: teamsError } = useTeams(user);
+  const { data: criteriaGroups = [], isLoading: criteriaLoading, error: criteriaError } = useCriteria();
 
-  const isLoading = usersLoading || evalsLoading || teamsLoading;
+  const error = usersError || evalsError || teamsError || criteriaError;
+
+  const isLoading = usersLoading || evalsLoading || teamsLoading || criteriaLoading;
 
   const { userMap, usersByTeam } = useMemo(() => {
     const map = new Map<string, User>();
@@ -37,41 +44,7 @@ export default function DashboardPage() {
     return { userMap: map, usersByTeam: byTeam };
   }, [users]);
 
-  // Aggregate data from database
-  const { totalEmployees, completedEvals, pendingEvals } = useMemo(() => {
-    const total = users.filter((u) => u.role !== 'Manager').length;
-    const completed = evaluations.filter((e) => {
-      const employee = userMap.get(e.employeeId);
-      return e.status === 'Approved' && employee?.role !== 'Manager';
-    }).length;
-    return {
-      totalEmployees: total,
-      completedEvals: completed,
-      pendingEvals: total - completed
-    };
-  }, [users, evaluations, userMap]);
-  
-  // Aggregate grades
-  const gradeData = useMemo(() => {
-    const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-    evaluations.forEach((e) => {
-      // Get result from finalGrade or latest round
-      const latestRound = e.rounds[e.rounds.length - 1];
-      const grade = e.finalGrade || latestRound?.grade;
-      if (grade && counts[grade] !== undefined) {
-        counts[grade]++;
-      }
-    });
 
-    return [
-      { grade: 'S', count: counts['S'], color: 'bg-indigo-500' },
-      { grade: 'A', count: counts['A'], color: 'bg-emerald-500' },
-      { grade: 'AB', count: counts['AB'], color: 'bg-teal-500' },
-      { grade: 'B', count: counts['B'], color: 'bg-blue-500' },
-      { grade: 'C', count: counts['C'], color: 'bg-amber-500' },
-      { grade: 'D', count: counts['D'], color: 'bg-rose-500' },
-    ];
-  }, [evaluations]);
 
   // Team status data
   const teamStatus = useMemo(() => {
@@ -151,10 +124,69 @@ export default function DashboardPage() {
     }
   };
 
+  const handleExportExcel = async () => {
+    if (!currentPeriod) return;
+    setIsExporting(true);
+    try {
+      await exportEvaluationsToExcel(currentPeriod.id, { includeRoundDetails: true });
+    } catch (error) {
+      console.error(error);
+      alert('Không thể xuất file Excel. Vui lòng thử lại.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 w-full max-w-[1600px] mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div className="space-y-2">
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={300} height={20} />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton variant="rectangular" width={100} height={40} className="rounded-xl" />
+            <Skeleton variant="rectangular" width={120} height={40} className="rounded-xl" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
+        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center">
+          <Activity size={32} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Đã có lỗi xảy ra</h2>
+          <p className="text-slate-500 max-w-md mx-auto">
+            Không thể tải dữ liệu hệ thống. Vui lòng kiểm tra kết nối mạng hoặc liên hệ quản trị viên.
+          </p>
+          <pre className="mt-4 p-4 bg-slate-50 rounded-lg text-xs text-rose-600 overflow-auto max-w-full">
+            {error instanceof Error ? error.message : 'Unknown Database Error'}
+          </pre>
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          Thử lại
+        </button>
       </div>
     );
   }
@@ -206,6 +238,17 @@ export default function DashboardPage() {
                 Tạo kỳ mới
               </button>
             )}
+
+            {currentPeriod && (
+              <button
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              >
+                <FileDown size={18} />
+                {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -216,38 +259,25 @@ export default function DashboardPage() {
         onSuccess={handlePeriodSuccess} 
       />
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Tổng nhân sự" 
-          value={totalEmployees} 
-          icon={Users} 
-        />
-        <StatCard 
-          title="Đã đánh giá" 
-          value={completedEvals} 
-          icon={FileCheck} 
-        />
-        <StatCard 
-          title="Chờ xử lý" 
-          value={pendingEvals} 
-          icon={Clock} 
-        />
-        <StatCard 
-          title="Tỉ lệ hoàn thành" 
-          value={`${totalEmployees > 0 ? Math.round((completedEvals / totalEmployees) * 100) : 0}%`} 
-          icon={Activity} 
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-        {/* Grade Distribution */}
-        <div className="flex flex-col">
-          <GradeDistribution data={gradeData} />
+      {(isManager || isLeader) && evaluations.length > 0 ? (
+        <PeriodSummary evaluations={evaluations} users={users} />
+      ) : (isManager || isLeader) && evaluations.length === 0 ? (
+        <div className="bg-white p-12 rounded-3xl border border-dashed border-outline-variant flex items-center justify-center">
+          <EmptyState 
+            title="Chưa có dữ liệu đánh giá"
+            description="Kỳ này hiện chưa có nhân viên nào được đánh giá. Hãy bắt đầu quy trình đánh giá cho nhân sự."
+            action={isManager || isLeader ? {
+              label: "Bắt đầu đánh giá",
+              onClick: () => window.location.href = '/employees',
+              icon: Plus
+            } : undefined}
+          />
         </div>
+      ) : null}
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Team Status */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-1">
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Trạng thái theo nhóm</h3>
           <div className="space-y-6 flex-1">
             {teamStatus.map((team) => (
@@ -267,8 +297,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Skill Gap Radar */}
+        {(isManager || isLeader) && (
+          <div className="lg:col-span-1">
+            <SkillGapRadar evaluations={evaluations} criteriaGroups={criteriaGroups} />
+          </div>
+        )}
+
         {/* Recent Activities */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-2 2xl:col-span-1">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-1 2xl:col-span-1">
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Hoạt động gần đây</h3>
           <div className="space-y-4 flex-1">
             {recentActivities.map(({ evaluation, employee, evaluator }) => (
@@ -287,7 +324,13 @@ export default function DashboardPage() {
               </div>
             ))}
             {evaluations.length === 0 && (
-              <div className="text-center py-6 text-slate-500 text-sm">Chưa có hoạt động nào</div>
+              <div className="h-full flex items-center justify-center py-10">
+                <EmptyState 
+                  title="Không có hoạt động"
+                  description="Chưa có hoạt động đánh giá nào gần đây."
+                  className="p-0"
+                />
+              </div>
             )}
           </div>
         </div>

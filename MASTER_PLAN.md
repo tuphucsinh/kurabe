@@ -23,9 +23,34 @@
 - Hoàn thiện UI detail/compare theo access-state; compare chỉ hiển thị visible rounds và empty state `Chưa có đánh giá.`.
 - Cập nhật `tsconfig` loại `scratch/` khỏi typecheck để giữ baseline build sạch.
 
-## Next Phases
 ### Phase 36: Vercel Deployment & Production Readiness
-- Verify local production build to catch environment/type issues.
-- Configure Environment Variables on Vercel Dashboard.
-- Connect GitHub repository to Vercel for Automated Deployment.
-- Final production smoke test.
+- Đồng bộ codebase lên GitHub sử dụng PAT.
+- Xác minh build production local thành công.
+- Kiểm thử Smoke Test trên môi trường LIVE (`https://lykiv.vercel.app/dashboard`).
+- Xác nhận dữ liệu Supabase kết nối ổn định và UI hiển thị chính xác.
+
+### Phase 37: Data Integrity & Stability
+- Khắc phục overlap boundary trong grading logic (exclusive `maxScore`).
+- Áp dụng atomic UPDATE cho `saveEvaluationRound` để ngăn chặn race condition và đảm bảo tính idempotent.
+- Chuẩn hóa PeriodStatus mapping bằng lookup table type-safe.
+
+### Phase 39: Export & Reporting
+- Triển khai engine xuất Excel sử dụng `xlsx` (SheetJS) với 2 sheet: Tổng hợp (Summary) và Chi tiết từng vòng (Round Details).
+- Tạo component `PeriodSummary` trực quan hóa tiến độ (Đã xong/Đang làm/Chưa bắt đầu) và phân bổ xếp loại (S/A/AB/B/C/D).
+- Tích hợp quyền Manager cho phép xuất Excel và quyền Manager/Leader xem thống kê tổng quan trên Dashboard.
+
+### Phase 40: Admin Enhancement & UI Feedback
+- Triển khai hệ thống Toast và ConfirmDialog thay thế alert/confirm browser.
+- Tích hợp CRUD nhân viên và nhóm trực tiếp từ UI với phân quyền Manager.
+- Hỗ trợ Import nhân viên hàng loạt từ file Excel.
+
+### Phase 41: UX Polish & Mobile Refinement
+- Áp dụng Loading Skeletons cho toàn bộ các trang chính.
+- Triển khai Empty State component chuẩn hóa.
+- Tối ưu UI Mobile với floating navigation bar và responsive layout.
+- Đồng nhất micro-animations và page transitions.
+
+## Next Phases
+
+### Phase 42: Next Steps & New Features
+- Refine Dashboard Analytics với Radar chart và Skill Gap analysis.

@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUsers, useTeams, useEvaluations, useUpsertUser, useDeleteUser } from '@/hooks/use-db';
+import { useUsers, useTeams, useEvaluations, useUpsertUser, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import { hasRoundDraft } from '@/data/workflow';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download } from 'lucide-react';
+import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface EmployeeTableItem extends User {
   teamName: string;
@@ -25,7 +30,10 @@ export default function EmployeesPage() {
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
   const { mutate: upsertUser } = useUpsertUser();
+  const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();
+  const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<string>('all');
@@ -34,7 +42,11 @@ export default function EmployeesPage() {
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const canManageEmployees = user?.role === 'Manager' || user?.role === 'Leader';
   const canDeleteEmployees = user?.role === 'Manager';
+  const isManager = user?.role === 'Manager';
   const isLeader = user?.role === 'Leader';
+  
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useState<HTMLInputElement | null>(null)[0]; // Actually I'll use a hidden input with ref
 
   const isLoading = usersLoading || teamsLoading || evalsLoading;
 
@@ -107,24 +119,31 @@ export default function EmployeesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <Skeleton variant="text" width={200} height={32} />
+            <Skeleton variant="text" width={300} height={20} />
+          </div>
+          <Skeleton variant="rectangular" width={140} height={40} className="rounded-xl" />
+        </div>
+        <TableSkeleton rows={8} columns={5} />
       </div>
     );
   }
 
   const handleEdit = (employee: User) => {
     if (!canManageEmployees) {
-      alert('Bạn không có quyền sửa nhân viên.');
+      toast('Bạn không có quyền sửa nhân viên.', 'error');
       return;
     }
     if (isLeader) {
       if (!user?.teamId || employee.teamId !== user.teamId) {
-        alert('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.');
+        toast('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.', 'error');
         return;
       }
       if (employee.role === 'Manager' || employee.role === 'Leader') {
-        alert('Leader không được sửa tài khoản Manager/Leader.');
+        toast('Leader không được sửa tài khoản Manager/Leader.', 'error');
         return;
       }
     }
@@ -134,43 +153,51 @@ export default function EmployeesPage() {
 
   const handleAdd = () => {
     if (!canManageEmployees) {
-      alert('Bạn không có quyền thêm nhân viên.');
+      toast('Bạn không có quyền thêm nhân viên.', 'error');
       return;
     }
     setEditingEmployee(null);
     setIsModalOpen(true);
   };
   
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (!canDeleteEmployees) {
-      alert('Bạn không có quyền xóa nhân viên.');
+      toast('Bạn không có quyền xóa nhân viên.', 'error');
       return;
     }
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${name}"?`)) {
+    
+    const confirmed = await confirm({
+      title: 'Xóa nhân viên',
+      message: `Bạn có chắc chắn muốn xóa nhân viên "${name}"? Thao tác này không thể hoàn tác.`,
+      confirmText: 'Xóa ngay',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
       deleteUser(id);
     }
   };
 
   const handleSaveEmployee = (data: Partial<User>) => {
     if (!canManageEmployees) {
-      alert('Bạn không có quyền lưu thay đổi nhân viên.');
+      toast('Bạn không có quyền lưu thay đổi nhân viên.', 'error');
       return;
     }
 
     if (isLeader) {
       if (!user?.teamId) {
-        alert('Leader chưa được gán nhóm nên không thể thêm/sửa nhân viên.');
+        toast('Leader chưa được gán nhóm nên không thể thêm/sửa nhân viên.', 'error');
         return;
       }
 
       const targetRole = data.role || editingEmployee?.role || 'Employee';
       if (targetRole === 'Manager' || targetRole === 'Leader') {
-        alert('Leader chỉ được thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý.');
+        toast('Leader chỉ được thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý.', 'error');
         return;
       }
 
       if (editingEmployee && editingEmployee.teamId !== user.teamId) {
-        alert('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.');
+        toast('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.', 'error');
         return;
       }
     }
@@ -189,6 +216,62 @@ export default function EmployeesPage() {
     }
     
     upsertUser(payload);
+  };
+
+  const handleImportClick = () => {
+    const input = document.getElementById('excel-import-input') as HTMLInputElement;
+    if (input) input.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast('File quá lớn (tối đa 5MB).', 'error');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await parseEmployeeExcel(file, teams);
+      
+      if (result.errors.length > 0 && result.data.length === 0) {
+        toast(`Lỗi import: ${result.errors[0]}`, 'error');
+        setIsImporting(false);
+        return;
+      }
+
+      // Match with existing users
+      const userMap = new Map(users.map(u => [u.employeeCode?.toLowerCase(), u.id]));
+      
+      const payloads: User[] = result.data.map(item => {
+        const existingId = userMap.get(item.employeeCode?.toLowerCase());
+        return {
+          ...item,
+          id: existingId || crypto.randomUUID(),
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          is_active: true
+        } as User;
+      });
+
+      if (payloads.length > 0) {
+        await batchUpsertUsers(payloads);
+        toast(`Đã import thành công ${payloads.length} nhân viên.`, 'success');
+      }
+      
+      if (result.errors.length > 0) {
+        console.error('Import errors:', result.errors);
+        toast(`Có ${result.errors.length} dòng bị lỗi. Kiểm tra console để biết chi tiết.`, 'warning');
+      }
+    } catch (error) {
+      console.error('Import process error:', error);
+      toast('Lỗi khi xử lý file import.', 'error');
+    } finally {
+      setIsImporting(false);
+      e.target.value = ''; // Reset input
+    }
   };
 
   const columns: Column<EmployeeTableItem>[] = [
@@ -311,13 +394,42 @@ export default function EmployeesPage() {
           <p className="text-on-surface-variant mt-1 text-sm md:text-base">Danh sách chi tiết nhân viên và kết quả đánh giá năng lực</p>
         </div>
         {canManageEmployees && (
-          <button 
-            onClick={handleAdd}
-            className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
-          >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-            Thêm nhân viên mới
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            {isManager && (
+              <>
+                <button 
+                  onClick={() => downloadSampleExcel(teams)}
+                  className="px-4 py-3 bg-white text-slate-600 border border-outline-variant rounded-xl font-bold hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center gap-2"
+                  title="Tải file mẫu"
+                >
+                  <Download size={20} />
+                  <span className="hidden sm:inline">File mẫu</span>
+                </button>
+                <input 
+                  type="file" 
+                  id="excel-import-input" 
+                  className="hidden" 
+                  accept=".xlsx, .xls"
+                  onChange={handleFileChange}
+                />
+                <button 
+                  onClick={handleImportClick}
+                  disabled={isImporting}
+                  className="px-6 py-3 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isImporting ? <Loader2 size={20} className="animate-spin" /> : <Upload size={20} />}
+                  Nhập từ Excel
+                </button>
+              </>
+            )}
+            <button 
+              onClick={handleAdd}
+              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
+            >
+              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+              Thêm nhân viên mới
+            </button>
+          </div>
         )}
       </div>
 
@@ -371,15 +483,33 @@ export default function EmployeesPage() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden">
-        <DataTable 
-          columns={columns} 
-          data={sortedEmployees} 
-          sortKey={sortConfig.key}
-          sortDirection={sortConfig.direction}
-          onSort={handleSort}
-          className="border-none rounded-none"
-        />
+      <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+        {sortedEmployees.length > 0 ? (
+          <DataTable 
+            columns={columns} 
+            data={sortedEmployees} 
+            sortKey={sortConfig.key}
+            sortDirection={sortConfig.direction}
+            onSort={handleSort}
+            className="border-none rounded-none"
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <EmptyState 
+              icon={Users}
+              title="Không tìm thấy nhân viên"
+              description={searchTerm || teamFilter !== 'all' || roleFilter !== 'all' 
+                ? "Không có nhân viên nào khớp với bộ lọc hiện tại. Thử thay đổi điều kiện tìm kiếm."
+                : "Chưa có nhân viên nào trong hệ thống. Hãy thêm nhân viên mới hoặc nhập từ Excel."
+              }
+              action={canManageEmployees ? {
+                label: "Thêm nhân viên mới",
+                onClick: handleAdd,
+                icon: Plus
+              } : undefined}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex items-center justify-between px-2">

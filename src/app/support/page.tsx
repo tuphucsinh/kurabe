@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Settings2,
   UsersRound,
+  LineChart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -128,6 +129,7 @@ const managementGuide = [
     steps: [
       'Vào mục "Nhân viên" từ sidebar để xem danh sách hiện có.',
       'Để thêm mới, dùng nút "Thêm nhân viên mới" ở góc trên bên phải.',
+      'Để import hàng loạt, bấm nút "Import Excel", tải file mẫu về, điền dữ liệu theo đúng định dạng và tải file lên. Hệ thống sẽ tự động rà soát lỗi và xác nhận trước khi lưu.',
       'Để sửa thông tin, bấm biểu tượng bút chì ở cuối dòng nhân viên.',
       'Để xóa, bấm biểu tượng thùng rác và xác nhận lại trước khi xóa.',
     ],
@@ -191,14 +193,44 @@ const faqItems = [
     answer:
       'Điểm cũ giúp đối chiếu mức thay đổi qua từng lượt đánh giá. Tại danh sách nhân viên và màn hình chi tiết, vòng hiện tại luôn nổi bật hơn để tránh đọc nhầm.',
   },
+  {
+    question: 'Hệ thống thông báo và cảnh báo hoạt động như thế nào?',
+    answer:
+      'Hệ thống sử dụng các thông báo nổi (Toast) ở góc màn hình để báo trạng thái thành công/lỗi nhằm không làm gián đoạn công việc. Với các thao tác rủi ro cao (Xóa, Gửi đánh giá), hệ thống sẽ hiển thị hộp thoại xác nhận (Confirm Dialog) rõ ràng để tránh bấm nhầm.',
+  },
+  {
+    question: 'Tôi có thể dùng hệ thống trên điện thoại không?',
+    answer:
+      'Có. Giao diện đã được tối ưu hoàn toàn cho thiết bị di động. Bạn có thể mở menu bên (Sidebar) thông qua nút menu ở góc màn hình, đồng thời các biểu đồ, bảng biểu và thao tác chấm điểm đều thân thiện với thao tác chạm/vuốt.',
+  },
 ];
 
 const quickLinks = [
   { href: '#huong-dan', label: 'Cách thao tác' },
   { href: '#vai-tro', label: 'Theo vai trò' },
   { href: '#workflow', label: 'Workflow các vòng' },
+  { href: '#bao-cao', label: 'Đọc báo cáo & Phân tích' },
   { href: '#quan-ly-du-lieu', label: 'Quản lý dữ liệu nền' },
   { href: '#faq', label: 'Câu hỏi thường gặp' },
+];
+
+const reportingGuide = [
+  {
+    title: 'Biểu đồ Radar (Hồ sơ năng lực)',
+    content: 'Biểu đồ Radar hiển thị sức mạnh tương đối của nhân viên trên các nhóm tiêu chí (A, B, C...). Một hình đa giác đều và rộng thể hiện năng lực toàn diện. Nếu biểu đồ bị "móp" ở một góc, đó là dấu hiệu của nhóm kỹ năng cần cải thiện.',
+  },
+  {
+    title: 'Phân tích khoảng cách (Skill Gap Analysis)',
+    content: 'Skill Gap là sự chênh lệch giữa Điểm mục tiêu (Target) và Điểm thực tế (Actual). Nếu điểm thực tế thấp hơn mục tiêu, hệ thống sẽ đánh dấu vùng thiếu hụt. Đây là căn cứ quan trọng nhất để lập kế hoạch đào tạo hoặc luân chuyển nhân sự.',
+  },
+  {
+    title: 'Biến động điểm qua các vòng',
+    content: 'Hệ thống cho phép so sánh điểm giữa vòng Tự đánh giá, Leader đánh giá và Manager chốt. Khoảng cách lớn giữa các vòng thường cho thấy sự chưa thống nhất về kỳ vọng công việc giữa nhân viên và quản lý.',
+  },
+  {
+    title: 'Xếp loại và Tổng điểm',
+    content: 'Tổng điểm là giá trị định lượng cuối cùng, nhưng Xếp loại (S, A, B, C...) mới là giá trị dùng để xét thưởng hoặc thăng tiến. Xếp loại được tính dựa trên dải điểm cấu hình sẵn trong tiêu chuẩn của từng kỳ.',
+  },
 ];
 
 export default function SupportPage() {
@@ -347,6 +379,27 @@ export default function SupportPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div id="bao-cao" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+                <LineChart size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Hướng dẫn đọc báo cáo & Phân tích</h2>
+                <p className="text-sm text-slate-500">Cách diễn giải các biểu đồ và chỉ số năng lực trong hệ thống.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {reportingGuide.map((item) => (
+                <div key={item.title} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+                  <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">{item.content}</p>
                 </div>
               ))}
             </div>

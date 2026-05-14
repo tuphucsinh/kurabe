@@ -3,52 +3,18 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { Grade, Role } from '@/types';
-import { EvaluatorSelector, getEvaluationFlow } from '@/lib/evaluation-workflow';
+import { getEvaluationFlow } from '@/lib/evaluation-workflow';
+import {
+  resolveEvaluatorFromList,
+  EvaluationSubject,
+  EvaluatorResolution,
+} from '@/lib/evaluator-resolver';
 import { Database } from '@/types/database';
 
 type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
 type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
 
-type PeriodEmployee = {
-  id: string;
-  role: Role;
-  team_id: string | null;
-};
 
-type EvaluatorResolution = {
-  id: string;
-  role: Role;
-};
-
-function resolveEvaluatorBySelector(
-  selector: EvaluatorSelector,
-  employee: PeriodEmployee,
-  employees: PeriodEmployee[]
-): EvaluatorResolution | null {
-  if (selector === 'SELF') {
-    return { id: employee.id, role: employee.role };
-  }
-
-  if (selector === 'SubLeader') {
-    if (!employee.team_id) return null;
-    const subLeader = employees.find(candidate =>
-      candidate.team_id === employee.team_id && candidate.role === 'SubLeader'
-    );
-    return subLeader ? { id: subLeader.id, role: subLeader.role } : null;
-  }
-
-  if (selector === 'Leader') {
-    if (!employee.team_id) return null;
-    const leader = employees.find(candidate =>
-      candidate.team_id === employee.team_id && candidate.role === 'Leader'
-    );
-    return leader ? { id: leader.id, role: leader.role } : null;
-  }
-
-  // Mặc định tìm Manager đầu tiên nếu không có chỉ định khác
-  const manager = employees.find(candidate => candidate.role === 'Manager');
-  return manager ? { id: manager.id, role: manager.role } : null;
-}
 
 function getMissingEvaluatorError(employeeId: string, selector: string, round: number): string {
   return `Không tìm thấy ${selector} phù hợp cho nhân viên ${employeeId} ở Round ${round}.`;
@@ -72,17 +38,17 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
       return { success: false, error: 'Lỗi lấy danh sách nhân viên: ' + eError.message };
     }
 
-    const periodEmployees: PeriodEmployee[] = (employees || []).map(emp => ({
+    const periodEmployees: EvaluationSubject[] = (employees || []).map(emp => ({
       id: emp.id,
       role: emp.role as Role,
-      team_id: emp.team_id,
+      teamId: emp.team_id,
     }));
     const initialEvaluators = new Map<string, EvaluatorResolution>();
 
     // Validate evaluator round 1 trước khi tạo bất kỳ record nào.
     for (const employee of periodEmployees) {
       const [firstStep] = getEvaluationFlow(employee.role);
-      const evaluator = resolveEvaluatorBySelector(firstStep.evaluator, employee, periodEmployees);
+      const evaluator = resolveEvaluatorFromList(firstStep.evaluator, employee, periodEmployees);
       if (!evaluator) {
         return { success: false, error: getMissingEvaluatorError(employee.id, firstStep.evaluator, firstStep.round) };
       }
@@ -115,7 +81,7 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
       period_id: period.id,
       employee_id: emp.id,
       employee_role: emp.role,
-      team_id: emp.team_id,
+      team_id: emp.teamId,
       status: 'NotStarted',
       current_round: 1,
       created_at: now,

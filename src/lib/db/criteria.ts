@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { CriteriaGroup, Role, Criterion } from '@/types';
+import { DatabaseError } from '../errors';
 import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
 type DbCriterionLevel = Tables<'criterion_levels'>;
@@ -46,8 +47,7 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
     .order('sort_order');
 
   if (error) {
-    console.error('Error fetching criteria groups:', error);
-    return [];
+    throw new DatabaseError('Error fetching criteria groups', error);
   }
 
   return (data || []).map(mapGroupFromDb);
@@ -90,8 +90,8 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching criteria group:', error);
-    return null;
+    if (error.code === 'PGRST116') return null;
+    throw new DatabaseError('Error fetching criteria group', error);
   }
 
   return mapGroupFromDb(data);
@@ -120,14 +120,14 @@ export async function upsertCriteriaGroup(group: Partial<CriteriaGroup>): Promis
     .from('criteria_groups')
     .upsert(dbGroup);
 
-  if (error) console.error('Error upserting criteria group:', error.message || error);
+  if (error) throw new DatabaseError('Error upserting criteria group', error);
 }
 
 export async function upsertCriterion(criterion: Partial<Criterion>, groupId: string): Promise<void> {
   let appliesToDb = 'both';
   if (criterion.appliesTo) {
-    const hasLeader = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader');
-    const hasStaff = criterion.appliesTo.includes('SubLeader') || criterion.appliesTo.includes('Employee');
+    const hasLeader = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader') || criterion.appliesTo.includes('SubLeader');
+    const hasStaff = criterion.appliesTo.includes('Employee');
     if (hasLeader && !hasStaff) appliesToDb = 'leader';
     else if (!hasLeader && hasStaff) appliesToDb = 'staff';
     else appliesToDb = 'both';
@@ -151,8 +151,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
     .single();
 
   if (error) {
-    console.error('Error upserting criterion:', error.message || error);
-    return;
+    throw new DatabaseError('Error upserting criterion', error);
   }
 
   const criterionId = data.id;
@@ -165,8 +164,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
       .eq('criterion_id', criterionId);
 
     if (delErr) {
-      console.error('Error deleting old levels:', delErr.message || delErr);
-      return;
+      throw new DatabaseError('Error deleting old levels', delErr);
     }
 
     const levelsToInsert: TablesInsert<'criterion_levels'>[] = criterion.levels.map((l, idx) => ({
@@ -181,7 +179,7 @@ export async function upsertCriterion(criterion: Partial<Criterion>, groupId: st
       .from('criterion_levels')
       .insert(levelsToInsert);
 
-    if (insErr) console.error('Error inserting levels:', insErr.message || insErr);
+    if (insErr) throw new DatabaseError('Error inserting levels', insErr);
   }
 }
 
@@ -191,7 +189,7 @@ export async function updateDefaultLevel(criterionId: string, levelIndex: number
     .update({ default_level_index: levelIndex })
     .eq('id', criterionId);
 
-  if (error) console.error('Error updating default level:', error.message || error);
+  if (error) throw new DatabaseError('Error updating default level', error);
 }
 
 export async function softDeleteCriteriaGroup(id: string): Promise<void> {
@@ -201,7 +199,7 @@ export async function softDeleteCriteriaGroup(id: string): Promise<void> {
     .update(update)
     .eq('id', id);
 
-  if (error) console.error('Error soft deleting criteria group:', error.message || error);
+  if (error) throw new DatabaseError('Error soft deleting criteria group', error);
 }
 
 export async function softDeleteCriterion(id: string): Promise<void> {
@@ -211,14 +209,14 @@ export async function softDeleteCriterion(id: string): Promise<void> {
     .update(update)
     .eq('id', id);
 
-  if (error) console.error('Error soft deleting criterion:', error.message || error);
+  if (error) throw new DatabaseError('Error soft deleting criterion', error);
 }
 
 // Helpers
 function mapAppliesToRoles(appliesTo: string): Role[] {
   switch (appliesTo) {
-    case 'leader': return ['Manager', 'Leader'];
-    case 'staff': return ['SubLeader', 'Employee'];
+    case 'leader': return ['Manager', 'Leader', 'SubLeader'];
+    case 'staff': return ['Employee'];
     case 'both': 
     default: return ['Manager', 'Leader', 'SubLeader', 'Employee'];
   }

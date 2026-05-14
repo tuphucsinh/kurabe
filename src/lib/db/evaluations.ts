@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
+import { DatabaseError } from '../errors';
 import { canViewEvaluation } from '@/data/workflow';
 import { Tables, TablesInsert, Json } from '@/types/database';
 import { composeRoundNotes, splitRoundNotes } from '@/lib/round-level-selection';
@@ -15,8 +16,7 @@ export async function getPeriods(): Promise<EvaluationPeriod[]> {
     .order('year', { ascending: false });
 
   if (error) {
-    console.error('Error fetching periods:', error);
-    return [];
+    throw new DatabaseError('Error fetching periods', error);
   }
 
   return (data || []).map(mapPeriodFromDb);
@@ -32,8 +32,8 @@ export async function getActivePeriod(): Promise<EvaluationPeriod | null> {
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching active period:', error);
-    return null;
+    if (error.code === 'PGRST116') return null;
+    throw new DatabaseError('Error fetching active period', error);
   }
 
   return mapPeriodFromDb(data);
@@ -70,8 +70,7 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching evaluations:', error);
-    return [];
+    throw new DatabaseError('Error fetching evaluations', error);
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
@@ -86,10 +85,8 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
     .single();
 
   if (error) {
-    if (error.code !== 'PGRST116') {
-      console.error('Error fetching evaluation:', error);
-    }
-    return null;
+    if (error.code === 'PGRST116') return null;
+    throw new DatabaseError('Error fetching evaluation', error);
   }
 
   const evaluation = mapEvaluationFromDb(data);
@@ -128,8 +125,7 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching evaluations by period:', error);
-    return [];
+    throw new DatabaseError('Error fetching evaluations by period', error);
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
@@ -149,8 +145,7 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
   const { data, error } = await query.maybeSingle();
 
   if (error) {
-    console.error('Error fetching evaluation by employee:', error);
-    return null;
+    throw new DatabaseError('Error fetching evaluation by employee', error);
   }
 
   if (!data) return null;
@@ -185,8 +180,7 @@ export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<E
     .single();
 
   if (error) {
-    console.error('Error upserting evaluation:', error);
-    return null;
+    throw new DatabaseError('Error upserting evaluation', error);
   }
 
   return mapEvaluationFromDb(data);
@@ -213,8 +207,13 @@ export async function upsertEvaluationRound(evaluationId: string, round: Partial
     .from('evaluation_rounds')
     .upsert(dbRound, { onConflict: 'evaluation_id,round' });
 
-  if (error) console.error('Error upserting evaluation round:', error);
+  if (error) throw new DatabaseError('Error upserting evaluation round', error);
 }
+
+const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {
+  active: 'Active',
+  closed: 'Closed',
+};
 
 // Helpers
 export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
@@ -222,7 +221,7 @@ export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
     id: db.id,
     year: db.year,
     name: db.name,
-    status: (db.status?.charAt(0).toUpperCase() + db.status?.slice(1).toLowerCase()) as PeriodStatus || 'Closed',
+    status: PERIOD_STATUS_MAP[db.status || ''] || 'Closed',
     createdBy: db.created_by || '',
     createdAt: db.created_at || '',
     closedAt: db.closed_at || undefined,

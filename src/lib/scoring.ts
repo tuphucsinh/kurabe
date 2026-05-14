@@ -46,17 +46,13 @@ export function getFinalResult(evaluation: Evaluation): { totalScore: number; gr
  * Lấy xếp loại từ điểm và vai trò
  */
 export function getGradeFromScore(totalScore: number, role: Role): Grade {
-  const isLeader = role === 'Leader' || role === 'Manager';
+  const isLeader = role === 'Leader' || role === 'Manager' || role === 'SubLeader';
   const targetGrading = isLeader ? gradingLeader : gradingStaff;
 
   // Tìm range phù hợp nhất, ưu tiên các mức cao trước nếu bị chồng lấn (overlapping)
   const result = [...targetGrading]
     .sort((a, b) => (b.minScore || 0) - (a.minScore || 0))
-    .find(range => {
-      const min = range.minScore ?? -Infinity;
-      const max = range.maxScore ?? Infinity;
-      return totalScore >= min && totalScore <= max;
-    });
+    .find(range => totalScore >= (range.minScore ?? -Infinity));
 
   return (result?.grade as Grade) || 'D';
 }
