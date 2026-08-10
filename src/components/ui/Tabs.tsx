@@ -17,12 +17,16 @@ interface TabsProps {
 
 export default function Tabs({ tabs, activeTab, onChange, className = '' }: TabsProps) {
   return (
-    <div className={`flex flex-wrap gap-2 p-1 bg-surface border border-outline-variant rounded-xl ${className}`}>
+    <div role="tablist" aria-label="Tabs" className={`flex flex-wrap gap-2 p-1 bg-surface border border-outline-variant rounded-xl ${className}`}>
       {tabs.map((tab) => {
         const active = activeTab === tab.id;
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={active}
+            aria-controls={`panel-${tab.id}`}
+            id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={`
               flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200

@@ -3,14 +3,15 @@ export class DatabaseError extends Error {
   public details?: string;
   public hint?: string;
 
-  constructor(message: string, originalError?: any) {
+  constructor(message: string, originalError?: unknown) {
     super(message);
     this.name = 'DatabaseError';
     
-    if (originalError) {
-      this.code = originalError.code;
-      this.details = originalError.details;
-      this.hint = originalError.hint;
+    if (originalError && typeof originalError === 'object') {
+      const err = originalError as Record<string, unknown>;
+      this.code = err.code as string | undefined;
+      this.details = err.details as string | undefined;
+      this.hint = err.hint as string | undefined;
     }
   }
 }

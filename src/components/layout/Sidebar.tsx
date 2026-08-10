@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar (Fixed) */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] bg-[#003449] z-50 flex-col overflow-hidden shadow-2xl">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] bg-[#003449] z-50 flex-col overflow-hidden shadow-2xl print:hidden">
         <SidebarContent 
           user={user} 
           logout={logout} 

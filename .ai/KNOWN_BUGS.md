@@ -8,8 +8,8 @@
 
 ## UI/UX
 - [x] **Mobile Touch Targets**: Nút chọn điểm (1-5) trên mobile đã được tăng padding (p-5).
-- [ ] **Export Feature**: Chưa có tính năng xuất PDF/Excel kết quả đánh giá.
+- [x] **Export Feature**: Đã hoàn thành tính năng Export ra file Excel.
 - [x] **Real-time Sync**: Đã sử dụng Supabase để sync real-time thay cho localStorage.
 
 ## Logic
-- [ ] **Grading Consistency**: Xếp loại AB/B cho nhân viên đôi khi bị chồng lấn điểm nếu không check kỹ `minScore`/`maxScore`.
+- [x] **Grading Consistency**: Đã fix lỗi logic xếp loại AB/B cho nhân viên, hiện tại xếp loại hoạt động ổn định và chính xác theo `minScore`/`maxScore`.

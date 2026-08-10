@@ -22,15 +22,14 @@ import {
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import CriteriaModal from '@/components/modals/CriteriaModal';
 import CriteriaGroupModal from '@/components/modals/CriteriaGroupModal';
-
-
-
-
-
-
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 export default function CriteriaPage() {
+  const confirm = useConfirm();
+  const { toast } = useToast();
   const { data: groups = [] } = useCriteria();
+
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();
   const updateDefaultLevel = useUpdateDefaultLevel();
@@ -58,35 +57,75 @@ export default function CriteriaPage() {
     upsertCriterion.mutate({
       criterion,
       groupId
+    }, {
+      onSuccess: () => toast('Cập nhật tiêu chí thành công!', 'success'),
+      onError: () => toast('Lỗi cập nhật tiêu chí.', 'error')
     });
   };
 
   const handleSaveGroup = (group: { id: string; code: string; name: string; shortName: string }) => {
-    upsertGroup.mutate(group);
+    upsertGroup.mutate(group, {
+      onSuccess: () => toast('Cập nhật nhóm tiêu chí thành công!', 'success'),
+      onError: () => toast('Lỗi cập nhật nhóm tiêu chí.', 'error')
+    });
     setActiveGroupId(group.code);
   };
 
-  const handleDeleteGroup = (id: string, name: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhóm tiêu chuẩn "${name}"? Tất cả tiêu chí trong nhóm này cũng sẽ bị xóa.`)) {
-      deleteGroup(id);
+  const handleDeleteGroup = async (id: string, name: string) => {
+    const confirmed = await confirm({
+      title: 'Xóa nhóm tiêu chuẩn',
+      message: `Bạn có chắc chắn muốn xóa nhóm tiêu chuẩn "${name}"? Tất cả tiêu chí trong nhóm này cũng sẽ bị xóa.`,
+      confirmText: 'Xóa nhóm',
+      variant: 'danger'
+    });
+    if (confirmed) {
+      deleteGroup(id, {
+        onSuccess: () => toast('Đã xóa nhóm tiêu chí.', 'success'),
+        onError: () => toast('Lỗi xóa nhóm tiêu chí.', 'error')
+      });
     }
   };
 
-  const handleDeleteCriterion = (id: string, name: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa tiêu chí "${name}"?`)) {
-      deleteCriterion(id);
+  const handleDeleteCriterion = async (id: string, name: string) => {
+    const confirmed = await confirm({
+      title: 'Xóa tiêu chí',
+      message: `Bạn có chắc chắn muốn xóa tiêu chí "${name}"?`,
+      confirmText: 'Xóa tiêu chí',
+      variant: 'danger'
+    });
+    if (confirmed) {
+      deleteCriterion(id, {
+        onSuccess: () => toast('Đã xóa tiêu chí.', 'success'),
+        onError: () => toast('Lỗi xóa tiêu chí.', 'error')
+      });
     }
   };
 
-  const handleSetDefaultLevel = (criterionId: string, levelIndex: number, currentDefault: number | undefined) => {
+  const handleSetDefaultLevel = async (criterionId: string, levelIndex: number, currentDefault: number | undefined) => {
     if (levelIndex === currentDefault) {
-      if (window.confirm('Bỏ chọn mức mặc định này?')) {
-        updateDefaultLevel.mutate({ criterionId, levelIndex: null });
+      const confirmed = await confirm({
+        title: 'Bỏ mức mặc định',
+        message: 'Bạn có chắc chắn muốn bỏ chọn mức mặc định này?',
+        confirmText: 'Bỏ chọn',
+      });
+      if (confirmed) {
+        updateDefaultLevel.mutate({ criterionId, levelIndex: null }, {
+          onSuccess: () => toast('Đã bỏ chọn mức mặc định.', 'success'),
+          onError: () => toast('Lỗi bỏ chọn mức mặc định.', 'error')
+        });
       }
       return;
     }
-    if (window.confirm('Đặt mức này làm mặc định khi tạo đánh giá mới?')) {
-      updateDefaultLevel.mutate({ criterionId, levelIndex });
+    const confirmed = await confirm({
+      title: 'Đặt mức mặc định',
+      message: 'Bạn có chắc chắn muốn đặt mức này làm mặc định khi tạo đánh giá mới?',
+      confirmText: 'Đặt mặc định',
+    });
+    if (confirmed) {
+      updateDefaultLevel.mutate({ criterionId, levelIndex }, {
+        onSuccess: () => toast('Đã đặt mức mặc định.', 'success'),
+        onError: () => toast('Lỗi đặt mức mặc định.', 'error')
+      });
     }
   };
 

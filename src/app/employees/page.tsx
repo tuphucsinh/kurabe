@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useUsers, useTeams, useEvaluations, useUpsertUser, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
@@ -46,7 +46,10 @@ export default function EmployeesPage() {
   const isLeader = user?.role === 'Leader';
   
   const [isImporting, setIsImporting] = useState(false);
-  const fileInputRef = useState<HTMLInputElement | null>(null)[0]; // Actually I'll use a hidden input with ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
 
   const isLoading = usersLoading || teamsLoading || evalsLoading;
 
@@ -101,8 +104,8 @@ export default function EmployeesPage() {
     if (!sortConfig.direction) return filteredEmployees;
     
     return [...filteredEmployees].sort((a, b) => {
-      let aVal: string | number = a[sortConfig.key as keyof EmployeeTableItem] as string | number;
-      let bVal: string | number = b[sortConfig.key as keyof EmployeeTableItem] as string | number;
+      let aVal = a[sortConfig.key as keyof EmployeeTableItem] ?? '';
+      let bVal = b[sortConfig.key as keyof EmployeeTableItem] ?? '';
       
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
@@ -112,6 +115,19 @@ export default function EmployeesPage() {
       return 0;
     });
   }, [filteredEmployees, sortConfig]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1);
+  }, [searchTerm, teamFilter, roleFilter]);
+
+  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
+  
+  const paginatedEmployees = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedEmployees.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedEmployees, currentPage]);
 
   const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
     setSortConfig({ key, direction });
@@ -174,7 +190,10 @@ export default function EmployeesPage() {
     });
 
     if (confirmed) {
-      deleteUser(id);
+      deleteUser(id, {
+        onSuccess: () => toast('Đã xóa nhân viên.', 'success'),
+        onError: () => toast('Lỗi khi xóa nhân viên.', 'error')
+      });
     }
   };
 
@@ -215,12 +234,16 @@ export default function EmployeesPage() {
       payload.teamId = user.teamId;
     }
     
-    upsertUser(payload);
+    upsertUser(payload, {
+      onSuccess: () => toast('Cập nhật nhân viên thành công!', 'success'),
+      onError: () => toast('Lỗi khi cập nhật nhân viên.', 'error')
+    });
   };
 
   const handleImportClick = () => {
-    const input = document.getElementById('excel-import-input') as HTMLInputElement;
-    if (input) input.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,8 +426,8 @@ export default function EmployeesPage() {
                   <span className="hidden sm:inline">File mẫu</span>
                 </button>
                 <input 
+                  ref={fileInputRef}
                   type="file" 
-                  id="excel-import-input" 
                   className="hidden" 
                   accept=".xlsx, .xls"
                   onChange={handleFileChange}
@@ -481,15 +504,59 @@ export default function EmployeesPage() {
 
       {/* Table Section */}
       <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
-        {sortedEmployees.length > 0 ? (
-          <DataTable 
-            columns={columns} 
-            data={sortedEmployees} 
-            sortKey={sortConfig.key}
-            sortDirection={sortConfig.direction}
-            onSort={handleSort}
-            className="border-none rounded-none"
-          />
+        {paginatedEmployees.length > 0 ? (
+          <>
+            <DataTable 
+              columns={columns} 
+              data={paginatedEmployees} 
+              sortKey={sortConfig.key}
+              sortDirection={sortConfig.direction}
+              onSort={handleSort}
+              className="border-none rounded-none flex-1"
+            />
+            {totalPages > 1 && (
+              <div className="border-t border-outline-variant px-6 py-4 flex items-center justify-between bg-surface/50">
+                <span className="text-sm text-outline">
+                  Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, sortedEmployees.length)} trong {sortedEmployees.length} nhân viên
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg border border-outline-variant text-sm font-medium hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                  >
+                    Trước
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((p, i, arr) => (
+                        <React.Fragment key={p}>
+                          {i > 0 && arr[i - 1] !== p - 1 && <span className="px-2 text-outline">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${
+                              currentPage === p 
+                                ? 'bg-primary text-white' 
+                                : 'hover:bg-white text-on-surface-variant'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg border border-outline-variant text-sm font-medium hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <EmptyState 
@@ -511,7 +578,7 @@ export default function EmployeesPage() {
 
       <div className="mt-6 flex items-center justify-between px-2">
         <p className="text-sm text-outline font-medium">
-          Tổng số: <b className="text-on-surface">{sortedEmployees.length}</b> nhân viên
+          Tổng số: <b className="text-on-surface">{users.length}</b> nhân viên trong hệ thống
         </p>
       </div>
 

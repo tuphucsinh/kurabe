@@ -16,6 +16,7 @@ export function AccordionItem({ title, children, isOpen, onToggle, icon }: Accor
     <div className="border border-outline-variant rounded-xl overflow-hidden bg-white mb-3 transition-all duration-300">
       <button
         onClick={onToggle}
+        aria-expanded={isOpen}
         className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface transition-colors"
       >
         <div className="flex items-center gap-3">

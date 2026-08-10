@@ -1,56 +1,19 @@
-import React, { useMemo } from 'react';
-import { Evaluation, User } from '@/types';
+import React from 'react';
 import { FileCheck, Clock, AlertCircle, PieChart } from 'lucide-react';
 
 interface PeriodSummaryProps {
-  evaluations: Evaluation[];
-  users: User[];
+  stats: {
+    completed: number;
+    inProgress: number;
+    notStarted: number;
+    total: number;
+    percent: number;
+  };
+  gradeDistribution: { grade: string; count: number; color: string }[];
+  totalEvaluationsCount: number;
 }
 
-export function PeriodSummary({ evaluations, users }: PeriodSummaryProps) {
-  const targetUsers = useMemo(() => users.filter(u => u.role !== 'Manager'), [users]);
-  const totalCount = targetUsers.length;
-
-  const stats = useMemo(() => {
-    const completed = evaluations.filter(e => e.status === 'Approved').length;
-    const dbNotStarted = evaluations.filter(e => e.status === 'NotStarted').length;
-    const inProgress = evaluations.filter(e => e.status !== 'Approved' && e.status !== 'NotStarted').length;
-    const notStarted = Math.max(0, totalCount - evaluations.length) + dbNotStarted;
-    
-    return {
-      completed,
-      inProgress,
-      notStarted,
-      total: totalCount,
-      percent: totalCount > 0 ? Math.round((completed / totalCount) * 100) : 0
-    };
-  }, [evaluations, totalCount]);
-
-  const gradeDistribution = useMemo(() => {
-    const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-    evaluations.forEach((e) => {
-      const grade = e.finalGrade || (e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
-      if (grade && counts[grade] !== undefined) {
-        counts[grade]++;
-      }
-    });
-
-    const colors: Record<string, string> = {
-      S: 'bg-indigo-500',
-      A: 'bg-emerald-500',
-      AB: 'bg-teal-500',
-      B: 'bg-blue-500',
-      C: 'bg-amber-500',
-      D: 'bg-rose-500'
-    };
-
-    return Object.entries(counts).map(([grade, count]) => ({
-      grade,
-      count,
-      color: colors[grade]
-    }));
-  }, [evaluations]);
-
+export function PeriodSummary({ stats, gradeDistribution, totalEvaluationsCount }: PeriodSummaryProps) {
   const maxGradeCount = Math.max(...gradeDistribution.map(d => d.count), 1);
 
   return (
@@ -126,14 +89,14 @@ export function PeriodSummary({ evaluations, users }: PeriodSummaryProps) {
           <div className="space-y-3">
             {gradeDistribution.map((item) => {
               const width = (item.count / maxGradeCount) * 100;
-              const percent = stats.completed > 0 ? Math.round((item.count / evaluations.length) * 100) : 0;
+              const percent = stats.completed > 0 ? Math.round((item.count / totalEvaluationsCount) * 100) : 0;
               
               return (
                 <div key={item.grade} className="flex items-center gap-3 group">
                   <div className="w-8 text-sm font-bold text-slate-600">{item.grade}</div>
                   <div className="flex-1 h-8 bg-slate-50 rounded-lg overflow-hidden relative">
                     <div 
-                      className={`absolute top-0 left-0 h-full rounded-r-lg transition-all duration-1000 ease-out group-hover:brightness-110 ${item.color}`}
+                      className={`absolute top-0 left-0 h-full rounded-r-lg transition-all duration-1000 ease-out group-hover:brightness-110 ${item.color || 'bg-slate-300'}`}
                       style={{ width: `${width}%` }}
                     />
                     <div className="absolute inset-0 flex items-center px-3 justify-between">

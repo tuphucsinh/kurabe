@@ -25,6 +25,7 @@ import {
   getMaxEvaluationRound,
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
+import { useToast } from '@/components/ui/Toast';
 
 interface EvaluationState {
   employee: User | null;
@@ -103,6 +104,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const { toast } = useToast();
   const [showDraftSavedToast, setShowDraftSavedToast] = useState(false);
   const [showSubmitSuccessToast, setShowSubmitSuccessToast] = useState(false);
 
@@ -379,11 +381,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           setShowDraftSavedToast(true);
         }
       } else {
-        alert(`Lỗi: ${res.error}`);
+        toast(`Lỗi: ${res.error}`, 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Đã xảy ra lỗi khi xử lý đánh giá.');
+      toast('Đã xảy ra lỗi khi xử lý đánh giá.', 'error');
     } finally {
       setIsSaving(false);
     }

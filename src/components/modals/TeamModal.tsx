@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Users, User as UserIcon } from 'lucide-react';
-import { Team, User } from '@/types';
+import { Team } from '@/types';
 import { useUsers } from '@/hooks/use-db';
 
 interface TeamModalProps {
@@ -21,6 +21,7 @@ export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalPr
 
   useEffect(() => {
     if (team) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: team.name,
         leaderId: team.leaderId || '',

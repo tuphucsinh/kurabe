@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
-import { toast } from 'sonner';
+import { showToast } from '@/components/ui/Toast';
 
 export default function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -12,9 +12,14 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
         retry: 1,
       },
     },
+    queryCache: new QueryCache({
+      onError: (error) => {
+        showToast(error.message || 'Lỗi tải dữ liệu.', 'error');
+      }
+    }),
     mutationCache: new MutationCache({
       onError: (error) => {
-        toast.error(error.message || 'Có lỗi xảy ra khi thực hiện thao tác.');
+        showToast(error.message || 'Có lỗi xảy ra khi thực hiện thao tác.', 'error');
       },
     }),
   }));

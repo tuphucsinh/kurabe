@@ -1,16 +1,16 @@
 # Active Tasks
 
-## Phase 44: Final Polish & Maintenance
+> ⚠️ Phase 44 (Security Hardening) đang được TẠM HOÃN (Deferred) theo yêu cầu.
+> Xem roadmap đầy đủ: `.ai/MASTER_PLAN.md` → "Next Phases (Post-Audit)"
 
-### [#P44T01] [Build] `optimizeBundleSize()`
+## Phase 49: App Optimization — Gọn Nhẹ, Mượt Mà, Ổn Định
 
-**Mục tiêu**: Tối ưu hóa tốc độ tải trang trên môi trường Production.
+Tất cả task Phase 49 đã hoàn thành và được migrate sang MASTER_PLAN.md.
 
-**Thay đổi cụ thể**:
-1. Kiểm tra kích thước bundle bằng `next-bundle-analyzer`.
-2. Tối ưu hóa việc import các thư viện nặng (icons, charts).
-3. Cấu hình Image optimization nếu cần.
+---
 
-**Status**: `[ ]`
+## Phase 50: Standalone Printable Guide Refinement 📄
+
+Tất cả task Phase 50 đã hoàn thành và được migrate sang MASTER_PLAN.md.
 
 ---

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { X, CheckCircle2, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -16,6 +16,13 @@ interface ToastContextValue {
 }
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+
+type ToastListener = (message: string, type: ToastType) => void;
+const listeners: ToastListener[] = [];
+
+export function showToast(message: string, type: ToastType = 'info') {
+  listeners.forEach(l => l(message, type));
+}
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -38,6 +45,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(timer);
   }, [removeToast]);
+
+  React.useEffect(() => {
+    listeners.push(toast);
+    return () => {
+      const index = listeners.indexOf(toast);
+      if (index > -1) listeners.splice(index, 1);
+    };
+  }, [toast]);
 
   return (
     <ToastContext.Provider value={{ toast }}>

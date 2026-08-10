@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { CriteriaGroup, EvaluationRound } from '@/types';
 import { Info, StickyNote, History } from 'lucide-react';
 
@@ -13,7 +13,7 @@ interface CriteriaTabProps {
   disabled?: boolean;
 }
 
-export default function CriteriaTab({ 
+const CriteriaTab = memo(function CriteriaTab({ 
   group, 
   scores, 
   selectedLevelIndexes,
@@ -216,4 +216,6 @@ export default function CriteriaTab({
       })}
     </div>
   );
-}
+});
+
+export default CriteriaTab;

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Trash2, Info, X } from 'lucide-react';
+import { AlertTriangle, Trash2, Info } from 'lucide-react';
 
 interface ConfirmOptions {
   title: string;

@@ -5,7 +5,7 @@ import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
 
 type DbUser = Tables<'users'>;
 
-export async function getUsers(requester?: User | null): Promise<User[]> {
+export async function getUsers(requester?: User | null, options?: { limit?: number; offset?: number }): Promise<User[]> {
   let query = supabase
     .from('users')
     .select('*')
@@ -19,7 +19,17 @@ export async function getUsers(requester?: User | null): Promise<User[]> {
     }
   }
 
-  const { data, error } = await query.order('name');
+  let orderedQuery = query.order('name');
+  
+  if (options?.limit) {
+    orderedQuery = orderedQuery.limit(options.limit);
+    if (options?.offset) {
+      // Supabase range is inclusive: range(start, end)
+      orderedQuery = orderedQuery.range(options.offset, options.offset + options.limit - 1);
+    }
+  }
+
+  const { data, error } = await orderedQuery;
 
   if (error) {
     throw new DatabaseError('Error fetching users', error);

@@ -96,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setCurrentPeriod = (period: EvaluationPeriod) => {
     setCurrentPeriodState(period);
     localStorage.setItem('selected_period_id', period.id);
+    document.cookie = `selected_period_id=${period.id}; path=/; max-age=31536000`; // 1 year expiry
   };
 
   const login = async (employeeCode: string) => {
@@ -109,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = mapUserFromDb(userData);
       setUser(user);
       localStorage.setItem('auth_user_id', user.id);
+      document.cookie = `auth_session=${user.id}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
     } else {
       throw new Error('User not found');
     }
@@ -117,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('auth_user_id');
+    document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
   };
 
   const isManager = user?.role === 'Manager';

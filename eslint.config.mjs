@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // AI tools ignores:
+    ".tmp/**",
+    ".understand-anything/**",
+    ".gitnexus/**",
+    ".claude/**",
   ]),
 ]);
 

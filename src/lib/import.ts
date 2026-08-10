@@ -28,7 +28,7 @@ export async function parseEmployeeExcel(
     const worksheet = workbook.Sheets[firstSheetName];
     
     // Convert to JSON with headers as keys
-    const rows = XLSX.utils.sheet_to_json<any>(worksheet);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
 
     if (rows.length > 500) {
       throw new Error('Số lượng dòng vượt quá giới hạn (500 dòng).');
@@ -77,12 +77,12 @@ export async function parseEmployeeExcel(
             const date = new Date(Math.round((joinDate - 25569) * 86400 * 1000));
             formattedJoinDate = date.toISOString().split('T')[0];
           } else {
-            const date = new Date(joinDate);
+            const date = new Date(joinDate as string | number | Date);
             if (!isNaN(date.getTime())) {
               formattedJoinDate = date.toISOString().split('T')[0];
             }
           }
-        } catch (e) {
+        } catch {
           // Ignore date error, just keep empty
         }
       }
@@ -102,101 +102,59 @@ export async function parseEmployeeExcel(
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     return {
       ...result,
       errorCount: 1,
-      errors: [`Lỗi khi đọc file: ${error.message}`]
+      errors: [`Lỗi khi đọc file: ${err.message}`]
     };
   }
 }
 
-export async function downloadSampleExcel(teams: Team[]) {
-  const ExcelJS = (await import('exceljs')).default;
-
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Danh sách nhân viên');
-  const dataWs = wb.addWorksheet('Data', { state: 'hidden' });
-
-  // --- Prepare Data Sheet for Dropdowns ---
+export function downloadSampleExcel(teams: Team[]) {
   const teamNames = teams.map(t => t.name);
-  
-  // Write Roles to Data Sheet
-  VALID_ROLES.forEach((role, i) => {
-    dataWs.getCell(`A${i + 1}`).value = role;
-  });
-  
-  // Write Teams to Data Sheet
-  teamNames.forEach((teamName, i) => {
-    dataWs.getCell(`B${i + 1}`).value = teamName;
-  });
 
-  // --- Headers ---
-  const headerRow = ws.addRow(['Mã NV', 'Họ tên', 'Chức vụ', 'Nhóm', 'Ngày vào làm']);
-  headerRow.eachCell(cell => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = {
-      bottom: { style: 'thin', color: { argb: 'FF000000' } },
-    };
-  });
-
-  // --- Column widths ---
-  ws.columns = [
-    { width: 15 },
-    { width: 28 },
-    { width: 18 },
-    { width: 22 },
-    { width: 18 },
-  ];
-
-  // --- Sample data (3 rows) ---
-  const sampleRows = [
+  // --- Sheet 1: Danh sách nhân viên (Data) ---
+  const data = [
+    ['Mã NV', 'Họ tên', 'Chức vụ', 'Nhóm', 'Ngày vào làm'],
     ['NV001', 'Nguyễn Văn A', 'Employee', teamNames[0] || '', '2024-01-15'],
     ['NV002', 'Trần Thị B', 'SubLeader', teamNames[0] || '', '2023-10-01'],
     ['NV003', 'Lê Văn C', 'Leader', teamNames[1] || teamNames[0] || '', '2022-05-20'],
   ];
-  sampleRows.forEach(row => ws.addRow(row));
 
-  // --- Data Validation (dropdown) cho 1000 dòng dữ liệu ---
-  const maxRow = 1001; // header + 1000 rows
-  for (let r = 2; r <= maxRow; r++) {
-    // Cột C (Chức vụ)
-    ws.getCell(`C${r}`).dataValidation = {
-      type: 'list',
-      allowBlank: false,
-      formulae: [`Data!$A$1:$A$${VALID_ROLES.length}`],
-      showErrorMessage: true,
-      errorTitle: 'Chức vụ không hợp lệ',
-      error: `Vui lòng chọn từ danh sách có sẵn.`,
-    };
-    // Cột D (Nhóm)
-    if (teamNames.length > 0) {
-      ws.getCell(`D${r}`).dataValidation = {
-        type: 'list',
-        allowBlank: true,
-        formulae: [`Data!$B$1:$B$${teamNames.length}`],
-        showErrorMessage: true,
-        errorTitle: 'Nhóm không hợp lệ',
-        error: `Vui lòng chọn nhóm có sẵn trong danh sách.`,
-      };
-    }
-  }
+  const wb = XLSX.utils.book_new();
+  const wsData = XLSX.utils.aoa_to_sheet(data);
 
-  // --- Ghi chú hướng dẫn ---
-  ws.getCell('A1').note = 'Mã nhân viên duy nhất, dùng để nhận dạng khi import cập nhật.';
-  ws.getCell('C1').note = 'Chọn từ danh sách: Manager, Leader, SubLeader, Employee';
-  ws.getCell('D1').note = 'Chọn nhóm từ danh sách. Manager không cần chọn nhóm.';
-  ws.getCell('E1').note = 'Định dạng: YYYY-MM-DD (VD: 2024-01-15)';
+  // Column widths
+  wsData['!cols'] = [
+    { wch: 15 }, // Mã NV
+    { wch: 28 }, // Họ tên
+    { wch: 18 }, // Chức vụ
+    { wch: 22 }, // Nhóm
+    { wch: 18 }, // Ngày vào làm
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsData, 'Danh sách nhân viên');
+
+  // --- Sheet 2: Hướng dẫn (Guide) ---
+  const guideData = [
+    ['Trường dữ liệu', 'Hướng dẫn nhập liệu'],
+    ['Mã NV', 'Mã nhân viên duy nhất, dùng để nhận dạng khi import cập nhật.'],
+    ['Họ tên', 'Tên đầy đủ của nhân viên.'],
+    ['Chức vụ', `Chọn đúng 1 trong các giá trị: ${VALID_ROLES.join(', ')}`],
+    ['Nhóm', `Nhập đúng tên nhóm. Các nhóm hiện có: ${teamNames.join(', ')}. Manager không cần nhóm.`],
+    ['Ngày vào làm', 'Định dạng chuẩn: YYYY-MM-DD (VD: 2024-01-15)']
+  ];
+
+  const wsGuide = XLSX.utils.aoa_to_sheet(guideData);
+  wsGuide['!cols'] = [
+    { wch: 20 },
+    { wch: 80 }
+  ];
+
+  XLSX.utils.book_append_sheet(wb, wsGuide, 'Hướng dẫn');
 
   // --- Export ---
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'Mau_Nhap_Nhan_Vien.xlsx';
-  a.click();
-  URL.revokeObjectURL(url);
+  XLSX.writeFile(wb, 'Mau_Nhap_Nhan_Vien.xlsx');
 }

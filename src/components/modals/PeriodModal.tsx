@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Calendar, FileText } from 'lucide-react';
+import { X, Calendar } from 'lucide-react';
 import { createEvaluationPeriod } from '@/actions/period';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -34,7 +34,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
       } else {
         setError(result.error || 'Đã xảy ra lỗi khi tạo kỳ đánh giá');
       }
-    } catch (err) {
+    } catch {
       setError('Lỗi kết nối server');
     } finally {
       setIsSubmitting(false);

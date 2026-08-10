@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, Users, Layout, Settings, LogOut, Bell } from 'lucide-react';
+import { Menu, Home, Users, Layout, Settings, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 import PageTransition from '@/components/layout/PageTransition';
@@ -52,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-[#F8FAFC]">
       {/* Mobile Header */}
-      <header className="md:hidden sticky top-0 bg-white/70 backdrop-blur-xl text-on-surface px-6 h-16 flex items-center justify-between z-40 border-b border-outline-variant/50">
+      <header className="md:hidden sticky top-0 bg-white/70 backdrop-blur-xl text-on-surface px-6 h-16 flex items-center justify-between z-40 border-b border-outline-variant/50 print:hidden">
         <button 
           onClick={() => setIsSidebarOpen(true)}
           className="p-2 hover:bg-surface rounded-xl transition-all active:scale-90"
@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSidebarOpen(false)} 
         />
         
-        <main className="flex-1 min-w-0 md:pl-[240px] pb-32 md:pb-0 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 min-w-0 md:pl-[240px] pb-32 md:pb-0 overflow-y-auto overflow-x-hidden print:pl-0 print:pb-0 print:overflow-visible">
           <PageTransition>
             {children}
           </PageTransition>
@@ -85,7 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile Floating Navigation */}
-      <nav className="md:hidden fixed bottom-6 left-6 right-6 h-16 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2">
+      <nav className="md:hidden fixed bottom-6 left-6 right-6 h-16 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
         <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Home" active={pathname === '/dashboard'} />
         <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Teams" active={pathname === '/teams'} />
         <BottomNavItem href="/employees" icon={<Users size={22} />} label="Users" active={pathname === '/employees'} />

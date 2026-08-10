@@ -17,25 +17,18 @@ export default function GroupNavTabs({
   onSelect
 }: GroupNavTabsProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
+    <div role="tablist" aria-label="Nhóm tiêu chí" className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
       {groups.map((group) => {
         const isActive = activeGroupId === group.id;
         const groupScore = group.criteria.reduce((sum, c) => sum + (scores[c.id] || 0), 0);
         const hasScores = group.criteria.some(c => scores[c.id] !== undefined);
         
-        // Extract short name cleanly
-        let baseName = group.name.replace(/\s*\(.*?\)\s*/g, '').trim();
-        // Remove group letter prefix if present (e.g., "A. ", "B ")
-        baseName = baseName.replace(/^[A-Z][.\s]+/, '');
+        let shortName = group.name.replace(/\s*\(.*?\)\s*/g, '').replace(/^[A-Z][.\s]+/, '').trim();
         
-        let shortName = baseName;
-        if (shortName.toLowerCase().startsWith('tính ')) {
-          shortName = shortName.substring(5);
-        } else if (shortName.toLowerCase().startsWith('năng lực')) {
-          shortName = 'Năng lực';
-        } else if (shortName.toLowerCase().startsWith('thành tích')) {
-          shortName = 'Thành tích';
-        }
+        shortName = shortName
+          .replace(/^tính\s+/i, '')
+          .replace(/^năng lực.*/i, 'Năng lực')
+          .replace(/^thành tích.*/i, 'Thành tích');
         
         // Capitalize first letter (e.g., "kỷ luật" -> "Kỷ luật")
         shortName = shortName.charAt(0).toUpperCase() + shortName.slice(1);
@@ -43,6 +36,10 @@ export default function GroupNavTabs({
         return (
           <button
             key={group.id}
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`panel-${group.id}`}
+            id={`tab-${group.id}`}
             onClick={() => onSelect(group.id)}
             className={`
               relative flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 shrink-0

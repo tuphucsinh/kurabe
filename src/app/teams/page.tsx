@@ -70,7 +70,10 @@ export default function TeamsPage() {
     });
 
     if (confirmed) {
-      deleteTeam(id);
+      deleteTeam(id, {
+        onSuccess: () => toast('Đã xóa nhóm.', 'success'),
+        onError: () => toast('Lỗi khi xóa nhóm.', 'error')
+      });
     }
   };
 
@@ -78,6 +81,9 @@ export default function TeamsPage() {
     upsertTeam.mutate({
       ...editingTeam,
       ...data,
+    }, {
+      onSuccess: () => toast('Cập nhật nhóm thành công!', 'success'),
+      onError: () => toast('Lỗi khi cập nhật nhóm.', 'error')
     });
   };
   

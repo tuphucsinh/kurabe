@@ -8,6 +8,7 @@ import {
   FilePenLine,
   HelpCircle,
   Lock,
+  Printer,
   ShieldCheck,
   Settings2,
   UsersRound,
@@ -236,19 +237,32 @@ const reportingGuide = [
 export default function SupportPage() {
   const { isManager } = useAuth();
 
+  const handlePrintGuide = () => {
+    window.open('/print-guide.html?autoPrint=true', '_blank');
+  };
+
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto print:p-0 print:space-y-6">
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Trang hỗ trợ</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">
-            Hướng dẫn sử dụng và quyền thao tác trong hệ thống đánh giá
-          </h1>
-          <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600 md:text-base">
-            Trang này gom toàn bộ hướng dẫn quan trọng theo đúng luồng sử dụng thực tế: chọn kỳ,
-            mở hồ sơ, chấm điểm, lưu nháp, gửi đánh giá, đọc workflow nhiều vòng và hiểu rõ ai
-            được phép làm gì.
-          </p>
+        <div className="rounded-[24px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm lg:col-span-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 print:border-none print:shadow-none print:p-0">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Trang hỗ trợ</p>
+            <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">
+              Hướng dẫn sử dụng và quyền thao tác trong hệ thống đánh giá
+            </h1>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600 md:text-base">
+              Trang này gom toàn bộ hướng dẫn quan trọng theo đúng luồng sử dụng thực tế: chọn kỳ,
+              mở hồ sơ, chấm điểm, lưu nháp, gửi đánh giá, đọc workflow nhiều vòng và hiểu rõ ai
+              được phép làm gì.
+            </p>
+          </div>
+          <button
+            onClick={handlePrintGuide}
+            className="flex items-center gap-2 rounded-2xl bg-[#07384d] px-5 py-3 text-sm font-black text-white transition-colors hover:bg-[#052b3b] shadow-sm whitespace-nowrap print:hidden active:scale-95 cursor-pointer"
+          >
+            <Printer size={18} />
+            In Hướng Dẫn (A4)
+          </button>
         </div>
 
         <div className="rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-5 shadow-sm">

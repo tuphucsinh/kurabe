@@ -1,6 +1,17 @@
 import { gradingLeader, gradingStaff } from '@/data/criteria';
 import { Evaluation, EvaluationRound, Grade, RoundNumber, Role } from '@/types';
 
+const LEADER_ROLES: Role[] = ['Leader', 'Manager', 'SubLeader'];
+
+const GRADE_COLORS: Record<string, string> = {
+  'S': 'text-amber-600 bg-amber-50 border-amber-200',
+  'A': 'text-blue-600 bg-blue-50 border-blue-200',
+  'AB': 'text-blue-600 bg-blue-50 border-blue-200',
+  'B': 'text-green-600 bg-green-50 border-green-200',
+  'C': 'text-orange-600 bg-orange-50 border-orange-200',
+  'D': 'text-red-600 bg-red-50 border-red-200',
+};
+
 /**
  * Tính score cho 1 round
  * Trả về { totalScore: number; grade: Grade }
@@ -46,7 +57,7 @@ export function getFinalResult(evaluation: Evaluation): { totalScore: number; gr
  * Lấy xếp loại từ điểm và vai trò
  */
 export function getGradeFromScore(totalScore: number, role: Role): Grade {
-  const isLeader = role === 'Leader' || role === 'Manager' || role === 'SubLeader';
+  const isLeader = LEADER_ROLES.includes(role);
   const targetGrading = isLeader ? gradingLeader : gradingStaff;
 
   // Tìm range phù hợp nhất, ưu tiên các mức cao trước nếu bị chồng lấn (overlapping)
@@ -68,14 +79,6 @@ export function calculateGrade(totalScore: number, isLeader: boolean): Grade {
  * Lấy màu sắc cho xếp loại
  */
 export function getGradeColor(grade: string): string {
-  switch (grade) {
-    case 'S': return 'text-amber-600 bg-amber-50 border-amber-200';
-    case 'A':
-    case 'AB': return 'text-blue-600 bg-blue-50 border-blue-200';
-    case 'B': return 'text-green-600 bg-green-50 border-green-200';
-    case 'C': return 'text-orange-600 bg-orange-50 border-orange-200';
-    case 'D': return 'text-red-600 bg-red-50 border-red-200';
-    default: return 'text-gray-600 bg-gray-50 border-gray-200';
-  }
+  return GRADE_COLORS[grade] || 'text-gray-600 bg-gray-50 border-gray-200';
 }
 

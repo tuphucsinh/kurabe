@@ -167,18 +167,13 @@ export async function closeEvaluationPeriod(periodId: string) {
  */
 export async function deleteEvaluationPeriod(periodId: string) {
   try {
-    // 1. Xóa rounds liên quan
-    const { data: evals } = await supabase
+    // 1. Xóa trực tiếp evaluations, DB đã config cascade sang evaluation_rounds và responses
+    const { error: evalError } = await supabase
       .from('evaluations')
-      .select('id')
+      .delete()
       .eq('period_id', periodId);
 
-    if (evals && evals.length > 0) {
-      const evalIds = evals.map(e => e.id);
-      await supabase.from('evaluation_rounds').delete().in('evaluation_id', evalIds);
-      // 2. Xóa evaluations
-      await supabase.from('evaluations').delete().eq('period_id', periodId);
-    }
+    if (evalError) return { success: false, error: evalError.message };
 
     // 3. Xóa period
     const { error } = await supabase

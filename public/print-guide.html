@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cẩm Nang Hướng Dẫn Sử Dụng Chi Tiết - Hệ Thống Đánh Giá Kurabe QAQC</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1e293b;
+      background-color: #fff;
+      font-size: 9.5pt;
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Screen navbar */
+    .screen-header {
+      background: #07384d;
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .print-btn {
+      background: #00a8cc;
+      color: white;
+      border: none;
+      padding: 8px 22px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .print-btn:hover {
+      background: #0088a3;
+    }
+
+    @media print {
+      .screen-header {
+        display: none !important;
+      }
+    }
+
+    .container {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 10px;
+    }
+
+    /* Main Cover / Document Header */
+    .doc-header {
+      border-bottom: 3px solid #07384d;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .doc-brand {
+      font-size: 24pt;
+      font-weight: 900;
+      color: #07384d;
+      letter-spacing: -0.5px;
+      font-style: italic;
+      line-height: 1;
+    }
+    .doc-title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+    .doc-subtitle {
+      font-size: 9pt;
+      color: #475569;
+      margin-top: 2px;
+    }
+    .doc-meta {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Important Alert Box */
+    .alert-box {
+      background-color: #eff6ff;
+      border: 1.5px solid #3b82f6;
+      border-left: 5px solid #1d4ed8;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 9pt;
+      color: #1e3a8a;
+    }
+    .alert-box strong {
+      color: #1e40af;
+    }
+
+    /* Section Component */
+    .section {
+      margin-bottom: 18px;
+    }
+    .section-header {
+      font-size: 11pt;
+      font-weight: 800;
+      color: #ffffff;
+      background: #07384d;
+      padding: 6px 12px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    .section-header span.tag {
+      font-size: 8pt;
+      font-weight: 600;
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* Sub-section headers */
+    .sub-header {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0369a1;
+      border-bottom: 1.5px solid #cbd5e1;
+      padding-bottom: 3px;
+      margin: 10px 0 8px 0;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    /* Detailed Steps Card List */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .step-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .step-badge {
+      background: #07384d;
+      color: white;
+      font-weight: 800;
+      font-size: 9pt;
+      min-width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-body {
+      flex: 1;
+    }
+    .step-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .step-desc {
+      font-size: 8.5pt;
+      color: #334155;
+      margin-top: 2px;
+      text-align: justify;
+    }
+    .step-tip {
+      font-size: 8pt;
+      color: #0369a1;
+      background: #f0f9ff;
+      border: 1px solid #e0f2fe;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      margin: 8px 0;
+      page-break-inside: auto;
+    }
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      page-break-after: auto;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    /* Role Guides Grid */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .role-box {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #ffffff;
+    }
+    .role-box-title {
+      font-size: 10pt;
+      font-weight: 800;
+      color: #07384d;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .role-box-title .badge {
+      font-size: 7.5pt;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .role-box ul {
+      padding-left: 14px;
+      font-size: 8.5pt;
+      color: #334155;
+    }
+    .role-box li {
+      margin-bottom: 3px;
+    }
+
+    /* Flow Diagrams */
+    .flow-card {
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .flow-header {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .flow-node {
+      background: #ffffff;
+      border: 1px solid #0284c7;
+      color: #0369a1;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 8.5pt;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .flow-arrow {
+      color: #64748b;
+      font-weight: bold;
+      font-size: 10pt;
+    }
+
+    /* FAQ Item */
+    .faq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .faq-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px;
+      background: #fafafa;
+    }
+    .faq-card h5 {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .faq-card p {
+      font-size: 8pt;
+      color: #475569;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    /* Page Break Marker */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* Footer */
+    .doc-footer {
+      margin-top: 15px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Navigation Bar -->
+  <div class="screen-header">
+    <div>
+      <strong>CẨM NANG HƯỚNG DẪN ĐÁNH GIÁ KURABE (KHỔ A4 CHUẨN)</strong>
+    </div>
+    <button class="print-btn" onclick="window.print()">
+      🖨️ IN CẨM NANG HƯỚNG DẪN (A4)
+    </button>
+  </div>
+
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="doc-header">
+      <div>
+        <div class="doc-brand">KURABE</div>
+        <div class="doc-title">CẨM NANG HƯỚNG DẪN VẬN HÀNH &amp; ĐÁNH GIÁ NĂNG LỰC QAQC</div>
+        <div class="doc-subtitle">Tài liệu chi tiết hướng dẫn thao tác từng bước dành cho mọi cấp bậc nhân sự</div>
+      </div>
+      <div class="doc-meta">
+        <p><strong>Mã tài liệu:</strong> HD-QAQC-2026</p>
+        <p><strong>Khổ giấy:</strong> A4 Standard</p>
+        <p><strong>Ngày phát hành:</strong> 2026</p>
+      </div>
+    </div>
+
+    <!-- QUY TẮC CỐT LÕI -->
+    <div class="alert-box">
+      📌 <strong>LƯU Ý CỐT LÕI TRƯỚC KHI THAO TÁC:</strong> Toàn bộ dữ liệu (Danh sách nhân viên, phiếu đánh giá, báo cáo, biểu đồ) đều phụ thuộc vào <strong>"Kỳ Đánh Giá"</strong> đang chọn ở góc dưới menu bên trái (Sidebar). Trước khi làm việc, luôn kiểm tra xem mình đã chọn đúng năm/kỳ đánh giá cần thực hiện chưa!
+    </div>
+
+    <!-- CHƯƠNG 1: QUY TRÌNH THAO TÁC NÂNG CAO -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 1: QUY TRÌNH 9 BƯỚC ĐÁNH GIÁ NĂNG LỰC CHUẨN
+        <span class="tag">Quy trình bắt buộc</span>
+      </div>
+
+      <div class="step-list">
+        
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-body">
+            <div class="step-title">Kiểm tra Kỳ Đánh Giá (Evaluation Period)</div>
+            <div class="step-desc">Nhìn xuống góc dưới cùng của Menu Sidebar bên trái. Nhấp vào bộ chọn kỳ để đảm bảo đang chọn đúng Kỳ hiện tại (VD: Kỳ Đánh Giá 2026). Nếu chọn sai kỳ, dữ liệu sẽ hiển thị trống hoặc sai năm.</div>
+            <div class="step-tip">💡 Mẹo: Nếu không thấy dữ liệu nhân viên, 99% nguyên nhân là đang chọn sai Kỳ đánh giá.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-body">
+            <div class="step-title">Truy cập Trang Danh Sách Nhân Viên</div>
+            <div class="step-desc">Vào mục <strong>"Nhân viên"</strong> từ menu. Danh sách sẽ liệt kê tất cả nhân sự thuộc phạm vi quản lý của bạn. Ở cột "Xếp loại gần nhất", thông tin vòng hiện tại được in đậm nổi bật, các vòng trước mờ hơn.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-body">
+            <div class="step-title">Mở Phiếu Đánh Giá Chi Tiết</div>
+            <div class="step-desc">Nhấn vào biểu tượng <strong>Tài liệu 📄</strong> ở góc phải dòng nhân viên tương ứng. Hệ thống sẽ mở màn hình chi tiết chấm điểm.</div>
+            <div class="step-tip">⚠️ Lưu ý: Nếu hiện "Không có quyền truy cập", nghĩa là bạn đang mở hồ sơ của cấp trên hoặc nhân sự ngoài nhóm.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">4</div>
+          <div class="step-body">
+            <div class="step-title">Đọc Thông Tin Trạng Thái Vòng Đánh Giá</div>
+            <div class="step-desc">Quan sát thanh tiêu đề đầu trang: Hệ thống báo rõ bạn đang ở <strong>Vòng mấy</strong> (Vòng 1/2/3), chế độ <strong>"Sửa"</strong> hay <strong>"Chỉ xem"</strong>. Cột bên phải cho biết tổng điểm, xếp loại và lịch sử các vòng trước.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">5</div>
+          <div class="step-body">
+            <div class="step-title">Chấm Điểm Tiêu Chí Theo Nhóm (Tab A, B, C...)</div>
+            <div class="step-desc">Các tiêu chí đánh giá được chia theo từng nhóm tab. Bạn nhấp chọn mức điểm từ <strong>1 đến 5</strong> cho từng tiêu chí. Với các tiêu chí đặc biệt hoặc cho điểm quá cao/thấp, hãy bấm <strong>"Ghi chú"</strong> để điền nội dung giải thích.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">6</div>
+          <div class="step-body">
+            <div class="step-title">Thường Xuyên Bấm "Lưu Bản Nháp"</div>
+            <div class="step-desc">Trong quá trình chấm, hãy bấm nút <strong>"Lưu bản nháp"</strong> ở góc trên. Dữ liệu sẽ được tự động lưu lên Supabase Database mà KHÔNG bị khóa phiếu, cho phép bạn thoát ra và quay lại sửa tiếp bất cứ lúc nào.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">7</div>
+          <div class="step-body">
+            <div class="step-title">Rà Soát Tổng Thể Phiếu Đánh Giá</div>
+            <div class="step-desc">Trước khi gửi, rà soát lại 3 điểm chính: 1) Đã chấm hết 100% các tiêu chí chưa; 2) Tổng điểm và Xếp loại tự động (S, A, B, C, D) có chính xác không; 3) Các nhận xét quan trọng đã điền đủ chưa.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">8</div>
+          <div class="step-body">
+            <div class="step-title">Nộp Đánh Giá (Submit Evaluation)</div>
+            <div class="step-desc">Nhấn <strong>"Gửi Đánh giá"</strong> và xác nhận trên hộp thoại. Ngay sau khi gửi, vòng hiện tại sẽ bị **KHÓA CHỈNH SỬA** để bảo toàn tính minh bạch, và hệ thống tự động mở lượt cho cấp quản lý tiếp theo.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">9</div>
+          <div class="step-body">
+            <div class="step-title">Theo Dõi Tiến Độ Trên Báo Cáo</div>
+            <div class="step-desc">Quay lại trang <strong>"Bảng điều khiển"</strong> hoặc <strong>"Báo cáo"</strong> để theo dõi tỷ lệ hoàn thành (%), phân bổ xếp loại toàn phòng ban và trích xuất file Excel khi cần.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 2: PHÂN QUYỀN VAI TRÒ & WORKFLOW -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 2: PHÂN QUYỀN VAI TRÒ &amp; WORKFLOW CÁC VÒNG
+        <span class="tag">Quy trình chuyển giao</span>
+      </div>
+
+      <div class="role-grid">
+        <div class="role-box">
+          <div class="role-box-title">1. NHÂN VIÊN (EMPLOYEE) <span class="badge">Vòng 1-3</span></div>
+          <ul>
+            <li><strong>Quyền hạn:</strong> Xem kết quả đánh giá cá nhân sau khi được duyệt.</li>
+            <li><strong>Tự đánh giá:</strong> Tham gia tự chấm điểm ở Vòng 1 nếu cấu hình kỳ yêu cầu.</li>
+            <li><strong>Giới hạn:</strong> Không thể chỉnh sửa kết quả của người khác hay quản lý dữ liệu.</li>
+          </ul>
+        </div>
+
+        <div class="role-box">
+          <div class="role-box-title">2. PHÓ NHÓM (SUBLEADER) <span class="badge">Vòng 1</span></div>
+          <ul>
+            <li><strong>Quyền hạn:</strong> Tự đánh giá bản thân (Vòng 1) và chấm điểm Nhân viên thuộc nhóm ở Vòng 1.</li>
+            <li><strong>Ghi chú:</strong> Nhập nhận xét chuyên môn từng tiêu chí ở giai đoạn trực tiếp sản xuất.</li>
+            <li><strong>Giới hạn:</strong> Không xem/chấm được nhân sự nhóm khác hoặc cấp cao hơn.</li>
+          </ul>
+        </div>
+
+        <div class="role-box">
+          <div class="role-box-title">3. TRƯỞNG NHÓM (LEADER) <span class="badge">Vòng 2</span></div>
+          <ul>
+            <li><strong>Quyền hạn:</strong> Tự đánh giá (Vòng 1), chấm Vòng 2 cho Nhân viên &amp; SubLeader trong nhóm.</li>
+            <li><strong>So sánh:</strong> Xem lại điểm Vòng 1 của SubLeader để đối chiếu biến động trước khi chốt Vòng 2.</li>
+            <li><strong>Quản lý nhân sự:</strong> Thêm/Sửa thông tin Nhân viên và SubLeader thuộc nhóm mình.</li>
+          </ul>
+        </div>
+
+        <div class="role-box">
+          <div class="role-box-title">4. QUẢN LÝ / ADMIN (MANAGER) <span class="badge">Vòng Cuối</span></div>
+          <ul>
+            <li><strong>Quyền hạn:</strong> Duyệt Vòng 3 (Chốt điểm cuối), Quản lý Kỳ đánh giá (Tạo/Đóng kỳ).</li>
+            <li><strong>Dữ liệu nền:</strong> Quản lý Nhóm phòng ban, Thêm/Sửa/Xóa Nhân viên, Import Excel.</li>
+            <li><strong>Cấu hình:</strong> Sửa bộ Tiêu chuẩn (Criteria), Thang điểm và dải Xếp loại (S/A/B/C/D).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sub-header">SƠ ĐỒ WORKFLOW TỰ ĐỘNG THEO ĐỐI TƯỢNG ĐƯỢC ĐÁNH GIÁ</div>
+
+      <div class="flow-card">
+        <div class="flow-header">🔹 Đối tượng: Nhân Viên Sản Xuất / QAQC Staff</div>
+        <div class="flow-steps">
+          <span class="flow-node">VÒNG 1: SubLeader Đánh giá</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">VÒNG 2: Leader Đánh giá</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">VÒNG 3: Manager Duyệt Chốt</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span style="font-size: 8.5pt; font-weight: 700; color: #166534;">[HOÀN TẤT]</span>
+        </div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-header">🔹 Đối tượng: Phó Nhóm / SubLeader</div>
+        <div class="flow-steps">
+          <span class="flow-node">VÒNG 1: Tự đánh giá (Self)</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">VÒNG 2: Leader Đánh giá</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">VÒNG 3: Manager Duyệt Chốt</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span style="font-size: 8.5pt; font-weight: 700; color: #166534;">[HOÀN TẤT]</span>
+        </div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-header">🔹 Đối tượng: Trưởng Nhóm / Leader</div>
+        <div class="flow-steps">
+          <span class="flow-node">VÒNG 1: Tự đánh giá (Self)</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span class="flow-node">VÒNG 2: Manager Duyệt Chốt</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span style="font-size: 8.5pt; font-weight: 700; color: #166534;">[HOÀN TẤT]</span>
+        </div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-header">🔹 Đối tượng: Trưởng Phòng / Manager</div>
+        <div class="flow-steps">
+          <span class="flow-node">VÒNG 1: Tự đánh giá (Self) &amp; Tự chốt</span>
+          <span class="flow-arrow">&rarr;</span>
+          <span style="font-size: 8.5pt; font-weight: 700; color: #166534;">[HOÀN TẤT NGUYÊN TỬ]</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SANG TRANG CHO NỘI DUNG ADMIN VÀ BÁO CÁO -->
+    <div class="page-break"></div>
+
+    <!-- CHƯƠNG 3: HƯỚNG DẪN QUẢN TRỊ DÀNH CHO ADMIN / MANAGER -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 3: HƯỚNG DẪN QUẢN TRỊ DỮ LIỆU NỀN &amp; ADMIN
+        <span class="tag">Dành cho Manager</span>
+      </div>
+
+      <div class="sub-header">1. Quản Lý Kỳ Đánh Giá Đăng Định Kỳ (Reset Đầu Năm)</div>
+      <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Khi bắt đầu đợt đánh giá mới (VD: Năm 2026), <strong>KHÔNG CẦN XÓA DỮ LIỆU CŨ</strong>. Quản trị viên chỉ cần thực hiện theo các bước:</p>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
+        <li>Vào menu <strong>"Cài đặt" (Settings)</strong> &rarr; chọn tab <strong>"Kỳ Đánh Giá" (Periods)</strong>.</li>
+        <li>Bấm <strong>"Tạo Kỳ Đánh Giá Mới"</strong>, điền tên (VD: "Đánh Giá QAQC 2026") và chọn trạng thái <strong>"Active"</strong>.</li>
+        <li>Hệ thống tự động kích hoạt kỳ mới. Toàn bộ nhân sự khi đăng nhập sẽ tự động chuyển sang kỳ mới với bảng điểm trắng sẵn sàng để đánh giá. Các kỳ cũ được lưu lại trong lịch sử để tra cứu.</li>
+      </ol>
+
+      <div class="sub-header">2. Import Nhân Viên Hàng Loạt Từ File Excel</div>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
+        <li>Vào mục <strong>"Nhân viên"</strong> &rarr; Bấm nút <strong>"Import Excel"</strong> ở góc trên bên phải.</li>
+        <li>Nhấn <strong>"Tải file mẫu (.xlsx)"</strong> để lấy định dạng file chuẩn của hệ thống.</li>
+        <li>Điền thông tin nhân sự (Mã NV, Họ tên, Nhóm, Chức vụ, Ngày vào làm) vào file mẫu và lưu lại.</li>
+        <li>Bấm <strong>"Chọn file"</strong> và tải file Excel lên. Hệ thống sẽ tự động đối chiếu rà soát lỗi dữ liệu (ví dụ: trùng mã nhân viên, sai tên nhóm). Xóa lỗi nếu có rồi bấm <strong>"Xác nhận Import"</strong>.</li>
+      </ol>
+
+      <div class="sub-header">3. Xuất Báo Cáo Kết Quả Ra File Excel (.xlsx)</div>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
+        <li>Vào mục <strong>"Báo cáo" (Reports)</strong> từ menu chính.</li>
+        <li>Nhấp bộ lọc Nhóm hoặc Kỳ đánh giá nếu cần xem phạm vi cụ thể.</li>
+        <li>Nhấn nút <strong>"Xuất Báo Cáo Excel"</strong> ở góc trên bên phải. File xuất ra sẽ chứa 2 Sheet chi tiết:
+          <ul style="padding-left: 14px; margin-top: 2px;">
+            <li><strong>Sheet 1 - Tổng hợp:</strong> Mã NV, Họ tên, Nhóm, Điểm tổng kết cuối cùng, Xếp loại (S/A/B/C/D).</li>
+            <li><strong>Sheet 2 - Chi tiết các vòng:</strong> Đối chiếu chi tiết điểm Vòng 1, Vòng 2, Vòng 3 và nhận xét của từng người đánh giá.</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+
+    <!-- CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO VÀ PHÂN TÍCH NĂNG LỰC -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO &amp; PHÂN TÍCH CHUYÊN SÂU
+        <span class="tag">Phân tích dữ liệu</span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">Chỉ số / Biểu đồ</th>
+            <th style="width: 40%;">Ý nghĩa chuyên môn</th>
+            <th style="width: 35%;">Hành động đề xuất cho Quản lý</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Biểu đồ Radar (Hồ sơ năng lực)</strong></td>
+            <td>Trực quan hóa sức mạnh trên các nhóm tiêu chí (A: Kỹ thuật, B: Kỷ luật, C: Quản lý...). Biểu đồ tròn đều = Năng lực đồng đều. Biểu đồ móp một góc = Thiếu hụt kỹ năng nhóm đó.</td>
+            <td>Lập kế hoạch đào tạo tập trung vào nhóm tiêu chí bị móp của nhân sự.</td>
+          </tr>
+          <tr>
+            <td><strong>Khoảng cách Kỹ năng (Skill Gap)</strong></td>
+            <td>Đo lường độ lệch giữa Điểm Mục Tiêu (Target) và Điểm Thực Tế (Actual). Vùng thiếu hụt đỏ thể hiện nhân sự chưa đạt tiêu chuẩn công việc.</td>
+            <td>Ưu tiên luân chuyển hoặc bổ túc kiến thức cho nhân sự có Skill Gap lớn.</td>
+          </tr>
+          <tr>
+            <td><strong>Biến động điểm qua các vòng</strong></td>
+            <td>So sánh sự chênh lệch điểm giữa Vòng 1 (Tự đánh giá / SubLeader) và Vòng 2/3 (Leader / Manager).</td>
+            <td>Nếu lệch quá 1.5 điểm: Cần họp đối thoại trực tiếp để làm rõ kỳ vọng công việc.</td>
+          </tr>
+          <tr>
+            <td><strong>Phân bổ Xếp loại (Grade Dist.)</strong></td>
+            <td>Tỷ lệ phần trăm nhân sự đạt các mức loại S (Xuất sắc), A (Giỏi), B (Đạt), C/D (Yếu).</td>
+            <td>Căn cứ chính xác để chia quỹ thưởng năm và đánh giá chất lượng nhân sự phòng ban.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CHƯƠNG 5: HƯỚNG DẪN XỬ LÝ LỖI & THẮC MẮC THƯỜNG GẶP (FAQ) -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 5: HƯỚNG DẪN XỬ LÝ SỰ CỐ &amp; CÂU HỎI THƯỜNG GẶP
+        <span class="tag">Xử lý sự cố</span>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <h5>❓ Nút "Gửi Đánh giá" bị ẩn hoặc báo "Chỉ xem"?</h5>
+          <p><strong>Trả lời:</strong> Do bạn đang nằm ngoài lượt đánh giá theo quy trình Workflow (chưa tới lượt hoặc đã nộp rồi). Sau khi nộp, phiếu tự động khóa để bảo đảm tính minh bạch.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Màn hình báo "Bạn không có quyền truy cập"?</h5>
+          <p><strong>Trả lời:</strong> Bạn đang mở phiếu đánh giá của cấp trên hoặc nhân sự không thuộc nhóm mình quản lý. Hệ thống phân quyền chặt chẽ theo phân cấp quản trị.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Bị mất kết nối mạng hoặc lỡ tắt trình duyệt khi chấm?</h5>
+          <p><strong>Trả lời:</strong> Đừng lo lắng! Nếu bạn đã bấm "Lưu bản nháp", toàn bộ điểm đã chấm đã được lưu trên Server. Chỉ cần đăng nhập lại và tiếp tục chấm.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Nhập sai điểm và lỡ bấm "Gửi đánh giá" thì làm sao?</h5>
+          <p><strong>Trả lời:</strong> Sau khi đã gửi, bạn không thể tự sửa. Hãy liên hệ Trưởng phòng (Manager) để hỗ trợ mở lại phiếu đánh giá hoặc điều chỉnh ở vòng duyệt cuối.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Tại sao không thấy nhân viên mới thêm vào danh sách?</h5>
+          <p><strong>Trả lời:</strong> Kiểm tra xem nhân viên đó đã được phân đúng Nhóm chưa. Nếu nhân viên chưa được gán vào nhóm nào, hệ thống sẽ không hiển thị trên danh sách nhóm.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Hệ thống lưu dữ liệu ở đâu, có sợ mất không?</h5>
+          <p><strong>Trả lời:</strong> Dữ liệu được lưu trữ tự động trên nền tảng Supabase Cloud Database với cơ chế sao lưu liên tục, đảm bảo không bao giờ bị mất mát dữ liệu.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="doc-footer">
+      <span>KURABE QAQC EVALUATION SYSTEM &copy; 2026 - TÀI LIỆU CHUẨN VẬN HÀNH DÀNH CHO NHÂN SỰ</span>
+      <span>Trang 2 / 2</span>
+    </div>
+
+  </div>
+
+  <script>
+    // Auto trigger print if opened with query param ?autoPrint=true
+    if (window.location.search.includes('autoPrint=true')) {
+      window.onload = function() {
+        setTimeout(function() {
+          window.print();
+        }, 300);
+      };
+    }
+  </script>
+</body>
+</html>

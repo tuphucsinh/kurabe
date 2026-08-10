@@ -15,14 +15,14 @@ import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefau
 import { deleteUserAction } from '@/actions/users';
 import { deleteTeamAction } from '@/actions/teams';
 import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
-import { useToast } from '@/components/ui/Toast';
+
 
 import { EvaluationRound, Criterion, User } from '@/types';
 
 // Users
-export const useUsers = (requester?: User | null) => useQuery({ 
-  queryKey: ['users', requester?.id], 
-  queryFn: () => getUsers(requester), 
+export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({ 
+  queryKey: ['users', requester?.id, options?.limit, options?.offset], 
+  queryFn: () => getUsers(requester, options), 
   staleTime: 5 * 60 * 1000 
 });
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserById(id), enabled: !!id });
@@ -30,36 +30,30 @@ export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-user
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: upsertUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast('Cập nhật nhân viên thành công!', 'success');
     },
   });
 };
 
 export const useBatchUpsertUsers = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: upsertUsers,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast('Đã cập nhật danh sách nhân viên thành công!', 'success');
     },
   });
 };
 
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: deleteUserAction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast('Đã xóa nhân viên.', 'success');
     },
   });
 };
@@ -75,24 +69,20 @@ export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryF
 
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: upsertTeam,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      toast('Cập nhật nhóm thành công!', 'success');
     },
   });
 };
 
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: deleteTeamAction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      toast('Đã xóa nhóm.', 'success');
     },
   });
 };
@@ -133,14 +123,12 @@ export const useUpsertEvaluation = () => {
 
 export const useUpsertEvaluationRound = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: ({ evaluationId, round }: { evaluationId: string; round: Partial<EvaluationRound> }) => 
       upsertEvaluationRound(evaluationId, round),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['evaluation', variables.evaluationId] });
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      toast('Lưu đánh giá thành công!', 'success');
     },
   });
 };
@@ -150,12 +138,10 @@ export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: get
 
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: upsertCriteriaGroup,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
-      toast('Cập nhật nhóm tiêu chí thành công!', 'success');
     },
   });
 };
@@ -173,13 +159,11 @@ export const useDeleteCriteriaGroup = () => {
 
 export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   return useMutation({
     mutationFn: ({ criterion, groupId }: { criterion: Criterion; groupId: string }) => 
       upsertCriterion(criterion, groupId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
-      toast('Cập nhật tiêu chí thành công!', 'success');
     },
   });
 };
