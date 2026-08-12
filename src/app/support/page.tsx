@@ -66,6 +66,14 @@ const usageGuide = [
 
 const roleGuides = [
   {
+    role: 'Nhân viên',
+    icon: UsersRound,
+    summary:
+      'Được đánh giá qua 3 vòng: SubLeader → Leader → Manager; chỉ xem kết quả trong phạm vi của mình.',
+    details:
+      'Nhân viên không tự khởi tạo phiếu đánh giá; phiếu do người đánh giá theo workflow tạo và chấm. Nếu mở phiếu của cấp trên hoặc người ngoài nhóm, hệ thống sẽ chặn truy cập.',
+  },
+  {
     role: 'SubLeader',
     icon: UsersRound,
     summary:
@@ -130,7 +138,7 @@ const managementGuide = [
     steps: [
       'Vào mục "Nhân viên" từ sidebar để xem danh sách hiện có.',
       'Để thêm mới, dùng nút "Thêm nhân viên mới" ở góc trên bên phải.',
-      'Để import hàng loạt, bấm nút "Import Excel", tải file mẫu về, điền dữ liệu theo đúng định dạng và tải file lên. Hệ thống sẽ tự động rà soát lỗi và xác nhận trước khi lưu.',
+      'Để import hàng loạt, bấm nút "Nhập từ Excel", tải file mẫu về, điền dữ liệu theo đúng định dạng và tải file lên. Hệ thống sẽ tự động rà soát lỗi và xác nhận trước khi lưu.',
       'Để sửa thông tin, bấm biểu tượng bút chì ở cuối dòng nhân viên.',
       'Để xóa, bấm biểu tượng thùng rác và xác nhận lại trước khi xóa.',
     ],
@@ -441,7 +449,7 @@ export default function SupportPage() {
                 <UsersRound size={22} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-slate-900">Hướng dẫn thêm, sửa, xóa nhân viên và nhóm</h2>
+                <h2 className="text-xl font-black text-slate-900">Hướng dẫn thêm, sửa, xóa nhân viên, nhóm và tiêu chuẩn</h2>
                 <p className="text-sm text-slate-500">Phần này dành cho thao tác quản trị dữ liệu nền trước và trong kỳ đánh giá.</p>
               </div>
             </div>
