@@ -19,7 +19,7 @@ Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file eve
 | Role | Responsibility | Never |
 |---|---|---|
 | **Mika** (plan/control/verify) | Read rules + `.ai/` + `HANDOFF.md` on onboarding; `/plan` → `.ai/MASTER_PLAN.md`; `/plan2task` → WBS; pick runner from state; record BASE_SHA; verify git diff + independent tests + secret scan; `/done` closes | Trust runner self-reports; dispatch without clear WBS |
-| **Runner** (coder \| agy \| opencode \| commandcode) | Implement exactly the assigned task: TDD-first → code → audit → test | Expand scope; commit; decide fast-path |
+| **Runner** (coder \| agy \| opencode \| commandcode) | Implement exactly the assigned task: test strategy theo loại task (pure logic TDD / UI-DOM browser verify — xem RUNNER BRIEF item 2) → code → audit → test | Expand scope; commit; decide fast-path |
 | **Reviewer** (fresh session, CONTROLLED only) | Receive package (diff + test evidence + known risks), verdict PASS / non-PASS | Edit code; receive runner transcripts |
 
 > **CONTROLLED thực tế** (2026-08-11, anh duyệt): dự án **static nhỏ** (không auth/DB/backend/production) → Mika verify + adversarial audit (Gate 3) **đủ, Reviewer không bắt buộc**. Reviewer bắt buộc khi chạm **auth/DB/schema/backend/production**. Ghi chú này áp dụng cho mọi dự án static tương tự.
@@ -132,7 +132,7 @@ Stop after writing. One-line report.
 Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
 - L1 (syntax): quick fix, test, report.
 - L2 (architecture): report user, propose task split.
-- L3 (deadlock/wide impact): `.tmp/SYSTEM_ALERT.md`, HALT → Mika (+ Reviewer if CONTROLLED).
+- L3 (deadlock/wide impact): `.tmp/SYSTEM_ALERT.md`, HALT → Mika (+ Reviewer khi chạm auth/DB/backend/production).
 - **MANDATORY diary**: after each fix → `[FIXED][#Txx] short note` in `.tmp/diary.md`.
 
 ### /done — Mika (close session)
