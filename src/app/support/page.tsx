@@ -148,6 +148,17 @@ const managementGuide = [
     note:
       'Quy tắc bắt buộc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER VÀ 1 SUBLEADER. Để thay đổi Leader/SubLeader, phải làm đúng 2 bước: (1) HẠ người đang giữ chức xuống "Nhân viên" trước, (2) rồi THĂNG người khác lên. Hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có người giữ chức (hiện thông báo yêu cầu hạ người cũ trước). Khi thay đổi chức vụ, hệ thống tự đồng bộ leader hiển thị ở trang Nhóm, danh sách nhân viên và các vòng đánh giá tương ứng.',
   },
+  {
+    title: 'Quản lý tiêu chuẩn đánh giá',
+    steps: [
+      'Vào mục "Tiêu chuẩn" từ sidebar để xem danh sách các nhóm tiêu chí (A, B, C...) và thang điểm.',
+      'Để thêm tiêu chí mới, bấm nút "Thêm tiêu chuẩn", điền tên, nhóm, mô tả và các mức điểm.',
+      'Để sửa, bấm biểu tượng bút chì trên tiêu chí/nhóm cần sửa.',
+      'Để xóa, bấm biểu tượng thùng rác và xác nhận lại trước khi xóa.',
+    ],
+    note:
+      'Chỉ Manager (Ngô Thảo Ly / tài khoản có vai trò Manager) mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader và Nhân viên chỉ được xem bảng tiêu chuẩn, không có nút thao tác. Thay đổi tiêu chuẩn sẽ ảnh hưởng ngay đến cách chấm điểm của kỳ hiện tại nên cần rà soát kỹ trước khi lưu.',
+  },
 ];
 
 const permissionMatrix = [

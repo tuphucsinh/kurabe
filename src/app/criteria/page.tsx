@@ -24,10 +24,13 @@ import CriteriaModal from '@/components/modals/CriteriaModal';
 import CriteriaGroupModal from '@/components/modals/CriteriaGroupModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CriteriaPage() {
   const confirm = useConfirm();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isManager = user?.role === 'Manager'; // Chỉ Manager được thêm/sửa/xóa tiêu chuẩn
   const { data: groups = [] } = useCriteria();
 
   const upsertGroup = useUpsertCriteriaGroup();
@@ -142,17 +145,19 @@ export default function CriteriaPage() {
           <p className="text-outline mt-1 text-lg">Hệ thống tiêu chuẩn xếp loại và thang điểm Kurabe</p>
         </div>
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
-          <button
-            onClick={() => {
-              setEditingCriterion(null);
-              setEditingGroupId(safeGroupId);
-              setCriteriaModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors shrink-0"
-          >
-            <Plus size={18} />
-            Thêm tiêu chuẩn
-          </button>
+          {isManager && (
+            <button
+              onClick={() => {
+                setEditingCriterion(null);
+                setEditingGroupId(safeGroupId);
+                setCriteriaModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors shrink-0"
+            >
+              <Plus size={18} />
+              Thêm tiêu chuẩn
+            </button>
+          )}
         </div>
       </div>
 
@@ -211,17 +216,19 @@ export default function CriteriaPage() {
               );
             })}
             
-            {/* Add Group Button */}
-            <button
-              onClick={() => {
-                setEditingGroup(null);
-                setGroupModalOpen(true);
-              }}
-              className="flex items-center justify-center w-12 h-12 rounded-2xl border border-dashed border-outline-variant bg-surface hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-300 shrink-0 text-outline"
-              title="Thêm nhóm tiêu chuẩn"
-            >
-              <Plus size={20} />
-            </button>
+            {/* Add Group Button — chỉ Manager */}
+            {isManager && (
+              <button
+                onClick={() => {
+                  setEditingGroup(null);
+                  setGroupModalOpen(true);
+                }}
+                className="flex items-center justify-center w-12 h-12 rounded-2xl border border-dashed border-outline-variant bg-surface hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-300 shrink-0 text-outline"
+                title="Thêm nhóm tiêu chuẩn"
+              >
+                <Plus size={20} />
+              </button>
+            )}
           </div>
 
           {/* Active Group Title */}
@@ -229,7 +236,7 @@ export default function CriteriaPage() {
             <div className="h-10 w-1.5 bg-primary rounded-full"></div>
             <h2 className="text-2xl font-black text-on-surface flex items-center gap-3">
               Nhóm {safeGroupCode}: {activeGroup?.name}
-              {activeGroup && (
+              {activeGroup && isManager && (
                 <>
                   <button
                     onClick={() => {
@@ -278,22 +285,26 @@ export default function CriteriaPage() {
                     </h3>
                     
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          setEditingCriterion(criterion);
-                          setEditingGroupId(safeGroupId);
-                          setCriteriaModalOpen(true);
-                        }}
-                        className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCriterion(criterion.id!, criterion.name)}
-                        className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {isManager && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingCriterion(criterion);
+                              setEditingGroupId(safeGroupId);
+                              setCriteriaModalOpen(true);
+                            }}
+                            className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCriterion(criterion.id!, criterion.name)}
+                            className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   
@@ -321,17 +332,19 @@ export default function CriteriaPage() {
                           <p className="text-sm leading-snug flex-1 text-on-surface-variant pt-1.5">
                             {level.label}
                           </p>
-                          <button
-                            onClick={() => handleSetDefaultLevel(criterion.id!, idx, criterion.defaultLevelIndex)}
-                            className={`shrink-0 p-1.5 rounded-lg transition-colors ${
-                              isDefault 
-                                ? 'text-amber-500 bg-amber-100 hover:bg-amber-200' 
-                                : 'text-outline-variant hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
-                            }`}
-                            title={isDefault ? "Đang là mức mặc định" : "Đặt làm mặc định"}
-                          >
-                            <Star size={16} className={isDefault ? 'fill-current' : ''} />
-                          </button>
+                          {isManager && (
+                            <button
+                              onClick={() => handleSetDefaultLevel(criterion.id!, idx, criterion.defaultLevelIndex)}
+                              className={`shrink-0 p-1.5 rounded-lg transition-colors ${
+                                isDefault 
+                                  ? 'text-amber-500 bg-amber-100 hover:bg-amber-200' 
+                                  : 'text-outline-variant hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
+                              }`}
+                              title={isDefault ? "Đang là mức mặc định" : "Đặt làm mặc định"}
+                            >
+                              <Star size={16} className={isDefault ? 'fill-current' : ''} />
+                            </button>
+                          )}
                         </div>
                         {level.description && (
                           <div className="mt-2 flex items-start gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity pr-6">
