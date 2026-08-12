@@ -470,7 +470,7 @@
           <div class="step-badge">8</div>
           <div class="step-body">
             <div class="step-title">Nộp Đánh Giá (Submit Evaluation)</div>
-            <div class="step-desc">Nhấn <strong>"Gửi Đánh giá"</strong> và xác nhận trên hộp thoại. Ngay sau khi gửi, vòng hiện tại sẽ bị **KHÓA CHỈNH SỬA** để bảo toàn tính minh bạch, và hệ thống tự động mở lượt cho cấp quản lý tiếp theo.</div>
+            <div class="step-desc">Nhấn <strong>"Gửi Đánh giá"</strong> và xác nhận trên hộp thoại. Ngay sau khi gửi, vòng hiện tại sẽ bị <strong>KHÓA CHỈNH SỬA</strong> để bảo toàn tính minh bạch, và hệ thống tự động mở lượt cho cấp quản lý tiếp theo.</div>
           </div>
         </div>
 
@@ -589,52 +589,61 @@
         <span class="tag">Dành cho Manager</span>
       </div>
 
-      <div class="sub-header">1. Quản Lý Kỳ Đánh Giá Đăng Định Kỳ (Reset Đầu Năm)</div>
+      <div class="sub-header">1. Quản Lý Kỳ Đánh Giá (Tạo Kỳ Mới Định Kỳ)</div>
       <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Khi bắt đầu đợt đánh giá mới (VD: Năm 2026), <strong>KHÔNG CẦN XÓA DỮ LIỆU CŨ</strong>. Quản trị viên chỉ cần thực hiện theo các bước:</p>
       <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
-        <li>Vào menu <strong>"Cài đặt" (Settings)</strong> &rarr; chọn tab <strong>"Kỳ Đánh Giá" (Periods)</strong>.</li>
+        <li>Vào trang <strong>"Bảng điều khiển" (Dashboard)</strong> &rarr; bấm nút <strong>"Tạo kỳ mới"</strong> ở khu vực quản lý kỳ (chỉ Manager thấy).</li>
         <li>Bấm <strong>"Tạo Kỳ Đánh Giá Mới"</strong>, điền tên (VD: "Đánh Giá QAQC 2026") và chọn trạng thái <strong>"Active"</strong>.</li>
         <li>Hệ thống tự động kích hoạt kỳ mới. Toàn bộ nhân sự khi đăng nhập sẽ tự động chuyển sang kỳ mới với bảng điểm trắng sẵn sàng để đánh giá. Các kỳ cũ được lưu lại trong lịch sử để tra cứu.</li>
       </ol>
 
-      <div class="sub-header">2. Import Nhân Viên Hàng Loạt Từ File Excel</div>
+      <div class="sub-header">2. Thêm / Sửa / Xóa Nhân Viên (Chỉ Manager; Leader giới hạn trong nhóm mình)</div>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
+        <li><strong>Thêm nhân viên:</strong> Vào mục <strong>"Nhân viên"</strong> &rarr; bấm <strong>"Thêm nhân viên mới"</strong> &rarr; điền Mã NV, Họ tên, Chức vụ (Manager/Leader/SubLeader/Nhân viên), Nhóm, Ngày vào làm &rarr; bấm <strong>"Thêm mới"</strong>.</li>
+        <li><strong>Sửa thông tin:</strong> Bấm biểu tượng <strong>bút chì ✏️</strong> ở cuối dòng nhân viên &rarr; chỉnh sửa &rarr; bấm <strong>"Cập nhật"</strong>.</li>
+        <li><strong>Xóa nhân viên:</strong> Bấm biểu tượng <strong>thùng rác 🗑️</strong> &rarr; xác nhận trong hộp thoại.</li>
+      </ol>
+      <p style="font-size: 8.5pt; color: #334155;">Khi thêm nhân viên mới vào kỳ đang hoạt động, hệ thống <strong>tự động tạo phiếu đánh giá</strong> (evaluation) và gán người đánh giá vòng 1 đúng chức vụ. Khi đổi chức vụ, hệ thống <strong>tự đồng bộ</strong> lại người đánh giá và các vòng tương ứng.</p>
+      <p style="font-size: 8.5pt; color: #334155;"><strong>Phân quyền:</strong> Manager thêm/sửa/xóa toàn bộ. Leader chỉ thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý, không xóa được nhân viên.</p>
+
+      <div class="sub-header">3. Import Nhân Viên Hàng Loạt Từ File Excel</div>
       <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
-        <li>Vào mục <strong>"Nhân viên"</strong> &rarr; Bấm nút <strong>"Import Excel"</strong> ở góc trên bên phải.</li>
+        <li>Vào mục <strong>"Nhân viên"</strong> &rarr; Bấm nút <strong>"Nhập từ Excel"</strong> ở góc trên bên phải.</li>
         <li>Nhấn <strong>"Tải file mẫu (.xlsx)"</strong> để lấy định dạng file chuẩn của hệ thống.</li>
         <li>Điền thông tin nhân sự (Mã NV, Họ tên, Nhóm, Chức vụ, Ngày vào làm) vào file mẫu và lưu lại.</li>
         <li>Bấm <strong>"Chọn file"</strong> và tải file Excel lên. Hệ thống sẽ tự động đối chiếu rà soát lỗi dữ liệu (ví dụ: trùng mã nhân viên, sai tên nhóm). Xóa lỗi nếu có rồi bấm <strong>"Xác nhận Import"</strong>.</li>
       </ol>
 
-      <div class="sub-header">3. Xuất Báo Cáo Kết Quả Ra File Excel (.xlsx)</div>
+      <div class="sub-header">4. Thêm / Sửa / Xóa Nhóm (Chỉ Manager)</div>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
+        <li><strong>Thêm nhóm:</strong> Vào mục <strong>"Nhóm"</strong> &rarr; bấm <strong>"Thêm nhóm mới"</strong> &rarr; điền Tên nhóm và chọn Leader &rarr; bấm lưu.</li>
+        <li><strong>Sửa nhóm:</strong> Bấm biểu tượng <strong>bút chì ✏️</strong> trên thẻ nhóm &rarr; sửa tên hoặc Leader &rarr; bấm lưu.</li>
+        <li><strong>Xóa nhóm:</strong> Bấm biểu tượng <strong>thùng rác 🗑️</strong> trên thẻ nhóm &rarr; xác nhận trong hộp thoại.</li>
+      </ol>
+      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Quy tắc bắt buộc: Mỗi nhóm CHỈ có đúng 1 Leader + 1 SubLeader. Muốn đổi người giữ chức, phải HẠ người cũ xuống "Nhân viên" TRƯỚC, rồi THĂNG người mới lên SAU. Hệ thống sẽ từ chối nếu thăng người mới khi nhóm vẫn còn người giữ chức cũ.</p>
+
+      <div class="sub-header">5. Thêm / Sửa / Xóa Tiêu Chuẩn Đánh Giá (Chỉ Manager)</div>
+      <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Chỉ <strong>Manager</strong> mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader, Nhân viên chỉ xem được bảng tiêu chuẩn (không có nút thao tác). Các thao tác:</p>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
+        <li><strong>Thêm tiêu chuẩn:</strong> Vào mục "Tiêu chuẩn" &rarr; bấm <strong>"Thêm tiêu chuẩn"</strong> &rarr; điền Nhóm, Mã, Tên TC, Áp dụng (Quản Lý và Nhân Viên / Chỉ Quản Lý / Chỉ Nhân Viên), Mô tả và các Mức điểm (Options) &rarr; bấm lưu.</li>
+        <li><strong>Thêm nhóm tiêu chuẩn:</strong> Bấm nút <strong>"+"</strong> cạnh danh sách nhóm (A, B, C...) &rarr; đặt tên nhóm.</li>
+        <li><strong>Sửa:</strong> Bấm biểu tượng <strong>bút chì ✏️</strong> trên tiêu chí hoặc nhóm cần sửa.</li>
+        <li><strong>Xóa:</strong> Bấm biểu tượng <strong>thùng rác 🗑️</strong> và xác nhận trước khi xóa.</li>
+        <li><strong>Mức mặc định:</strong> Bấm ngôi sao ⭐ để đặt mức điểm khởi tạo cho từng tiêu chí.</li>
+      </ol>
+      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Thay đổi tiêu chuẩn ảnh hưởng ngay đến cách chấm điểm của kỳ hiện tại — cần rà soát kỹ trước khi lưu.</p>
+
+      <div class="sub-header">6. Xuất Báo Cáo Kết Quả Ra File Excel (.xlsx)</div>
       <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
         <li>Vào mục <strong>"Báo cáo" (Reports)</strong> từ menu chính.</li>
         <li>Nhấp bộ lọc Nhóm hoặc Kỳ đánh giá nếu cần xem phạm vi cụ thể.</li>
-        <li>Nhấn nút <strong>"Xuất Báo Cáo Excel"</strong> ở góc trên bên phải. File xuất ra sẽ chứa 2 Sheet chi tiết:
+        <li>Nhấn nút <strong>"Xuất file"</strong> ở góc trên bên phải. File xuất ra sẽ chứa 2 Sheet chi tiết:
           <ul style="padding-left: 14px; margin-top: 2px;">
             <li><strong>Sheet 1 - Tổng hợp:</strong> Mã NV, Họ tên, Nhóm, Điểm tổng kết cuối cùng, Xếp loại (S/A/B/C/D).</li>
             <li><strong>Sheet 2 - Chi tiết các vòng:</strong> Đối chiếu chi tiết điểm Vòng 1, Vòng 2, Vòng 3 và nhận xét của từng người đánh giá.</li>
           </ul>
         </li>
       </ol>
-
-      <div class="sub-header">4. Quản Lý Tiêu Chuẩn Đánh Giá (Chỉ Manager)</div>
-      <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Chỉ <strong>Manager</strong> mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader, Nhân viên chỉ xem được bảng tiêu chuẩn (không có nút thao tác). Các thao tác:</p>
-      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
-        <li><strong>Thêm tiêu chuẩn:</strong> Vào mục "Tiêu chuẩn" → bấm "Thêm tiêu chuẩn" → điền tên, nhóm (A/B/C...), mô tả và các mức điểm.</li>
-        <li><strong>Sửa:</strong> Bấm biểu tượng bút chì trên tiêu chí hoặc nhóm cần sửa.</li>
-        <li><strong>Xóa:</strong> Bấm biểu tượng thùng rác và xác nhận trước khi xóa.</li>
-        <li><strong>Mức mặc định:</strong> Bấm ngôi sao để đặt mức điểm khởi tạo cho từng tiêu chí.</li>
-      </ol>
-      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Thay đổi tiêu chuẩn ảnh hưởng ngay đến cách chấm điểm của kỳ hiện tại — cần rà soát kỹ trước khi lưu.</p>
-
-      <div class="sub-header">5. Quy Tắc Nhóm: MỖI NHÓM CHỈ CÓ 1 LEADER + 1 SUBLEADER (Bắt Buộc)</div>
-      <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Hệ thống chỉ cho phép mỗi nhóm có <strong>đúng 1 Leader và 1 SubLeader</strong>. Muốn thay đổi người giữ chức, phải làm <strong>đúng 2 bước theo thứ tự</strong>:</p>
-      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
-        <li><strong>HẠ người đang giữ chức xuống "Nhân viên" trước</strong>: vào mục "Nhân viên", sửa chức vụ của Leader/SubLeader hiện tại thành "Nhân viên" và lưu.</li>
-        <li><strong>THĂNG người mới lên sau</strong>: sửa chức vụ của người được chọn thành "Leader" hoặc "SubLeader" và lưu.</li>
-      </ol>
-      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Hệ thống sẽ TỪ CHỐI nếu cố thăng người mới lên Leader/SubLeader khi nhóm vẫn còn người đang giữ chức đó. Thông báo lỗi sẽ yêu cầu hạ người cũ xuống trước.</p>
-      <p style="font-size: 8.5pt; color: #334155;">Khi thay đổi chức vụ, hệ thống tự động đồng bộ: Leader hiển thị ở trang Nhóm, danh sách nhân viên, và các vòng đánh giá (round 1) của nhân viên trong nhóm được gán đúng người đánh giá mới.</p>
     </div>
 
     <!-- CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO VÀ PHÂN TÍCH NĂNG LỰC -->
