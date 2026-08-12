@@ -4,6 +4,8 @@ import { DatabaseError } from '../errors';
 import { canViewEvaluation } from '@/data/workflow';
 import { Tables, TablesInsert, Json } from '@/types/database';
 import { composeRoundNotes, splitRoundNotes } from '@/lib/round-level-selection';
+import { getEvaluationFlow } from '@/lib/evaluation-workflow';
+import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-resolver';
 
 type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
@@ -208,6 +210,114 @@ export async function upsertEvaluationRound(evaluationId: string, round: Partial
     .upsert(dbRound, { onConflict: 'evaluation_id,round' });
 
   if (error) throw new DatabaseError('Error upserting evaluation round', error);
+}
+
+/**
+ * Tự động tạo evaluation + round 1 cho các user MỚI được thêm vào kỳ đang active.
+ * Gọi sau upsertUser/upsertUsers. Idempotent: user đã có evaluation sẽ được bỏ qua.
+ * Logic giống createEvaluationPeriod (actions/period.ts): resolve evaluator round 1
+ * theo flow role, tạo evaluation NotStarted + round 1.
+ */
+export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ created: number; skipped: number; errors: string[] }> {
+  const result = { created: 0, skipped: 0, errors: [] as string[] };
+  if (!newUsers || newUsers.length === 0) return result;
+
+  // 1. Kỳ active (không có → không làm gì)
+  const activePeriod = await getActivePeriod();
+  if (!activePeriod) {
+    result.skipped = newUsers.length;
+    return result;
+  }
+
+  // 2. Tải toàn bộ user active để resolve evaluator (batch) + danh sách evaluation hiện có
+  const [allUsersRes, existingEvalsRes] = await Promise.all([
+    supabase.from('users').select('id, role, team_id').eq('is_active', true),
+    supabase.from('evaluations').select('employee_id').eq('period_id', activePeriod.id),
+  ]);
+  if (allUsersRes.error || existingEvalsRes.error) {
+    result.errors.push('Không thể tải dữ liệu để khởi tạo đánh giá.');
+    result.skipped = newUsers.length;
+    return result;
+  }
+
+  const subjects: EvaluationSubject[] = (allUsersRes.data || []).map(u => ({
+    id: u.id,
+    role: u.role as Role,
+    teamId: u.team_id || null,
+  }));
+  const existingIds = new Set((existingEvalsRes.data || []).map(e => e.employee_id));
+
+  const now = new Date().toISOString();
+
+  for (const user of newUsers) {
+    // Bỏ qua user đã có evaluation trong kỳ active (idempotent)
+    if (existingIds.has(user.id)) {
+      result.skipped++;
+      continue;
+    }
+
+    const flow = getEvaluationFlow(user.role);
+    const firstStep = flow[0];
+    const evaluator = resolveEvaluatorFromList(firstStep.evaluator, {
+      id: user.id,
+      role: user.role,
+      teamId: user.teamId || null,
+    }, subjects);
+
+    if (!evaluator) {
+      result.errors.push(`Không tìm thấy ${firstStep.evaluator} phù hợp cho ${user.name || user.id} ở Round 1.`);
+      result.skipped++;
+      continue;
+    }
+
+    // Tạo evaluation
+    const { data: ev, error: evError } = await supabase
+      .from('evaluations')
+      .insert({
+        period_id: activePeriod.id,
+        employee_id: user.id,
+        employee_role: user.role,
+        team_id: user.teamId || null,
+        status: 'NotStarted',
+        current_round: 1,
+        created_at: now,
+        updated_at: now,
+      })
+      .select()
+      .single();
+
+    if (evError || !ev) {
+      result.errors.push(`Lỗi tạo evaluation cho ${user.name || user.id}: ${evError?.message || 'unknown'}`);
+      result.skipped++;
+      continue;
+    }
+
+    // Tạo round 1
+    const { error: rError } = await supabase
+      .from('evaluation_rounds')
+      .insert({
+        evaluation_id: ev.id,
+        round: 1,
+        evaluator_id: evaluator.id,
+        evaluator_role: evaluator.role,
+        scores: {},
+        notes: {},
+        total_score: 0,
+        grade: 'Pending' as Grade,
+        status: 'NotStarted',
+        created_at: now,
+      });
+
+    if (rError) {
+      result.errors.push(`Lỗi tạo round 1 cho ${user.name || user.id}: ${rError.message}`);
+      result.skipped++;
+      continue;
+    }
+
+    result.created++;
+  }
+
+  return result;
 }
 
 const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {

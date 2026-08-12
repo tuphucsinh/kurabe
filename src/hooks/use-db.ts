@@ -9,7 +9,8 @@ import {
   getEvaluationById, 
   upsertEvaluation, 
   upsertEvaluationRound,
-  getEvaluationByEmployee
+  getEvaluationByEmployee,
+  ensureEvaluationsForUsers
 } from '@/lib/db/evaluations';
 import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefaultLevel } from '@/lib/db/criteria';
 import { deleteUserAction } from '@/actions/users';
@@ -32,8 +33,17 @@ export const useUpsertUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: upsertUser,
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Tự tạo evaluation + round 1 nếu user mới vào kỳ active
+      if (data) {
+        try {
+          await ensureEvaluationsForUsers([data]);
+          queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        } catch (err) {
+          console.error('ensureEvaluationsForUsers (single) error:', err);
+        }
+      }
     },
   });
 };
@@ -42,8 +52,17 @@ export const useBatchUpsertUsers = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: upsertUsers,
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Tự tạo evaluation + round 1 cho user mới vào kỳ active
+      if (data && data.length > 0) {
+        try {
+          await ensureEvaluationsForUsers(data);
+          queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        } catch (err) {
+          console.error('ensureEvaluationsForUsers (batch) error:', err);
+        }
+      }
     },
   });
 };
