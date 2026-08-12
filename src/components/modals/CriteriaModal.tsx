@@ -40,9 +40,13 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
       setDescription(criterion.description || '');
       
       let mappedAppliesTo: AppliesTo = 'both';
-      if (criterion.appliesTo && criterion.appliesTo.length === 1) {
-        if (criterion.appliesTo.includes('Leader')) mappedAppliesTo = 'leader';
-        else if (criterion.appliesTo.includes('Employee')) mappedAppliesTo = 'staff';
+      if (criterion.appliesTo && criterion.appliesTo.length > 0) {
+        // DB map: 'leader' → [Manager, Leader, SubLeader]; 'staff' → [Employee]; 'both' → cả 4
+        const hasLeader = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader') || criterion.appliesTo.includes('SubLeader');
+        const hasStaff = criterion.appliesTo.includes('Employee');
+        if (hasLeader && !hasStaff) mappedAppliesTo = 'leader';
+        else if (!hasLeader && hasStaff) mappedAppliesTo = 'staff';
+        // else → both (có cả 2 nhóm)
       }
       setAppliesTo(mappedAppliesTo);
 
@@ -182,9 +186,9 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                 value={appliesTo}
                 onChange={(e) => setAppliesTo(e.target.value as AppliesTo)}
               >
-                <option value="both">Leader & Staff</option>
-                <option value="leader">Chỉ Leader</option>
-                <option value="staff">Chỉ Staff</option>
+                <option value="both">Quản Lý và Nhân Viên</option>
+                <option value="leader">Chỉ Quản Lý</option>
+                <option value="staff">Chỉ Nhân Viên</option>
               </select>
             </div>
 
