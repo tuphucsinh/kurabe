@@ -24,6 +24,14 @@ interface EmployeeTableItem extends User {
   previousRoundScores: Array<{ round: number; score: number }>;
 }
 
+// Thứ tự chức vụ cho sort theo nhóm: Manager cuối (Toàn bộ bộ phận), Leader > SubLeader > Employee
+const ROLE_ORDER: Record<string, number> = {
+  Leader: 0,
+  SubLeader: 1,
+  Employee: 2,
+  Manager: 3,
+};
+
 export default function EmployeesPage() {
   const { user } = useAuth();
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
@@ -94,7 +102,7 @@ export default function EmployeesPage() {
     });
   }, [employeesData, searchTerm, teamFilter, roleFilter]);
 
-  // Sort state — mặc định theo Nhóm (rule: nhóm rồi mới tên)
+  // Sort state — mặc định theo Nhóm → Chức vụ (Leader > SubLeader > Employee) → Tên
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
     key: 'teamName',
     direction: 'asc',
@@ -110,12 +118,19 @@ export default function EmployeesPage() {
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
       
-      // Cùng nhóm → ưu tiên sort theo tên để ổn định
-      if (sortConfig.key === 'teamName' && aVal === bVal) {
+      // Sort theo Nhóm: cùng nhóm → chức vụ → tên
+      if (sortConfig.key === 'teamName') {
+        if (aVal !== bVal) return sortConfig.direction === 'asc' ? (aVal < bVal ? -1 : 1) : (aVal > bVal ? -1 : 1);
+        // Cùng nhóm → theo chức vụ (Leader trước, SubLeader, rồi Employee)
+        const aRole = ROLE_ORDER[a.role] ?? 9;
+        const bRole = ROLE_ORDER[b.role] ?? 9;
+        if (aRole !== bRole) return sortConfig.direction === 'asc' ? aRole - bRole : bRole - aRole;
+        // Cùng chức vụ → theo tên để ổn định
         const aName = (a.name || '').toLowerCase();
         const bName = (b.name || '').toLowerCase();
         if (aName < bName) return -1;
         if (aName > bName) return 1;
+        return 0;
       }
       
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
