@@ -2,8 +2,99 @@ import { supabase } from '../supabase';
 import { User, Role } from '@/types';
 import { DatabaseError } from '../errors';
 import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
+import { getEvaluationFlow } from '@/lib/evaluation-workflow';
+import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-resolver';
 
 type DbUser = Tables<'users'>;
+
+/**
+ * RULE (anh chốt 2026-08-12): Mỗi team chỉ có 1 Leader + 1 SubLeader.
+ * Muốn thay đổi Leader/SubLeader → phải hạ người giữ chức hiện tại xuống
+ * Employee TRƯỚC, rồi mới thăng người khác lên.
+ * Throw DatabaseError nếu team đã có người giữ chức khác.
+ */
+async function assertLeadershipSlot(
+  candidate: Partial<User>,
+  existingUsers: Pick<User, 'id' | 'role' | 'teamId'>[]
+): Promise<void> {
+  if ((candidate.role !== 'Leader' && candidate.role !== 'SubLeader') || !candidate.teamId) {
+    return; // Employee/Manager hoặc chưa gán team → không bị ràng buộc slot
+  }
+  const holders = existingUsers.filter(u =>
+    u.teamId === candidate.teamId &&
+    u.role === candidate.role &&
+    u.id !== candidate.id // không tính chính người đang sửa
+  );
+  if (holders.length > 0) {
+    const holderName = holders[0].id; // caller có thể enrich tên
+    throw new DatabaseError(
+      `Nhóm này đã có ${candidate.role === 'Leader' ? 'Leader' : 'SubLeader'}` +
+      (holderName ? ` (id: ${holderName})` : '') +
+      `. Muốn thay đổi, hãy hạ người giữ chức hiện tại xuống Nhân viên trước, rồi mới thăng người khác lên.`
+    );
+  }
+}
+
+/**
+ * Đồng bộ evaluation + round 1 theo role/team MỚI của user sau khi đổi chức vụ.
+ * - Cập nhật employee_role trên mọi evaluation của user (role là thuộc tính người, không phụ thuộc kỳ)
+ * - Round 1: Employee → gán SubLeader team (nếu team có); Leader/SubLeader/Manager → SELF
+ * - KHÔNG đụng round đã submit (giữ lịch sử)
+ */
+async function syncEvaluationAfterUserChange(user: User): Promise<void> {
+  try {
+    // 1. Đồng bộ employee_role trên mọi evaluation
+    await supabase
+      .from('evaluations')
+      .update({ employee_role: user.role })
+      .eq('employee_id', user.id);
+
+    // 2. Lấy toàn bộ user active để resolve evaluator
+    const { data: allUsers } = await supabase
+      .from('users')
+      .select('id, role, team_id')
+      .eq('is_active', true);
+    const subjects: EvaluationSubject[] = (allUsers || []).map(u => ({
+      id: u.id,
+      role: u.role as Role,
+      teamId: u.team_id || null,
+    }));
+
+    // 3. Round 1 theo flow mới (chỉ khi chưa submit)
+    const { data: evs } = await supabase
+      .from('evaluations')
+      .select('id, team_id')
+      .eq('employee_id', user.id);
+
+    for (const ev of evs || []) {
+      const { data: rounds } = await supabase
+        .from('evaluation_rounds')
+        .select('id, status, submitted_at')
+        .eq('evaluation_id', ev.id)
+        .eq('round', 1);
+      const r1 = rounds?.[0];
+      if (!r1) continue;
+      if (r1.status === 'Submitted' || r1.submitted_at) continue; // đã submit → giữ nguyên
+
+      const flow = getEvaluationFlow(user.role);
+      const firstStep = flow[0];
+      const evaluator = resolveEvaluatorFromList(firstStep.evaluator, {
+        id: user.id,
+        role: user.role,
+        teamId: user.teamId || null,
+      }, subjects);
+      if (!evaluator) continue; // team chưa có SubLeader → giữ nguyên, chờ quản lý xử lý
+
+      await supabase
+        .from('evaluation_rounds')
+        .update({ evaluator_id: evaluator.id, evaluator_role: evaluator.role })
+        .eq('id', r1.id);
+    }
+  } catch (err) {
+    // Sync là best-effort: không làm hỏng upsert user đã thành công
+    console.error('syncEvaluationAfterUserChange error:', err);
+  }
+}
 
 export async function getUsers(requester?: User | null, options?: { limit?: number; offset?: number }): Promise<User[]> {
   let query = supabase
@@ -70,6 +161,15 @@ export async function getUsersByTeam(teamId: string): Promise<User[]> {
 }
 
 export async function upsertUser(user: Partial<User>): Promise<User | null> {
+  // Rule: 1 team = 1 Leader + 1 SubLeader — chặn thăng khi team đã có người giữ chức
+  if (user.role === 'Leader' || user.role === 'SubLeader') {
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id, role, team_id')
+      .eq('is_active', true);
+    await assertLeadershipSlot(user, (existing || []).map(mapSlot));
+  }
+
   const dbUser: TablesInsert<'users'> = {
     id: user.id,
     employee_code: user.employeeCode || '',
@@ -90,10 +190,29 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
     throw new DatabaseError('Error upserting user', error);
   }
 
-  return mapUserFromDb(data);
+  const saved = mapUserFromDb(data);
+
+  // Đổi chức vụ/team → đồng bộ evaluation + round 1 theo flow mới
+  if (user.role || user.teamId) {
+    await syncEvaluationAfterUserChange(saved);
+  }
+
+  return saved;
 }
 
 export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
+  // Rule: chặn nếu batch cố thăng cấp lên slot đã có người giữ (trong DB hiện tại)
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id, role, team_id')
+    .eq('is_active', true);
+  const existingSlots = (existing || []).map(mapSlot);
+  for (const u of users) {
+    if (u.role === 'Leader' || u.role === 'SubLeader') {
+      await assertLeadershipSlot(u, existingSlots);
+    }
+  }
+
   const dbUsers: TablesInsert<'users'>[] = users.map(user => ({
     id: user.id,
     employee_code: user.employeeCode || '',
@@ -114,7 +233,21 @@ export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
     throw new DatabaseError('Error batch upserting users', error);
   }
 
-  return (data || []).map(mapUserFromDb);
+  const saved = (data || []).map(mapUserFromDb);
+
+  // Đồng bộ evaluation cho user đổi chức vụ
+  for (const u of saved) {
+    const orig = users.find(x => x.id === u.id || x.employeeCode === u.employeeCode);
+    if (orig?.role || orig?.teamId) {
+      await syncEvaluationAfterUserChange(u);
+    }
+  }
+
+  return saved;
+}
+
+function mapSlot(u: { id: string; role: string; team_id: string | null }): Pick<User, 'id' | 'role' | 'teamId'> {
+  return { id: u.id, role: u.role as Role, teamId: u.team_id || '' };
 }
 
 export async function softDeleteUser(id: string): Promise<void> {

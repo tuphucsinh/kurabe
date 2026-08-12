@@ -236,7 +236,10 @@ export default function EmployeesPage() {
     
     upsertUser(payload, {
       onSuccess: () => toast('Cập nhật nhân viên thành công!', 'success'),
-      onError: () => toast('Lỗi khi cập nhật nhân viên.', 'error')
+      onError: (err) => {
+        const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật nhân viên.';
+        toast(msg, 'error');
+      }
     });
   };
 
