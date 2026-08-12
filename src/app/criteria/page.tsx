@@ -267,7 +267,7 @@ export default function CriteriaPage() {
                 <div key={criterion.id} className="bg-white rounded-2xl border border-outline-variant overflow-hidden shadow-sm hover:border-primary/20 transition-all duration-300">
                   <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center">
                     <h3 className="font-bold text-on-surface flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-[10px] font-black bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20 shrink-0">
+                      <span className="text-xs font-black bg-white text-primary px-2 py-0.5 rounded border border-primary/20 shrink-0">
                         {criterion.code || criterion.id}
                       </span>
                       {(() => {
