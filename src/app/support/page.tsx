@@ -30,7 +30,7 @@ const usageGuide = [
   {
     title: '3. Mở đúng hồ sơ cần đánh giá hoặc cần xem',
     content:
-      'Nhấn biểu tượng tài liệu ở cuối dòng nhân viên để vào chi tiết đánh giá. Nếu hệ thống hiện "Bạn không có quyền truy cập", nghĩa là hồ sơ đó nằm ngoài phạm vi vai trò của bạn hoặc bạn đang cố mở đánh giá của cấp trên. Nếu hiện "Chưa có dữ liệu đánh giá", nghĩa là kỳ hiện tại chưa có evaluation tương ứng cho nhân viên đó và cần kiểm tra lại kỳ hoặc dữ liệu khởi tạo.',
+      'Nhấn biểu tượng tài liệu ở cuối dòng nhân viên để vào chi tiết đánh giá. Nếu hệ thống hiện "Bạn không thể xem đánh giá của cấp trên", nghĩa là bạn đang cố mở đánh giá của người giữ chức vụ cao hơn bạn. Nếu hiện "Chưa có dữ liệu đánh giá", nghĩa là kỳ hiện tại chưa có evaluation tương ứng cho nhân viên đó và cần kiểm tra lại kỳ hoặc dữ liệu khởi tạo. Nếu hiện "Tên nhân viên (chức vụ) chưa có đánh giá — hiện đang ở vòng X/Y", nghĩa là vòng hiện tại chưa ai khởi tạo bản nháp cho nhân viên đó.',
   },
   {
     title: '4. Hiểu rõ màn hình chi tiết trước khi chấm điểm',
@@ -146,7 +146,7 @@ const managementGuide = [
       'Dùng biểu tượng thùng rác trên thẻ nhóm để xóa nhóm khi không còn sử dụng.',
     ],
     note:
-      'Khi sửa hoặc xóa nhóm, cần rà soát lại leader và các thành viên liên quan để tránh làm sai phạm vi người được đánh giá ở các vòng tiếp theo.',
+      'Quy tắc bắt buộc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER VÀ 1 SUBLEADER. Để thay đổi Leader/SubLeader, phải làm đúng 2 bước: (1) HẠ người đang giữ chức xuống "Nhân viên" trước, (2) rồi THĂNG người khác lên. Hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có người giữ chức (hiện thông báo yêu cầu hạ người cũ trước). Khi thay đổi chức vụ, hệ thống tự đồng bộ leader hiển thị ở trang Nhóm, danh sách nhân viên và các vòng đánh giá tương ứng.',
   },
 ];
 
@@ -180,9 +180,14 @@ const faqItems = [
       'Bạn đang ở ngoài lượt đánh giá của mình, hoặc vòng đó đã được nộp. Hệ thống khóa chỉnh sửa để giữ đúng quy trình nhiều vòng.',
   },
   {
-    question: 'Vì sao mở vào chỉ thấy thông báo không có quyền truy cập?',
+    question: 'Vì sao mở vào chỉ thấy thông báo "Bạn không thể xem đánh giá của cấp trên"?',
     answer:
-      'Thông báo này xuất hiện khi người dùng cố mở evaluation không thuộc phạm vi được xem, đặc biệt là trường hợp cấp dưới mở đánh giá của cấp trên.',
+      'Thông báo này xuất hiện khi người dùng cấp thấp hơn cố mở đánh giá của người giữ chức vụ cao hơn (ví dụ SubLeader mở đánh giá của Leader, hoặc Nhân viên mở đánh giá của SubLeader/Leader). Mỗi vai trò chỉ được xem đánh giá trong phạm vi công việc của mình.',
+  },
+  {
+    question: 'Tôi muốn thay đổi Leader hoặc SubLeader của nhóm thì làm thế nào?',
+    answer:
+      'Mỗi nhóm chỉ có đúng 1 Leader và 1 SubLeader. Muốn đổi người giữ chức, hãy làm 2 bước theo đúng thứ tự: (1) vào "Nhân viên", hạ người đang giữ chức xuống "Nhân viên" trước; (2) sau đó thăng người mới lên Leader/SubLeader. Hệ thống sẽ chặn nếu bạn thăng người mới khi nhóm vẫn còn người giữ chức cũ — đây là quy tắc bắt buộc để mỗi nhóm luôn chỉ có 1 Leader + 1 SubLeader.',
   },
   {
     question: 'Vì sao có nhân viên chưa có dữ liệu evaluation?',
