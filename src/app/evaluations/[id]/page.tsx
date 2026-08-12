@@ -242,8 +242,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <div className="p-4 bg-red-50 rounded-full text-red-500">
             <Lock size={48} />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
-          <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
+          <p className="text-slate-500 max-w-md">Bạn không thể xem đánh giá của cấp trên</p>
           <button
             onClick={() => router.back()}
             className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
@@ -277,8 +276,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         <div className="p-4 bg-red-50 rounded-full text-red-500">
           <Lock size={48} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
-        <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
+        <p className="text-slate-500 max-w-md">Bạn không thể xem đánh giá của cấp trên</p>
         <button
           onClick={() => router.back()}
           className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
