@@ -430,7 +430,7 @@
           <div class="step-body">
             <div class="step-title">Mở Phiếu Đánh Giá Chi Tiết</div>
             <div class="step-desc">Nhấn vào biểu tượng <strong>Tài liệu 📄</strong> ở góc phải dòng nhân viên tương ứng. Hệ thống sẽ mở màn hình chi tiết chấm điểm.</div>
-            <div class="step-tip">⚠️ Lưu ý: Nếu hiện "Không có quyền truy cập", nghĩa là bạn đang mở hồ sơ của cấp trên hoặc nhân sự ngoài nhóm.</div>
+            <div class="step-tip">⚠️ Lưu ý: Nếu hiện "Bạn không thể xem đánh giá của cấp trên", nghĩa là bạn đang mở hồ sơ của cấp trên hoặc nhân sự ngoài nhóm. Nếu hiện "Chưa có đánh giá — vòng X/Y", nghĩa là vòng hiện tại chưa ai khởi tạo bản nháp cho nhân viên đó.</div>
           </div>
         </div>
 
@@ -616,6 +616,15 @@
           </ul>
         </li>
       </ol>
+
+      <div class="sub-header">4. Quy Tắc Nhóm: MỖI NHÓM CHỈ CÓ 1 LEADER + 1 SUBLEADER (Bắt Buộc)</div>
+      <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Hệ thống chỉ cho phép mỗi nhóm có <strong>đúng 1 Leader và 1 SubLeader</strong>. Muốn thay đổi người giữ chức, phải làm <strong>đúng 2 bước theo thứ tự</strong>:</p>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
+        <li><strong>HẠ người đang giữ chức xuống "Nhân viên" trước</strong>: vào mục "Nhân viên", sửa chức vụ của Leader/SubLeader hiện tại thành "Nhân viên" và lưu.</li>
+        <li><strong>THĂNG người mới lên sau</strong>: sửa chức vụ của người được chọn thành "Leader" hoặc "SubLeader" và lưu.</li>
+      </ol>
+      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Hệ thống sẽ TỪ CHỐI nếu cố thăng người mới lên Leader/SubLeader khi nhóm vẫn còn người đang giữ chức đó. Thông báo lỗi sẽ yêu cầu hạ người cũ xuống trước.</p>
+      <p style="font-size: 8.5pt; color: #334155;">Khi thay đổi chức vụ, hệ thống tự động đồng bộ: Leader hiển thị ở trang Nhóm, danh sách nhân viên, và các vòng đánh giá (round 1) của nhân viên trong nhóm được gán đúng người đánh giá mới.</p>
     </div>
 
     <!-- CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO VÀ PHÂN TÍCH NĂNG LỰC -->
@@ -672,8 +681,8 @@
         </div>
 
         <div class="faq-card">
-          <h5>❓ Màn hình báo "Bạn không có quyền truy cập"?</h5>
-          <p><strong>Trả lời:</strong> Bạn đang mở phiếu đánh giá của cấp trên hoặc nhân sự không thuộc nhóm mình quản lý. Hệ thống phân quyền chặt chẽ theo phân cấp quản trị.</p>
+          <h5>❓ Màn hình báo "Bạn không thể xem đánh giá của cấp trên"?</h5>
+          <p><strong>Trả lời:</strong> Bạn đang mở phiếu đánh giá của cấp trên (ví dụ SubLeader mở phiếu của Leader) hoặc nhân sự không thuộc nhóm mình quản lý. Hệ thống phân quyền chặt chẽ theo phân cấp quản trị.</p>
         </div>
 
         <div class="faq-card">
