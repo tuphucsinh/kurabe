@@ -8,10 +8,11 @@
 Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file every turn**: each turn you receive a self-contained prompt from Mika (task + constraints + test commands already extracted).
 
 1. Implement ONLY the assigned task — no scope creep, no self-commit.
-2. TDD-first: run tests to see RED → code → audit (static + "3 most serious issues") → tests GREEN.
+2. **Test strategy phân loại**: pure logic (utils/functions) → TDD-first: run tests to see RED → code → audit (static + "3 most serious issues") → tests GREEN. UI/DOM/CDN → verify browser thật (không ép unit test cho DOM — xem PROJECT TOOLING "Browser verify").
 3. 2-Strike: 2 failed test runs → HALT, write `.tmp/SYSTEM_ALERT.md`, report to Mika.
 4. Fast-path (config/typo/trivial): report to Mika — Mika decides, runner never self-decides.
 5. Follow **PROJECT TOOLING** (project test/lint commands — bottom of file).
+6. NEVER edit `tasks.md` (no ticking `[x]`, no notes) — Mika ticks only after independent verification.
 
 ## ROLES (fixed — every task passes through all three)
 
@@ -20,6 +21,8 @@ Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file eve
 | **Mika** (plan/control/verify) | Read rules + `.ai/` + `HANDOFF.md` on onboarding; `/plan` → `.ai/MASTER_PLAN.md`; `/plan2task` → WBS; pick runner from state; record BASE_SHA; verify git diff + independent tests + secret scan; `/done` closes | Trust runner self-reports; dispatch without clear WBS |
 | **Runner** (coder \| agy \| opencode \| commandcode) | Implement exactly the assigned task: TDD-first → code → audit → test | Expand scope; commit; decide fast-path |
 | **Reviewer** (fresh session, CONTROLLED only) | Receive package (diff + test evidence + known risks), verdict PASS / non-PASS | Edit code; receive runner transcripts |
+
+> **CONTROLLED thực tế** (2026-08-11, anh duyệt): dự án **static nhỏ** (không auth/DB/backend/production) → Mika verify + adversarial audit (Gate 3) **đủ, Reviewer không bắt buộc**. Reviewer bắt buộc khi chạm **auth/DB/schema/backend/production**. Ghi chú này áp dụng cho mọi dự án static tương tự.
 
 ## RULES
 
@@ -115,10 +118,10 @@ interface Example {
 Stop after writing. One-line report.
 
 ### /do [Task_ID] — Runner (implement, 4 gates)
-1. **SCAN (TDD-first)**: read real environment (`package.json`, `Makefile`, `.env`). Run tests → see RED (proves bug/missing code) before coding.
+1. **SCAN**: read real environment (`package.json`, `Makefile`, `.env`). **Test strategy theo loại task**: pure logic → chạy test thấy RED (proves bug/missing code) trước khi code (TDD); UI/DOM/CDN → ghi nhận verify browser (PROJECT TOOLING "Browser verify") — không ép RED cho DOM.
 2. **CODE**: runner's file tools (`patch`/`write_file`/equivalent). No rambling.
 3. **AUDIT**: static analysis (project lint — see PROJECT TOOLING) + Sequential Thinking *"3 most serious issues vs requirement"*.
-4. **TEST**: rerun test command (pipe `| tail -n 50`).
+4. **TEST**: rerun test command (pipe `| tail -n 50`). Task UI/DOM/CDN → chạy thêm browser verify (PROJECT TOOLING) trước khi báo Mika.
    - PASS → report Mika; Mika independently verifies (git diff + rerun tests) BEFORE ticking `[x]`; phase 100% → auto-sync `.ai/MASTER_PLAN.md` + prune `[x]` tasks.
    - FAIL #1 → stop coding; web-search docs + `@systematic-debugging` before retry (max 1 retry).
    - FAIL #2 → 2-Strike HALT → `.tmp/SYSTEM_ALERT.md`.
@@ -141,7 +144,7 @@ Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
 ## RUNNER DISPATCH
 - **State**: current runner stored in Mika's profile (`coding_runner.txt`); user switches anytime: "đổi runner sang X". Runner ∈ {coder, agy, opencode, commandcode}.
 - **Dispatch**: Mika packages a self-contained prompt (task + affected files + constraints + test commands) → `harness-run <runner> --add-dir <repo> '<prompt>'` (guard: workspace allowlist/denylist + non-git marker; auto-prints git status/diff). `coder` uses the orchestration path instead.
-- **Verify invariants** (runner-independent): BASE_SHA before → git diff + status after (scope? secret leak?) → rerun tests independently → **Reviewer** (fresh) when CONTROLLED (auth/DB/schema/security/production) → close only on PASS.
+- **Verify invariants** (runner-independent): BASE_SHA before → git diff + status after (scope? secret leak?) → rerun tests independently → **Reviewer** (fresh) khi CONTROLLED chạm auth/DB/schema/backend/production (dự án static nhỏ: Mika verify + adversarial audit đủ — xem note ROLES) → close only on PASS.
 
 ## AUTO-BEHAVIORS
 | Trigger | Behavior |
@@ -157,5 +160,6 @@ Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
 |---|---|
 | Test command | none yet (TDD-first will add when needed) |
 | Lint/static | `npm run lint` (eslint) |
+| Browser verify | `~/.hermes/workspaces/browser-verify.sh <assert.mjs> [url]` (nguồn chuẩn — copy vào `tests/` khi cần; assert mẫu `~/.hermes/workspaces/browser-assert.example.mjs`). Chrome headless dump-dom + node assert + console-error check. Dùng cho task UI/DOM/CDN. |
 | Code intelligence (optional) | none |
 | Build/verify | `npm run build` (next build — ~24s on Pi5, pilot 2026-08-10) |
