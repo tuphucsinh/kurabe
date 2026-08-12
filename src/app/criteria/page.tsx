@@ -270,12 +270,13 @@ export default function CriteriaPage() {
                       <span className="text-[10px] font-black bg-white text-primary px-1.5 py-0.5 rounded border border-primary/20 shrink-0">
                         {criterion.code || criterion.id}
                       </span>
-                      {criterion.appliesTo.length <= 2 && criterion.appliesTo.includes('Leader') && !criterion.appliesTo.includes('Employee') && (
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full shrink-0">Chỉ QL</span>
-                      )}
-                      {criterion.appliesTo.length <= 2 && criterion.appliesTo.includes('Employee') && !criterion.appliesTo.includes('Leader') && (
-                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full shrink-0">Chỉ NV</span>
-                      )}
+                      {(() => {
+                        const hasQL = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader') || criterion.appliesTo.includes('SubLeader');
+                        const hasNV = criterion.appliesTo.includes('Employee');
+                        if (hasQL && !hasNV) return <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full shrink-0">Chỉ QL</span>;
+                        if (!hasQL && hasNV) return <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full shrink-0">Chỉ NV</span>;
+                        return null;
+                      })()}
                       <span className="shrink-0">{criterion.name}</span>
                       {criterion.description && (
                         <span className="text-sm font-normal text-outline/80 block w-full md:inline md:w-auto">
