@@ -1,6 +1,6 @@
 'use client';
 
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 import { showToast } from '@/components/ui/Toast';
 
@@ -17,11 +17,8 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
         showToast(error.message || 'Lỗi tải dữ liệu.', 'error');
       }
     }),
-    mutationCache: new MutationCache({
-      onError: (error) => {
-        showToast(error.message || 'Có lỗi xảy ra khi thực hiện thao tác.', 'error');
-      },
-    }),
+    // MutationCache KHÔNG có onError global — mọi mutation đều có onError local ở page,
+    // nếu thêm global sẽ hiển thị 2 toast trùng nội dung (verified 2026-08-12 rule leader).
   }));
 
   return (

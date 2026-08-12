@@ -38,10 +38,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       return newToasts.slice(-3); // Keep only 3 most recent
     });
 
-    // Auto dismiss
+    // Auto dismiss — 10s (tăng từ 6s theo yêu cầu 2026-08-12)
     const timer = setTimeout(() => {
       removeToast(id);
-    }, 3000);
+    }, 10000);
 
     return () => clearTimeout(timer);
   }, [removeToast]);
