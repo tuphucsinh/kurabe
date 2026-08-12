@@ -291,6 +291,17 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   // Blocked UI
   if (accessState.mode === 'blocked') {
+    const blockedMaxRound = getMaxEvaluationRound(employee.role);
+    const roleLabel: Record<string, string> = {
+      Manager: 'Manager',
+      Leader: 'Leader',
+      SubLeader: 'SubLeader',
+      Employee: 'Nhân viên',
+    };
+    const blockedDetail =
+      accessState.reason === 'NO_DRAFT'
+        ? `Nhân viên (${roleLabel[employee.role] || employee.role}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
+        : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.';
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
         <div className="p-4 bg-red-50 rounded-full text-red-500">
@@ -298,9 +309,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         </div>
         <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
         <p className="text-slate-500 max-w-md">
-          {accessState.reason === 'NO_DRAFT' 
-            ? 'Chưa có đánh giá.'
-            : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.'}
+          {blockedDetail}
         </p>
         <button 
           onClick={() => router.back()}
