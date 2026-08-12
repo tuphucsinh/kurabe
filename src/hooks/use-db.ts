@@ -35,6 +35,8 @@ export const useUpsertUser = () => {
     mutationFn: upsertUser,
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       // Tự tạo evaluation + round 1 nếu user mới vào kỳ active
       if (data) {
         try {
@@ -54,6 +56,8 @@ export const useBatchUpsertUsers = () => {
     mutationFn: upsertUsers,
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       // Tự tạo evaluation + round 1 cho user mới vào kỳ active
       if (data && data.length > 0) {
         try {
