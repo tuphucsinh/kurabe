@@ -300,14 +300,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     };
     const blockedDetail =
       accessState.reason === 'NO_DRAFT'
-        ? `Nhân viên (${roleLabel[employee.role] || employee.role}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
+        ? `${employee.name} (${roleLabel[employee.role] || employee.role}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
         : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.';
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
         <div className="p-4 bg-red-50 rounded-full text-red-500">
           <Lock size={48} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
         <p className="text-slate-500 max-w-md">
           {blockedDetail}
         </p>
