@@ -43,6 +43,21 @@ async function assertLeadershipSlot(
  */
 async function syncEvaluationAfterUserChange(user: User): Promise<void> {
   try {
+    // 0. Đồng bộ teams.leader_id theo role hiện tại (rule: Leader = role user)
+    //    - user thành Leader → set leader_id của team = user.id
+    //    - user bị hạ khỏi Leader → xóa leader_id nếu đang trỏ tới user
+    if (user.teamId) {
+      if (user.role === 'Leader') {
+        await supabase.from('teams').update({ leader_id: user.id }).eq('id', user.teamId);
+      } else {
+        await supabase
+          .from('teams')
+          .update({ leader_id: null })
+          .eq('id', user.teamId)
+          .eq('leader_id', user.id); // chỉ xóa nếu đang là leader của team này
+      }
+    }
+
     // 1. Đồng bộ employee_role trên mọi evaluation
     await supabase
       .from('evaluations')

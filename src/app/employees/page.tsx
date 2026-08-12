@@ -94,9 +94,9 @@ export default function EmployeesPage() {
     });
   }, [employeesData, searchTerm, teamFilter, roleFilter]);
 
-  // Sort state
+  // Sort state — mặc định theo Nhóm (rule: nhóm rồi mới tên)
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
-    key: 'name',
+    key: 'teamName',
     direction: 'asc',
   });
 
@@ -109,6 +109,14 @@ export default function EmployeesPage() {
       
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      
+      // Cùng nhóm → ưu tiên sort theo tên để ổn định
+      if (sortConfig.key === 'teamName' && aVal === bVal) {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        if (aName < bName) return -1;
+        if (aName > bName) return 1;
+      }
       
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
