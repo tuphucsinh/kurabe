@@ -65,6 +65,29 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ---
 
+## Phase 56: AI cho Manager — Cảnh báo bất thường (rule-based) + khung AI 🤖 (2026-08-13)
+
+### [#P56T01] [src/lib/anomaly.ts + src/lib/ai.ts] Detection rule-based + khung LLM
+
+**Goal**: Phát hiện đánh giá bất thường (chênh lệch điểm giữa 2 vòng liên tiếp ≥ 20) — chính xác 100% rule-based; khung gọi LLM sẵn sàng (env `AI_API_KEY`/`AI_BASE_URL`, fail-soft, không vỡ khi thiếu key).
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**New interface**: `detectAnomalies(evaluations)` → `Anomaly[] { employeeId, name, round, prevScore, score, diff, severity }` (diff ≥30 = 'high', ≥20 = 'medium'); `callAI(prompt)` (OpenAI-compatible chat completions, timeout 20s, trả null khi lỗi/thiếu key); `isAIConfigured()`.
+
+### [#P56T02] [src/components/dashboard/AnomalyAlertCard.tsx + dashboard] Card cảnh báo
+
+**Goal**: Dashboard hiển thị cảnh báo đánh giá bất thường (Manager) + nút "Giải thích bằng AI" (khi chưa có key → toast "AI chưa được cấu hình").
+
+**Depends on**: `[#P56T01]` — **Parallel-safe**: `no`
+
+- **P56T01** ✅: `lib/anomaly.ts` (rule ≥20 medium / ≥30 high — TEST PASS tsx: high 45 + medium 22, bỏ round 0 điểm) + `lib/ai.ts` (OpenAI-compatible, env AI_API_KEY/AI_BASE_URL/AI_MODEL, timeout 20s, fail-soft null)
+- **P56T02** ✅: `AnomalyAlertCard` trên Dashboard (Manager-only, EmptyState khi sạch, nút "Giải thích bằng AI" per anomaly → `actions/ai.ts` explainAnomalyAction — chưa có key → "AI chưa được cấu hình — chờ cung cấp API key") + wire dashboard. Verify browser: card hiển thị + EmptyState đúng.
+
+**Phase 56 DONE (phần anomaly + khung AI)** — chờ anh cấp `AI_API_KEY` để bật giải thích AI + làm Tóm tắt kỳ (Phase 57).
+
+---
+
 ## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
 
 ### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action
