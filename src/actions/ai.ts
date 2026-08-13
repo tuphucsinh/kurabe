@@ -75,7 +75,7 @@ ${prevText}
 ${input.currentComment ? `- Nhận xét hiện tại: ${input.currentComment}` : ''}
 
 MẪU PHONG CÁCH QUẢN LÝ (chỉ THAM KHẢO CÁCH VIẾT — không sao chép nội dung):
-"Ở vai trò dẫn dắt, việc bố trí người khi cấp bách và đào tạo NV đa năng đã phát huy tốt, kíp vận hành hiếm khi chờ người; nên nhân rộng cách chia sẻ kinh nghiệm xử lý sự cố sang các kíp còn lại. Kỷ luật lao động kỳ này giữ ổn định. Tiếp tục phát huy, chú ý thêm khâu theo dõi sau đào tạo."
+"Với vai trò quản lý, việc bố trí người khi cấp bách và đào tạo NV đa năng đã phát huy tốt, kíp vận hành hiếm khi chờ người; nên nhân rộng cách chia sẻ kinh nghiệm xử lý sự cố sang các kíp còn lại. Kỷ luật lao động kỳ này giữ ổn định. Tiếp tục phát huy, chú ý thêm khâu theo dõi sau đào tạo."
 MẪU PHONG CÁCH NHÂN VIÊN:
 "Hiện diện và tác phong tốt, thực hiện 6S đều đặn nên khu vực phụ trách luôn gọn gàng; điểm cần lưu ý là chủ động hơn khi phát sinh việc bất thường thay vì chờ chỉ đạo. Nhìn chung hoàn thành tốt nhiệm vụ kỳ này, duy trì nếp làm việc ổn định."
 
@@ -83,7 +83,7 @@ Hãy viết NHẬN XÉT TỔNG QUÁT (4-5 câu, tiếng Việt) theo NGUYÊN T�
 1. QUẢN LÝ (Leader/SubLeader/Manager): phân tích KỸ 2-3 tiêu chuẩn QUẢN LÝ nổi bật (mã F*) — điểm mạnh + đề xuất phát huy. NHÂN VIÊN: 1-2 tiêu chuẩn mạnh nhất + 1-2 yếu nhất + cách khắc phục cụ thể.
 2. KỶ LUẬT (mã A*): không vi phạm → CHỈ 1 câu NGẮN nhưng DIỄN ĐẠT ĐA DẠNG theo từng người (vd: "Nhân viên duy trì kỷ luật và tác phong lao động tốt trong kỳ", "Không phát sinh vi phạm nội quy, chấm công ổn định", "Tinh thần chấp hành nội quy tốt, không có vấn đề kỷ luật"...). TUYỆT ĐỐI không viết y hệt câu giống nhau cho mọi người, không liệt kê tiêu chí 0 điểm, không nêu "theo dõi chấm công" khi không có vi phạm.
 3. XƯNG HÔ: gọi người được đánh giá là "Nhân viên" (vd: "Nhân viên đạt...", "Nhân viên cần...") — KHÔNG dùng "Anh/chị", "bạn", "em".
-4. VAI TRÒ: khi nhắc vai trò, dùng chung "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager") và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với trách nhiệm dẫn dắt...", "Trong phạm vi quản lý đội nhóm...", "Ở vị trí điều phối...") — không lặp lại cùng một cụm cho mọi người.
+4. VAI TRÒ: khi nhắc vai trò, LUÔN dùng từ "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager", "điều phối", "dẫn dắt" để chỉ vai trò) và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với vai trò quản lý...", "Là người quản lý...", "Trong vai trò quản lý...") — không lặp lại cùng một cụm cho mọi người.
 5. NHẮC TIÊU CHUẨN: MÔ TẢ NGẮN nội dung tiêu chuẩn rồi để mã số trong ngoặc (vd: "ở tiêu chuẩn về tinh thần hợp tác, phối hợp (B1)", "ở tiêu chuẩn về đào tạo nhân sự chủ chốt (F9)") — KHÔNG viết "Ở B1" hoặc để mã đứng một mình đầu câu.
 6. NHẬN XÉT VÒNG TRƯỚC chỉ dùng để THAM KHẢO NGẦM (nắm thông tin cho nhất quán) — KHÔNG được trích dẫn kiểu "như nhận xét trước", "theo nhận xét vòng trước". KHÔNG so sánh điểm, KHÔNG nhận xét tiến bộ/lùi giữa các vòng.
 7. KHÔNG nêu tổng điểm số. Kết 1 câu khuyến khích ngắn.
@@ -143,7 +143,7 @@ Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (3-5 câu, tiến
 3. Nếu CÓ tiêu chuẩn thực sự yếu (điểm âm/thiếu sót rõ): 1 điều cần cải thiện + gợi ý ngắn. Nếu KHÔNG: 1 gợi ý phát triển nhẹ nhàng.
 4. Kỷ luật (A*) không vi phạm → KHÔNG nêu hoặc tối đa nửa câu, DIỄN ĐẠT ĐA DẠNG theo từng người — không lặp lại cùng một câu.
 5. XƯNG HÔ: gọi người được đánh giá là "Nhân viên" — KHÔNG dùng "Anh/chị", "bạn", "em".
-6. VAI TRÒ: dùng chung "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager") và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với trách nhiệm dẫn dắt...", "Trong phạm vi quản lý đội nhóm...") — không lặp cùng một cụm cho mọi người.
+6. VAI TRÒ: LUÔN dùng từ "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager", "điều phối", "dẫn dắt" để chỉ vai trò) và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với vai trò quản lý...", "Là người quản lý...", "Trong vai trò quản lý...") — không lặp cùng một cụm cho mọi người.
 7. NHẮC TIÊU CHUẨN: MÔ TẢ NGẮN nội dung rồi mã trong ngoặc (vd: "tiêu chuẩn về hợp tác, phối hợp (B1)") — KHÔNG viết "Ở B1" hoặc mã đứng một mình.
 8. Kết 1 câu khuyến khích.
 VIẾT GIỐNG NGƯỜI THẬT, BẮT CHƯỚC PHONG CÁCH MẪU — tự nhiên, ấm áp như quản lý viết tin riêng — TRÁNH giọng văn AI (không "cho thấy sự nỗ lực", "đáng ghi nhận", liệt kê đều đều, sáo rỗng). Mỗi nhân viên một cách diễn đạt khác nhau.
