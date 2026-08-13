@@ -4,6 +4,7 @@ import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
+import { getSessionUser } from '@/lib/auth';
 import { Grade, User } from '@/types';
 
 export interface ReportAggregationData {
@@ -26,8 +27,11 @@ export async function getReportAggregation(
   if (!periodId) return null;
 
   try {
+    // Viewer = session user — nếu thiếu, getEvaluationsByPeriod trả [] (filterEvaluationsForViewer)
+    const viewer = await getSessionUser();
+
     const [evaluations, users, teams, allCriteriaData] = await Promise.all([
-      getEvaluationsByPeriod(periodId),
+      getEvaluationsByPeriod(periodId, viewer),
       getUsers(),
       getTeams(),
       getAllCriteriaGroups()
@@ -47,10 +51,10 @@ export async function getReportAggregation(
 
     const teamMap = new Map(teams.map(t => [t.id, t]));
 
-    // Filter by team
+    // Filter by team — KHÔNG loại Manager: Manager có evaluation riêng trong kỳ (được đánh giá)
     const filteredUsers = selectedTeam === 'all' 
-      ? users.filter(u => u.role !== 'Manager') 
-      : (usersByTeam.get(selectedTeam) || []).filter(u => u.role !== 'Manager');
+      ? users 
+      : (usersByTeam.get(selectedTeam) || []);
 
     const userIds = new Set(filteredUsers.map(u => u.id));
     
@@ -102,7 +106,8 @@ export async function getReportAggregation(
     // Stats
     const totalEmployees = filteredUsers.length;
     const evaluatedCount = filteredEvals.length;
-    const pendingCount = totalEmployees - evaluatedCount;
+    // "Chưa đánh giá" = đã có evaluation nhưng CHƯA Approved (kết quả chưa chốt)
+    const pendingCount = filteredEvals.filter((e) => e.status !== 'Approved').length;
     const avgScore = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
     const highGradeRate = evaluatedCount > 0 ? (highGrades / evaluatedCount) * 100 : 0;
 

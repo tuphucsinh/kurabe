@@ -44,7 +44,8 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
       getAllCriteriaGroups()
     ]);
 
-    const targetUsers = users.filter((u) => u.role !== 'Manager');
+    // Gồm cả Manager — Manager có evaluation riêng trong kỳ (được đánh giá)
+    const targetUsers = users;
     const totalCount = targetUsers.length;
 
     const completed = evaluations.filter((e) => e.status === 'Approved').length;
