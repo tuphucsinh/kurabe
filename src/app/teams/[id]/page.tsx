@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Clock,
   Crown,
-  User as UserIcon,
   FileText,
   ChevronRight,
   AlertTriangle,
@@ -214,26 +213,16 @@ export default function TeamDetailPage() {
       </div>
 
       {/* Grouped SubLeader Blocks */}
-      <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6">
-        <div className="flex items-center justify-between border-b border-outline-variant/50 pb-4">
-          <div className="flex items-center gap-2">
-            <UserIcon size={18} className="text-primary" />
-            <h2 className="text-lg font-bold text-on-surface">Thành viên nhóm theo SubLeader</h2>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              {memberRows.length} thành viên
-            </span>
-          </div>
-        </div>
-
+      <div className="space-y-5">
         {memberRows.length === 0 ? (
           <EmptyState
             icon={Users}
             title="Nhóm chưa có thành viên"
             description="Chưa có nhân viên nào được gán vào nhóm này."
-            className="p-6"
+            className="p-6 bg-white rounded-2xl border border-outline-variant shadow-sm"
           />
         ) : sortedSubLeaders.length === 0 && subLeaderBlocks.unassignedRows.length === 0 ? (
-          <div className="py-6 text-center text-sm text-slate-500">
+          <div className="py-6 text-center text-sm text-slate-500 bg-white rounded-2xl border border-outline-variant shadow-sm">
             Không có nhân viên trực thuộc trong nhóm.
           </div>
         ) : (
