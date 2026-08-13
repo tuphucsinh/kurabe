@@ -447,6 +447,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         employeeCode: employee.employeeCode || '',
         role: employee.role,
         criteriaDetail,
+        previousComments: (allPreviousRounds || []).map((r) => r.comment || '').filter(Boolean),
         currentComment: comment,
         totalScore: totalScoreNow,
         grade: currentRoundData?.grade || '',
@@ -491,6 +492,10 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         totalScore: lastRound?.totalScore || 0,
         grade: lastRound?.grade || '',
         criteriaDetail,
+        previousComments: (evaluation.rounds || [])
+          .filter((r) => r.round < (lastRound?.round ?? 0))
+          .map((r) => r.comment || '')
+          .filter(Boolean),
         summaryNotes: comment || (evaluation.rounds || []).map((r) => r.comment).filter(Boolean).join(' | '),
         periodName: '2026',
       });
