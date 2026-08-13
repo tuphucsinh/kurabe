@@ -111,6 +111,48 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ---
 
+## Phase 58: Gợi ý nhận xét + Soạn thông báo kết quả (AI, chỉ Manager) 🤖 (2026-08-13)
+
+### [#P58T01] [src/actions/ai.ts] suggestCommentAction + draftResultMessageAction
+
+**Goal**: Manager chấm điểm → AI gợi ý nhận xét chung (điền vào ô Ghi chú chung, sửa được); Manager xem hồ sơ → AI soạn thông báo kết quả cá nhân hóa + nút Sao chép. Cả 2: requireManager, ẩn danh hóa (mã NV), fail-soft.
+
+**Depends on**: `[#P56T01]` — **Parallel-safe**: `no`
+
+- **P58T01** ✅: 2 action trong `actions/ai.ts` — input `criteriaDetail` (code+name+points+levelLabel+note TỪNG tiêu chuẩn) + `previousComments` (vòng trước, tham khảo NGẦM) + notesSummary; prompt chất lượng cao (xem chuẩn bên dưới); token 600-900; temperature 0.7 (đa dạng).
+- **P58T02** ✅: UI trên `/evaluations/[id]` — nút "✨ Gợi ý nhận xét (AI)" (chỉ Manager + đang chấm — hiện cạnh ô Ghi chú chung) + nút "📨 Soạn thông báo kết quả (AI)" (Manager mọi chế độ xem) + khối draft + nút Sao chép.
+- **Verify**: browser thật với data seed (chênh 45 điểm → cảnh báo + giải thích AI 4s tiếng Việt; thông báo cụ thể theo tên tiêu chuẩn 10s) — data test đã RESTORE sạch.
+
+**CHUẨN PROMPT NHẬN XÉT (đã tinh chỉnh theo anh — 2026-08-13)**:
+- 4-5 câu (gợi ý) / 3-5 câu (thông báo); cụ thể theo TÊN tiêu chuẩn, mã để trong ngoặc (vd "tinh thần hợp tác, phối hợp (B1)" — KHÔNG "Ở B1")
+- Xưng hô "Nhân viên" (KHÔNG Anh/chị/bạn/em); vai trò LUÔN "quản lý" (KHÔNG Leader/SubLeader/Manager/điều phối/dẫn dắt) + ĐA DẠNG cụm mở ("Ở vai trò quản lý / Với vai trò quản lý / Là người quản lý...")
+- Kỷ luật (A*) không vi phạm → 1 câu ngắn DIỄN ĐẠT ĐA DẠNG (không lặp câu cho mọi người; không liệt kê 0 điểm; không "theo dõi chấm công")
+- Tham khảo NGẦM nhận xét vòng trước (KHÔNG trích "như nhận xét trước"); KHÔNG so sánh điểm/tiến bộ giữa vòng (mỗi vòng 1 người chấm khác nhau)
+- Giọng người thật (chống AI-isms: "cho thấy sự nỗ lực", "đáng ghi nhận"...); few-shot 2 mẫu phong cách (quản lý/NV); không nêu tổng điểm số
+- **Model**: `gpt-5.6-luna` (deepseek-v4-flash reasoning ngốn hết max_tokens → content rỗng với prompt dài — đã test HTTP 200 content ""); lib/ai.ts: maxTokens 1500 default + retry ×2 token khi content rỗng + timeout 45s.
+
+**Phase 58 DONE** — 3 ví dụ mẫu (NV/Leader/Manager) anh duyệt OK. Chờ push.
+
+---
+
+## Phase 59: 🔗 lyly ↔ kurabe (vợ anh hỏi Telegram nắm tình hình) (2026-08-13)
+
+### [#P59T01] [profile lyly — ngoài repo] MCP supabase (anon) + skill kurabe-monitor
+
+**Goal**: Chị Ly chat Telegram bot lyly → hỏi tình hình đánh giá QAQC → lyly truy vấn Supabase (chỉ ĐỌC) trả lời bằng dữ liệu thật.
+
+- **P59T01** ✅ (ngoài repo — profile `~/.hermes/profiles/lyly/`):
+  - MCP server `supabase` trong config lyly — dùng **ANON key** (public, chỉ đọc — KHÔNG dùng PAT admin của mika)
+  - Skill `kurabe-monitor` tại `~/.hermes/profiles/lyly/skills/software-development/kurabe-monitor/SKILL.md` — cấu trúc bảng + câu hỏi mẫu + quy tắc (chỉ đọc, tiếng Việt, không bịa số)
+  - **Verified** (2 câu thật qua `hermes -p lyly -z`): "kỳ 2026 active, 22 NV, 22/22 chưa xong" + "QC Gia dụng 15 NV — Leader Mai Thị Hòa" + **phát hiện QI Gia dụng chưa gán Leader**
+  - Telegram: lyly đã DM "Ly Ngo" (8632993932) — chị Ly chat trực tiếp
+
+**Phase 59 DONE** — chờ anh xác nhận chị Ly dùng thử.
+
+---
+
+
+
 ## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
 
 ### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action
