@@ -192,17 +192,10 @@ export default function TeamDetailPage() {
                 <span className="font-black text-lg text-on-surface">{pendingCount}</span>
                 <span className="text-sm text-slate-500">còn lại</span>
               </div>
+              </div>
+              </div>
+              </div>
             </div>
-
-            {/* Status Pill */}
-            <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
-              progress === 100 ? 'bg-green-100 text-green-700' : progress > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-            }`}>
-              {progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Grouped SubLeader Blocks */}
       <div className="space-y-5">

@@ -229,9 +229,6 @@ export default function TeamsPage() {
                           </button>
                         </>
                       )}
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                        {team.status}
-                      </span>
                     </div>
                   </div>
                   <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
