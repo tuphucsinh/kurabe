@@ -65,18 +65,18 @@ export async function suggestCommentAction(input: {
 
   const prompt = `Dữ liệu đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}):
 - Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
-- CHI TIẾT TỪNG TIÊU CHUẨN:
+- CHI TIẾT TỪNG TIÊU CHUẨN (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
 ${detailText}
 ${input.currentComment ? `- Nhận xét hiện tại: ${input.currentComment}` : ''}
 
-Hãy viết NHẬN XÉT TỔNG QUÁT (4-7 câu, tiếng Việt) DỰA TRÊN TỪNG TIÊU CHUẨN TRÊN:
-1. Nêu RÕ 2-3 tiêu chí mạnh nhất (kèm tên tiêu chuẩn) và ý nghĩa.
-2. Nêu RÕ 2-3 tiêu chí yếu nhất (kèm tên tiêu chuẩn) — chỉ ra vấn đề cụ thể.
-3. Đề xuất CÁCH KHẮC PHỤC / CẢI THIỆN cụ thể cho từng tiêu chí yếu (hành động thực tế, có thể làm được).
-4. Kết bằng khuyến khích ngắn.
-YÊU CẦU: cụ thể, sát dữ liệu, có thể hành động — TUYỆT ĐỐI không viết chung chung, không thêm thông tin không có trong dữ liệu. KHÔNG nêu tổng điểm số cụ thể.`;
+Hãy viết NHẬN XÉT TỔNG QUÁT (3-5 câu, tiếng Việt) theo NGUYÊN TẮC SAU:
+1. Nếu vai trò là QUẢN LÝ (Leader/SubLeader/Manager): phân tích KỸ 2-3 tiêu chuẩn QUẢN LÝ nổi bật (mã F* — đào tạo, giám sát, phát triển đội ngũ) — nêu cụ thể điểm mạnh + đề xuất phát huy.
+2. Nếu là NHÂN VIÊN: phân tích kỹ 1-2 tiêu chuẩn mạnh nhất (tên + ý nghĩa) và 1-2 tiêu chuẩn yếu nhất + cách khắc phục cụ thể.
+3. TIÊU CHUẨN KỶ LUẬT (mã A*): nếu KHÔNG có vi phạm → CHỈ ghi 1 câu ngắn (vd: "chấp hành kỷ luật tốt, không có vi phạm"). TUYỆT ĐỐI không phân tích từng tiêu chí A, không liệt kê các tiêu chí 0 điểm, không nêu "cần theo dõi chấm công" khi không có vi phạm. Chỉ nêu A* khi CÓ vấn đề thật (điểm âm).
+4. Không nêu tổng điểm số cụ thể. Kết 1 câu khuyến khích ngắn.
+YÊU CẦU: NGẮN GỌN, sát dữ liệu, cụ thể theo TÊN tiêu chuẩn, có hành động — không chung chung, không thừa thãi.`;
 
-  const comment = await callAI(prompt, { maxTokens: 1500 });
+  const comment = await callAI(prompt, { maxTokens: 800 });
   if (!comment) return aiError();
   return { comment };
 }
@@ -108,18 +108,19 @@ export async function draftResultMessageAction(input: {
 
   const prompt = `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):
 - Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
-- CHI TIẾT TIÊU CHUẨN VÒNG CUỐI:
+- CHI TIẾT TIÊU CHUẨN VÒNG CUỐI (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
 ${detailText}
 - Nhận xét tổng hợp: ${input.summaryNotes || 'không có'}
 
-Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (3-6 câu, tiếng Việt, chân thành, xây dựng):
+Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (2-4 câu, tiếng Việt, chân thành, xây dựng):
 1. Xác nhận xếp loại (KHÔNG nói điểm số cụ thể).
-2. Nêu 2 ĐIỂM MẠNH cụ thể theo TÊN TIÊU CHUẨN (vd: tỷ lệ hiện diện tốt, 6S đạt mức rất tốt...).
-3. Nêu 2 ĐIỀU CẦN CẢI THIỆN cụ thể theo TÊN TIÊU CHUẨN + gợi ý khắc phục ngắn gọn, thực tế.
-4. Kết thúc khuyến khích.
-YÊU CẦU: cụ thể theo tên tiêu chuẩn thật, sát dữ liệu, hữu ích cho nhân viên — KHÔNG chung chung, không bịa thông tin.`;
+2. Nêu 1-2 điểm mạnh CỤ THỂ theo TÊN tiêu chuẩn (nếu là quản lý: ưu tiên tiêu chuẩn quản lý mã F*; nếu là nhân viên: tiêu chuẩn mạnh nhất).
+3. Nếu CÓ tiêu chuẩn thực sự yếu (điểm âm/thiếu sót rõ): nêu 1 điều cần cải thiện + gợi ý ngắn. Nếu KHÔNG có: nêu 1 gợi ý phát triển nhẹ nhàng.
+4. KHÔNG nêu các tiêu chuẩn kỷ luật A* khi không có vi phạm — chỉ ghi ngắn "chấp hành kỷ luật tốt" nếu cần thiết.
+5. Kết thúc 1 câu khuyến khích.
+YÊU CẦU: NGẮN GỌN, cụ thể theo TÊN tiêu chuẩn thật, sát dữ liệu, hữu ích — không chung chung, không bịa thông tin, không liệt kê dài dòng.`;
 
-  const message = await callAI(prompt, { maxTokens: 1200 });
+  const message = await callAI(prompt, { maxTokens: 600 });
   if (!message) return aiError();
   return { message };
 }
