@@ -250,9 +250,6 @@ export default function TeamDetailPage() {
                     </div>
                   </div>
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
-                      <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
-                        {slBadge.label}
-                      </span>
                       {slGrade && slGrade !== 'Pending' && (
                         <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
                           slGrade === 'S' ? 'bg-indigo-100 text-indigo-700' :
@@ -275,6 +272,9 @@ export default function TeamDetailPage() {
                           )}
                         </div>
                       )}
+                      <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
+                        {slBadge.label}
+                      </span>
                       {slEvaluation && (
                         <Link
                           href={`/evaluations/${sl.id}`}
@@ -318,9 +318,6 @@ export default function TeamDetailPage() {
                               </div>
                               <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                             </div>
-                            <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                              {badge.label}
-                            </span>
                             {grade && grade !== 'Pending' ? (
                               <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
                                 grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
@@ -353,6 +350,9 @@ export default function TeamDetailPage() {
                             ) : (
                               <span className="w-[104px]" />
                             )}
+                            <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                              {badge.label}
+                            </span>
                           </div>
                           <Link
                             href={`/evaluations/${member.id}`}
@@ -408,9 +408,6 @@ export default function TeamDetailPage() {
                             </div>
                             <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                           </div>
-                          <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                            {badge.label}
-                          </span>
                           {grade && grade !== 'Pending' ? (
                             <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
                               grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
@@ -443,6 +440,9 @@ export default function TeamDetailPage() {
                           ) : (
                             <span className="w-[104px]" />
                           )}
+                        <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                          {badge.label}
+                        </span>
                         </div>
                         <Link
                           href={`/evaluations/${member.id}`}
