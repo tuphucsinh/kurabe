@@ -8,8 +8,9 @@ import { hasRoundDraft } from '@/data/workflow';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import dynamic from 'next/dynamic';
 const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'), { ssr: false });
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
+import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -220,6 +221,29 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleResetPassword = async (id: string, name: string) => {
+    if (!isManager) {
+      toast('Chỉ Quản lý mới có quyền đặt lại mật khẩu.', 'error');
+      return;
+    }
+
+    const confirmed = await confirm({
+      title: 'Đặt lại mật khẩu',
+      message: `Đặt lại mật khẩu của "${name}"? Mật khẩu sẽ chuyển về TRỐNG — nhân viên sẽ tự đặt mật khẩu mới từ Cài đặt → Tài khoản.`,
+      confirmText: 'Đặt lại',
+      variant: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    const result = await resetPassword(id);
+    if (result.success) {
+      toast(`Đã đặt lại mật khẩu cho ${name}.`, 'success');
+    } else {
+      toast(result.error || 'Lỗi khi đặt lại mật khẩu.', 'error');
+    }
+  };
+
   const handleSaveEmployee = (data: Partial<User>) => {
     if (!canManageEmployees) {
       toast('Bạn không có quyền lưu thay đổi nhân viên.', 'error');
@@ -415,6 +439,15 @@ export default function EmployeesPage() {
               title="Sửa"
             >
               <Edit2 size={18} />
+            </button>
+          )}
+          {isManager && (
+            <button
+              onClick={() => handleResetPassword(item.id, item.name)}
+              className="p-2 text-outline hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+              title="Đặt lại mật khẩu (về trống)"
+            >
+              <KeyRound size={18} />
             </button>
           )}
           {canDeleteEmployees && (

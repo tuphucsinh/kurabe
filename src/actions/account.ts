@@ -69,3 +69,32 @@ export async function changePassword(
     };
   }
 }
+
+/**
+ * Đặt lại mật khẩu của một nhân viên về TRỐNG (password_hash = null).
+ * Nhân viên sẽ tự đặt mật khẩu mới từ Tab Tài khoản (form "Đặt mật khẩu").
+ * Manager-only về mặt UI; auth thật thuộc Phase 44.
+ */
+export async function resetPassword(userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!userId) {
+      return { success: false, error: 'Thiếu thông tin tài khoản.' };
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: null })
+      .eq('id', userId);
+
+    if (error) {
+      return { success: false, error: 'Lỗi đặt lại mật khẩu: ' + error.message };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Lỗi không xác định khi đặt lại mật khẩu.',
+    };
+  }
+}
