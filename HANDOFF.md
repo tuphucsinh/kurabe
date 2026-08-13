@@ -14,3 +14,4 @@
 - **QI Gia dụng chưa gán Leader** — anh cập nhật khi UAT.
 - Kỳ 2026 có điểm thật → AI đầy đủ hoạt động; P2 "Gợi ý khác" + Chat — sau kỳ đầu.
 - Phase 44 C1 (password login) defer sau UAT.
+- **Phase 61 DONE (13-08)**: SubLeader đa dạng — users+subleader_id/description; vòng 1 theo SubLeader gán; UI Teams/Employees/team-detail. **Còn**: QI Gia dụng 3 NV chưa gán (cần tạo SubLeader); QI Gia dụng chưa có Leader.
