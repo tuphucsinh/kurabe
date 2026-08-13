@@ -18,6 +18,30 @@ export default function TeamsRolesTab() {
     return users.filter((u) => !u.teamId).length;
   }, [users]);
 
+  // Cảnh báo NV (role Employee) chưa được gán SubLeader (subleaderId == null)
+  const unassignedSubLeaderEmployees = useMemo(() => {
+    return users.filter(
+      (u) =>
+        u.role === 'Employee' &&
+        (!u.subleaderId || u.subleaderId.trim() === '')
+    );
+  }, [users]);
+
+  // Gom nhóm NV chưa gán SubLeader theo team
+  const unassignedByTeam = useMemo(() => {
+    const map: Record<string, { teamName: string; count: number }> = {};
+    unassignedSubLeaderEmployees.forEach((u) => {
+      const team = teams.find((t) => t.id === u.teamId);
+      const key = u.teamId || 'unassigned';
+      const teamName = team ? team.name : 'Chưa xếp nhóm';
+      if (!map[key]) {
+        map[key] = { teamName, count: 0 };
+      }
+      map[key].count += 1;
+    });
+    return Object.values(map);
+  }, [unassignedSubLeaderEmployees, teams]);
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -40,6 +64,34 @@ export default function TeamsRolesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Alert cảnh báo NV chưa gán SubLeader đặt ở đầu tab */}
+      {unassignedSubLeaderEmployees.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4 space-y-2">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>
+              <strong className="font-semibold">
+                {unassignedSubLeaderEmployees.length}
+              </strong>{' '}
+              nhân viên chưa được gán SubLeader
+            </span>
+          </div>
+          {unassignedByTeam.length > 0 && (
+            <div className="flex flex-wrap gap-2 pl-7">
+              {unassignedByTeam.map((item) => (
+                <span
+                  key={item.teamName}
+                  className="inline-flex items-center gap-1 bg-amber-100/80 text-amber-900 border border-amber-300/60 px-2.5 py-0.5 rounded-full text-xs font-medium"
+                >
+                  <span>{item.teamName}:</span>
+                  <span className="font-bold">{item.count} NV</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {teams.map((team) => {
           const teamMembers = users.filter((u) => u.teamId === team.id);
@@ -52,17 +104,15 @@ export default function TeamsRolesTab() {
           return (
             <div
               key={team.id}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6"
             >
               {/* Header */}
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
                   <Users className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">
-                    {team.name}
-                  </h3>
+                  <h3 className="font-bold text-slate-800">{team.name}</h3>
                   <p className="text-sm text-slate-500">
                     {teamMembers.length} thành viên
                   </p>
@@ -70,7 +120,7 @@ export default function TeamsRolesTab() {
               </div>
 
               {/* Vai trò */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {/* Leader */}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500 font-medium flex items-center gap-1.5">
@@ -89,27 +139,50 @@ export default function TeamsRolesTab() {
                 </div>
 
                 {/* SubLeader */}
-                <div className="flex items-start justify-between text-sm">
-                  <span className="text-slate-500 font-medium flex items-center gap-1.5 pt-0.5">
-                    <UserIcon className="w-4 h-4 text-sky-500" />
-                    SubLeader
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 justify-end">
-                    {subLeaders.length > 0 ? (
-                      subLeaders.map((sub) => (
-                        <span
-                          key={sub.id}
-                          className="bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full text-xs font-semibold"
-                        >
-                          {sub.name}
-                        </span>
-                      ))
-                    ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                      <UserIcon className="w-4 h-4 text-sky-500" />
+                      SubLeader
+                    </span>
+                    {subLeaders.length === 0 && (
                       <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-xs font-semibold">
                         Chưa có SubLeader
                       </span>
                     )}
                   </div>
+                  {subLeaders.length > 0 && (
+                    <div className="space-y-1.5 pl-5">
+                      {subLeaders.map((sub) => (
+                        <div
+                          key={sub.id}
+                          className="flex items-center justify-between text-xs py-1.5 px-3 bg-slate-50 rounded-xl border border-slate-100"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-slate-800 truncate">
+                              {sub.name}
+                            </span>
+                            {sub.employeeCode && (
+                              <span className="text-slate-400 font-mono text-[11px] shrink-0">
+                                ({sub.employeeCode})
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-medium shrink-0 ml-2 ${
+                              sub.description && sub.description.trim() !== ''
+                                ? 'bg-sky-100 text-sky-700 border border-sky-200/50'
+                                : 'bg-slate-200/60 text-slate-500 italic'
+                            }`}
+                          >
+                            {sub.description && sub.description.trim() !== ''
+                              ? sub.description
+                              : 'Chưa có chức danh'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Cảnh báo chung */}

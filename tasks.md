@@ -176,7 +176,7 @@
 
 **Definition of Done**: browser verify tab hiển thị đủ SubLeader + alert đúng số NV thiếu gán (hiện tại sau backfill: team không có subleader → NV thiếu).
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
