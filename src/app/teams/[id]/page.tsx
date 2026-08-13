@@ -25,11 +25,11 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Submitted: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
-  Reviewed: { label: 'Đã xem xét', className: 'bg-indigo-100 text-indigo-700' },
+  Reviewed: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
 };
 
 function getStatusBadge(status: string, latestRound?: number | null): { label: string; className: string } {
-  if (status === 'Submitted') {
+  if (status === 'Submitted' || status === 'Reviewed') {
     const roundText = latestRound ? ` vòng ${latestRound}` : '';
     return {
       label: `Đã nộp${roundText}`,
@@ -261,7 +261,7 @@ export default function TeamDetailPage() {
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                             {member.name.charAt(0)}
                           </div>
-                          <div className="min-w-0 flex-1 flex items-center gap-3">
+                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
@@ -275,39 +275,41 @@ export default function TeamDetailPage() {
                               </div>
                               <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap shrink-0">
-                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                                {badge.label}
+                            <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                            {grade && grade !== 'Pending' ? (
+                              <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                                grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                                grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                                grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                                grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                                grade === 'C' ? 'bg-amber-100 text-amber-700' :
+                                grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {grade}
                               </span>
-                              {grade && grade !== 'Pending' && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                                    grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                                    grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                                    grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                                    grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                                    grade === 'C' ? 'bg-amber-100 text-amber-700' :
-                                    grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                                  }`}>
-                                    {grade}
-                                  </span>
-                                  <div className="flex items-end gap-2 tabular-nums">
-                                    {gradeRound != null && (
-                                      <div className="w-12 flex flex-col items-center leading-none">
-                                        <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
-                                        <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
-                                      </div>
-                                    )}
-                                    {previousRounds.map((roundData) => (
-                                      <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
-                                        <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-                                        <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-                                      </div>
-                                    ))}
+                            ) : (
+                              <span className="w-8" />
+                            )}
+                            {grade && grade !== 'Pending' ? (
+                              <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                                {gradeRound != null && (
+                                  <div className="w-12 flex flex-col items-center leading-none">
+                                    <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
+                                    <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
                                   </div>
-                                </div>
-                              )}
-                            </div>
+                                )}
+                                {previousRounds.map((roundData) => (
+                                  <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
+                                    <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                    <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="w-[104px]" />
+                            )}
                           </div>
                           <Link
                             href={`/evaluations/${member.id}`}
@@ -355,46 +357,48 @@ export default function TeamDetailPage() {
                         <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
                           {member.name.charAt(0)}
                         </div>
-                        <div className="min-w-0 flex-1 flex items-center gap-3">
+                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
                             </div>
                             <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap shrink-0">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                              {badge.label}
+                          <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                          {grade && grade !== 'Pending' ? (
+                            <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                              grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                              grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                              grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                              grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                              grade === 'C' ? 'bg-amber-100 text-amber-700' :
+                              grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {grade}
                             </span>
-                            {grade && grade !== 'Pending' && (
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                                  grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                                  grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                                  grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                                  grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                                  grade === 'C' ? 'bg-amber-100 text-amber-700' :
-                                  grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                                }`}>
-                                  {grade}
-                                </span>
-                                <div className="flex items-end gap-2 tabular-nums">
-                                  {gradeRound != null && (
-                                    <div className="w-12 flex flex-col items-center leading-none">
-                                      <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
-                                      <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
-                                    </div>
-                                  )}
-                                  {previousRounds.map((roundData) => (
-                                    <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
-                                      <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-                                      <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-                                    </div>
-                                  ))}
+                          ) : (
+                            <span className="w-8" />
+                          )}
+                          {grade && grade !== 'Pending' ? (
+                            <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                              {gradeRound != null && (
+                                <div className="w-12 flex flex-col items-center leading-none">
+                                  <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
+                                  <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
                                 </div>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                              {previousRounds.map((roundData) => (
+                                <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
+                                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="w-[104px]" />
+                          )}
                         </div>
                         <Link
                           href={`/evaluations/${member.id}`}
