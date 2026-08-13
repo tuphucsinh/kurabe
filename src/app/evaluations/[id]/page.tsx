@@ -448,7 +448,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         role: employee.role,
         criteriaDetail,
         previousComments: (allPreviousRounds || []).map((r) => r.comment || '').filter(Boolean),
-        roundScores: (allPreviousRounds || []).map((r) => r.totalScore || 0),
         currentComment: comment,
         totalScore: totalScoreNow,
         grade: currentRoundData?.grade || '',
@@ -497,9 +496,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           .filter((r) => r.round < (lastRound?.round ?? 0))
           .map((r) => r.comment || '')
           .filter(Boolean),
-        roundScores: (evaluation.rounds || [])
-          .sort((a, b) => a.round - b.round)
-          .map((r) => r.totalScore || 0),
         notesSummary: Object.entries(lastRound?.notes || {})
           .filter(([, v]) => v && v.trim())
           .slice(0, 3)
