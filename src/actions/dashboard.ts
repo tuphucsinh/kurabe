@@ -5,6 +5,7 @@ import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getSessionUser } from '@/lib/auth';
+import { EvaluationRound } from '@/types';
 import { User, Evaluation, CriteriaGroup } from '@/types';
 
 export interface DashboardData {
@@ -112,23 +113,26 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
     });
 
     const recentActivities = evaluations
-      .slice(0, 5)
       .map((evaluation) => {
         const employee = userMap.get(evaluation.employeeId);
-        const latestRound = evaluation.rounds && evaluation.rounds.length > 0 
-          ? evaluation.rounds[evaluation.rounds.length - 1] 
-          : undefined;
+        const submittedRounds = evaluation.rounds && evaluation.rounds.length > 0
+          ? [...evaluation.rounds].filter((r): r is EvaluationRound & { submittedAt: string } => !!r.submittedAt).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+          : [];
+        const latestRound = submittedRounds[0] || (evaluation.rounds && evaluation.rounds.length > 0 ? evaluation.rounds[evaluation.rounds.length - 1] : undefined);
         const evaluator = latestRound ? userMap.get(latestRound.evaluatorId) : undefined;
-        
+        const activityDate = submittedRounds[0]?.submittedAt || evaluation.updatedAt || evaluation.createdAt;
+
         return {
           id: evaluation.id,
           employeeName: employee?.name || 'Unknown',
           evaluatorName: evaluator?.name || 'Unknown',
           status: evaluation.status,
           grade: (evaluation.finalGrade || (latestRound?.grade) || '-') as string,
-          date: new Date(evaluation.createdAt).toISOString()
+          date: new Date(activityDate).toISOString()
         };
-      });
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
 
     return {
       stats,

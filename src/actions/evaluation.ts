@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 import { calculateRoundScore } from '@/lib/scoring';
 import { RoundNumber, EvaluationRound, Grade, Role } from '@/types';
 import {
@@ -231,6 +232,15 @@ export async function saveEvaluationRound(
     }
 
     revalidatePath(`/evaluations/${evaluationId}`);
+    if (isSubmit) {
+      await logAudit(
+        auth.user,
+        nextStep?.isFinal ? 'APPROVE_EVALUATION' : 'SUBMIT_EVALUATION',
+        'evaluation',
+        evaluationId,
+        { round, grade, score: totalScore }
+      );
+    }
     return { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
