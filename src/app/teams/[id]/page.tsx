@@ -261,19 +261,21 @@ export default function TeamDetailPage() {
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                             {member.name.charAt(0)}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
-                              {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
-                                <span
-                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
-                                >
-                                  {ROLE_BADGE[member.role].label}
-                                </span>
-                              )}
+                          <div className="min-w-0 flex-1 flex items-center gap-3">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                                {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
+                                  >
+                                    {ROLE_BADGE[member.role].label}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                             </div>
-                            <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap shrink-0">
                               <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
                                 {badge.label}
                               </span>
@@ -353,12 +355,14 @@ export default function TeamDetailPage() {
                         <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
                           {member.name.charAt(0)}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                        <div className="min-w-0 flex-1 flex items-center gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                            </div>
+                            <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                           </div>
-                          <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
-                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap shrink-0">
                             <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
                               {badge.label}
                             </span>
