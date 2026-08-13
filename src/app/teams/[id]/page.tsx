@@ -7,14 +7,13 @@ import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ArrowLeft,
+  FileText,
   Users,
   CheckCircle2,
   Clock,
   Crown,
-  FileText,
   ChevronRight,
   AlertTriangle,
-  UserCheck,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -155,35 +154,6 @@ export default function TeamDetailPage() {
           }`}>
             {progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'}
           </span>
-        </div>
-
-        {/* Danh sách SubLeader trong Header */}
-        <div className="mt-4 pt-3 border-t border-outline-variant/40 flex flex-wrap items-center gap-3">
-          <span className="text-xs font-bold text-outline uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-            <UserCheck size={14} className="text-teal-600" />
-            SubLeader ({subLeaders.length}):
-          </span>
-          {subLeaders.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {subLeaders.map((sl) => (
-                <div
-                  key={sl.id}
-                  className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200/80 px-3 py-1 rounded-xl text-xs"
-                >
-                  <span className="font-bold text-on-surface">{sl.name}</span>
-                  <span className="text-outline-variant text-[11px]">({sl.employeeCode})</span>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200/60">
-                    {sl.description && sl.description.trim() !== '' ? sl.description : 'Chưa có chức danh'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200/70 px-3 py-1 rounded-xl inline-flex items-center gap-1.5">
-              <AlertTriangle size={13} className="text-amber-500" />
-              Chưa có SubLeader — cần bổ sung
-            </span>
-          )}
         </div>
       </div>
 
