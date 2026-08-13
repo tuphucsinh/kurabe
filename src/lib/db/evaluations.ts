@@ -335,6 +335,8 @@ export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
     createdBy: db.created_by || '',
     createdAt: db.created_at || '',
     closedAt: db.closed_at || undefined,
+    targetRate: db.target_rate ?? 75,
+    targetGrade: db.target_grade || 'AB',
   };
 }
 

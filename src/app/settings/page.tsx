@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, CalendarDays, UsersRound, Compass, UserCircle, Gauge, ScrollText, Users, Scale } from 'lucide-react';
+import { ShieldAlert, CalendarDays, UsersRound, Compass, UserCircle, Gauge, ScrollText, Target, Users, Scale } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Tabs from '@/components/ui/Tabs';
 import PeriodsTab from '@/components/settings/PeriodsTab';
@@ -10,6 +10,7 @@ import TeamsRolesTab from '@/components/settings/TeamsRolesTab';
 import AccountTab from '@/components/settings/AccountTab';
 import GradeBandsTab from '@/components/settings/GradeBandsTab';
 import AuditTab from '@/components/settings/AuditTab';
+import TargetTab from '@/components/settings/TargetTab';
 
 export default function SettingsPage() {
   const { isLoading, isManager } = useAuth();
@@ -47,6 +48,7 @@ export default function SettingsPage() {
     { id: 'grades', label: 'Thang điểm', icon: <Gauge className="w-4 h-4" /> },
     { id: 'roles', label: 'Nhóm & Quyền', icon: <UsersRound className="w-4 h-4" /> },
     { id: 'audit', label: 'Nhật ký', icon: <ScrollText className="w-4 h-4" /> },
+    { id: 'target', label: 'Mục tiêu', icon: <Target className="w-4 h-4" /> },
     { id: 'quick', label: 'Điều hướng nhanh', icon: <Compass className="w-4 h-4" /> },
   ];
 
@@ -70,6 +72,7 @@ export default function SettingsPage() {
         {activeTab === 'grades' && <GradeBandsTab />}
         {activeTab === 'roles' && <TeamsRolesTab />}
         {activeTab === 'audit' && <AuditTab />}
+        {activeTab === 'target' && <TargetTab />}
         {activeTab === 'quick' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <Link

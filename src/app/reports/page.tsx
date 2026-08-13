@@ -55,6 +55,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
 
   const cookieStore = await cookies();
   let periodId = cookieStore.get('selected_period_id')?.value;
+  let periodTarget = { rate: 75, grade: 'AB' as string };
   
   try {
     if (!periodId) {
@@ -75,6 +76,20 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
         if (fallbackPeriodData) {
            periodId = fallbackPeriodData.id;
         }
+      }
+    }
+
+    if (periodId) {
+      const { data: periodData } = await supabase
+        .from('evaluation_periods')
+        .select('target_rate, target_grade')
+        .eq('id', periodId)
+        .maybeSingle();
+      if (periodData) {
+        periodTarget = {
+          rate: periodData.target_rate ?? 75,
+          grade: periodData.target_grade || 'AB',
+        };
       }
     }
   } catch (err) {
@@ -154,18 +169,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
               Mục tiêu Kỳ này
             </h4>
             <p className="text-sm text-outline-variant font-medium leading-relaxed">
-              Đạt tỉ lệ <strong className="text-primary font-bold">75%</strong> nhân sự xếp loại từ <strong className="text-primary font-bold">AB</strong> trở lên. 
+              Đạt tỉ lệ <strong className="text-primary font-bold">{periodTarget.rate}%</strong> nhân sự xếp loại từ <strong className="text-primary font-bold">{periodTarget.grade}</strong> trở lên. 
               Hiện tại đang đạt <strong className="text-primary font-bold">{reportData.stats.highGradeRate.toFixed(1)}%</strong>.
             </p>
             <div className="mt-6 p-4 bg-white/50 rounded-2xl border border-primary/10">
               <div className="flex justify-between text-xs font-bold mb-2">
                 <span className="text-outline">Tiến độ mục tiêu</span>
-                <span className="text-primary">{((reportData.stats.highGradeRate / 75) * 100).toFixed(0)}%</span>
+                <span className="text-primary">{((reportData.stats.highGradeRate / periodTarget.rate) * 100).toFixed(0)}%</span>
               </div>
               <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-primary transition-all duration-1000" 
-                  style={{ width: `${Math.min(100, (reportData.stats.highGradeRate / 75) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (reportData.stats.highGradeRate / periodTarget.rate) * 100)}%` }}
                 />
               </div>
             </div>

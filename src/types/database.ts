@@ -131,6 +131,8 @@ export type Database = {
           id: string
           name: string
           status: string
+          target_grade: string
+          target_rate: number
           year: number
         }
         Insert: {
@@ -139,7 +141,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
-          status: string
+          status?: string
+          target_grade?: string
+          target_rate?: number
           year: number
         }
         Update: {
@@ -149,6 +153,8 @@ export type Database = {
           id?: string
           name?: string
           status?: string
+          target_grade?: string
+          target_rate?: number
           year?: number
         }
         Relationships: [

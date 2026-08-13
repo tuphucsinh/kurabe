@@ -39,6 +39,32 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ---
 
+## Phase 55: Cấu hình Mục tiêu Kỳ (Manager) 🟡 (2026-08-13)
+
+### [#P55T01] [db/migration-f-target.sql + types + actions/period.ts] Lưu mục tiêu theo kỳ
+
+**Goal**: Mục tiêu (tỉ lệ % + mức xếp loại) lưu theo kỳ, Manager cấu hình được — thay hardcode 75%/AB.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**New interface**: migration thêm `evaluation_periods.target_rate int default 75` + `target_grade text default 'AB'`; types + `mapPeriodFromDb` thêm 2 field; server action `savePeriodTarget(periodId, rate, grade)` — requireManager + admin client + logAudit.
+
+### [#P55T02] [src/components/settings/TargetTab.tsx + settings/page.tsx] Tab "Mục tiêu"
+
+**Goal**: Manager chọn kỳ → sửa % + mức xếp loại → Lưu (toast).
+
+**Depends on**: `[#P55T01]` — **Parallel-safe**: `no`
+
+**New interface**: `TargetTab` (useAuth allPeriods/currentPeriod) — select kỳ + input % (0-100) + select grade (S/A/AB/B/C/D) + nút Lưu; tab thứ 7 "Mục tiêu" (icon Target).
+
+### [#P55T03] [src/app/reports/page.tsx] Báo cáo dùng mục tiêu động
+
+**Goal**: Hộp "Mục tiêu Kỳ này" đọc target từ kỳ (thay hardcode 75/AB) — text + tiến độ % theo target_rate.
+
+**Depends on**: `[#P55T01]` — **Parallel-safe**: `no`
+
+---
+
 ## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
 
 ### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action

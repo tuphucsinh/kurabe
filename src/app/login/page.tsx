@@ -98,7 +98,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {demoUsers.length > 0 && (
+          {demoUsers.length > 0 && process.env.NEXT_PUBLIC_SHOW_TEST_LOGIN === 'true' && (
             <div className="mt-8 pt-6 border-t border-outline-variant">
               <h3 className="text-sm font-medium text-on-surface mb-3">Tài khoản test (Real Data):</h3>
               <div className="flex flex-wrap gap-2">

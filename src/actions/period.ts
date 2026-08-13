@@ -206,3 +206,40 @@ export async function deleteEvaluationPeriod(periodId: string) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+
+/**
+ * Cập nhật MỤC TIÊU kỳ đánh giá (tỉ lệ % + mức xếp loại) — Manager-only.
+ */
+export async function savePeriodTarget(
+  periodId: string,
+  rate: number,
+  grade: string
+): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
+  try {
+    if (!periodId) return { success: false, error: 'Thiếu thông tin kỳ đánh giá.' };
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      return { success: false, error: 'Tỉ lệ mục tiêu phải nằm trong khoảng 0-100%.' };
+    }
+    const validGrades = ['S', 'A', 'AB', 'B', 'C', 'D'];
+    if (!validGrades.includes(grade)) {
+      return { success: false, error: 'Mức xếp loại mục tiêu không hợp lệ.' };
+    }
+
+    const { error } = await supabaseAdmin
+      .from('evaluation_periods')
+      .update({ target_rate: Math.round(rate), target_grade: grade })
+      .eq('id', periodId);
+
+    if (error) return { success: false, error: 'Lỗi lưu mục tiêu: ' + error.message };
+
+    revalidatePath('/settings');
+    revalidatePath('/reports');
+    await logAudit(auth.user, 'UPDATE_PERIOD_TARGET', 'period', periodId, { rate, grade });
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}

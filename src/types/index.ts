@@ -43,6 +43,8 @@ export interface EvaluationPeriod {
   createdBy: string;
   createdAt: string;
   closedAt?: string;
+  targetRate?: number;
+  targetGrade?: string;
 }
 
 export interface EvaluationRound {
