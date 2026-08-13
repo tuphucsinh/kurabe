@@ -115,7 +115,10 @@
 - Verify: lint 0 errors + build PASS; browser 6 điểm PASS (Manager: 3 tab / Tab Kỳ bảng 2026 Đang mở 0/22 / Tab Nhóm 3 nhóm / Tab Điều hướng / Dashboard sạch nút; Employee: màn chặn).
 - Commits: `61977ab..f1fcd84` (5 commits). Push GitHub sau Phase A.
 
-### Phase 52 (tiếp): Trang Cài đặt — Phase B + Phase C (PLANNED — chờ anh bấm nút)
+### Phase 52 (tiếp): Trang Cài đặt — Phase B + Phase C 🟡 (CODE XONG 2026-08-13 — chờ migration + test end-to-end)
+- **Phase B — Tab Tài khoản** (P52T05, commit `149d465`): dependency `bcryptjs`; server action `changePassword` (user chưa có hash → đặt mới không cần mật khẩu cũ; đã có → verify bcrypt; new ≥ 6 ký tự); `AccountTab` (thông tin cá nhân: mã NV/tên/chức vụ/nhóm + form đặt/đổi mật khẩu); tab "Tài khoản" active trong /settings. **KHÔNG đụng login** (fake login giữ nguyên — xác nhận bằng git: 0 commit chạm login/AuthContext/middleware). Lint/build PASS, UI browser PASS. Chờ: `db/migration-b-account.sql`.
+- **Phase C — Tab Thang điểm** (P52T06, commit `6b744b7`): bảng `grade_bands` + seed 12 dòng; `lib/grade-bands.ts` (module cache sync + fallback hardcode — app không vỡ khi bảng chưa có); `saveGradeBands` (upsert) + `validateGradeBands` (chống chồng lấn: `next.max >= current.min` → lỗi; **bug chiều so sánh phát hiện qua test tsx → đã fix, retest 12/12 PASS**); `GradeBandsTab` 2 cột Quản lý/Nhân viên (S bỏ max, D bỏ min); `scoring.ts` đọc cache; trang /criteria đồng bộ. Lint/build PASS, UI browser PASS. Chờ: `db/migration-c-grade-bands.sql`.
+- **Đã push GitHub** `d715dc7..6b744b7` (git sạch). Phase 44 (Security) giữ DEFERRED — fake login giữ tới khi anh test xong ổn thỏa.
 
 ---
 
