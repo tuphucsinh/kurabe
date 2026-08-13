@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { invalidateGradeBandsCache } from '@/lib/grade-bands';
 import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate';
 import { requireManager } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -47,6 +48,7 @@ export async function saveGradeBands(
     invalidateGradeBandsCache();
     revalidatePath('/settings');
     revalidatePath('/criteria');
+    await logAudit(auth.user, 'UPDATE_GRADE_BANDS', 'grade_bands', null, { bands });
     return { success: true };
   } catch (err: unknown) {
     return {

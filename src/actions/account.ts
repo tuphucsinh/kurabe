@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { requireAuth, requireManager } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -65,6 +66,7 @@ export async function changePassword(
       return { success: false, error: 'Lỗi lưu mật khẩu: ' + updateError.message };
     }
 
+    await logAudit(auth.user, 'CHANGE_PASSWORD', 'user', userId);
     return { success: true };
   } catch (err: unknown) {
     return {
@@ -97,6 +99,7 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
       return { success: false, error: 'Lỗi đặt lại mật khẩu: ' + error.message };
     }
 
+    await logAudit(auth.user, 'RESET_PASSWORD', 'user', userId);
     return { success: true };
   } catch (err: unknown) {
     return {

@@ -2,6 +2,7 @@
 
 import { softDeleteTeam } from '@/lib/db/teams';
 import { requireManager } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteTeamAction(id: string) {
@@ -11,6 +12,7 @@ export async function deleteTeamAction(id: string) {
   try {
     await softDeleteTeam(id);
     revalidatePath('/teams');
+    await logAudit(auth.user, 'DELETE_TEAM', 'team', id);
     return { success: true };
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

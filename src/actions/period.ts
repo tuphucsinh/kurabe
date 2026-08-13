@@ -3,6 +3,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { requireManager } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 import { Grade, Role } from '@/types';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import {
@@ -140,6 +141,7 @@ export async function createEvaluationPeriod(year: number) {
     }
 
     revalidatePath('/admin/periods');
+    await logAudit(auth.user, 'CREATE_PERIOD', 'period', period.id, { year });
     return { success: true, periodId: period.id };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -165,6 +167,7 @@ export async function closeEvaluationPeriod(periodId: string) {
     if (error) return { success: false, error: error.message };
 
     revalidatePath('/admin/periods');
+    await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -197,6 +200,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
 
     revalidatePath('/admin/periods');
     revalidatePath('/dashboard');
+    await logAudit(auth.user, 'DELETE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
