@@ -1,10 +1,13 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getReportAggregation } from '@/actions/reports';
 import { getTeams } from '@/lib/db/teams';
+import { getSessionUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/layout/PageHeader';
-import { Users, Target, TrendingUp, Clock, Download } from 'lucide-react';
+import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
+import ExportReportButton from '@/components/reports/ExportReportButton';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import TeamComparison from '@/components/reports/TeamComparison';
 import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
@@ -44,6 +47,12 @@ function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: KPICardP
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
+  // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39)
+  const viewer = await getSessionUser();
+  if (!viewer || (viewer.role !== 'Manager' && viewer.role !== 'Leader')) {
+    redirect('/dashboard');
+  }
+
   const cookieStore = await cookies();
   let periodId = cookieStore.get('selected_period_id')?.value;
   
@@ -91,10 +100,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
         description="Tổng hợp kết quả đánh giá năng lực và chất lượng QAQC"
       >
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm font-medium hover:bg-surface-container transition-colors">
-            <Download className="w-4 h-4" />
-            Xuất file
-          </button>
+          <ExportReportButton periodId={periodId || ''} />
         </div>
       </PageHeader>
 
@@ -113,7 +119,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
           value={reportData.stats.avgScore.toFixed(1)} 
           icon={Target} 
           colorClass="bg-primary"
-          trend="+0.5" 
         />
         <KPICard 
           title="Tỉ lệ ≥ AB" 
@@ -121,7 +126,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
           unit="%" 
           icon={TrendingUp} 
           colorClass="bg-green-600"
-          trend="+1.2%" 
         />
         <KPICard 
           title="Chưa đánh giá" 

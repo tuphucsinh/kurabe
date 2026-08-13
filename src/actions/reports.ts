@@ -73,6 +73,23 @@ export async function getReportAggregation(
       g.criteria.forEach(c => criteriaGroupIdMap.set(c.id, g.code));
     });
 
+    // Tổng điểm tối đa THẬT từ DB (sum max points mỗi tiêu chí) — thay hardcode 150
+    let maxTotalScore = 0;
+    const groupCriteriaCount: Record<string, number> = {};
+    const groupMaxScore: Record<string, number> = {};
+    allCriteriaData.forEach(g => {
+      let gm = 0;
+      let count = 0;
+      g.criteria.forEach(c => {
+        const maxPoints = (c.levels || []).reduce((m, l) => Math.max(m, l.points || 0), 0);
+        gm += maxPoints;
+        maxTotalScore += maxPoints;
+        count += 1;
+      });
+      groupCriteriaCount[g.code] = count;
+      groupMaxScore[g.code] = gm;
+    });
+
     const criteriaGroupScores: Record<string, { totalGroupScore: number, count: number }> = {
       'A': { totalGroupScore: 0, count: 0 },
       'B': { totalGroupScore: 0, count: 0 },
@@ -148,18 +165,22 @@ export async function getReportAggregation(
         id: ts.id,
         name: ts.name,
         avgScore: teamAvg,
-        progress: (teamAvg / 150) * 100 // Assume 150 is max
+        progress: maxTotalScore > 0 ? (teamAvg / maxTotalScore) * 100 : 0 // max thật từ DB
       };
     });
 
-    // Criteria Group Analysis (A-F)
+    // Criteria Group Analysis (A-F) — % theo max THẬT của từng nhóm (không giả định 5/tiêu chí)
     const groupCodes = ['A', 'B', 'C', 'D', 'E', 'F'];
     const criteriaAnalysis = groupCodes.map(group => {
       const stats = criteriaGroupScores[group] || { totalGroupScore: 0, count: 0 };
+      const count = groupCriteriaCount[group] || 0;
+      const maxScore = groupMaxScore[group] || 0;
+      const avgScore = stats.count > 0 ? stats.totalGroupScore / stats.count : 0;
+      const avgMax = count > 0 && maxScore > 0 ? maxScore / count : 0;
       return {
         group,
-        avgScore: stats.count > 0 ? stats.totalGroupScore / stats.count : 0,
-        percentage: stats.count > 0 ? (stats.totalGroupScore / (stats.count * 5)) * 100 : 0 
+        avgScore,
+        percentage: avgMax > 0 ? (avgScore / avgMax) * 100 : 0
       };
     });
 

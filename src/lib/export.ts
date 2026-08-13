@@ -10,15 +10,18 @@ import { supabase } from './supabase';
 
 /**
  * Xuất dữ liệu đánh giá của một kỳ ra file Excel.
+ * viewer: user đang đăng nhập (client AuthContext) — bắt buộc để getEvaluationsByPeriod
+ * không bị filterEvaluationsForViewer trả [] (bug viewer — file rỗng).
  */
 export async function exportEvaluationsToExcel(
   periodId: string,
-  options: { includeRoundDetails?: boolean } = {}
+  options: { includeRoundDetails?: boolean } = {},
+  viewer?: User | null
 ): Promise<void> {
   try {
     // 1. Fetch data
     const [evaluations, users, teams, criteriaGroups, periodData] = await Promise.all([
-      getEvaluationsByPeriod(periodId),
+      getEvaluationsByPeriod(periodId, viewer),
       getUsers(),
       getTeams(),
       getAllCriteriaGroups(),
