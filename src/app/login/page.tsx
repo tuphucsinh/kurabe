@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { Lock, User as UserIcon } from 'lucide-react';
 import { getUsers } from '@/lib/db/users';
 import { User } from '@/types';
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [demoUsers, setDemoUsers] = useState<User[]>([]);
   const { login } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     getUsers().then(users => {
@@ -27,7 +25,9 @@ export default function LoginPage() {
     
     try {
       await login(employeeCode);
-      router.push('/dashboard');
+      // Full reload — middleware đọc cookie auth_session và redirect chắc chắn
+      // (router.push có thể bị kẹt nếu RSC navigation fail)
+      window.location.href = '/dashboard';
     } catch {
       setError('Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }
