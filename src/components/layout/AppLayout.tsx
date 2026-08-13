@@ -32,7 +32,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setIsSidebarOpen(false);
   }, [pathname]);
 
-  // Conditional rendering
+  // Trang login luôn full-screen (không sidebar) — tránh hiện sidebar + login card
+  // trong 1-2s sau khi set session trước khi redirect dashboard.
+  if (pathname === '/login') {
+    return (
+      <main className="flex-1 w-full">
+        <PageTransition>{children}</PageTransition>
+      </main>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#003449] flex items-center justify-center">
