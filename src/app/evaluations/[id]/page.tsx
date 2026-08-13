@@ -17,6 +17,9 @@ import {
   CheckCircle2,
   Lock,
   ArrowLeftRight,
+  Loader2,
+  Sparkles,
+  Send,
 } from 'lucide-react';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
@@ -26,6 +29,7 @@ import {
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
 import { useToast } from '@/components/ui/Toast';
+import { suggestCommentAction, draftResultMessageAction } from '@/actions/ai';
 
 interface EvaluationState {
   employee: User | null;
@@ -99,6 +103,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
+
+  // AI (Manager-only)
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [draftMessage, setDraftMessage] = useState('');
+  const [isDrafting, setIsDrafting] = useState(false);
 
   const [criteriaGroups, setCriteriaGroups] = useState<CriteriaGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState('A');
@@ -416,6 +425,61 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   const { totalScore, grade } = calculateRoundScore(currentSummaryRound);
 
+  const handleSuggestComment = async () => {
+    if (!employee) return;
+    setIsSuggesting(true);
+    try {
+      const totalScoreNow = Object.values(scores).reduce((a, b) => a + (Number(b) || 0), 0);
+      const result = await suggestCommentAction({
+        employeeCode: employee.employeeCode || '',
+        role: employee.role,
+        scores,
+        notes,
+        currentComment: comment,
+        totalScore: totalScoreNow,
+        grade: currentRoundData?.grade || '',
+      });
+      if (result.comment) {
+        dispatch({ type: 'SET_COMMENT', comment: result.comment });
+        toast('Đã điền gợi ý — anh có thể chỉnh sửa trước khi lưu.', 'success');
+      } else {
+        toast(result.error || 'Lỗi khi tạo gợi ý.', 'error');
+      }
+    } catch (err) {
+      console.error('suggestComment error:', err);
+      toast('Lỗi khi tạo gợi ý.', 'error');
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const handleDraftMessage = async () => {
+    if (!employee || !evaluation) return;
+    setIsDrafting(true);
+    try {
+      const lastRound = [...evaluation.rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0);
+      const result = await draftResultMessageAction({
+        employeeCode: employee.employeeCode || '',
+        name: employee.name,
+        role: employee.role,
+        totalScore: lastRound?.totalScore || 0,
+        grade: lastRound?.grade || '',
+        summaryNotes: comment || evaluation.rounds.map((r) => r.comment).filter(Boolean).join(' | '),
+        periodName: '2026',
+      });
+      if (result.message) {
+        setDraftMessage(result.message);
+      } else {
+        toast(result.error || 'Lỗi khi soạn thông báo.', 'error');
+      }
+    } catch (err) {
+      console.error('draftMessage error:', err);
+      toast('Lỗi khi soạn thông báo.', 'error');
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
   return (
       <LazyMotion features={domAnimation}>
       {showDraftSavedToast && (
@@ -525,7 +589,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
           <div className="w-full lg:w-80 shrink-0">
             <div className="bg-white rounded-2xl p-6 border border-outline-variant shadow-sm sticky top-8">
-              <h3 className="text-lg font-bold text-on-surface-variant mb-4">Ghi chú chung</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-on-surface-variant">Ghi chú chung</h3>
+                {user?.role === 'Manager' && !isReadOnly && (
+                  <button
+                    onClick={handleSuggestComment}
+                    disabled={isSuggesting}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-all disabled:opacity-50"
+                  >
+                    {isSuggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    {isSuggesting ? 'Đang gợi ý...' : 'Gợi ý nhận xét (AI)'}
+                  </button>
+                )}
+              </div>
               <textarea
                 value={comment}
                 onChange={(e) => dispatch({ type: 'SET_COMMENT', comment: e.target.value })}
@@ -536,6 +612,29 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               <p className="mt-2 text-xs text-outline leading-relaxed">
                 Nhận xét này sẽ được hiển thị cho nhân viên sau khi kỳ đánh giá kết thúc.
               </p>
+              {user?.role === 'Manager' && (
+                <>
+                  <button
+                    onClick={handleDraftMessage}
+                    disabled={isDrafting}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-outline-variant text-xs font-bold text-on-surface hover:border-primary hover:text-primary transition-all disabled:opacity-50"
+                  >
+                    {isDrafting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                    {isDrafting ? 'Đang soạn...' : 'Soạn thông báo kết quả (AI)'}
+                  </button>
+                  {draftMessage && (
+                    <div className="mt-3 p-3 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface leading-relaxed">
+                      <p className="whitespace-pre-wrap">{draftMessage}</p>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(draftMessage); toast('Đã sao chép thông báo.', 'success'); }}
+                        className="mt-2 text-primary font-bold hover:underline"
+                      >
+                        📋 Sao chép
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

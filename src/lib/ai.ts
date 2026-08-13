@@ -21,39 +21,57 @@ export async function callAI(
   const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
+  const attempt = async (maxTokens: number, extraSystem: string): Promise<string | null> => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25000);
 
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: opts.system || 'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt. TRẢ LỜI TRỰC TIẾP NỘI DUNG, KHÔNG suy luận dài dòng.' },
-          { role: 'user', content: prompt },
-        ],
-        max_tokens: opts.maxTokens ?? 800,
-        temperature: opts.temperature ?? 0.3,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content:
+                opts.system ||
+                'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt. TRẢ LỜI TRỰC TIẾP NỘI DUNG, KHÔNG suy luận dài dòng.' + extraSystem,
+            },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens: maxTokens,
+          temperature: opts.temperature ?? 0.3,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
 
-    if (!res.ok) {
-      console.error('callAI HTTP error:', res.status);
+      if (!res.ok) {
+        console.error('callAI HTTP error:', res.status);
+        return null;
+      }
+
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      return typeof text === 'string' && text.trim() ? text.trim() : null;
+    } catch (err) {
+      console.error('callAI error:', err);
       return null;
     }
+  };
 
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
-    return typeof text === 'string' && text.trim() ? text.trim() : null;
-  } catch (err) {
-    console.error('callAI error:', err);
-    return null;
-  }
+  const maxTokens = opts.maxTokens ?? 1200;
+
+  // Lần 1: token đủ lớn
+  const first = await attempt(maxTokens, '');
+  if (first) return first;
+
+  // Lần 2 (retry): model reasoning có thể ngốn hết token → content rỗng.
+  // Tăng token + nhấn mạnh trả lời ngắn trực tiếp.
+  const second = await attempt(Math.max(1500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 5 CÂU, KHÔNG PHÂN TÍCH.');
+  return second;
 }
