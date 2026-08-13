@@ -152,21 +152,21 @@ export default function TeamDetailPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Cụm KPI Compact */}
-            <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm text-xs divide-x divide-slate-200">
-              <div className="px-3 py-1.5 flex items-center gap-1.5">
-                <Users size={14} className="text-slate-400 shrink-0" />
-                <span className="font-bold text-on-surface">{memberRows.length}</span>
-                <span className="text-slate-500">thành viên</span>
+            <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm divide-x divide-slate-200">
+              <div className="px-4 py-2.5 flex items-center gap-2">
+                <Users size={18} className="text-slate-400 shrink-0" />
+                <span className="font-black text-lg text-on-surface">{memberRows.length}</span>
+                <span className="text-sm text-slate-500">thành viên</span>
               </div>
-              <div className="px-3 py-1.5 flex items-center gap-1.5">
-                <CheckCircle2 size={14} className="text-green-500 shrink-0" />
-                <span className="font-bold text-on-surface">{completedCount}/{memberRows.length}</span>
-                <span className="text-slate-500">đã đánh giá</span>
+              <div className="px-4 py-2.5 flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+                <span className="font-black text-lg text-on-surface">{completedCount}/{memberRows.length}</span>
+                <span className="text-sm text-slate-500">đã đánh giá</span>
               </div>
-              <div className="px-3 py-1.5 flex items-center gap-1.5">
-                <Clock size={14} className="text-amber-500 shrink-0" />
-                <span className="font-bold text-on-surface">{pendingCount}</span>
-                <span className="text-slate-500">còn lại</span>
+              <div className="px-4 py-2.5 flex items-center gap-2">
+                <Clock size={18} className="text-amber-500 shrink-0" />
+                <span className="font-black text-lg text-on-surface">{pendingCount}</span>
+                <span className="text-sm text-slate-500">còn lại</span>
               </div>
             </div>
 
