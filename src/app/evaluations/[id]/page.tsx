@@ -491,7 +491,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         totalScore: lastRound?.totalScore || 0,
         grade: lastRound?.grade || '',
         criteriaDetail,
-        summaryNotes: comment || evaluation.rounds.map((r) => r.comment).filter(Boolean).join(' | '),
+        summaryNotes: comment || (evaluation.rounds || []).map((r) => r.comment).filter(Boolean).join(' | '),
         periodName: '2026',
       });
       if (result.message) {

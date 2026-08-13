@@ -43,7 +43,7 @@ export async function generatePeriodSummary(
     ]);
 
     const userMap = new Map(users.map((u) => [u.id, u]));
-    const evaluated = evaluations.filter((e) => e.rounds.some((r) => (r.totalScore || 0) > 0));
+    const evaluated = evaluations.filter((e) => (e.rounds || []).some((r) => (r.totalScore || 0) > 0));
 
     if (evaluated.length === 0) {
       return { error: 'Kỳ này chưa có đánh giá nào có điểm — hãy chờ các vòng đánh giá hoàn thành rồi tạo tóm tắt.' };
@@ -53,7 +53,7 @@ export async function generatePeriodSummary(
     const rows = evaluated.map((e) => {
       const u = userMap.get(e.employeeId);
       const lastRound = [...e.rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0);
-      const notes = e.rounds
+      const notes = (e.rounds || [])
         .filter((r) => (r.comment || '').trim())
         .map((r) => `vòng ${r.round}: ${r.comment}`)
         .join(' | ');

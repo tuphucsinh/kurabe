@@ -25,7 +25,7 @@ export function detectAnomalies(evaluations: Evaluation[], nameById: Map<string,
   const anomalies: Anomaly[] = [];
 
   for (const ev of evaluations) {
-    const scoredRounds = ev.rounds
+    const scoredRounds = (ev.rounds || [])
       .filter((r) => (r.totalScore || 0) > 0)
       .sort((a, b) => a.round - b.round);
 
