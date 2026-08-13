@@ -230,5 +230,5 @@ const getReportAggregationCached = unstable_cache(
   async (periodId: string, selectedTeam: string, viewer: import('@/types').User | null) =>
     getReportAggregationInner(periodId, selectedTeam, viewer),
   ['report-aggregation'],
-  { revalidate: 30 }
+  { revalidate: 300 }
 );
