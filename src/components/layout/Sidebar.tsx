@@ -31,9 +31,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const mainLinks = [
     { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
+    { href: '/teams', label: 'Nhóm', icon: UsersRound },
     { href: '/employees', label: 'Nhân viên', icon: Users },
     { href: '/reports', label: 'Báo cáo', icon: BarChart3 },
-    { href: '/teams', label: 'Nhóm', icon: UsersRound },
     { href: '/criteria', label: 'Tiêu chuẩn', icon: Scale },
   ];
 
