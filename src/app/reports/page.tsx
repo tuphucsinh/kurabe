@@ -15,39 +15,6 @@ import TeamComparison from '@/components/reports/TeamComparison';
 import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
 import TopPerformers from '@/components/reports/TopPerformers';
 
-interface KPICardProps {
-  title: string;
-  value: string | number;
-  unit?: string;
-  icon: React.ElementType;
-  colorClass: string;
-  trend?: string;
-}
-
-function KPICard({ title, value, unit, icon: Icon, colorClass, trend }: KPICardProps) {
-  return (
-    <div className="bg-white p-5 rounded-3xl border border-outline-variant shadow-sm hover:shadow-md transition-all group">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-2.5 rounded-2xl ${colorClass} bg-opacity-10 transition-colors group-hover:bg-opacity-20`}>
-          <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
-        </div>
-        {trend && (
-          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${trend.startsWith('+') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
-            {trend}
-          </span>
-        )}
-      </div>
-      <div>
-        <h4 className="text-sm font-medium text-outline mb-1">{title}</h4>
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold text-on-surface">{value}</span>
-          {unit && <span className="text-sm font-medium text-outline-variant">{unit}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
   // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39)
   const viewer = await getSessionUser();
@@ -57,7 +24,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
 
   const cookieStore = await cookies();
   let periodId = cookieStore.get('selected_period_id')?.value;
-  let periodTarget = { rate: 75, grade: 'AB' as string };
   
   try {
     if (!periodId) {
@@ -76,22 +42,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
           .limit(1)
           .maybeSingle();
         if (fallbackPeriodData) {
-           periodId = fallbackPeriodData.id;
+          periodId = fallbackPeriodData.id;
         }
-      }
-    }
-
-    if (periodId) {
-      const { data: periodData } = await supabase
-        .from('evaluation_periods')
-        .select('target_rate, target_grade')
-        .eq('id', periodId)
-        .maybeSingle();
-      if (periodData) {
-        periodTarget = {
-          rate: periodData.target_rate ?? 75,
-          grade: periodData.target_grade || 'AB',
-        };
       }
     }
   } catch (err) {
@@ -112,91 +64,60 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
   }
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+      {/* 1. HEADER: Flex justify-between với Tiêu đề bên trái & KPI Compact Pill + Export Button bên phải */}
       <PageHeader 
         title="Báo cáo QAQC" 
         description="Tổng hợp kết quả đánh giá năng lực và chất lượng QAQC"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* KPI COMPACT pill trắng chia 4 */}
+          <div className="bg-white px-4 py-2 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.totalEmployees}</span>
+              <span className="text-xs text-outline font-medium">nhân sự</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
+              <span className="text-xs text-outline font-medium">điểm TB</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
+              <span className="text-xs text-outline font-medium">≥ AB</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-orange-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.pendingCount}</span>
+              <span className="text-xs text-outline font-medium">chưa đánh giá</span>
+            </div>
+          </div>
+
           <ExportReportButton periodId={periodId || ''} />
         </div>
       </PageHeader>
 
+      {/* 2. ReportFilters (giữ nguyên trên cùng dưới header) */}
       <ReportFilters teams={teams} />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          title="Tổng nhân sự" 
-          value={reportData.stats.totalEmployees} 
-          icon={Users} 
-          colorClass="bg-blue-600" 
-        />
-        <KPICard 
-          title="Điểm trung bình" 
-          value={reportData.stats.avgScore.toFixed(1)} 
-          icon={Target} 
-          colorClass="bg-primary"
-        />
-        <KPICard 
-          title="Tỉ lệ ≥ AB" 
-          value={reportData.stats.highGradeRate.toFixed(1)} 
-          unit="%" 
-          icon={TrendingUp} 
-          colorClass="bg-green-600"
-        />
-        <KPICard 
-          title="Chưa đánh giá" 
-          value={reportData.stats.pendingCount} 
-          icon={Clock} 
-          colorClass="bg-orange-600" 
-        />
+      {/* 3. GradeDistribution (đưa LÊN ĐẦU nội dung, render full width, nén gọn) */}
+      <GradeDistribution data={reportData.gradeDistribution} />
+
+      {/* 4. GRID 2 CỘT: TRÁI = TeamComparison · PHẢI = CriteriaHeatmap */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TeamComparison teams={reportData.teamStats} />
+        <CriteriaHeatmap data={reportData.criteriaAnalysis} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <GradeDistribution data={reportData.gradeDistribution} />
-        </div>
-        <div className="lg:col-span-2">
-          <TeamComparison teams={reportData.teamStats} />
-        </div>
-
-        <div className="lg:col-span-2">
-          <TopPerformers employees={reportData.topPerformers} />
-        </div>
-        
-        <div className="lg:col-span-1">
-          <div className="bg-primary/5 p-8 rounded-3xl border border-primary/20 flex flex-col justify-center h-full">
-            <h4 className="text-primary font-bold mb-3 flex items-center gap-2">
-              <Target className="w-5 h-5" />
-              Mục tiêu Kỳ này
-            </h4>
-            <p className="text-sm text-outline-variant font-medium leading-relaxed">
-              Đạt tỉ lệ <strong className="text-primary font-bold">{periodTarget.rate}%</strong> nhân sự xếp loại từ <strong className="text-primary font-bold">{periodTarget.grade}</strong> trở lên. 
-              Hiện tại đang đạt <strong className="text-primary font-bold">{reportData.stats.highGradeRate.toFixed(1)}%</strong>.
-            </p>
-            <div className="mt-6 p-4 bg-white/50 rounded-2xl border border-primary/10">
-              <div className="flex justify-between text-xs font-bold mb-2">
-                <span className="text-outline">Tiến độ mục tiêu</span>
-                <span className="text-primary">{((reportData.stats.highGradeRate / periodTarget.rate) * 100).toFixed(0)}%</span>
-              </div>
-              <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-1000" 
-                  style={{ width: `${Math.min(100, (reportData.stats.highGradeRate / periodTarget.rate) * 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-3">
-          <AiSummaryCard periodId={periodId || ''} initialSummary={aiSummary.summary} initialCreatedAt={aiSummary.created_at} />
-        </div>
-
-        <div className="lg:col-span-3">
-          <CriteriaHeatmap data={reportData.criteriaAnalysis} />
-        </div>
+      {/* 5. GRID 2 CỘT: TRÁI = TopPerformers · PHẢI = AiSummaryCard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TopPerformers employees={reportData.topPerformers} />
+        <AiSummaryCard periodId={periodId || ''} initialSummary={aiSummary.summary} initialCreatedAt={aiSummary.created_at} />
       </div>
     </div>
   );
