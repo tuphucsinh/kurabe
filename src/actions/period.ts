@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { requireManager } from '@/lib/auth';
 import { Grade, Role } from '@/types';
@@ -35,7 +35,7 @@ export async function createEvaluationPeriod(year: number) {
     const periodName = `Kỳ ${year}`;
 
     // 1. Lấy danh sách TẤT CẢ nhân viên active
-    const { data: employees, error: eError } = await supabase
+    const { data: employees, error: eError } = await supabaseAdmin
       .from('users')
       .select('id, role, team_id')
       .eq('is_active', true);
@@ -62,7 +62,7 @@ export async function createEvaluationPeriod(year: number) {
     }
 
     // 2. Tạo Evaluation Period
-    const { data: period, error: pError } = await supabase
+    const { data: period, error: pError } = await supabaseAdmin
       .from('evaluation_periods')
       .insert({
         name: periodName,
@@ -94,7 +94,7 @@ export async function createEvaluationPeriod(year: number) {
       updated_at: now
     }));
 
-    const { data: insertedEvals, error: evError } = await supabase
+    const { data: insertedEvals, error: evError } = await supabaseAdmin
       .from('evaluations')
       .insert(evaluationsData)
       .select();
@@ -131,7 +131,7 @@ export async function createEvaluationPeriod(year: number) {
       });
     }
 
-    const { error: rError } = await supabase
+    const { error: rError } = await supabaseAdmin
       .from('evaluation_rounds')
       .insert(roundsData);
 
@@ -154,7 +154,7 @@ export async function closeEvaluationPeriod(periodId: string) {
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('evaluation_periods')
       .update({
         status: 'closed',
@@ -180,7 +180,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
 
   try {
     // 1. Xóa trực tiếp evaluations, DB đã config cascade sang evaluation_rounds và responses
-    const { error: evalError } = await supabase
+    const { error: evalError } = await supabaseAdmin
       .from('evaluations')
       .delete()
       .eq('period_id', periodId);
@@ -188,7 +188,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
     if (evalError) return { success: false, error: evalError.message };
 
     // 3. Xóa period
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('evaluation_periods')
       .delete()
       .eq('id', periodId);

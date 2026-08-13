@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { invalidateGradeBandsCache } from '@/lib/grade-bands';
 import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate';
 import { requireManager } from '@/lib/auth';
@@ -28,7 +28,7 @@ export async function saveGradeBands(
 
     // Upsert từng dòng (bảng nhỏ — 12 dòng, an toàn)
     for (const band of bands) {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('grade_bands')
         .upsert(
           {
