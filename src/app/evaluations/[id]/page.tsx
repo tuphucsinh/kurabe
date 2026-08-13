@@ -448,6 +448,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         role: employee.role,
         criteriaDetail,
         previousComments: (allPreviousRounds || []).map((r) => r.comment || '').filter(Boolean),
+        roundScores: (allPreviousRounds || []).map((r) => r.totalScore || 0),
         currentComment: comment,
         totalScore: totalScoreNow,
         grade: currentRoundData?.grade || '',
@@ -496,6 +497,18 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           .filter((r) => r.round < (lastRound?.round ?? 0))
           .map((r) => r.comment || '')
           .filter(Boolean),
+        roundScores: (evaluation.rounds || [])
+          .sort((a, b) => a.round - b.round)
+          .map((r) => r.totalScore || 0),
+        notesSummary: Object.entries(lastRound?.notes || {})
+          .filter(([, v]) => v && v.trim())
+          .slice(0, 3)
+          .map(([k, v]) => {
+            const c = criteriaGroups.flatMap((g) => g.criteria).find((x) => x.id === k);
+            return `${c?.code || ''} ${c?.name || ''}: ${v}`;
+          })
+          .filter(Boolean)
+          .join(' | '),
         summaryNotes: comment || (evaluation.rounds || []).map((r) => r.comment).filter(Boolean).join(' | '),
         periodName: '2026',
       });
