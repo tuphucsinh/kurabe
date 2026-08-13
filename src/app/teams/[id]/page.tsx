@@ -222,7 +222,9 @@ export default function TeamDetailPage() {
                   {/* SubLeader của NV */}
                   <div className="shrink-0 flex items-center gap-1.5 text-xs min-w-[130px]">
                     <span className="text-[11px] text-outline font-medium hidden md:inline">SubLeader:</span>
-                    {assignedSubLeader ? (
+                    {member.role !== 'Employee' ? (
+                      <span className="text-xs text-slate-400 font-medium">—</span>
+                    ) : assignedSubLeader ? (
                       <span className="font-semibold text-slate-700 bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-md text-xs truncate max-w-[140px]" title={assignedSubLeader.name}>
                         {assignedSubLeader.name}
                       </span>

@@ -694,6 +694,9 @@ export default function EmployeesPage() {
       sortable: true,
       hiddenOnMobile: true,
       render: (item) => {
+        if (item.role !== 'Employee') {
+          return <span className="text-xs text-slate-400 font-medium">—</span>;
+        }
         const subleader = item.subleaderId ? userMap.get(item.subleaderId) : null;
         return subleader ? (
           <span className="text-xs font-medium text-slate-700">
