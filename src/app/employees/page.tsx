@@ -115,7 +115,7 @@ function EmployeeModalContent({
       ...prev,
       role: newRole,
       teamId: newRole === 'Manager' ? undefined : prev.teamId,
-      subleaderId: newRole === 'Manager' ? '' : prev.subleaderId,
+      subleaderId: newRole === 'Employee' ? prev.subleaderId : '',
     }));
   };
 
@@ -138,6 +138,8 @@ function EmployeeModalContent({
 
     if (finalData.role === 'Manager') {
       finalData.teamId = undefined;
+      finalData.subleaderId = null;
+    } else if (finalData.role !== 'Employee') {
       finalData.subleaderId = null;
     } else if (finalData.subleaderId) {
       // Validate client-side: subleader must belong to the same team
@@ -242,7 +244,7 @@ function EmployeeModalContent({
 
           {formData.role !== 'Manager' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className={`space-y-2 ${formData.role !== 'Employee' ? 'col-span-2' : ''}`}>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                   <Users size={14} />
                   Nhóm
@@ -262,31 +264,33 @@ function EmployeeModalContent({
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <UserCheck size={14} />
-                  SubLeader phụ trách
-                </label>
-                <select
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white disabled:bg-slate-100 disabled:text-slate-400"
-                  value={formData.subleaderId || ''}
-                  onChange={(e) => setFormData({ ...formData, subleaderId: e.target.value || null })}
-                  disabled={!formData.teamId}
-                >
-                  {!formData.teamId ? (
-                    <option value="">Chọn team trước</option>
-                  ) : (
-                    <>
-                      <option value="">Chưa gán</option>
-                      {subleaderOptions.map((sl) => (
-                        <option key={sl.id} value={sl.id}>
-                          {sl.name}{sl.employeeCode ? ` (${sl.employeeCode})` : ''}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-              </div>
+              {formData.role === 'Employee' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck size={14} />
+                    SubLeader phụ trách
+                  </label>
+                  <select
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                    value={formData.subleaderId || ''}
+                    onChange={(e) => setFormData({ ...formData, subleaderId: e.target.value || null })}
+                    disabled={!formData.teamId}
+                  >
+                    {!formData.teamId ? (
+                      <option value="">Chọn team trước</option>
+                    ) : (
+                      <>
+                        <option value="">Chưa gán</option>
+                        {subleaderOptions.map((sl) => (
+                          <option key={sl.id} value={sl.id}>
+                            {sl.name}{sl.employeeCode ? ` (${sl.employeeCode})` : ''}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

@@ -189,15 +189,16 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
     await assertLeadershipSlot(user, (existing || []).map(mapSlot));
   }
 
+  const role = user.role || 'Employee';
   const dbUser: TablesInsert<'users'> = {
     id: user.id,
     employee_code: user.employeeCode || '',
     name: user.name || '',
-    role: user.role || 'Employee',
+    role,
     team_id: user.teamId || null,
     join_date: user.joinDate || null,
     avatar_url: user.avatar || null,
-    subleader_id: user.subleaderId || null,
+    subleader_id: role === 'Employee' ? (user.subleaderId || null) : null,
     description: user.description || null,
   };
 
@@ -234,18 +235,21 @@ export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
     }
   }
 
-  const dbUsers: TablesInsert<'users'>[] = users.map(user => ({
-    id: user.id,
-    employee_code: user.employeeCode || '',
-    name: user.name || '',
-    role: user.role || 'Employee',
-    team_id: user.teamId || null,
-    join_date: user.joinDate || null,
-    avatar_url: user.avatar || null,
-    subleader_id: user.subleaderId || null,
-    description: user.description || null,
-    is_active: true
-  }));
+  const dbUsers: TablesInsert<'users'>[] = users.map(user => {
+    const role = user.role || 'Employee';
+    return {
+      id: user.id,
+      employee_code: user.employeeCode || '',
+      name: user.name || '',
+      role,
+      team_id: user.teamId || null,
+      join_date: user.joinDate || null,
+      avatar_url: user.avatar || null,
+      subleader_id: role === 'Employee' ? (user.subleaderId || null) : null,
+      description: user.description || null,
+      is_active: true
+    };
+  });
 
   const { data, error } = await supabase
     .from('users')
