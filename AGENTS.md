@@ -31,7 +31,7 @@ Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file eve
 | 1 | **Firewall** | No code without an assigned task (`/do`). Default: `.md`/`.json` only. | All agents |
 | 2 | **Strict Scope** | Do exactly what was asked; propose extras, don't implement them. Runner never commits. | All agents |
 | 3 | **Sweep** | Phase done (100% `[x]`): compress summary → `.ai/MASTER_PLAN.md` (mark phase DONE), **XÓA HẲN task `[x]` khỏi `tasks.md`** (chỉ giữ phase ACTIVE + pending/next; chi tiết đã ở MASTER_PLAN — KHÔNG duplicate summary). | Mika |
-| 4 | **2-Strike** | `/do` fails tests twice → HALT, write `.tmp/SYSTEM_ALERT.md`, alert user. | Runner |
+| 4 | **2-Strike** | `/do` fails tests twice → HALT, write `.tmp/SYSTEM_ALERT.md`, alert user. **Mở rộng (retro 13-08)**: lỗi tái diễn ≥2 lần → DỪNG fix theo giả định cơ chế — THU BẰNG CHỨNG VẬN HÀNH thật (log đầy đủ, frame capture, response thô) rồi mới fix tiếp. | Runner/Mika |
 | 5 | **No Yapping** | No flattery; straight to the point. Diff/evidence for code, bullets for `.md`. | All agents |
 | 6 | **Adversarial Audit** | `/do` Gate 3: Sequential Thinking, prompt *"3 most serious issues vs requirement"*. No self-review ceremony. | Runner |
 | 7 | **Pushback First** | Strongest pushback (with data) BEFORE agreeing. Independent fact-check; don't anchor on user data. | Mika |
@@ -175,6 +175,12 @@ Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
 | Phase/milestone 100% `[x]` | **BẮT BUỘC sweep ngay** (RULE 3): ① compress summary → `.ai/MASTER_PLAN.md` (mark DONE + kết quả thực thi) ② **prune task `[x]` khỏi `tasks.md`** (giữ summary ≤ 4 dòng + phase active) ③ commit. KHÔNG đợi `/done`. |
 | Task `[x]` sau verify | Tick + commit ngay (1 task = 1 commit) — không dồn. |
 | Milestone gate có frontend chạy được | **BẮT BUỘC browser verify** (Chrome thật + CDP console + screenshot) ngay gate milestone — KHÔNG đợi cuối phase (bug thread-safety/CSS/JS chỉ lộ khi browser thật — verified finanza P1M3). |
+
+## ENGINEERING PRACTICE (retro kurabe 2026-08-13 — áp dụng mọi dự án)
+1. **Test-data discipline**: seed dữ liệu giả/test → BẮT BUỘC snapshot trước + restore sau + verify **ĐA CHIỀU** (mục tiêu chính + số liệu lân cận như pending count) — không chỉ check mục tiêu (bài học: DELETE jsonb `?` xóa nhầm round 1 → 20/22).
+2. **Action AI/LLM mới**: smoke test bằng tsx với **PROMPT THẬT (độ dài thực)** NGAY khi viết xong action — TRƯỚC khi wire UI (UI access gate có thể chặn test; model reasoning có thể trả content rỗng với prompt dài — phát hiện sớm).
+3. **Prompt tuning với user**: mỗi vòng feedback chỉ test **1 case đại diện** (role/loại anh quan tâm nhất); chạy full bộ case chỉ khi chốt — tiết kiệm 30-40% thời gian.
+4. **Lỗi tái diễn ≥2 lần** → xem RULE 4 (2-Strike mở rộng): thu bằng chứng vận hành thật trước khi fix tiếp, cấm fix theo giả định.
 
 ## PROJECT TOOLING (project-specific — auto-filled, not part of template)
 **Auto-fill**: Mika detects the stack from root files (package.json → npm test / npm run lint; requirements.txt → pytest / ruff; go.mod → go test / gofmt; pyproject.toml → hatch/uv) and fills this table at the FIRST `/plan` — no manual step.
