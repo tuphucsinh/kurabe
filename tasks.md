@@ -209,7 +209,7 @@
 
 **Definition of Done**: browser verify team detail QC Gia dụng hiển thị SubLeader + từng NV gắn đúng.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
