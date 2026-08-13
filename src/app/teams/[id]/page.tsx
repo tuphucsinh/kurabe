@@ -53,6 +53,12 @@ export default function TeamDetailPage() {
     () => users.filter((u) => u.teamId === teamId && u.role === 'SubLeader'),
     [users, teamId]
   );
+
+  const sortedSubLeaders = useMemo(
+    () => [...subLeaders].sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+    [subLeaders]
+  );
+
   const members = useMemo(
     () => users.filter((u) => u.teamId === teamId).sort((a, b) => a.role.localeCompare(b.role)),
     [users, teamId]
@@ -66,6 +72,35 @@ export default function TeamDetailPage() {
       return { member: m, evaluation: ev || null, status, grade };
     });
   }, [members, evaluations]);
+
+  const directMemberRows = useMemo(() => {
+    return memberRows.filter(({ member }) => {
+      const isLeadershipOrManager =
+        member.role === 'Leader' ||
+        member.role === 'SubLeader' ||
+        member.role === 'Manager' ||
+        member.id === team?.leaderId;
+      return !isLeadershipOrManager;
+    });
+  }, [memberRows, team]);
+
+  const subLeaderBlocks = useMemo(() => {
+    const subLeaderIds = new Set(sortedSubLeaders.map((sl) => sl.id));
+
+    const grouped = sortedSubLeaders.map((sl) => {
+      const rows = directMemberRows.filter(({ member }) => member.subleaderId === sl.id);
+      return {
+        subLeader: sl,
+        rows,
+      };
+    });
+
+    const unassignedRows = directMemberRows.filter(
+      ({ member }) => !member.subleaderId || !subLeaderIds.has(member.subleaderId)
+    );
+
+    return { grouped, unassignedRows };
+  }, [sortedSubLeaders, directMemberRows]);
 
   const completedCount = memberRows.filter((r) => r.status === 'Approved').length;
   const pendingCount = memberRows.length - completedCount;
@@ -178,82 +213,175 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      {/* Members table */}
-      <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-outline-variant/50 flex items-center gap-2">
-          <UserIcon size={18} className="text-primary" />
-          <h2 className="text-lg font-bold text-on-surface">Thành viên nhóm</h2>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{memberRows.length}</span>
+      {/* Grouped SubLeader Blocks */}
+      <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6">
+        <div className="flex items-center justify-between border-b border-outline-variant/50 pb-4">
+          <div className="flex items-center gap-2">
+            <UserIcon size={18} className="text-primary" />
+            <h2 className="text-lg font-bold text-on-surface">Thành viên nhóm theo SubLeader</h2>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              {memberRows.length} thành viên
+            </span>
+          </div>
         </div>
 
         {memberRows.length === 0 ? (
-          <div className="p-10">
-            <EmptyState icon={Users} title="Nhóm chưa có thành viên" description="Chưa có nhân viên nào được gán vào nhóm này." className="p-0" />
+          <EmptyState
+            icon={Users}
+            title="Nhóm chưa có thành viên"
+            description="Chưa có nhân viên nào được gán vào nhóm này."
+            className="p-6"
+          />
+        ) : sortedSubLeaders.length === 0 && subLeaderBlocks.unassignedRows.length === 0 ? (
+          <div className="py-6 text-center text-sm text-slate-500">
+            Không có nhân viên trực thuộc trong nhóm.
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {memberRows.map(({ member, evaluation, status, grade }) => {
-              const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
-              const assignedSubLeader = member.subleaderId
-                ? users.find((u) => u.id === member.subleaderId)
-                : null;
-
-              return (
-                <div key={member.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-                    {member.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
-                      {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}>
-                          {ROLE_BADGE[member.role].label}
-                        </span>
-                      )}
-                      {member.id === team.leaderId && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 flex items-center gap-0.5">
-                          <Crown size={10} /> Trưởng nhóm
-                        </span>
-                      )}
+          <div className="space-y-5">
+            {/* SubLeader Blocks */}
+            {subLeaderBlocks.grouped.map(({ subLeader: sl, rows }) => (
+              <div
+                key={sl.id}
+                className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden p-4 space-y-3"
+              >
+                {/* Block Header */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                      {sl.name.charAt(0)}
                     </div>
-                    <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
-                  </div>
-                  {/* SubLeader của NV */}
-                  <div className="shrink-0 flex items-center gap-1.5 text-xs min-w-[130px]">
-                    <span className="text-[11px] text-outline font-medium hidden md:inline">SubLeader:</span>
-                    {member.role !== 'Employee' ? (
-                      <span className="text-xs text-slate-400 font-medium">—</span>
-                    ) : assignedSubLeader ? (
-                      <span className="font-semibold text-slate-700 bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-md text-xs truncate max-w-[140px]" title={assignedSubLeader.name}>
-                        {assignedSubLeader.name}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-800 text-sm md:text-base">{sl.name}</span>
+                      <span className="text-xs text-slate-500 font-medium">Mã: {sl.employeeCode}</span>
+                      <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200/70">
+                        {sl.description && sl.description.trim() !== '' ? sl.description : 'Chưa có chức danh'}
                       </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200/60">
-                        Chưa gán
-                      </span>
-                    )}
+                    </div>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                    {badge.label}
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                    {rows.length} nhân viên
                   </span>
-                  {grade && grade !== 'Pending' && (
-                    <span className="text-sm font-black text-primary shrink-0 w-8 text-center">{grade}</span>
-                  )}
-                  {evaluation ? (
-                    <Link
-                      href={`/evaluations/${member.id}`}
-                      className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-                      title="Xem đánh giá"
-                    >
-                      <FileText size={18} />
-                    </Link>
-                  ) : (
-                    <span className="w-9 shrink-0" />
-                  )}
                 </div>
-              );
-            })}
+
+                {/* Direct Employees List */}
+                {rows.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-400 font-medium italic">
+                    Chưa có nhân viên trực thuộc
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {rows.map(({ member, evaluation, status, grade }) => {
+                      const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+                      return (
+                        <div
+                          key={member.id}
+                          className="flex items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                            {member.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                              {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
+                                <span
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
+                                >
+                                  {ROLE_BADGE[member.role].label}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
+                          </div>
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                          {grade && grade !== 'Pending' && (
+                            <span className="text-sm font-black text-primary shrink-0 w-8 text-center">
+                              {grade}
+                            </span>
+                          )}
+                          {evaluation ? (
+                            <Link
+                              href={`/evaluations/${member.id}`}
+                              className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                              title="Xem đánh giá"
+                            >
+                              <FileText size={18} />
+                            </Link>
+                          ) : (
+                            <span className="w-9 shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Unassigned SubLeader Block */}
+            {subLeaderBlocks.unassignedRows.length > 0 && (
+              <div className="bg-white rounded-2xl border border-amber-200/80 shadow-sm overflow-hidden p-4 space-y-3">
+                {/* Warning Header */}
+                <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                    <div>
+                      <span className="font-bold text-amber-900 text-sm md:text-base">Chưa gán SubLeader</span>
+                      <span className="ml-2 text-xs text-amber-700 font-medium">
+                        ({subLeaderBlocks.unassignedRows.length} nhân viên)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                    Cần phân công
+                  </span>
+                </div>
+
+                {/* Unassigned Employees List */}
+                <div className="divide-y divide-slate-100">
+                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade }) => {
+                    const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+                    return (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
+                          {member.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                          </div>
+                          <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
+                        </div>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        {grade && grade !== 'Pending' && (
+                          <span className="text-sm font-black text-primary shrink-0 w-8 text-center">
+                            {grade}
+                          </span>
+                        )}
+                        {evaluation ? (
+                          <Link
+                            href={`/evaluations/${member.id}`}
+                            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                            title="Xem đánh giá"
+                          >
+                            <FileText size={18} />
+                          </Link>
+                        ) : (
+                          <span className="w-9 shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -266,4 +394,3 @@ export default function TeamDetailPage() {
     </div>
   );
 }
-
