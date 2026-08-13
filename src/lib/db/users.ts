@@ -8,8 +8,8 @@ import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-res
 type DbUser = Tables<'users'>;
 
 /**
- * RULE (anh chốt 2026-08-12): Mỗi team chỉ có 1 Leader + 1 SubLeader.
- * Muốn thay đổi Leader/SubLeader → phải hạ người giữ chức hiện tại xuống
+ * RULE: Team chỉ được 1 Leader; SubLeader không giới hạn số lượng.
+ * Muốn thay đổi Leader → phải hạ người giữ chức hiện tại xuống
  * Employee TRƯỚC, rồi mới thăng người khác lên.
  * Throw DatabaseError nếu team đã có người giữ chức khác.
  */
@@ -17,8 +17,8 @@ async function assertLeadershipSlot(
   candidate: Partial<User>,
   existingUsers: Pick<User, 'id' | 'role' | 'teamId'>[]
 ): Promise<void> {
-  if ((candidate.role !== 'Leader' && candidate.role !== 'SubLeader') || !candidate.teamId) {
-    return; // Employee/Manager hoặc chưa gán team → không bị ràng buộc slot
+  if (candidate.role !== 'Leader' || !candidate.teamId) {
+    return; // Chỉ Leader bị ràng buộc slot (SubLeader không giới hạn)
   }
   const holders = existingUsers.filter(u =>
     u.teamId === candidate.teamId &&
