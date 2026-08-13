@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, CalendarDays, UsersRound, Compass, Users, Scale } from 'lucide-react';
+import { ShieldAlert, CalendarDays, UsersRound, Compass, UserCircle, Users, Scale } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Tabs from '@/components/ui/Tabs';
 import PeriodsTab from '@/components/settings/PeriodsTab';
 import TeamsRolesTab from '@/components/settings/TeamsRolesTab';
+import AccountTab from '@/components/settings/AccountTab';
 
 export default function SettingsPage() {
   const { isLoading, isManager } = useAuth();
@@ -40,6 +41,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'periods', label: 'Kỳ đánh giá', icon: <CalendarDays className="w-4 h-4" /> },
+    { id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> },
     { id: 'roles', label: 'Nhóm & Quyền', icon: <UsersRound className="w-4 h-4" /> },
     { id: 'quick', label: 'Điều hướng nhanh', icon: <Compass className="w-4 h-4" /> },
   ];
@@ -60,6 +62,7 @@ export default function SettingsPage() {
       {/* Tab Content */}
       <div>
         {activeTab === 'periods' && <PeriodsTab />}
+        {activeTab === 'account' && <AccountTab />}
         {activeTab === 'roles' && <TeamsRolesTab />}
         {activeTab === 'quick' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

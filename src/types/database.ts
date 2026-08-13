@@ -384,6 +384,7 @@ export type Database = {
           is_active: boolean | null
           join_date: string | null
           name: string
+          password_hash: string | null
           role: string
           team_id: string | null
         }
@@ -395,6 +396,7 @@ export type Database = {
           is_active?: boolean | null
           join_date?: string | null
           name: string
+          password_hash?: string | null
           role: string
           team_id?: string | null
         }
@@ -406,6 +408,7 @@ export type Database = {
           is_active?: boolean | null
           join_date?: string | null
           name?: string
+          password_hash?: string | null
           role?: string
           team_id?: string | null
         }

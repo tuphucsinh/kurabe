@@ -1,0 +1,71 @@
+'use server';
+
+import { supabase } from '@/lib/supabase';
+import bcrypt from 'bcryptjs';
+
+const MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * Đặt/đổi mật khẩu cho tài khoản.
+ * - User CHƯA có password_hash (mới) → đặt mật khẩu lần đầu (không cần mật khẩu cũ).
+ * - User ĐÃ có password_hash → bắt buộc nhập mật khẩu cũ đúng.
+ *
+ * KHÔNG đụng login/middleware — fake login theo mã NV giữ nguyên (Phase 44 sẽ bật password login).
+ */
+export async function changePassword(
+  userId: string,
+  oldPassword: string | null,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!userId) {
+      return { success: false, error: 'Thiếu thông tin tài khoản.' };
+    }
+
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return { success: false, error: `Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.` };
+    }
+
+    // 1. Lấy user hiện tại
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, password_hash')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userError || !user) {
+      return { success: false, error: 'Không tìm thấy tài khoản.' };
+    }
+
+    // 2. Nếu đã có mật khẩu → verify mật khẩu cũ
+    if (user.password_hash) {
+      if (!oldPassword) {
+        return { success: false, error: 'Vui lòng nhập mật khẩu cũ.' };
+      }
+      const valid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!valid) {
+        return { success: false, error: 'Mật khẩu cũ không đúng.' };
+      }
+    }
+
+    // 3. Hash mật khẩu mới (bcrypt, 10 rounds)
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // 4. Cập nhật
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password_hash: passwordHash })
+      .eq('id', userId);
+
+    if (updateError) {
+      return { success: false, error: 'Lỗi lưu mật khẩu: ' + updateError.message };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Lỗi không xác định khi đổi mật khẩu.',
+    };
+  }
+}
