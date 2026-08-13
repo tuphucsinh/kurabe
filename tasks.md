@@ -193,7 +193,7 @@
 
 **Definition of Done**: browser verify: tạo/sửa NV gán subleader + chức danh → lưu → table hiển thị đúng; DB đúng.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
