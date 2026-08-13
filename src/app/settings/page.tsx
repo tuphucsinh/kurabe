@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ShieldAlert, CalendarDays, UsersRound, Compass, UserCircle, Gauge, ScrollText, Target, Users, Scale } from 'lucide-react';
+import { ShieldAlert, CalendarDays, UsersRound, UserCircle, Gauge, ScrollText, Target } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Tabs from '@/components/ui/Tabs';
 import PeriodsTab from '@/components/settings/PeriodsTab';
@@ -59,7 +59,6 @@ export default function SettingsPage() {
     { id: 'roles', label: 'Nhóm & Quyền', icon: <UsersRound className="w-4 h-4" /> },
     { id: 'audit', label: 'Nhật ký', icon: <ScrollText className="w-4 h-4" /> },
     { id: 'target', label: 'Mục tiêu', icon: <Target className="w-4 h-4" /> },
-    { id: 'quick', label: 'Điều hướng nhanh', icon: <Compass className="w-4 h-4" /> },
   ];
 
   return (
@@ -83,54 +82,6 @@ export default function SettingsPage() {
         {activeTab === 'roles' && <TeamsRolesTab />}
         {activeTab === 'audit' && <AuditTab />}
         {activeTab === 'target' && <TargetTab />}
-        {activeTab === 'quick' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link
-              href="/employees"
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:border-indigo-200 transition-all flex flex-col gap-4"
-            >
-              <div className="w-fit p-3 rounded-xl bg-indigo-50 text-indigo-600">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-800">Nhân viên</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Quản lý danh sách nhân viên
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              href="/teams"
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:border-indigo-200 transition-all flex flex-col gap-4"
-            >
-              <div className="w-fit p-3 rounded-xl bg-indigo-50 text-indigo-600">
-                <UsersRound className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-800">Nhóm</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Quản lý nhóm QAQC
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              href="/criteria"
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:border-indigo-200 transition-all flex flex-col gap-4"
-            >
-              <div className="w-fit p-3 rounded-xl bg-indigo-50 text-indigo-600">
-                <Scale className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-800">Tiêu chuẩn</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Quản lý tiêu chí đánh giá
-                </p>
-              </div>
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
