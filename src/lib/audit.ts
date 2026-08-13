@@ -9,8 +9,8 @@ export async function logAudit(
   actor: User | null,
   action: string,
   entity: string,
-  entityId?: string,
-  detail?: Record<string, unknown>
+  entityId?: string | null,
+  detail?: Record<string, unknown> | null
 ): Promise<void> {
   try {
     await supabaseAdmin.from('audit_logs').insert({
