@@ -92,7 +92,7 @@ export default async function DashboardPage() {
             </div>
             <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
               <Clock size={18} className="text-amber-600" />
-              <span className="text-lg font-black text-slate-900">{dashboardData.stats.notStarted}</span>
+              <span className="text-lg font-black text-slate-900">{dashboardData.stats.total - dashboardData.stats.completed}</span>
               <span className="text-sm text-slate-500">chưa xong</span>
             </div>
           </div>

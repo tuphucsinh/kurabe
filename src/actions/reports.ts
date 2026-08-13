@@ -192,7 +192,7 @@ export async function getReportAggregation(
         return {
           id: e.employeeId,
           name: user?.name || 'Unknown',
-          teamName: team?.name || 'Unknown',
+          teamName: team?.name || '—',
           score: e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0),
           grade: (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : '-')) as string
         };
