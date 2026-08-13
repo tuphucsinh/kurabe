@@ -51,7 +51,7 @@ function matchesEvaluatorSelector(
 
   if (selector === 'SubLeader') {
     if (evaluator.role !== 'SubLeader') return false;
-    let subleaderId: string | null | undefined = (target as any).subleaderId;
+    let subleaderId: string | null | undefined = 'subleaderId' in target ? (target as User).subleaderId : undefined;
     if (!subleaderId && 'employeeId' in target && allUsers) {
       const targetUser = allUsers.find(u => u.id === target.employeeId);
       subleaderId = targetUser?.subleaderId;
