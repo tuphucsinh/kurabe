@@ -13,3 +13,22 @@
 
 ## Logic
 - [x] **Grading Consistency**: Đã fix lỗi logic xếp loại AB/B cho nhân viên, hiện tại xếp loại hoạt động ổn định và chính xác theo `minScore`/`maxScore`.
+
+## Bugs đã fix — 2026-08-13 (kiểm tra trước khi debug lại)
+- [x] **Đổi SubLeader NV → round 1 evaluator không sync**: `upsertUser` gọi `syncEvaluationAfterUserChange` chỉ khi `user.role || user.teamId` — thiếu `user.subleaderId !== undefined` → SubLeader mới không đánh giá được NV (EmptyState "Chưa có dữ liệu đánh giá").
+- [x] **Promote NV → SubLeader bị chặn** "Nhóm này đã có SubLeader": `assertLeadershipSlot` giữ rule cũ 1 SubLeader/team — chỉ nên ràng buộc Leader.
+- [x] **"Hoạt động gần đây" không update**: `evaluations.slice(0,5)` không sort + `date: createdAt` — sort theo `submittedAt` round mới nhất rồi slice 5.
+- [x] **Nhật ký (audit) thiếu hoạt động đánh giá**: submit/approve không ghi `audit_logs` — `logAudit(actor, 'SUBMIT_EVALUATION'|'APPROVE_EVALUATION', 'evaluation', id, {round, grade, score})` trong `saveEvaluationRound` (detail phải object — type `Record<string, unknown>`).
+- [x] **STATUS_BADGE thiếu Submitted/Draft/Reviewed** → nhầm "Chưa bắt đầu": badge động "Đã nộp vòng {round}" (Reviewed cũng vậy), Approved → "Đã có KẾT QUẢ đánh giá" (emerald-600).
+
+## Dev pitfalls & operations
+- **Build discipline**: `npm run build` trong lúc `npm run start` đang chạy → ghi đè `.next` → "Failed to load chunk" / error boundary. Kill PID 3000 CHÍNH XÁC (`ss -tlnp | grep 3000`) trước build. Chunk 404 → `rm -rf .next` + rebuild + start.
+- **EADDRINUSE**: process cũ vẫn sống — luôn xác định PID bằng `ss -tlnp` trước start; kill -9 nếu cần.
+- **Runner agy headless**: harness-run + `agy --print` có thể bị chặn `read_file` permission (headless không prompt được) → lỗi môi trường, không phải code sai. Sau 2 lần chặn: Mika tự làm task nhỏ với verify chặt.
+- **UI layout**: Tabs `flex-1 justify-center` PHẢI kèm `flex` (mất → icon/text lệch dọc). Grid thẳng cột: placeholder phải width cố định (vd `w-[104px]`), không span rỗng.
+- **Browser verify**: sau build lại, navigate fresh (`/login` → route) tránh chunk cache cũ. UI verify bằng bounding box (`getBoundingClientRect`): icon vs text cùng baseline (diff ≤2px), badge/grid left đồng nhất giữa các row.
+- **Login redirect & flash**: login xong dùng `window.location.href = '/dashboard'` (full reload → middleware đọc cookie redirect chắc chắn) thay `router.push` (có thể kẹt im lặng trên production nếu RSC nav fail). `AppLayout`: `if (pathname === '/login') return login-only` — tránh hiện sidebar + login card cùng lúc sau set session.
+- **Next 16 cache** (chi tiết MASTER_PLAN Phase 63): `unstable_cache(fn, keys, options)` — keys (mảng) là tham số 2 BẮT BUỘC, `{tags, revalidate}` ở options (tham số 3); `revalidateTag(tag, 'default')` cần 2 tham số (Next 16 khác Next 15); cache fn KHÔNG chứa dynamic APIs (cookies/getSessionUser) — lấy viewer ngoài cache truyền vào; KHÔNG import `next/cache` trong `src/lib/db/*` (AuthContext/hooks import chúng → lỗi build "Pages Router"); lazy recharts phải qua wrapper `'use client'` riêng (không `next/dynamic` + `ssr:false` trong Server Component).
+
+## E2E live test
+Xem `.ai/E2E_LIVE_TEST.md`.
