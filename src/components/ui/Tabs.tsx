@@ -29,7 +29,7 @@ export default function Tabs({ tabs, activeTab, onChange, className = '' }: Tabs
             id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={`
-              flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+              flex-1 justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
               ${active 
                 ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
                 : 'text-outline hover:text-on-surface hover:bg-white/50'
