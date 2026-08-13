@@ -134,14 +134,14 @@ export default function TeamDetailPage() {
   }
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Back + Header */}
       <div>
         <Link href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-outline hover:text-primary transition-colors mb-4">
           <ArrowLeft size={16} />
           Quay lại danh sách nhóm
         </Link>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{team.name}</h1>
             <p className="text-on-surface-variant mt-1 text-sm md:text-base flex items-center gap-2">
@@ -149,35 +149,33 @@ export default function TeamDetailPage() {
               Leader: <span className="font-semibold text-on-surface">{leader?.name || 'Chưa xác định'}</span>
             </p>
           </div>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-            progress === 100 ? 'bg-green-100 text-green-700' : progress > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
-          }`}>
-            {progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'}
-          </span>
-        </div>
-      </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-primary/10 text-primary"><Users size={22} /></div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Thành viên</p>
-            <p className="text-2xl font-black text-on-surface">{memberRows.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-green-50 text-green-600"><CheckCircle2 size={22} /></div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Đã đánh giá</p>
-            <p className="text-2xl font-black text-on-surface">{completedCount}<span className="text-base font-medium text-on-surface/40">/{memberRows.length}</span></p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-amber-50 text-amber-600"><Clock size={22} /></div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Còn lại</p>
-            <p className="text-2xl font-black text-on-surface">{pendingCount}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Cụm KPI Compact */}
+            <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm text-xs divide-x divide-slate-200">
+              <div className="px-3 py-1.5 flex items-center gap-1.5">
+                <Users size={14} className="text-slate-400 shrink-0" />
+                <span className="font-bold text-on-surface">{memberRows.length}</span>
+                <span className="text-slate-500">thành viên</span>
+              </div>
+              <div className="px-3 py-1.5 flex items-center gap-1.5">
+                <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                <span className="font-bold text-on-surface">{completedCount}/{memberRows.length}</span>
+                <span className="text-slate-500">đã đánh giá</span>
+              </div>
+              <div className="px-3 py-1.5 flex items-center gap-1.5">
+                <Clock size={14} className="text-amber-500 shrink-0" />
+                <span className="font-bold text-on-surface">{pendingCount}</span>
+                <span className="text-slate-500">còn lại</span>
+              </div>
+            </div>
+
+            {/* Status Pill */}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
+              progress === 100 ? 'bg-green-100 text-green-700' : progress > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {progress === 100 ? 'Hoàn thành' : progress > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu'}
+            </span>
           </div>
         </div>
       </div>
