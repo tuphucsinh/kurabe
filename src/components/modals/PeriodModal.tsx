@@ -27,7 +27,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
     setError('');
 
     try {
-      const result = await createEvaluationPeriod(year, user.id);
+      const result = await createEvaluationPeriod(year);
       if (result.success && result.periodId) {
         onSuccess(result.periodId);
         onClose();

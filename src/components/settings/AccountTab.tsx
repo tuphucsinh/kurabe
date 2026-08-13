@@ -72,7 +72,7 @@ export default function AccountTab() {
 
     setIsSaving(true);
     try {
-      const result = await changePassword(user.id, hasPassword ? oldPassword : null, newPassword);
+      const result = await changePassword(hasPassword ? oldPassword : null, newPassword);
       if (result.success) {
         toast(hasPassword ? 'Đã đổi mật khẩu thành công.' : 'Đã đặt mật khẩu thành công.', 'success');
         setOldPassword('');

@@ -1,22 +1,26 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
+import { requireAuth, requireManager } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 const MIN_PASSWORD_LENGTH = 6;
 
 /**
- * Đặt/đổi mật khẩu cho tài khoản.
+ * Đặt/đổi mật khẩu cho tài khoản ĐANG ĐĂNG NHẬP (actor từ session — KHÔNG trust userId từ client).
  * - User CHƯA có password_hash (mới) → đặt mật khẩu lần đầu (không cần mật khẩu cũ).
  * - User ĐÃ có password_hash → bắt buộc nhập mật khẩu cũ đúng.
  *
  * KHÔNG đụng login/middleware — fake login theo mã NV giữ nguyên (Phase 44 sẽ bật password login).
  */
 export async function changePassword(
-  userId: string,
   oldPassword: string | null,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return { success: false, error: auth.error };
+  const userId = auth.user.id;
+
   try {
     if (!userId) {
       return { success: false, error: 'Thiếu thông tin tài khoản.' };
@@ -76,6 +80,9 @@ export async function changePassword(
  * Manager-only về mặt UI; auth thật thuộc Phase 44.
  */
 export async function resetPassword(userId: string): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     if (!userId) {
       return { success: false, error: 'Thiếu thông tin tài khoản.' };

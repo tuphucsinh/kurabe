@@ -1,9 +1,13 @@
 'use server';
 
 import { softDeleteCriteriaGroup, softDeleteCriterion } from '@/lib/db/criteria';
+import { requireManager } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteCriteriaGroupAction(id: string) {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     await softDeleteCriteriaGroup(id);
     revalidatePath('/criteria');
@@ -14,6 +18,9 @@ export async function deleteCriteriaGroupAction(id: string) {
 }
 
 export async function deleteCriterionAction(id: string) {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     await softDeleteCriterion(id);
     revalidatePath('/criteria');

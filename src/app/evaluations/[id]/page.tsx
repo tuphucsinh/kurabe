@@ -365,7 +365,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       const res = await saveEvaluationRound(
         evaluation.id,
         accessState.editableRound,
-        user.id,
         scores,
         notes,
         selectedLevelIndexes,

@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireAuth } from '@/lib/auth';
 import { calculateRoundScore } from '@/lib/scoring';
 import { RoundNumber, EvaluationRound, Grade, Role } from '@/types';
 import {
@@ -29,17 +30,21 @@ interface EvaluationSnapshot {
 
 /**
  * Lưu bản nháp (Draft) hoặc Gửi (Submit) kết quả đánh giá cho một Round.
+ * Actor lấy từ session (requireAuth) — round chỉ update được bởi đúng evaluator của round đó.
  */
 export async function saveEvaluationRound(
   evaluationId: string,
   round: RoundNumber,
-  actorId: string,
   scores: Record<string, number>,
   notes: Record<string, string>,
   selectedLevelIndexes: SelectedLevelIndexes,
   comment: string,
   isSubmit: boolean = false
 ) {
+  const auth = await requireAuth();
+  if (auth.error !== null) return { success: false, error: auth.error };
+  const actorId = auth.user.id;
+
   try {
     const { data: evalInfo, error: evalInfoError } = await supabase
       .from('evaluations')

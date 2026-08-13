@@ -3,15 +3,19 @@
 import { supabase } from '@/lib/supabase';
 import { invalidateGradeBandsCache } from '@/lib/grade-bands';
 import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate';
+import { requireManager } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
 /**
  * Lưu toàn bộ thang điểm (upsert từng dòng theo role_group + grade).
- * Manager-only về mặt UI; auth thật thuộc Phase 44.
+ * Manager-only — requireManager server-side (KHÔNG trust client).
  */
 export async function saveGradeBands(
   bands: GradeBandsInput[]
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     if (!bands || bands.length !== 12) {
       return { success: false, error: 'Dữ liệu thang điểm không đầy đủ.' };

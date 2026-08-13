@@ -27,6 +27,56 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ---
 
+## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
+
+### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action
+
+**Goal**: Server actions KHÔNG còn trust actorId từ client — lấy user từ session cookie `auth_session`, verify role. Đóng lỗ CRITICAL C2.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**New interface**:
+- `src/lib/auth.ts`: `getSessionUser()` (cookie → users query → User|null), `requireAuth(): Promise<AuthResult>` (`{user}` | `{error}`), `requireRole(roles: Role[])`, `requireManager()`.
+- `changePassword(oldPassword, newPassword)` — BỎ param userId (lấy từ session); `saveEvaluationRound(...)` — BỎ actorId (lấy từ session + verify round.evaluator_id === session user).
+- Apply: period (create/close/delete → Manager), users/teams/criteria delete → Manager, grade-bands save → Manager, resetPassword → Manager, changePassword → Auth, saveEvaluationRound → Auth + evaluator match.
+- Sửa `middleware.ts`: thêm `/settings` vào protectedRoutes.
+
+**Verify**: lint/build PASS; browser: Manager thao tác bình thường; gọi action không session → error "cần đăng nhập"; Employee gọi action Manager → error "không có quyền".
+
+### [#P54T02] [db/migration-d-rls.sql] RLS: deny anon WRITE trên evaluation_periods + grade_bands
+
+**Goal**: Chặn sửa/xóa kỳ + thang điểm qua REST trực tiếp (anon) — mọi ghi phải qua server actions (đã authz P54T01). Bảng còn lại (users/teams/evaluations...) giữ hiện trạng vì client còn ghi trực tiếp (ghi nhận rủi ro còn lại → Phase 44 hoàn chỉnh).
+
+**Depends on**: `[#P54T01]` — **Parallel-safe**: `no`
+
+**New interface**: migration SQL — `DROP POLICY` cũ, `CREATE POLICY ... FOR SELECT USING (true)` (không WITH CHECK) trên 2 bảng; chạy qua Management API; verify bằng test INSERT trái phép phải FAIL + SELECT vẫn OK + action (có authz) vẫn ghi được.
+
+### [#P54T03] [db/migration-e-audit.sql + src/lib/audit.ts + actions] Audit log
+
+**Goal**: Ghi nhật ký hành động quan trọng (ai, làm gì, khi nào) — truy vết.
+
+**Depends on**: `[#P54T01]` — **Parallel-safe**: `no`
+
+**New interface**: bảng `audit_logs (id, actor_id, actor_name, action, entity, entity_id, detail jsonb, created_at)` + RLS select-only + `logAudit(actor, action, entity, entityId, detail?)` (fire-and-forget, không làm fail action chính). Hook: create/close/delete period, deleteUser, deleteTeam, deleteCriteriaGroup/Criterion, saveGradeBands, changePassword, resetPassword.
+
+### [#P54T04] [src/components/settings/AuditTab.tsx + settings/page.tsx] Tab "Nhật ký hoạt động"
+
+**Goal**: Manager xem audit log (read-only) trong Cài đặt.
+
+**Depends on**: `[#P54T03]` — **Parallel-safe**: `no`
+
+**New interface**: `AuditTab` — bảng desc limit 50: thời gian, người thực hiện, hành động (label VN), đối tượng; thêm tab thứ 6 `audit` "Nhật ký" (icon ScrollText) — chỉ Manager.
+
+### [#P54T05] [src/components/dashboard/PendingReviews.tsx + dashboard/page.tsx] Nhắc đánh giá tồn đọng
+
+**Goal**: Dashboard hiển thị theo evaluator: ai còn nợ đánh giá bao nhiêu NV, vòng nào (kỳ hiện tại) — Manager nhắc đúng người.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**New interface**: `PendingReviews` (client, nhận `evaluations` như ClientSkillGapRadar) — với mỗi evaluation: round hiện tại (currentRound) chưa Submitted → evaluator nợ; group theo evaluator name; card list + tổng; EmptyState khi hết nợ. Wire vào dashboard/page.tsx.
+
+---
+
 ## Phase 52: Trang Cài đặt — Phase B + Phase C 🟢 (đang làm)
 
 ### [#P52T05] [db/ + src/actions/account.ts + src/components/settings/AccountTab.tsx] Tab Tài khoản — đổi mật khẩu

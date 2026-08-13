@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { requireManager } from '@/lib/auth';
 import { Grade, Role } from '@/types';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import {
@@ -22,8 +23,13 @@ function getMissingEvaluatorError(employeeId: string, selector: string, round: n
 
 /**
  * Tạo một kỳ đánh giá mới và khởi tạo Evaluations cho TẤT CẢ nhân viên (Bao gồm cả Manager).
+ * Actor lấy từ session (requireManager) — KHÔNG trust managerId từ client.
  */
-export async function createEvaluationPeriod(year: number, managerId: string) {
+export async function createEvaluationPeriod(year: number) {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+  const managerId = auth.user.id;
+
   try {
     const now = new Date().toISOString();
     const periodName = `Kỳ ${year}`;
@@ -144,6 +150,9 @@ export async function createEvaluationPeriod(year: number, managerId: string) {
  * Đóng một kỳ đánh giá.
  */
 export async function closeEvaluationPeriod(periodId: string) {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     const { error } = await supabase
       .from('evaluation_periods')
@@ -166,6 +175,9 @@ export async function closeEvaluationPeriod(periodId: string) {
  * Xóa một kỳ đánh giá và toàn bộ dữ liệu liên quan.
  */
 export async function deleteEvaluationPeriod(periodId: string) {
+  const auth = await requireManager();
+  if (auth.error !== null) return { success: false, error: auth.error };
+
   try {
     // 1. Xóa trực tiếp evaluations, DB đã config cascade sang evaluation_rounds và responses
     const { error: evalError } = await supabase
