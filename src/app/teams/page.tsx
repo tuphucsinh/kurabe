@@ -140,50 +140,41 @@ export default function TeamsPage() {
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhóm QAQC</h1>
           <p className="text-on-surface-variant mt-1 text-sm md:text-base">Theo dõi tiến độ đánh giá theo từng đơn vị</p>
         </div>
-        {isManager && (
-          <button 
-            onClick={handleAddTeam}
-            className="w-full md:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
-          >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-            Thêm nhóm mới
-          </button>
-        )}
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-primary/10 text-primary">
-            <Users size={22} />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Cụm KPI Compact */}
+          <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm divide-x divide-slate-200">
+            <div className="px-4 py-2.5 flex items-center gap-2">
+              <Users size={18} className="text-slate-400 shrink-0" />
+              <span className="font-black text-lg text-on-surface">{teamsData.length}</span>
+              <span className="text-sm text-slate-500">tổng nhóm</span>
+            </div>
+            <div className="px-4 py-2.5 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+              <span className="font-black text-lg text-on-surface">{totalCompleted}/{totalMembers}</span>
+              <span className="text-sm text-slate-500">đã đánh giá</span>
+            </div>
+            <div className="px-4 py-2.5 flex items-center gap-2">
+              <TrendingUp size={18} className="text-amber-500 shrink-0" />
+              <span className="font-black text-lg text-on-surface">{overallProgress}%</span>
+              <span className="text-sm text-slate-500">tiến độ</span>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Tổng nhóm</p>
-            <p className="text-2xl font-black text-on-surface">{teamsData.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-green-50 text-green-600">
-            <CheckCircle2 size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Đã đánh giá</p>
-            <p className="text-2xl font-black text-on-surface">{totalCompleted}<span className="text-base font-medium text-on-surface/40">/{totalMembers}</span></p>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl border border-outline-variant shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-amber-50 text-amber-600">
-            <TrendingUp size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-outline">Tiến độ chung</p>
-            <p className="text-2xl font-black text-on-surface">{overallProgress}<span className="text-base font-medium text-on-surface/40">%</span></p>
-          </div>
+
+          {isManager && (
+            <button 
+              onClick={handleAddTeam}
+              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95 shrink-0"
+            >
+              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+              Thêm nhóm mới
+            </button>
+          )}
         </div>
       </div>
 
