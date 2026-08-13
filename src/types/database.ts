@@ -381,6 +381,30 @@ export type Database = {
           },
         ]
       }
+      ai_summaries: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          period_id: string
+          summary: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          period_id: string
+          summary: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          period_id?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string

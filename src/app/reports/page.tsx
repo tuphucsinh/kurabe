@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getReportAggregation } from '@/actions/reports';
+import { getPeriodSummary } from '@/actions/ai-summary';
 import { getTeams } from '@/lib/db/teams';
 import { getSessionUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +9,7 @@ import PageHeader from '@/components/layout/PageHeader';
 import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
+import AiSummaryCard from '@/components/reports/AiSummaryCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import TeamComparison from '@/components/reports/TeamComparison';
 import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
@@ -99,6 +101,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
   const team = searchParams.team || 'all';
   const teams = await getTeams();
   const reportData = periodId ? await getReportAggregation(periodId, team) : null;
+  const aiSummary = periodId ? await getPeriodSummary(periodId) : {};
 
   if (!reportData) {
     return (
@@ -185,6 +188,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="lg:col-span-3">
+          <AiSummaryCard periodId={periodId || ''} initialSummary={aiSummary.summary} initialCreatedAt={aiSummary.created_at} />
         </div>
 
         <div className="lg:col-span-3">

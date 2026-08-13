@@ -88,6 +88,29 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ---
 
+## Phase 57: Tóm tắt kỳ đánh giá bằng AI 🤖 (2026-08-13)
+
+### [#P57T01] [db/migration-g-ai-summaries.sql + types + actions/ai-summary.ts] Cache + generate summary
+
+**Goal**: AI tổng hợp dữ liệu kỳ (số liệu + nhận xét các vòng, ẩn danh hóa tên) → markdown tiếng Việt, lưu cache theo kỳ.
+
+**Depends on**: `[#P56T01]` — **Parallel-safe**: `no`
+
+**New interface**: bảng `ai_summaries (period_id UNIQUE, summary, created_by, created_at)` RLS select-only; `getPeriodSummary(periodId)` (đọc cache, Manager); `generatePeriodSummary(periodId)` (requireManager, fetch data, ẩn danh hóa, callAI, upsert cache, trả thông báo nếu chưa có dữ liệu đánh giá — không gọi AI phí phạm).
+
+### [#P57T02] [src/components/reports/AiSummaryCard.tsx + reports/page.tsx] Card tóm tắt AI
+
+**Goal**: Trang Báo cáo hiển thị tóm tắt AI (Manager): nút "Tạo tóm tắt" / hiển thị cached + "Tạo lại".
+
+**Depends on**: `[#P57T01]` — **Parallel-safe**: `no`
+
+- **P57T01** ✅: migration-g ai_summaries (UNIQUE period_id, RLS select-only, HTTP 201) + types + `actions/ai-summary.ts` (getPeriodSummary đọc cache; generatePeriodSummary — requireManager, ẩn danh hóa (mã NV), prompt 4 phần, upsert cache, **skip AI khi kỳ chưa có điểm**)
+- **P57T02** ✅: `AiSummaryCard` trên /reports (Manager-only, nút Tạo/Tạo lại, loader, disclaimer "AI tổng hợp — số liệu gốc là nguồn chính thức") + wire server fetch summary. Verify browser: card hiển thị + click → toast "Kỳ này chưa có đánh giá nào có điểm..." (fail-soft đúng, không gọi AI phí phạm). Khi kỳ có dữ liệu thật → AI generate (callAI đã verified HTTP 200 qua opencode-go).
+
+**Phase 57 DONE** — chờ dữ liệu đánh giá thật để chạy generate end-to-end.
+
+---
+
 ## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
 
 ### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action
