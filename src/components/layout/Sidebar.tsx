@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { logoutAction } from '@/actions/logout';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -182,11 +181,12 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         <button
           onClick={() => {
             onClose?.();
-            // Xóa trạng thái local trước; server action xóa cookie + redirect /login
-            // (redirect server-side → không frame trung gian khi logout)
+            // Xóa session local rồi FULL RELOAD sang /login —
+            // window.location (không phải client navigation) để browser tải hẳn trang login,
+            // KHÔNG giữ layout/sidebar cũ (tránh frame trung gian lẫn login + sidebar).
             localStorage.removeItem('auth_user_id');
             document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-            logoutAction();
+            window.location.href = '/login';
           }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/8 hover:text-red-400 transition-all duration-200 w-full text-left group"
         >
