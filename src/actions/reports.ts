@@ -5,6 +5,7 @@ import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getSessionUser } from '@/lib/auth';
+import { unstable_cache } from 'next/cache';
 import { Grade, User } from '@/types';
 
 export interface ReportAggregationData {
@@ -20,16 +21,14 @@ export interface ReportAggregationData {
   topPerformers: { id: string; name: string; teamName: string; score: number; grade: string }[];
 }
 
-export async function getReportAggregation(
-  periodId: string, 
-  selectedTeam: string = 'all'
+async function getReportAggregationInner(
+  periodId: string,
+  selectedTeam: string,
+  viewer: import('@/types').User | null
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
 
   try {
-    // Viewer = session user — nếu thiếu, getEvaluationsByPeriod trả [] (filterEvaluationsForViewer)
-    const viewer = await getSessionUser();
-
     const [evaluations, users, teams, allCriteriaData] = await Promise.all([
       getEvaluationsByPeriod(periodId, viewer),
       getUsers(),
@@ -217,3 +216,19 @@ export async function getReportAggregation(
     return null;
   }
 }
+
+export async function getReportAggregation(
+  periodId: string,
+  selectedTeam: string = 'all'
+): Promise<ReportAggregationData | null> {
+  if (!periodId) return null;
+  const viewer = await getSessionUser();
+  return getReportAggregationCached(periodId, selectedTeam, viewer);
+}
+
+const getReportAggregationCached = unstable_cache(
+  async (periodId: string, selectedTeam: string, viewer: import('@/types').User | null) =>
+    getReportAggregationInner(periodId, selectedTeam, viewer),
+  ['report-aggregation'],
+  { revalidate: 30 }
+);

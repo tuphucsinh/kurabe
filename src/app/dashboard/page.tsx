@@ -7,7 +7,7 @@ import { Users, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
 import PendingReviews from '@/components/dashboard/PendingReviews';
 import AnomalyAlertCard from '@/components/dashboard/AnomalyAlertCard';
 import { cookies } from 'next/headers';
-import ClientSkillGapRadar from '@/components/charts/ClientSkillGapRadar';
+import LazySkillGapRadar from '@/components/charts/LazySkillGapRadar';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 
 
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
           {/* Grid: Radar | Recent */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <ClientSkillGapRadar 
+              <LazySkillGapRadar 
                 evaluations={dashboardData.rawEvaluations} 
                 criteriaGroups={dashboardData.rawCriteriaGroups} 
               />

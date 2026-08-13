@@ -5,6 +5,7 @@ import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getSessionUser } from '@/lib/auth';
+import { unstable_cache } from 'next/cache';
 import { EvaluationRound } from '@/types';
 import { User, Evaluation, CriteriaGroup } from '@/types';
 
@@ -30,14 +31,10 @@ export interface DashboardData {
   rawCriteriaGroups: CriteriaGroup[]; // Only needed if we still pass them to SkillGapRadar
 }
 
-export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
+async function getDashboardDataInner(periodId: string, viewer: import('@/types').User | null): Promise<DashboardData | null> {
   if (!periodId) return null;
 
   try {
-    // Viewer = user đang đăng nhập (session) — dashboard hiển thị đúng scope theo role;
-    // trước đây truyền undefined → filterEvaluationsForViewer trả [] → stats luôn 0.
-    const viewer = await getSessionUser();
-
     const [evaluations, users, teams, criteriaGroups] = await Promise.all([
       getEvaluationsByPeriod(periodId, viewer),
       getUsers(),
@@ -147,3 +144,14 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
     return null;
   }
 }
+
+export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
+  const viewer = await getSessionUser();
+  return getDashboardDataCached(periodId, viewer);
+}
+
+const getDashboardDataCached = unstable_cache(
+  async (periodId: string, viewer: import('@/types').User | null) => getDashboardDataInner(periodId, viewer),
+  ['dashboard-data'],
+  { revalidate: 30 }
+);
