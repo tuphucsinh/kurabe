@@ -5,7 +5,9 @@
  * KHÔNG BAO GIỜ import vào client component (key là bí mật).
  */
 
-const DEFAULT_MODEL = 'gpt-4o-mini';
+// gpt-5.6-luna: trả content ổn định qua opencode.ai/zen/go/v1 (deepseek-v4-flash reasoning
+// ngốn hết max_tokens → content rỗng với prompt dài).
+const DEFAULT_MODEL = 'gpt-5.6-luna';
 
 export function isAIConfigured(): boolean {
   return Boolean(process.env.AI_API_KEY);
@@ -24,7 +26,7 @@ export async function callAI(
   const attempt = async (maxTokens: number, extraSystem: string): Promise<string | null> => {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 25000);
+      const timer = setTimeout(() => controller.abort(), 45000);
 
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
@@ -64,7 +66,7 @@ export async function callAI(
     }
   };
 
-  const maxTokens = opts.maxTokens ?? 1200;
+  const maxTokens = opts.maxTokens ?? 1500;
 
   // Lần 1: token đủ lớn
   const first = await attempt(maxTokens, '');
@@ -72,6 +74,6 @@ export async function callAI(
 
   // Lần 2 (retry): model reasoning có thể ngốn hết token → content rỗng.
   // Tăng token + nhấn mạnh trả lời ngắn trực tiếp.
-  const second = await attempt(Math.max(1500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 5 CÂU, KHÔNG PHÂN TÍCH.');
+  const second = await attempt(Math.max(2500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 8 CÂU, KHÔNG PHÂN TÍCH.');
   return second;
 }

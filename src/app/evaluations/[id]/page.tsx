@@ -430,11 +430,23 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     setIsSuggesting(true);
     try {
       const totalScoreNow = Object.values(scores).reduce((a, b) => a + (Number(b) || 0), 0);
+      const criteriaDetail = criteriaGroups
+        .flatMap((g) => g.criteria)
+        .map((c) => {
+          const levelIdx = selectedLevelIndexes[c.id] ?? 0;
+          const level = c.levels[levelIdx];
+          return {
+            code: c.code,
+            name: c.name,
+            points: Number(scores[c.id]) || 0,
+            levelLabel: level?.label || '',
+            note: notes[c.id] || '',
+          };
+        });
       const result = await suggestCommentAction({
         employeeCode: employee.employeeCode || '',
         role: employee.role,
-        scores,
-        notes,
+        criteriaDetail,
         currentComment: comment,
         totalScore: totalScoreNow,
         grade: currentRoundData?.grade || '',
@@ -458,12 +470,27 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     setIsDrafting(true);
     try {
       const lastRound = [...evaluation.rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0);
+      const lastScores = lastRound?.scores || {};
+      const criteriaDetail = criteriaGroups
+        .flatMap((g) => g.criteria)
+        .filter((c) => lastScores[c.id] !== undefined)
+        .map((c) => {
+          const levelIdx = lastRound?.selectedLevelIndexes?.[c.id] ?? 0;
+          const level = c.levels[levelIdx];
+          return {
+            code: c.code,
+            name: c.name,
+            points: Number(lastScores[c.id]) || 0,
+            levelLabel: level?.label || '',
+          };
+        });
       const result = await draftResultMessageAction({
         employeeCode: employee.employeeCode || '',
         name: employee.name,
         role: employee.role,
         totalScore: lastRound?.totalScore || 0,
         grade: lastRound?.grade || '',
+        criteriaDetail,
         summaryNotes: comment || evaluation.rounds.map((r) => r.comment).filter(Boolean).join(' | '),
         periodName: '2026',
       });

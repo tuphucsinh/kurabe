@@ -41,13 +41,13 @@ export async function explainAnomalyAction(input: {
 
 /**
  * Gợi ý nhận xét chung khi chấm điểm — CHỈ Manager.
- * Ẩn danh hóa: mã NV thay tên; gửi điểm + tiêu chí nổi bật cho LLM.
+ * Gửi CHI TIẾT TỪNG TIÊU CHUẨN (tên + điểm + mức đạt) để AI nhận xét cụ thể,
+ * không chung chung. Ẩn danh hóa: mã NV thay tên.
  */
 export async function suggestCommentAction(input: {
   employeeCode: string;
   role: string;
-  scores: Record<string, number>;
-  notes: Record<string, string>;
+  criteriaDetail: { code: string; name: string; points: number; levelLabel: string; note: string }[];
   currentComment: string;
   totalScore: number;
   grade: string;
@@ -56,38 +56,34 @@ export async function suggestCommentAction(input: {
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
-  const topCriteria = Object.entries(input.scores)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('; ');
-  const weakCriteria = Object.entries(input.scores)
-    .sort((a, b) => a[1] - b[1])
-    .slice(0, 3)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('; ');
-  const noteSummary = Object.entries(input.notes)
-    .filter(([, v]) => v.trim())
-    .slice(0, 3)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(' | ');
+  const scored = input.criteriaDetail.filter((c) => c.points !== 0);
+  const detailText = input.criteriaDetail.length
+    ? input.criteriaDetail
+        .map((c) => `- ${c.code} ${c.name}: ${c.points} điểm (${c.levelLabel || 'không xác định'})${c.note ? ` — ghi chú: ${c.note}` : ''}`)
+        .join('\n')
+    : 'chưa có tiêu chí nào được chấm';
 
   const prompt = `Dữ liệu đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}):
 - Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
-- Tiêu chí mạnh nhất: ${topCriteria || 'chưa chấm'}
-- Tiêu chí yếu nhất: ${weakCriteria || 'chưa chấm'}
-- Ghi chú từng tiêu chí: ${noteSummary || 'không có'}
+- CHI TIẾT TỪNG TIÊU CHUẨN:
+${detailText}
 ${input.currentComment ? `- Nhận xét hiện tại: ${input.currentComment}` : ''}
 
-Hãy viết NHẬN XÉT TỔNG QUÁT (2-4 câu, tiếng Việt, mang tính xây dựng, phù hợp xem sau khi kỳ kết thúc): nêu điểm mạnh, điểm cần cải thiện, gợi ý phát triển. KHÔNG nêu điểm số cụ thể, KHÔNG dùng tên người.`;
+Hãy viết NHẬN XÉT TỔNG QUÁT (4-7 câu, tiếng Việt) DỰA TRÊN TỪNG TIÊU CHUẨN TRÊN:
+1. Nêu RÕ 2-3 tiêu chí mạnh nhất (kèm tên tiêu chuẩn) và ý nghĩa.
+2. Nêu RÕ 2-3 tiêu chí yếu nhất (kèm tên tiêu chuẩn) — chỉ ra vấn đề cụ thể.
+3. Đề xuất CÁCH KHẮC PHỤC / CẢI THIỆN cụ thể cho từng tiêu chí yếu (hành động thực tế, có thể làm được).
+4. Kết bằng khuyến khích ngắn.
+YÊU CẦU: cụ thể, sát dữ liệu, có thể hành động — TUYỆT ĐỐI không viết chung chung, không thêm thông tin không có trong dữ liệu. KHÔNG nêu tổng điểm số cụ thể.`;
 
-  const comment = await callAI(prompt, { maxTokens: 300 });
+  const comment = await callAI(prompt, { maxTokens: 1500 });
   if (!comment) return aiError();
   return { comment };
 }
 
 /**
  * Soạn thông báo kết quả cá nhân hóa cho nhân viên — Manager-only.
+ * Dựa trên CHI TIẾT tiêu chuẩn của vòng cuối để thông báo cụ thể, hữu ích.
  */
 export async function draftResultMessageAction(input: {
   employeeCode: string;
@@ -95,6 +91,7 @@ export async function draftResultMessageAction(input: {
   role: string;
   totalScore: number;
   grade: string;
+  criteriaDetail: { code: string; name: string; points: number; levelLabel: string }[];
   summaryNotes: string;
   periodName: string;
 }): Promise<{ message?: string; error?: string }> {
@@ -102,13 +99,27 @@ export async function draftResultMessageAction(input: {
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
+  const detailText = input.criteriaDetail.length
+    ? input.criteriaDetail
+        .filter((c) => c.points !== 0)
+        .map((c) => `- ${c.code} ${c.name}: ${c.points} điểm (${c.levelLabel || ''})`)
+        .join('\n')
+    : 'không có chi tiết';
+
   const prompt = `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):
 - Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
+- CHI TIẾT TIÊU CHUẨN VÒNG CUỐI:
+${detailText}
 - Nhận xét tổng hợp: ${input.summaryNotes || 'không có'}
 
-Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (2-4 câu, tiếng Việt, chân thành, xây dựng): xác nhận kết quả (không nói điểm số, chỉ nói xếp loại), nêu điểm mạnh, gợi ý cải thiện. KHÔNG nêu điểm số cụ thể, KHÔNG dùng tên người. Kết thúc bằng lời khuyến khích.`;
+Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (3-6 câu, tiếng Việt, chân thành, xây dựng):
+1. Xác nhận xếp loại (KHÔNG nói điểm số cụ thể).
+2. Nêu 2 ĐIỂM MẠNH cụ thể theo TÊN TIÊU CHUẨN (vd: tỷ lệ hiện diện tốt, 6S đạt mức rất tốt...).
+3. Nêu 2 ĐIỀU CẦN CẢI THIỆN cụ thể theo TÊN TIÊU CHUẨN + gợi ý khắc phục ngắn gọn, thực tế.
+4. Kết thúc khuyến khích.
+YÊU CẦU: cụ thể theo tên tiêu chuẩn thật, sát dữ liệu, hữu ích cho nhân viên — KHÔNG chung chung, không bịa thông tin.`;
 
-  const message = await callAI(prompt, { maxTokens: 300 });
+  const message = await callAI(prompt, { maxTokens: 1200 });
   if (!message) return aiError();
   return { message };
 }
