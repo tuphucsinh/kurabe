@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { logoutAction } from '@/actions/logout';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -27,7 +28,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const mainLinks = [
     { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
@@ -50,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] bg-[#003449] z-50 flex-col overflow-hidden shadow-2xl print:hidden">
         <SidebarContent 
           user={user} 
-          logout={logout} 
+          
           mainLinks={mainLinks} 
           bottomLinks={bottomLinks} 
           isActive={isActive} 
@@ -83,7 +84,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               >
                 <SidebarContent 
                   user={user} 
-                  logout={logout} 
+                  
                   mainLinks={mainLinks} 
                   bottomLinks={bottomLinks} 
                   isActive={isActive} 
@@ -101,15 +102,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 interface SidebarContentProps {
   user: User | null;
-  logout: () => void;
-  mainLinks: { label: string; href: string; icon: React.ElementType }[];
-  bottomLinks: { label: string; href: string; icon: React.ElementType }[];
+  mainLinks: { href: string; label: string; icon: React.ElementType }[];
+  bottomLinks: { href: string; label: string; icon: React.ElementType }[];
   isActive: (href: string) => boolean;
   onClose?: () => void;
   isMobile?: boolean;
 }
 
-function SidebarContent({ user, logout, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
+function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
   const router = useRouter();
   return (
     <>
@@ -182,8 +182,11 @@ function SidebarContent({ user, logout, mainLinks, bottomLinks, isActive, onClos
         <button
           onClick={() => {
             onClose?.();
-            logout();
-            router.push('/login');
+            // Xóa trạng thái local trước; server action xóa cookie + redirect /login
+            // (redirect server-side → không frame trung gian khi logout)
+            localStorage.removeItem('auth_user_id');
+            document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            logoutAction();
           }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/8 hover:text-red-400 transition-all duration-200 w-full text-left group"
         >
