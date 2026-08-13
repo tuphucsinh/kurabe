@@ -229,6 +229,6 @@ export async function getReportAggregation(
 const getReportAggregationCached = unstable_cache(
   async (periodId: string, selectedTeam: string, viewer: import('@/types').User | null) =>
     getReportAggregationInner(periodId, selectedTeam, viewer),
-  ['report-aggregation'],
-  { revalidate: 300 }
+  [],
+  { tags: ['report-aggregation'], revalidate: 300 }
 );

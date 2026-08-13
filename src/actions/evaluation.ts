@@ -1,7 +1,7 @@
 'use server';
 
 import { supabase } from '@/lib/supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { calculateRoundScore } from '@/lib/scoring';
@@ -233,6 +233,9 @@ export async function saveEvaluationRound(
 
     revalidatePath(`/evaluations/${evaluationId}`);
     if (isSubmit) {
+      // Data mới phải hiện ngay trên dashboard/reports (xóa cache data)
+      revalidateTag('dashboard-data', 'default');
+      revalidateTag('report-aggregation', 'default');
       await logAudit(
         auth.user,
         nextStep?.isFinal ? 'APPROVE_EVALUATION' : 'SUBMIT_EVALUATION',

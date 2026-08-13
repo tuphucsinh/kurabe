@@ -152,6 +152,6 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
 
 const getDashboardDataCached = unstable_cache(
   async (periodId: string, viewer: import('@/types').User | null) => getDashboardDataInner(periodId, viewer),
-  ['dashboard-data'],
-  { revalidate: 300 }
+  [],
+  { tags: ['dashboard-data'], revalidate: 300 }
 );

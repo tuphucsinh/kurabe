@@ -3,7 +3,7 @@
 import { softDeleteTeam } from '@/lib/db/teams';
 import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export async function deleteTeamAction(id: string) {
   const auth = await requireManager();
@@ -11,6 +11,8 @@ export async function deleteTeamAction(id: string) {
 
   try {
     await softDeleteTeam(id);
+    revalidateTag('dashboard-data', 'default');
+    revalidateTag('report-aggregation', 'default');
     revalidatePath('/teams');
     await logAudit(auth.user, 'DELETE_TEAM', 'team', id);
     return { success: true };

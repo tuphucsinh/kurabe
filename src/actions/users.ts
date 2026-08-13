@@ -3,7 +3,7 @@
 import { softDeleteUser, upsertUser } from '@/lib/db/users';
 import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { User } from '@/types';
 
 export async function deleteUserAction(id: string) {
@@ -12,6 +12,8 @@ export async function deleteUserAction(id: string) {
 
   try {
     await softDeleteUser(id);
+    revalidateTag('dashboard-data', 'default');
+    revalidateTag('report-aggregation', 'default');
     revalidatePath('/users');
     revalidatePath('/employees');
     await logAudit(auth.user, 'DELETE_USER', 'user', id);
@@ -27,6 +29,8 @@ export async function upsertUserAction(userData: Partial<User>) {
 
   try {
     const saved = await upsertUser(userData);
+    revalidateTag('dashboard-data', 'default');
+    revalidateTag('report-aggregation', 'default');
     revalidatePath('/employees');
     revalidatePath('/users');
     await logAudit(auth.user, userData.id ? 'UPDATE_USER' : 'CREATE_USER', 'user', saved?.id || '');

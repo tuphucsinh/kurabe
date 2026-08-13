@@ -17,6 +17,8 @@ export async function upsertTeam(team: Partial<Team>): Promise<void> {
     .upsert(dbTeam);
 
   if (error) throw new DatabaseError('Error upserting team', error);
+
+
 }
 
 export async function getTeams(requester?: User | null): Promise<Team[]> {
@@ -67,6 +69,8 @@ export async function softDeleteTeam(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw new DatabaseError('Error soft deleting team', error);
+
+
 }
 
 function mapTeamFromDb(dbTeam: DbTeam): Team {

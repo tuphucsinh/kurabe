@@ -219,6 +219,7 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
     await syncEvaluationAfterUserChange(saved);
   }
 
+
   return saved;
 }
 
@@ -285,6 +286,8 @@ export async function softDeleteUser(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw new DatabaseError('Error soft deleting user', error);
+
+
 }
 
 export function mapUserFromDb(dbUser: DbUser): User {
