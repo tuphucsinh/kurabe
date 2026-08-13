@@ -14,7 +14,7 @@ import TargetTab from '@/components/settings/TargetTab';
 
 export default function SettingsPage() {
   const { isLoading, isManager, user } = useAuth();
-  const [activeTab, setActiveTab] = useState('periods');
+  const [activeTab, setActiveTab] = useState(isManager ? 'periods' : 'account');
 
   if (isLoading) {
     return (
@@ -34,32 +34,16 @@ export default function SettingsPage() {
     );
   }
 
-  if (!isManager) {
-    return (
-      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="p-4 rounded-full bg-rose-50 text-rose-600">
-            <ShieldAlert className="w-12 h-12" />
-          </div>
-          <h1 className="text-xl font-bold text-slate-800">
-            Chỉ Quản lý mới có quyền truy cập
-          </h1>
-          <p className="text-sm text-slate-500 max-w-md">
-            Trang Cài đặt chỉ dành cho Quản lý. Liên hệ Quản lý nếu cần hỗ trợ.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const tabs = [
+  const adminTabs = [
     { id: 'periods', label: 'Kỳ đánh giá', icon: <CalendarDays className="w-4 h-4" /> },
-    { id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> },
     { id: 'grades', label: 'Thang điểm', icon: <Gauge className="w-4 h-4" /> },
     { id: 'roles', label: 'Nhóm & Quyền', icon: <UsersRound className="w-4 h-4" /> },
     { id: 'audit', label: 'Nhật ký', icon: <ScrollText className="w-4 h-4" /> },
     { id: 'target', label: 'Mục tiêu', icon: <Target className="w-4 h-4" /> },
   ];
+  const tabs = isManager
+    ? [{ id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> }, ...adminTabs]
+    : [{ id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> }];
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
