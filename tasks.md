@@ -160,7 +160,7 @@
 
 **Definition of Done**: unit test logic qua tsx (NV gán subleader A → A match, B không match); build PASS.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 

@@ -41,15 +41,17 @@ export async function getActivePeriod(): Promise<EvaluationPeriod | null> {
   return mapPeriodFromDb(data);
 }
 
-export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: User | null): Evaluation[] {
+export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: User | null, allUsers?: User[]): Evaluation[] {
   if (!viewer) return [];
-  return evaluations.filter(ev => canViewEvaluation(viewer, ev));
+  return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers));
 }
 
 export async function getEvaluations(user?: User | null): Promise<Evaluation[]> {
   let query = supabase
     .from('evaluations')
     .select('*, evaluation_rounds(*)');
+
+  let allUsers: User[] | undefined = undefined;
 
   if (user && user.role !== 'Manager') {
     const { data: rounds } = await supabase
@@ -61,9 +63,22 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
     
-    // Hỗ trợ Leader/SubLeader xem evaluations trong team
-    if ((user.role === 'Leader' || user.role === 'SubLeader') && user.teamId) {
+    // Leader xem evaluations trong team
+    if (user.role === 'Leader' && user.teamId) {
       orFilters.push(`team_id.eq.${user.teamId}`);
+    }
+
+    // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
+    if (user.role === 'SubLeader') {
+      const { data: subEmployees } = await supabase
+        .from('users')
+        .select('id, subleader_id')
+        .eq('subleader_id', user.id);
+      const subEmpIds = (subEmployees || []).map(u => u.id).filter(Boolean);
+      if (subEmpIds.length > 0) {
+        orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
+      }
+      allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
     }
 
     query = query.or(orFilters.join(','));
@@ -76,7 +91,7 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
-  return filterEvaluationsForViewer(evaluations, user);
+  return filterEvaluationsForViewer(evaluations, user, allUsers);
 }
 
 export async function getEvaluationById(id: string, user?: User | null): Promise<Evaluation | null> {
@@ -93,7 +108,16 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
 
   const evaluation = mapEvaluationFromDb(data);
 
-  if (!canViewEvaluation(user, evaluation)) {
+  let allUsers: User[] | undefined = undefined;
+  if (user?.role === 'SubLeader') {
+    const { data: subEmployees } = await supabase
+      .from('users')
+      .select('id, subleader_id')
+      .eq('subleader_id', user.id);
+    allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
+  }
+
+  if (!canViewEvaluation(user, evaluation, allUsers)) {
     return null;
   }
 
@@ -106,6 +130,8 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
     .select('*, evaluation_rounds(*)')
     .eq('period_id', periodId);
 
+  let allUsers: User[] | undefined = undefined;
+
   if (user && user.role !== 'Manager') {
     const { data: rounds } = await supabase
       .from('evaluation_rounds')
@@ -116,9 +142,22 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
 
-    // Hỗ trợ Leader/SubLeader xem evaluations trong team
-    if ((user.role === 'Leader' || user.role === 'SubLeader') && user.teamId) {
+    // Leader xem evaluations trong team
+    if (user.role === 'Leader' && user.teamId) {
       orFilters.push(`team_id.eq.${user.teamId}`);
+    }
+
+    // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
+    if (user.role === 'SubLeader') {
+      const { data: subEmployees } = await supabase
+        .from('users')
+        .select('id, subleader_id')
+        .eq('subleader_id', user.id);
+      const subEmpIds = (subEmployees || []).map(u => u.id).filter(Boolean);
+      if (subEmpIds.length > 0) {
+        orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
+      }
+      allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
     }
 
     query = query.or(orFilters.join(','));
@@ -131,7 +170,7 @@ export async function getEvaluationsByPeriod(periodId: string, user?: User | nul
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
-  return filterEvaluationsForViewer(evaluations, user);
+  return filterEvaluationsForViewer(evaluations, user, allUsers);
 }
 
 export async function getEvaluationByEmployee(employeeId: string, periodId?: string, user?: User | null): Promise<Evaluation | null> {
@@ -154,7 +193,16 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
 
   const evaluation = mapEvaluationFromDb(data);
 
-  if (!canViewEvaluation(user, evaluation)) {
+  let allUsers: User[] | undefined = undefined;
+  if (user?.role === 'SubLeader') {
+    const { data: subEmployees } = await supabase
+      .from('users')
+      .select('id, subleader_id')
+      .eq('subleader_id', user.id);
+    allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
+  }
+
+  if (!canViewEvaluation(user, evaluation, allUsers)) {
     return null;
   }
 
@@ -231,7 +279,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
 
   // 2. Tải toàn bộ user active để resolve evaluator (batch) + danh sách evaluation hiện có
   const [allUsersRes, existingEvalsRes] = await Promise.all([
-    supabase.from('users').select('id, role, team_id').eq('is_active', true),
+    supabase.from('users').select('id, role, team_id, subleader_id').eq('is_active', true),
     supabase.from('evaluations').select('employee_id').eq('period_id', activePeriod.id),
   ]);
   if (allUsersRes.error || existingEvalsRes.error) {
@@ -244,6 +292,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
     id: u.id,
     role: u.role as Role,
     teamId: u.team_id || null,
+    subleaderId: u.subleader_id || null,
   }));
   const existingIds = new Set((existingEvalsRes.data || []).map(e => e.employee_id));
 
@@ -262,9 +311,10 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       id: user.id,
       role: user.role,
       teamId: user.teamId || null,
+      subleaderId: user.subleaderId || null,
     }, subjects);
 
-    if (!evaluator) {
+    if (!evaluator && firstStep.evaluator !== 'SubLeader') {
       result.errors.push(`Không tìm thấy ${firstStep.evaluator} phù hợp cho ${user.name || user.id} ở Round 1.`);
       result.skipped++;
       continue;
@@ -292,14 +342,14 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       continue;
     }
 
-    // Tạo round 1
+    // Tạo round 1 (evaluator_id = null nếu nhân viên chưa được gán subleader)
     const { error: rError } = await supabase
       .from('evaluation_rounds')
       .insert({
         evaluation_id: ev.id,
         round: 1,
-        evaluator_id: evaluator.id,
-        evaluator_role: evaluator.role,
+        evaluator_id: evaluator?.id || null,
+        evaluator_role: evaluator?.role || (firstStep.evaluator as Role),
         scores: {},
         notes: {},
         total_score: 0,

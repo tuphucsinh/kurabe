@@ -2,7 +2,7 @@
 
 import { use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
+import { useUser, useUsers, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
 import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
@@ -31,11 +31,12 @@ export default function ComparePage({ params }: ComparePageProps) {
   
   const { data: employee, isLoading: loadingUser } = useUser(id);
   const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id, undefined, user);
+  const { data: users = [] } = useUsers(user);
   const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
 
   const accessState = useMemo(() => 
-    evaluation ? getEvaluationAccessState(user, evaluation) : null,
-  [user, evaluation]);
+    evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
+  [user, evaluation, users]);
 
   const allRounds = useMemo(() => {
     if (!evaluation || !evaluation.rounds || !accessState) return [];

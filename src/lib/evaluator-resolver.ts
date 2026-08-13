@@ -11,6 +11,7 @@ export interface EvaluationSubject {
   id: string;
   role: Role;
   teamId: string | null;
+  subleaderId?: string | null;
 }
 
 /**
@@ -24,19 +25,31 @@ export async function resolveEvaluatorFromDb(
     return { id: subject.id, role: subject.role };
   }
 
-  if (selector === 'SubLeader' && subject.teamId) {
-    const { data: subLeader } = await supabase
-      .from('users')
-      .select('id, role')
-      .eq('team_id', subject.teamId)
-      .eq('role', 'SubLeader')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (subLeader) {
-      return { id: subLeader.id, role: subLeader.role as Role };
+  if (selector === 'SubLeader') {
+    let subleaderId = subject.subleaderId;
+    if (subleaderId === undefined) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('subleader_id')
+        .eq('id', subject.id)
+        .maybeSingle();
+      subleaderId = user?.subleader_id;
     }
+
+    if (subleaderId) {
+      const { data: subLeader } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', subleaderId)
+        .eq('role', 'SubLeader')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (subLeader) {
+        return { id: subLeader.id, role: subLeader.role as Role };
+      }
+    }
+    return null;
   }
 
   if (selector === 'Leader' && subject.teamId) {
@@ -106,9 +119,9 @@ export function resolveEvaluatorFromList(
   }
 
   if (selector === 'SubLeader') {
-    if (!subject.teamId) return null;
+    if (!subject.subleaderId) return null;
     const subLeader = allUsers.find(u =>
-      u.teamId === subject.teamId && u.role === 'SubLeader'
+      u.id === subject.subleaderId && u.role === 'SubLeader'
     );
     return subLeader ? { id: subLeader.id, role: subLeader.role } : null;
   }

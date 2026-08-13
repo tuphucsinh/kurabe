@@ -4,7 +4,7 @@
 import { useState, useReducer, use, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCriteriaForRole } from '@/lib/db/criteria';
-import { useUser, useEvaluationByEmployee } from '@/hooks/use-db';
+import { useUser, useUsers, useEvaluationByEmployee } from '@/hooks/use-db';
 import { User, Evaluation, EvaluationRound, CriteriaGroup } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -100,6 +100,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { user } = useAuth();
   const { data: employee = null, isLoading: isLoadingUser } = useUser(id);
   const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id, undefined, user);
+  const { data: users = [] } = useUsers(user);
 
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
@@ -119,8 +120,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   // New access control logic
   const accessState = useMemo(() => 
-    evaluation ? getEvaluationAccessState(user, evaluation) : null,
-  [evaluation, user]);
+    evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
+  [evaluation, user, users]);
 
   useEffect(() => {
     async function loadData() {

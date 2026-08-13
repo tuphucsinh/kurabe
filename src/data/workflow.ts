@@ -41,7 +41,8 @@ export function isRoundSubmitted(round: EvaluationRound): boolean {
 function matchesEvaluatorSelector(
   selector: EvaluatorSelector,
   evaluator: User,
-  target: User | Evaluation
+  target: User | Evaluation,
+  allUsers?: User[]
 ): boolean {
   if (selector === 'SELF') {
     const targetId = 'employeeId' in target ? target.employeeId : target.id;
@@ -49,7 +50,14 @@ function matchesEvaluatorSelector(
   }
 
   if (selector === 'SubLeader') {
-    return evaluator.role === 'SubLeader' && evaluator.teamId === target.teamId;
+    if (evaluator.role !== 'SubLeader') return false;
+    let subleaderId: string | null | undefined = (target as any).subleaderId;
+    if (!subleaderId && 'employeeId' in target && allUsers) {
+      const targetUser = allUsers.find(u => u.id === target.employeeId);
+      subleaderId = targetUser?.subleaderId;
+    }
+    if (!subleaderId) return false;
+    return subleaderId === evaluator.id;
   }
 
   if (selector === 'Leader') {
@@ -81,7 +89,7 @@ export function canReview(reviewer: User, evaluation: Evaluation, allUsers: User
     return false;
   }
 
-  return matchesEvaluatorSelector(currentStep.evaluator, reviewer, evaluation);
+  return matchesEvaluatorSelector(currentStep.evaluator, reviewer, evaluation, allUsers);
 }
 
 /**
@@ -130,7 +138,7 @@ export function isRoundLocked(round: EvaluationRound): boolean {
 /**
  * Kiểm tra quyền xem chi tiết evaluation
  */
-export function canViewEvaluation(user: User | null | undefined, evaluation: Evaluation): boolean {
+export function canViewEvaluation(user: User | null | undefined, evaluation: Evaluation, allUsers?: User[]): boolean {
   if (!user) return false;
   
   // Manager xem tất cả
@@ -144,7 +152,7 @@ export function canViewEvaluation(user: User | null | undefined, evaluation: Eva
 
   // Thành viên trong flow của người được đánh giá (nếu cùng team)
   const flow = getEvaluationFlow(evaluation.employeeRole);
-  const isInFlow = flow.some(step => matchesEvaluatorSelector(step.evaluator, user, evaluation));
+  const isInFlow = flow.some(step => matchesEvaluatorSelector(step.evaluator, user, evaluation, allUsers));
 
   // Future reviewer được phép xem draft trước khi đến lượt:
   // chỉ mở cho Leader cùng team. SubLeader phải có assign evaluator cụ thể.
@@ -158,7 +166,8 @@ export function canViewEvaluation(user: User | null | undefined, evaluation: Eva
  */
 export function getEvaluationAccessState(
   viewer: User | null | undefined,
-  evaluation: Evaluation
+  evaluation: Evaluation,
+  allUsers?: User[]
 ): EvaluationAccessState {
   if (!viewer) {
     return {
@@ -177,7 +186,7 @@ export function getEvaluationAccessState(
   const hasAnyDraft = visibleRounds.length > 0;
 
   // 1. Tìm step hiện tại của viewer trong flow
-  const viewerStep = flow.find(step => matchesEvaluatorSelector(step.evaluator, viewer, evaluation));
+  const viewerStep = flow.find(step => matchesEvaluatorSelector(step.evaluator, viewer, evaluation, allUsers));
   
   // 2. Xác định mode mặc định
   const state: EvaluationAccessState = {

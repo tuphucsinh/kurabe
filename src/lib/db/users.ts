@@ -67,12 +67,13 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
     // 2. Lấy toàn bộ user active để resolve evaluator
     const { data: allUsers } = await supabase
       .from('users')
-      .select('id, role, team_id')
+      .select('id, role, team_id, subleader_id')
       .eq('is_active', true);
     const subjects: EvaluationSubject[] = (allUsers || []).map(u => ({
       id: u.id,
       role: u.role as Role,
       teamId: u.team_id || null,
+      subleaderId: u.subleader_id || null,
     }));
 
     // 3. Round 1 theo flow mới (chỉ khi chưa submit)
@@ -97,12 +98,15 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
         id: user.id,
         role: user.role,
         teamId: user.teamId || null,
+        subleaderId: user.subleaderId || null,
       }, subjects);
-      if (!evaluator) continue; // team chưa có SubLeader → giữ nguyên, chờ quản lý xử lý
 
       await supabase
         .from('evaluation_rounds')
-        .update({ evaluator_id: evaluator.id, evaluator_role: evaluator.role })
+        .update({
+          evaluator_id: evaluator?.id || null,
+          evaluator_role: evaluator?.role || (firstStep.evaluator as Role)
+        })
         .eq('id', r1.id);
     }
   } catch (err) {

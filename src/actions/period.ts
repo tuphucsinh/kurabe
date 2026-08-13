@@ -38,7 +38,7 @@ export async function createEvaluationPeriod(year: number) {
     // 1. Lấy danh sách TẤT CẢ nhân viên active
     const { data: employees, error: eError } = await supabaseAdmin
       .from('users')
-      .select('id, role, team_id')
+      .select('id, role, team_id, subleader_id')
       .eq('is_active', true);
 
     if (eError) {
@@ -49,14 +49,16 @@ export async function createEvaluationPeriod(year: number) {
       id: emp.id,
       role: emp.role as Role,
       teamId: emp.team_id,
+      subleaderId: emp.subleader_id,
     }));
-    const initialEvaluators = new Map<string, EvaluatorResolution>();
+    const initialEvaluators = new Map<string, EvaluatorResolution | null>();
 
-    // Validate evaluator round 1 trước khi tạo bất kỳ record nào.
+    // Validate/Resolve evaluator round 1 trước khi tạo bất kỳ record nào.
+    // Nếu employee.subleaderId null (chưa gán SubLeader), round 1 sẽ được tạo với evaluator_id = null (không fail kỳ).
     for (const employee of periodEmployees) {
       const [firstStep] = getEvaluationFlow(employee.role);
       const evaluator = resolveEvaluatorFromList(firstStep.evaluator, employee, periodEmployees);
-      if (!evaluator) {
+      if (!evaluator && firstStep.evaluator !== 'SubLeader') {
         return { success: false, error: getMissingEvaluatorError(employee.id, firstStep.evaluator, firstStep.round) };
       }
       initialEvaluators.set(employee.id, evaluator);
@@ -116,13 +118,13 @@ export async function createEvaluationPeriod(year: number) {
       const flow = getEvaluationFlow(employee.role);
       const firstStep = flow[0]; // Chỉ lấy Round 1
       const evaluator = initialEvaluators.get(employee.id);
-      if (!evaluator) continue;
 
+      // Nếu employee chưa gán subleader (evaluator null), evaluator_id = null (không được assign) để bổ sung sau
       roundsData.push({
         evaluation_id: ev.id,
         round: firstStep.round,
-        evaluator_id: evaluator.id,
-        evaluator_role: evaluator.role,
+        evaluator_id: evaluator?.id || null,
+        evaluator_role: evaluator?.role || (firstStep.evaluator as Role),
         scores: {},
         notes: {},
         total_score: 0,
