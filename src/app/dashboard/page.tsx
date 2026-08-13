@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { getDashboardData } from '@/actions/dashboard';
 import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
+import PendingReviews from '@/components/dashboard/PendingReviews';
 import { cookies } from 'next/headers';
 import ClientSkillGapRadar from '@/components/charts/ClientSkillGapRadar';
 
@@ -74,6 +75,8 @@ export default async function DashboardPage() {
             gradeDistribution={dashboardData.gradeDistribution} 
             totalEvaluationsCount={dashboardData.rawEvaluations.length} 
           />
+
+          <PendingReviews evaluations={dashboardData.rawEvaluations} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Team Status */}
