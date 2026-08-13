@@ -34,7 +34,7 @@
 
 **Definition of Done**: `cloudflared --version` exit 0; binary nằm `/usr/local/bin`.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
@@ -54,7 +54,7 @@
 
 **Definition of Done**: browser qua trycloudflare mở được login + dashboard; tunnel đã tắt; log latency ghi vào tasks.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
@@ -76,7 +76,7 @@
 
 **Definition of Done**: browser qua hostname chính thức mở được kurabe; service tự chạy sau reboot (test `systemctl --user restart` + is-active).
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
@@ -93,7 +93,7 @@
 
 **Definition of Done**: truy cập từ email ngoài allowlist bị chặn; email trong allowlist vào được app.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
@@ -105,4 +105,4 @@
 
 **Definition of Done**: docs cập nhật + commit.
 
-**Status**: `[ ]`
+**Status**: `[x]`
