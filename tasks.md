@@ -143,7 +143,7 @@
 
 **Definition of Done**: query verify số liệu đúng (vd QC Gia dụng 15 NV → subleader_id = SubLeader team đó); snapshot trước đã lưu.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
