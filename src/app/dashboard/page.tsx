@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { getDashboardData } from '@/actions/dashboard';
 import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
-import PeriodActions from '@/components/dashboard/PeriodActions';
 import { cookies } from 'next/headers';
 import ClientSkillGapRadar from '@/components/charts/ClientSkillGapRadar';
 
@@ -59,9 +58,6 @@ export default async function DashboardPage() {
             )}
           </p>
         </div>
-
-        {/* Client Component for Actions */}
-        <PeriodActions />
       </div>
 
       {!dashboardData || dashboardData.stats.total === 0 ? (
