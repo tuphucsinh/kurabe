@@ -115,10 +115,13 @@
 - Verify: lint 0 errors + build PASS; browser 6 điểm PASS (Manager: 3 tab / Tab Kỳ bảng 2026 Đang mở 0/22 / Tab Nhóm 3 nhóm / Tab Điều hướng / Dashboard sạch nút; Employee: màn chặn).
 - Commits: `61977ab..f1fcd84` (5 commits). Push GitHub sau Phase A.
 
-### Phase 52 (tiếp): Trang Cài đặt — Phase B + Phase C 🟡 (CODE XONG 2026-08-13 — chờ migration + test end-to-end)
-- **Phase B — Tab Tài khoản** (P52T05, commit `149d465`): dependency `bcryptjs`; server action `changePassword` (user chưa có hash → đặt mới không cần mật khẩu cũ; đã có → verify bcrypt; new ≥ 6 ký tự); `AccountTab` (thông tin cá nhân: mã NV/tên/chức vụ/nhóm + form đặt/đổi mật khẩu); tab "Tài khoản" active trong /settings. **KHÔNG đụng login** (fake login giữ nguyên — xác nhận bằng git: 0 commit chạm login/AuthContext/middleware). Lint/build PASS, UI browser PASS. Chờ: `db/migration-b-account.sql`.
-- **Phase C — Tab Thang điểm** (P52T06, commit `6b744b7`): bảng `grade_bands` + seed 12 dòng; `lib/grade-bands.ts` (module cache sync + fallback hardcode — app không vỡ khi bảng chưa có); `saveGradeBands` (upsert) + `validateGradeBands` (chống chồng lấn: `next.max >= current.min` → lỗi; **bug chiều so sánh phát hiện qua test tsx → đã fix, retest 12/12 PASS**); `GradeBandsTab` 2 cột Quản lý/Nhân viên (S bỏ max, D bỏ min); `scoring.ts` đọc cache; trang /criteria đồng bộ. Lint/build PASS, UI browser PASS. Chờ: `db/migration-c-grade-bands.sql`.
-- **Đã push GitHub** `d715dc7..6b744b7` (git sạch). Phase 44 (Security) giữ DEFERRED — fake login giữ tới khi anh test xong ổn thỏa.
+### Phase 52 (tiếp): Trang Cài đặt — Phase B + Phase C [DONE] ✅ (2026-08-13)
+- **Phase B — Tab Tài khoản** (P52T05, commit `149d465`): `bcryptjs`; `changePassword` (chưa có hash → đặt mới; đã có → verify bcrypt; new ≥ 6 ký tự); `AccountTab` (thông tin cá nhân + form đặt/đổi mật khẩu); tab "Tài khoản" active. KHÔNG đụng login (fake login giữ nguyên — 0 commit chạm login/AuthContext/middleware).
+- **Phase C — Tab Thang điểm** (P52T06 + fix `98e8673`): bảng `grade_bands` + seed; `lib/grade-bands.ts` (cache sync + fallback hardcode); `saveGradeBands` + `validateGradeBands` (chống chồng lấn `next.max >= current.min` — bug chiều so sánh phát hiện qua test tsx → fix + retest 12/12 PASS); `GradeBandsTab` 2 cột; `scoring.ts` đọc cache; /criteria đồng bộ. Fix sau cùng: handleSave thêm catch (lỗi server action không bị nuốt im lặng).
+- **Migration đã chạy thành công trên Supabase** (Management API, project `kiv`/`cliiqqthppxuzirabzla`, Postgres 17.6): `users.password_hash` (text) + bảng `grade_bands` 12 dòng seed ✓.
+- **Verify end-to-end browser PASS**: Phase B — đặt mật khẩu lần đầu ✓, sai mật khẩu cũ bị chặn ("Mật khẩu cũ không đúng") ✓, đổi đúng → thành công ✓, DB hash `$2b$10$...` (bcrypt 60 ký tự) ✓. Phase C — hiển thị từ DB ✓, lưu thật → DB cập nhật (test D 69→65→69 restore sạch) ✓, UI chặn chồng lấn (A min 100 → lỗi) ✓, /criteria đồng bộ ✓.
+- **MCP Supabase đã cấu hình cho profile mika** (token account ngothaoly@gmail.com — CHỈ dùng cho project kurabe): `hermes -p mika mcp test supabase` PASS, tools `mcp_supabase_*` sẵn sàng sau `/reload-mcp`.
+- **Đã push GitHub** (`149d465`, `6b744b7`, `964437d`, `98e8673`). Phase 44 (Security) giữ DEFERRED — fake login giữ tới khi anh test xong ổn thỏa.
 
 ---
 

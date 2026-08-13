@@ -23,7 +23,7 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 - P52T03: Tab Nhóm & Quyền — Leader/SubLeader + cảnh báo thiếu chức vụ/chưa gán nhóm
 - P52T04: Dashboard bỏ PeriodActions (chuyển hẳn sang Cài đặt)
 
-**Còn lại (chờ anh bấm nút)**: ~~Phase B — Tab Tài khoản~~ / ~~Phase C — Tab Thang điểm~~ → đã CODE XONG (P52T05/P52T06), push GitHub; **chờ chạy 2 migration** (`db/migration-b-account.sql`, `db/migration-c-grade-bands.sql`) → verify end-to-end → đóng phase. Phase 44 (Security) giữ DEFERRED — fake login giữ tới khi test xong ổn thỏa.
+**Còn lại (chờ anh bấm nút)**: ~~Phase B~~ / ~~Phase C~~ → **ĐÃ HOÀN THÀNH** (P52T05/P52T06, migration đã chạy, verify end-to-end PASS — chi tiết `.ai/MASTER_PLAN.md`). Phase 44 (Security) giữ DEFERRED — fake login giữ tới khi anh test xong ổn thỏa.
 
 ---
 
