@@ -214,8 +214,8 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
 
   const saved = mapUserFromDb(data);
 
-  // Đổi chức vụ/team → đồng bộ evaluation + round 1 theo flow mới
-  if (user.role || user.teamId) {
+  // Đổi chức vụ/team/SubLeader → đồng bộ evaluation + round 1 theo flow mới
+  if (user.role || user.teamId || user.subleaderId !== undefined) {
     await syncEvaluationAfterUserChange(saved);
   }
 
