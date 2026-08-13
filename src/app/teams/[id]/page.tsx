@@ -188,7 +188,7 @@ export default function TeamDetailPage() {
                   )}
                   {evaluation ? (
                     <Link
-                      href={`/evaluations/${evaluation.id}`}
+                      href={`/evaluations/${member.id}`}
                       className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                       title="Xem đánh giá"
                     >
