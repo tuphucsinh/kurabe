@@ -30,7 +30,7 @@ Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file eve
 |---|---|---|---|
 | 1 | **Firewall** | No code without an assigned task (`/do`). Default: `.md`/`.json` only. | All agents |
 | 2 | **Strict Scope** | Do exactly what was asked; propose extras, don't implement them. Runner never commits. | All agents |
-| 3 | **Sweep** | Phase done (100% `[x]`): compress summary → `.ai/MASTER_PLAN.md` (mark phase DONE), **prune finished tasks from `tasks.md`** (summary ≤ 4 dòng + active phase). | Mika |
+| 3 | **Sweep** | Phase done (100% `[x]`): compress summary → `.ai/MASTER_PLAN.md` (mark phase DONE), **XÓA HẲN task `[x]` khỏi `tasks.md`** (chỉ giữ phase ACTIVE + pending/next; chi tiết đã ở MASTER_PLAN — KHÔNG duplicate summary). | Mika |
 | 4 | **2-Strike** | `/do` fails tests twice → HALT, write `.tmp/SYSTEM_ALERT.md`, alert user. | Runner |
 | 5 | **No Yapping** | No flattery; straight to the point. Diff/evidence for code, bullets for `.md`. | All agents |
 | 6 | **Adversarial Audit** | `/do` Gate 3: Sequential Thinking, prompt *"3 most serious issues vs requirement"*. No self-review ceremony. | Runner |
@@ -170,7 +170,7 @@ Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
 ## AUTO-BEHAVIORS
 | Trigger | Behavior |
 |---|---|
-| New conversation opens | Read `HANDOFF.md` + `tasks.md` + `.ai/KNOWN_BUGS.md`. One-line goal report. |
+| New conversation opens | Đọc `AGENTS.md` + `HANDOFF.md` + `tasks.md` + `.ai/KNOWN_BUGS.md`. One-line goal report. |
 | `.tmp/SYSTEM_ALERT.md` exists | Read immediately; warn user before anything else. |
 | Phase/milestone 100% `[x]` | **BẮT BUỘC sweep ngay** (RULE 3): ① compress summary → `.ai/MASTER_PLAN.md` (mark DONE + kết quả thực thi) ② **prune task `[x]` khỏi `tasks.md`** (giữ summary ≤ 4 dòng + phase active) ③ commit. KHÔNG đợi `/done`. |
 | Task `[x]` sau verify | Tick + commit ngay (1 task = 1 commit) — không dồn. |
