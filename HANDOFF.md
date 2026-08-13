@@ -1,17 +1,13 @@
 # HANDOFF SNAPSHOT
-**Date**: 2026-08-13 · **Git**: local `main` AHEAD 16 (chưa push — production ở `b135177`); build/lint PASS; DB nguyên trạng.
+**Date**: 2026-08-13 (tối) · **Git**: `main` đồng bộ origin (ahead 0 — ĐÃ PUSH 66 commits); build/lint PASS; DB nguyên trạng (22 NV / 3 nhóm / 22 ev / Kỳ 2026 active).
 
-**Đã xong phiên này** (chi tiết: `.ai/MASTER_PLAN.md`):
-1. Fix Báo cáo (5 mục: trend ảo, max 237 động, criteria %, Xuất file 2 sheets 22 NV, guard role).
-2. Trang chi tiết nhóm `/teams/[id]` + fix link employee id.
-3. Phase 55: Mục tiêu kỳ cấu hình (Settings + Reports động); P1 ẩn test login production.
-4. Fix logout full-reload (hết frame lẫn login+sidebar).
-5. Phase 56-58: AI — Cảnh báo + Giải thích, Tóm tắt kỳ, Gợi ý nhận xét + Soạn thông báo (chỉ Manager; prompt chuẩn anh duyệt; model gpt-5.6-luna).
-6. Fix defensive `(ev.rounds||[])`; Phase 59: lyly ↔ kurabe (MCP anon + skill kurabe-monitor — verified).
+**Đã xong phiên** (chi tiết `.ai/MASTER_PLAN.md` Phase 61-63):
+1. Phase 61 hoàn tất: fix promote (bỏ rule 1 SubLeader/team) + sync subleader_id → round 1 + badge/grade đúng; UI team detail blocks + grid cột thẳng; settings mở cho NV (tab Tài khoản đổi mật khẩu).
+2. Live test E2E: org test → 3 vòng đánh giá → Approved; verify dashboard/reports/scope; dọn sạch test data.
+3. Production: push + Vercel; fix login flash + kẹt (AppLayout /login full-screen + location.href); tối ưu tốc độ (cache 300s + revalidateTag on mutation + lazy radar + cron warm-ping 5 phút).
 
 **Blocker / Next**:
-- Chờ anh báo **PUSH** (16 commits + 3 AI env lên Vercel: AI_API_KEY, AI_BASE_URL, AI_MODEL).
-- **QI Gia dụng chưa gán Leader** — anh cập nhật khi UAT.
-- Kỳ 2026 có điểm thật → AI đầy đủ hoạt động; P2 "Gợi ý khác" + Chat — sau kỳ đầu.
-- Phase 44 C1 (password login) defer sau UAT.
-- **Phase 61 DONE (13-08)**: SubLeader đa dạng — users+subleader_id/description; vòng 1 theo SubLeader gán; UI Teams/Employees/team-detail. **Còn**: QI Gia dụng 3 NV chưa gán (cần tạo SubLeader); QI Gia dụng chưa có Leader.
+- **AI env lên Vercel CHƯA set** (AI_API_KEY, AI_BASE_URL, AI_MODEL=gpt-5.6-luna) — production AI chưa hoạt động.
+- QI Gia dụng chưa Leader + 3 NV chưa gán SubLeader (anh cập nhật khi UAT).
+- Phase 60 Cloudflare: chờ anh đưa vorigin.vn nameserver sang Cloudflare + báo Active.
+- Phase 44 C1 (password login) + refactor client writes — defer sau UAT.

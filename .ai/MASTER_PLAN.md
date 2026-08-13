@@ -195,6 +195,32 @@
 
 **Quyết định ghi nhận**: NV chưa gán SubLeader → round 1 chưa có evaluator (chặn đánh giá tới khi gán — UI cảnh báo). Runner: agy (theo chỉ đạo anh 13-08).
 
+**Bổ sung phiên tối 13-08 (sau T07)**:
+- **Fix lỗi promote**: `assertLeadershipSlot` (users.ts) còn giữ rule cũ "1 SubLeader/team" → bỏ (chỉ giữ 1 Leader/team) — test thật 7346→SubLeader PASS + restore nguyên trạng. Commit `dd4e79f`.
+- **Fix sync SubLeader**: `upsertUser` chỉ sync khi đổi role/team — thêm `subleaderId !== undefined` → đổi SubLeader nào cũng đồng bộ round 1; + fix data 19853 (round 1 evaluator Vẹn → Bích Điệp). Commit `32aecbb`. Verify: Bích Điệp đánh giá được Thùy (Lần 1/3).
+- **Fix hiển thị**: STATUS_BADGE thiếu Submitted/Reviewed/Draft → nhầm "Chưa bắt đầu" (thêm "Đã nộp", "Đã nộp vòng x", "Đã có KẾT QUẢ đánh giá" emerald nổi); icon đánh giá LUÔN hiển thị mọi NV; grade lấy round Submitted mới nhất. Commits `6a7dd77`, `43a9bd2`.
+- **UI team detail**: block SubLeader (header + NV trực thuộc, block trống/Chưa gán) — `19e2240`; bỏ header card + SUBLEADER strip + badge "X nhân viên" — `fd53067`, `5a8a25f`, `b642596`; KPI compact gộp hàng header + tăng size — `ae7f551`, `424041b`; xếp loại đầy đủ (B L1 104) — `a3f0c25`; grid 4 cột thẳng hàng + status bên phải — `c2464f1`, `039c3a4`; bỏ pill "Đang thực hiện" — `00b26f3`.
+- **UI teams/reports/dashboard/settings**: /teams KPI header compact + card clickable + bỏ footer/avatar stack — `8ca8d5c`, `9abfa22`, `881ab22`; reports redesign (KPI compact + grid 2 cột) — `0425b92`; dashboard tối ưu (KPI compact + ẩn anomaly rỗng + grid) — `883fe3f`; activity feed sort theo submittedAt + audit SUBMIT/APPROVE — `9ce82c8`; settings: mở cho NV (tab Tài khoản đổi mật khẩu), bỏ điều hướng nhanh, tabs đều + fix flex — `92e6300`, `9d325a8`, `de68753`, `cd09c41`.
+- **Live test E2E** (Phase 62): tạo "Nhóm Test E2E" + TST01 Leader/TST02 SubLeader/TST03-04 NV qua UI → đánh giá 3 vòng (SubLeader 110 B → Leader → Manager Approved B 110) → verify dashboard 26 NV/reports Top/scope từng role → dọn sạch test data (verify 22 NV/3 team/1 Approved). Ghi nhận: reports "Unknown"→"—" + KPI chưa xong = total-completed — `16ff741`.
+- **Production + tốc độ** (Phase 63): push 66 commits → Vercel; fix login flash (AppLayout /login full-screen — `30feb6d`); login redirect `window.location.href` (hết kẹt — `b292d27`); cache 300s + revalidateTag on mutation (submit/approve/đổi NV) + lazy recharts radar — `57035fb`, `aa0716e`, `5e44206`; cron warm-ping 5 phút (job `warm-ping-lykiv-vercel`, script `~/.hermes/profiles/mika/scripts/warm-ping-lykiv.py`).
+
+---
+
+### Phase 62: Live Test E2E — org test + 3 vòng đánh giá [DONE] ✅ (2026-08-13)
+> Yêu cầu anh: tự tạo nhóm test, thêm Leader/SubLeader/NV, chạy đánh giá từ đầu tới cuối trên account test; kiểm tra UI/biến đổi/lỗi/báo cáo/dashboard/scope.
+
+- Tạo "Nhóm Test E2E" + TST01 (Leader) / TST02 (SubLeader) / TST03-04 (NV, gán TST02) qua UI — form hoạt động đúng.
+- Flow: TST02 chấm TST03 vòng 1 → 110đ B + **tự tạo round 2 (TST01)**; TST01 "Lần 2/3" → submit → round 3 (Manager); Manager "Lần 3/3" → **Approved final B 110**.
+- Verify: team detail 1/4 · dashboard 26 NV/2-26/Test 25% · reports Top 2 TST03 + nhóm Test 27.5 · scope TST02 (3 NV chưa xong = 2 NV + self) · scope TST04 (chỉ 1 NV = chính mình) · settings NV tab Tài khoản.
+- Dọn sạch test data (rounds/evs/audit/users/team) — DB về nguyên trạng (22/3/22/1 Approved).
+- Phát hiện & fix: "Unknown" → "—" (reports) + KPI "chưa xong" = total − completed (`16ff741`).
+
+### Phase 63: Production push + tối ưu tốc độ + login fix [DONE] ✅ (2026-08-13)
+- Push 66 commits lên `origin/main` (production Vercel auto-deploy).
+- Fix login flash production: AppLayout `/login` luôn full-screen (hết sidebar+login card 1-2s) — `30feb6d`; redirect bằng `window.location.href` (hết kẹt Brave/cache cũ) — `b292d27`.
+- Tốc độ: `unstable_cache` 300s (tags dashboard-data/report-aggregation, key theo viewer) + **revalidateTag on mutation** (submit/approve evaluation + upsert/delete user → data mới hiện ngay; nhược điểm: cache thô theo tag — mọi user revalidate; race cửa sổ nhỏ; phải nhớ quy ước khi thêm mutation mới) + lazy-load recharts (LazySkillGapRadar) + cron warm-ping 5 phút (giữ warm Vercel — giảm cold start ~3s).
+- Verify tổng: build/lint PASS · DB 22/3/22/27/1 active · smoke 8 trang 0 lỗi console · cron ok · production login 200 + middleware 307 · git ahead 0.
+
 ---
 
 ## Audit Summary (2026-08-10)

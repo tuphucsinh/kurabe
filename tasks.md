@@ -13,10 +13,13 @@
 
 ---
 
-## Pending / Next (chốt 13-08)
-- Chờ anh báo **PUSH** (local ahead; kèm 3 AI env lên Vercel: AI_API_KEY, AI_BASE_URL, AI_MODEL=gpt-5.6-luna).
-- **QI Gia dụng chưa gán Leader** (lyly phát hiện — anh cập nhật khi UAT).
+## Pending / Next (chốt 13-08 — tối)
+- **AI env lên Vercel CHƯA set**: AI_API_KEY, AI_BASE_URL, AI_MODEL=gpt-5.6-luna (production AI chưa hoạt động — local có).
+- **QI Gia dụng chưa gán Leader** + 3 NV chưa gán SubLeader (lyly phát hiện — anh cập nhật khi UAT).
+- **Phase 60 Cloudflare Tunnel**: chờ anh đưa `vorigin.vn` nameserver sang Cloudflare + báo Active → mới làm named tunnel + Access (fake login chưa đủ an toàn internet).
+- **Phase 44 C1** (password login) + refactor client writes — defer sau UAT.
 - P2 "Gợi ý khác" + Chat hỏi đáp dữ liệu — sau kỳ đầu có data thật.
+- ✅ Đã xong 13-08 (chi tiết `.ai/MASTER_PLAN.md` Phase 61-63): push 66 commits · live test E2E · tối ưu UI/tốc độ · login fix · settings mở cho NV.
 
 ---
 
