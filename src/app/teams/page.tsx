@@ -273,26 +273,6 @@ export default function TeamsPage() {
                     </div>
                   </div>
 
-                  {/* Member Avatars */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {team.members.slice(0, 4).map((member) => (
-                        <div 
-                          key={member.id}
-                          className="w-7 h-7 rounded-full bg-primary/10 border-2 border-white flex items-center justify-center text-[10px] font-bold text-primary"
-                          title={member.name}
-                        >
-                          {member.name.charAt(0)}
-                        </div>
-                      ))}
-                      {team.membersCount > 4 && (
-                        <div className="w-7 h-7 rounded-full bg-surface border-2 border-white flex items-center justify-center text-[10px] font-bold text-outline">
-                          +{team.membersCount - 4}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-outline">{team.membersCount} thành viên</span>
-                  </div>
                 </div>
               </Link>
             );
