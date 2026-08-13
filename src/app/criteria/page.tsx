@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   useCriteria, 
   useUpsertCriteriaGroup, 
@@ -10,7 +10,7 @@ import {
   useDeleteCriterion
 } from '@/hooks/use-db';
 import { Criterion, CriteriaGroup } from '@/types';
-import { gradingLeader, gradingStaff } from '@/data/criteria';
+import { getGradeBandsSync, loadGradeBandsFromDb } from '@/lib/grade-bands';
 import { 
   Award, 
   Info, 
@@ -32,6 +32,22 @@ export default function CriteriaPage() {
   const { user } = useAuth();
   const isManager = user?.role === 'Manager'; // Chỉ Manager được thêm/sửa/xóa tiêu chuẩn
   const { data: groups = [] } = useCriteria();
+  const [, setGradeTick] = useState(0);
+
+  // Load dải điểm từ DB (nếu có) để đồng bộ với Tab Thang điểm trong Cài đặt
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await loadGradeBandsFromDb();
+      if (!cancelled) setGradeTick((t) => t + 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const gradingLeader = getGradeBandsSync().leader;
+  const gradingStaff = getGradeBandsSync().staff;
 
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();

@@ -375,6 +375,36 @@ export type Database = {
           },
         ]
       }
+      grade_bands: {
+        Row: {
+          created_at: string | null
+          grade: string
+          id: string
+          max_score: number | null
+          min_score: number | null
+          role_group: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string | null
+          grade: string
+          id?: string
+          max_score?: number | null
+          min_score?: number | null
+          role_group: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string | null
+          grade?: string
+          id?: string
+          max_score?: number | null
+          min_score?: number | null
+          role_group?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null

@@ -1,4 +1,4 @@
-import { gradingLeader, gradingStaff } from '@/data/criteria';
+import { getGradeBandsSync } from '@/lib/grade-bands';
 import { Evaluation, EvaluationRound, Grade, RoundNumber, Role } from '@/types';
 
 const LEADER_ROLES: Role[] = ['Leader', 'Manager', 'SubLeader'];
@@ -58,11 +58,12 @@ export function getFinalResult(evaluation: Evaluation): { totalScore: number; gr
  */
 export function getGradeFromScore(totalScore: number, role: Role): Grade {
   const isLeader = LEADER_ROLES.includes(role);
-  const targetGrading = isLeader ? gradingLeader : gradingStaff;
+  const bands = getGradeBandsSync();
+  const targetGrading = isLeader ? bands.leader : bands.staff;
 
   // Tìm range phù hợp nhất, ưu tiên các mức cao trước nếu bị chồng lấn (overlapping)
   const result = [...targetGrading]
-    .sort((a, b) => (b.minScore || 0) - (a.minScore || 0))
+    .sort((a, b) => (b.minScore ?? 0) - (a.minScore ?? 0))
     .find(range => totalScore >= (range.minScore ?? -Infinity));
 
   return (result?.grade as Grade) || 'D';
