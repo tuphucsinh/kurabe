@@ -23,6 +23,9 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   Approved: { label: 'Đã xong', className: 'bg-green-100 text-green-700' },
   NotStarted: { label: 'Chưa bắt đầu', className: 'bg-slate-100 text-slate-500' },
   InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
+  Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
+  Submitted: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
+  Reviewed: { label: 'Đã xem xét', className: 'bg-indigo-100 text-indigo-700' },
 };
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
@@ -66,7 +69,10 @@ export default function TeamDetailPage() {
     return members.map((m: User) => {
       const ev = evaluations.find((e: Evaluation) => e.employeeId === m.id);
       const status = ev ? ev.status : 'NotStarted';
-      const grade = ev?.finalGrade || (ev?.rounds?.length ? ev.rounds[ev.rounds.length - 1].grade : null);
+      const submittedRounds = ev?.rounds
+        ? [...ev.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
+        : [];
+      const grade = ev?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
       return { member: m, evaluation: ev || null, status, grade };
     });
   }, [members, evaluations]);
@@ -258,22 +264,18 @@ export default function TeamDetailPage() {
                               {grade}
                             </span>
                           )}
-                          {evaluation ? (
-                            <Link
-                              href={`/evaluations/${member.id}`}
-                              className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-                              title="Xem đánh giá"
-                            >
-                              <FileText size={18} />
-                            </Link>
-                          ) : (
-                            <span className="w-9 shrink-0" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                          <Link
+                          href={`/evaluations/${member.id}`}
+                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          title="Xem đánh giá"
+                        >
+                          <FileText size={18} />
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               </div>
             ))}
 
@@ -322,17 +324,13 @@ export default function TeamDetailPage() {
                             {grade}
                           </span>
                         )}
-                        {evaluation ? (
-                          <Link
-                            href={`/evaluations/${member.id}`}
-                            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-                            title="Xem đánh giá"
-                          >
-                            <FileText size={18} />
-                          </Link>
-                        ) : (
-                          <span className="w-9 shrink-0" />
-                        )}
+                        <Link
+                          href={`/evaluations/${member.id}`}
+                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          title="Xem đánh giá"
+                        >
+                          <FileText size={18} />
+                        </Link>
                       </div>
                     );
                   })}
