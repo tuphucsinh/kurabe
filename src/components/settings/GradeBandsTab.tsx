@@ -80,6 +80,11 @@ export default function GradeBandsTab() {
         setError(result.error || 'Lỗi khi lưu thang điểm.');
         toast(result.error || 'Lỗi khi lưu thang điểm.', 'error');
       }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Lỗi không xác định khi lưu thang điểm.';
+      console.error('saveGradeBands error:', err);
+      setError(message);
+      toast(message, 'error');
     } finally {
       setIsSaving(false);
     }
