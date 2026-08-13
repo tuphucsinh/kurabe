@@ -25,7 +25,7 @@ const usageGuide = [
   {
     title: '2. Mở danh sách nhân viên và đọc trạng thái đúng cách',
     content:
-      'Vào mục "Nhân viên" để xem toàn bộ danh sách trong phạm vi quyền của bạn. Ở cột "Xếp loại gần nhất", vòng hiện tại luôn được hiển thị đậm hơn, các vòng trước mờ hơn. Hãy dùng cột này để xác định nhanh một người đang ở vòng nào, điểm hiện tại là bao nhiêu, và có lịch sử thay đổi gì từ các vòng trước.',
+      'Vào mục "Nhân viên" để xem toàn bộ danh sách trong phạm vi quyền của bạn. Ở cột "Xếp loại gần nhất", vòng hiện tại luôn được hiển thị đậm hơn, các vòng trước mờ hơn. Hãy dùng cột này để xác định nhanh một người đang ở vòng nào, điểm hiện tại là bao nhiêu, và có lịch sử thay đổi gì từ các vòng trước. Trên màn hình chi tiết nhóm, mỗi người có badge trạng thái rõ ràng: "Chưa bắt đầu" (chưa ai nộp vòng hiện tại), "Đã nộp vòng X" (vòng X vừa được nộp hoặc đã xem xét) hoặc "Đã có KẾT QUẢ đánh giá" (đã được duyệt hoàn tất).',
   },
   {
     title: '3. Mở đúng hồ sơ cần đánh giá hoặc cần xem',
@@ -95,7 +95,7 @@ const roleGuides = [
     summary:
       'Quản lý kỳ đánh giá, xem toàn bộ dữ liệu, chấm vòng cuối và điều chỉnh trực tiếp bộ tiêu chuẩn khi cần.',
     details:
-      'Manager là vai trò duy nhất có quyền khởi tạo kỳ mới, đóng kỳ, rà soát tất cả nhân sự và cập nhật cấu hình tiêu chuẩn đánh giá.',
+      'Manager là vai trò duy nhất có quyền quản lý kỳ đánh giá (tạo/đóng/xóa), rà soát tất cả nhân sự, cập nhật tiêu chuẩn, thang điểm, mục tiêu kỳ và xem nhật ký hoạt động — tập trung trong trang Cài đặt (6 tab: Tài khoản, Kỳ đánh giá, Thang điểm, Nhóm & Quyền, Nhật ký, Mục tiêu).',
   },
 ];
 
@@ -154,7 +154,7 @@ const managementGuide = [
       'Dùng biểu tượng thùng rác trên thẻ nhóm để xóa nhóm khi không còn sử dụng.',
     ],
     note:
-      'Quy tắc bắt buộc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER VÀ 1 SUBLEADER. Để thay đổi Leader/SubLeader, phải làm đúng 2 bước: (1) HẠ người đang giữ chức xuống "Nhân viên" trước, (2) rồi THĂNG người khác lên. Hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có người giữ chức (hiện thông báo yêu cầu hạ người cũ trước). Khi thay đổi chức vụ, hệ thống tự đồng bộ leader hiển thị ở trang Nhóm, danh sách nhân viên và các vòng đánh giá tương ứng.',
+      'Quy tắc bắt buộc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER; SubLeader không giới hạn số lượng. Để thay đổi Leader, phải làm đúng 2 bước: (1) HẠ người đang giữ chức xuống "Nhân viên" trước, (2) rồi THĂNG người khác lên. Hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có Leader (hiện thông báo yêu cầu hạ người cũ trước). Với SubLeader thì thăng/hạ tự do, không cần hạ người cũ. Khi thay đổi chức vụ hoặc SubLeader, hệ thống tự đồng bộ leader hiển thị ở trang Nhóm, danh sách nhân viên và các vòng đánh giá (vòng 1 chưa nộp được gán lại đúng người đánh giá).',
   },
   {
     title: 'Quản lý tiêu chuẩn đánh giá',
@@ -167,13 +167,23 @@ const managementGuide = [
     note:
       'Chỉ Manager (Ngô Thảo Ly / tài khoản có vai trò Manager) mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader và Nhân viên chỉ được xem bảng tiêu chuẩn, không có nút thao tác. Thay đổi tiêu chuẩn sẽ ảnh hưởng ngay đến cách chấm điểm của kỳ hiện tại nên cần rà soát kỹ trước khi lưu.',
   },
+  {
+    title: 'Cập nhật tài khoản & mật khẩu (mọi vai trò)',
+    steps: [
+      'Vào mục "Cài đặt" từ sidebar — mọi vai trò đều vào được, nhưng chỉ thấy tab "Tài khoản" của mình (Manager thấy thêm các tab quản trị).',
+      'Tab Tài khoản hiển thị thông tin cá nhân (mã nhân viên, họ tên, chức vụ, nhóm).',
+      'Chưa có mật khẩu → bấm "Đặt mật khẩu" (tối thiểu 6 ký tự). Đã có mật khẩu → nhập mật khẩu cũ rồi "Đổi mật khẩu".',
+    ],
+    note:
+      'Hiện tại đăng nhập vẫn dùng mã nhân viên; mật khẩu được lưu sẵn sàng cho đợt bật đăng nhập bằng mật khẩu sắp tới. Manager có thể đặt lại mật khẩu của nhân viên (đưa về trống) từ nút "Đặt lại mật khẩu" trong trang Nhân viên — khi đó nhân viên vào Cài đặt đặt mật khẩu mới.',
+  },
 ];
 
 const permissionMatrix = [
   {
     role: 'Manager',
     rights:
-      'Xem toàn bộ dữ liệu; thêm, sửa, xóa nhân viên; thêm, sửa, xóa nhóm; tạo, đóng, xóa kỳ; sửa tiêu chuẩn; chấm vòng cuối theo workflow.',
+      'Xem toàn bộ dữ liệu; thêm, sửa, xóa nhân viên (kèm đặt lại mật khẩu); thêm, sửa, xóa nhóm; tạo, đóng, xóa kỳ; sửa tiêu chuẩn, thang điểm, mục tiêu kỳ; xem nhật ký hoạt động; chấm vòng cuối theo workflow.',
   },
   {
     role: 'Leader',
@@ -183,12 +193,12 @@ const permissionMatrix = [
   {
     role: 'SubLeader',
     rights:
-      'Xem dữ liệu trong phạm vi nhóm phụ trách; tự đánh giá vòng 1 và đánh giá nhân viên vòng 1; không có quyền thêm, sửa, xóa nhân viên hoặc nhóm.',
+      'Xem dữ liệu trong phạm vi nhóm phụ trách; tự đánh giá vòng 1 và đánh giá nhân viên vòng 1; không có quyền thêm, sửa, xóa nhân viên hoặc nhóm; có thể cập nhật thông tin cá nhân và đặt/đổi mật khẩu trong Cài đặt → Tài khoản.',
   },
   {
     role: 'Nhân viên',
     rights:
-      'Chỉ xem dữ liệu thuộc phạm vi của mình và tham gia các vòng đánh giá nếu workflow cho phép; không có quyền quản lý nhân viên, nhóm, kỳ hay tiêu chuẩn.',
+      'Chỉ xem dữ liệu thuộc phạm vi của mình và tham gia các vòng đánh giá nếu workflow cho phép; không có quyền quản lý nhân viên, nhóm, kỳ hay tiêu chuẩn; có thể cập nhật thông tin cá nhân và đặt/đổi mật khẩu trong Cài đặt → Tài khoản.',
   },
 ];
 
@@ -206,7 +216,7 @@ const faqItems = [
   {
     question: 'Tôi muốn thay đổi Leader hoặc SubLeader của nhóm thì làm thế nào?',
     answer:
-      'Mỗi nhóm chỉ có đúng 1 Leader và 1 SubLeader. Muốn đổi người giữ chức, hãy làm 2 bước theo đúng thứ tự: (1) vào "Nhân viên", hạ người đang giữ chức xuống "Nhân viên" trước; (2) sau đó thăng người mới lên Leader/SubLeader. Hệ thống sẽ chặn nếu bạn thăng người mới khi nhóm vẫn còn người giữ chức cũ — đây là quy tắc bắt buộc để mỗi nhóm luôn chỉ có 1 Leader + 1 SubLeader.',
+      'Quy tắc này chỉ áp dụng cho Leader: mỗi nhóm chỉ có đúng 1 Leader. Muốn đổi Leader, hãy làm 2 bước theo đúng thứ tự: (1) vào "Nhân viên", hạ người đang giữ chức xuống "Nhân viên" trước; (2) sau đó thăng người mới lên Leader. Hệ thống sẽ chặn nếu bạn thăng người mới khi nhóm vẫn còn Leader cũ. Với SubLeader thì không giới hạn: thăng thêm hoặc hạ bớt bất cứ lúc nào, hệ thống tự cập nhật vòng đánh giá tương ứng.',
   },
   {
     question: 'Vì sao có nhân viên chưa có dữ liệu evaluation?',

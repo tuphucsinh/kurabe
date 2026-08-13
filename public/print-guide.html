@@ -497,16 +497,16 @@
           <div class="role-box-title">1. NHÂN VIÊN (EMPLOYEE) <span class="badge">Vòng 1-3</span></div>
           <ul>
             <li><strong>Quyền hạn:</strong> Xem kết quả đánh giá cá nhân sau khi được duyệt.</li>
-            <li><strong>Tự đánh giá:</strong> Tham gia tự chấm điểm ở Vòng 1 nếu cấu hình kỳ yêu cầu.</li>
+            <li><strong>Vòng 1:</strong> Do SubLeader chấm — bản thân không tự đánh giá; Vòng 2 do Leader, Vòng 3 do Manager duyệt chốt.</li>
             <li><strong>Giới hạn:</strong> Không thể chỉnh sửa kết quả của người khác hay quản lý dữ liệu.</li>
           </ul>
         </div>
 
         <div class="role-box">
-          <div class="role-box-title">2. PHÓ NHÓM (SUBLEADER) <span class="badge">Vòng 1</span></div>
+          <div class="role-box-title">2. PHÓ NHÓM (SUBLEADER) <span class="badge">Vòng 1-3</span></div>
           <ul>
             <li><strong>Quyền hạn:</strong> Tự đánh giá bản thân (Vòng 1) và chấm điểm Nhân viên thuộc nhóm ở Vòng 1.</li>
-            <li><strong>Ghi chú:</strong> Nhập nhận xét chuyên môn từng tiêu chí ở giai đoạn trực tiếp sản xuất.</li>
+            <li><strong>Bản thân:</strong> Được đánh giá đủ 3 vòng: Tự đánh giá &rarr; Leader &rarr; Manager duyệt chốt.</li>
             <li><strong>Giới hạn:</strong> Không xem/chấm được nhân sự nhóm khác hoặc cấp cao hơn.</li>
           </ul>
         </div>
@@ -523,9 +523,9 @@
         <div class="role-box">
           <div class="role-box-title">4. QUẢN LÝ / ADMIN (MANAGER) <span class="badge">Vòng Cuối</span></div>
           <ul>
-            <li><strong>Quyền hạn:</strong> Duyệt Vòng 3 (Chốt điểm cuối), Quản lý Kỳ đánh giá (Tạo/Đóng kỳ).</li>
-            <li><strong>Dữ liệu nền:</strong> Quản lý Nhóm phòng ban, Thêm/Sửa/Xóa Nhân viên, Import Excel.</li>
-            <li><strong>Cấu hình:</strong> Sửa bộ Tiêu chuẩn (Criteria), Thang điểm và dải Xếp loại (S/A/B/C/D).</li>
+            <li><strong>Quyền hạn:</strong> Duyệt Vòng 3 (Chốt điểm cuối), Quản lý Kỳ đánh giá (Tạo/Đóng kỳ) — thao tác tại trang Cài đặt &rarr; Tab "Kỳ đánh giá".</li>
+            <li><strong>Dữ liệu nền:</strong> Quản lý Nhóm phòng ban, Thêm/Sửa/Xóa Nhân viên (kèm đặt lại mật khẩu), Import Excel.</li>
+            <li><strong>Cấu hình:</strong> Sửa bộ Tiêu chuẩn (Criteria), Thang điểm, Mục tiêu kỳ (tỉ lệ % + xếp loại), xem Nhật ký hoạt động — tại trang Cài đặt.</li>
           </ul>
         </div>
       </div>
@@ -592,7 +592,7 @@
       <div class="sub-header">1. Quản Lý Kỳ Đánh Giá (Tạo Kỳ Mới Định Kỳ)</div>
       <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Khi bắt đầu đợt đánh giá mới (VD: Năm 2026), <strong>KHÔNG CẦN XÓA DỮ LIỆU CŨ</strong>. Quản trị viên chỉ cần thực hiện theo các bước:</p>
       <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
-        <li>Vào trang <strong>"Bảng điều khiển" (Dashboard)</strong> &rarr; bấm nút <strong>"Tạo kỳ mới"</strong> ở khu vực quản lý kỳ (chỉ Manager thấy).</li>
+        <li>Vào trang <strong>"Cài đặt"</strong> &rarr; Tab <strong>"Kỳ đánh giá"</strong> (chỉ Manager thấy tab này).</li>
         <li>Bấm <strong>"Tạo Kỳ Đánh Giá Mới"</strong>, điền tên (VD: "Đánh Giá QAQC 2026") và chọn trạng thái <strong>"Active"</strong>.</li>
         <li>Hệ thống tự động kích hoạt kỳ mới. Toàn bộ nhân sự khi đăng nhập sẽ tự động chuyển sang kỳ mới với bảng điểm trắng sẵn sàng để đánh giá. Các kỳ cũ được lưu lại trong lịch sử để tra cứu.</li>
       </ol>
@@ -620,7 +620,7 @@
         <li><strong>Sửa nhóm:</strong> Bấm biểu tượng <strong>bút chì ✏️</strong> trên thẻ nhóm &rarr; sửa tên hoặc Leader &rarr; bấm lưu.</li>
         <li><strong>Xóa nhóm:</strong> Bấm biểu tượng <strong>thùng rác 🗑️</strong> trên thẻ nhóm &rarr; xác nhận trong hộp thoại.</li>
       </ol>
-      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Quy tắc bắt buộc: Mỗi nhóm CHỈ có đúng 1 Leader + 1 SubLeader. Muốn đổi người giữ chức, phải HẠ người cũ xuống "Nhân viên" TRƯỚC, rồi THĂNG người mới lên SAU. Hệ thống sẽ từ chối nếu thăng người mới khi nhóm vẫn còn người giữ chức cũ.</p>
+      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Quy tắc bắt buộc: Mỗi nhóm CHỈ có đúng 1 Leader; SubLeader không giới hạn số lượng. Muốn đổi Leader, phải HẠ người cũ xuống "Nhân viên" TRƯỚC, rồi THĂNG người mới lên SAU. Hệ thống sẽ từ chối nếu thăng người mới khi nhóm vẫn còn Leader cũ. Với SubLeader: thăng/hạ tự do, hệ thống tự cập nhật vòng đánh giá tương ứng.</p>
 
       <div class="sub-header">5. Thêm / Sửa / Xóa Tiêu Chuẩn Đánh Giá (Chỉ Manager)</div>
       <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Chỉ <strong>Manager</strong> mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader, Nhân viên chỉ xem được bảng tiêu chuẩn (không có nút thao tác). Các thao tác:</p>
@@ -644,6 +644,14 @@
           </ul>
         </li>
       </ol>
+
+      <div class="sub-header">7. Cập Nhật Tài Khoản &amp; Đặt/Đổi Mật Khẩu (Mọi Vai Trò)</div>
+      <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 6px;">
+        <li>Vào mục <strong>"Cài đặt"</strong> từ menu — mọi vai trò đều vào được; Nhân viên/SubLeader/Leader chỉ thấy tab <strong>"Tài khoản"</strong>, Manager thấy thêm các tab quản trị.</li>
+        <li>Tab Tài khoản hiển thị thông tin cá nhân (Mã NV, Họ tên, Chức vụ, Nhóm) và phần mật khẩu.</li>
+        <li>Chưa có mật khẩu &rarr; bấm <strong>"Đặt mật khẩu"</strong> (tối thiểu 6 ký tự). Đã có mật khẩu &rarr; nhập mật khẩu cũ rồi bấm <strong>"Đổi mật khẩu"</strong>.</li>
+      </ol>
+      <p style="font-size: 8.5pt; color: #334155;">Hiện tại đăng nhập vẫn dùng mã nhân viên; mật khẩu được lưu sẵn sàng cho đợt bật đăng nhập bằng mật khẩu sắp tới. Manager có thể đặt lại mật khẩu của nhân viên (đưa về trống) từ nút <strong>"Đặt lại mật khẩu"</strong> trong trang Nhân viên — khi đó nhân viên vào Cài đặt để đặt mật khẩu mới.</p>
     </div>
 
     <!-- CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO VÀ PHÂN TÍCH NĂNG LỰC -->
