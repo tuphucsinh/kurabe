@@ -34,10 +34,10 @@ export async function callAI(
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: opts.system || 'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt.' },
+          { role: 'system', content: opts.system || 'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt. TRẢ LỜI TRỰC TIẾP NỘI DUNG, KHÔNG suy luận dài dòng.' },
           { role: 'user', content: prompt },
         ],
-        max_tokens: opts.maxTokens ?? 500,
+        max_tokens: opts.maxTokens ?? 800,
         temperature: opts.temperature ?? 0.3,
       }),
       signal: controller.signal,
