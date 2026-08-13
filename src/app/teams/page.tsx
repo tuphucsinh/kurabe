@@ -7,8 +7,6 @@ import {
   Users, 
   User as UserIcon, 
   CheckCircle2, 
-  Clock, 
-  ChevronRight, 
   Plus,
   TrendingUp,
   Edit2,
@@ -193,9 +191,10 @@ export default function TeamsPage() {
               : 'bg-primary';
 
             return (
-              <div 
+              <Link 
                 key={team.id} 
-                className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden"
+                href={`/teams/${team.id}`}
+                className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
               >
                 {/* Card Header */}
                 <div className="p-6 pb-5">
@@ -243,7 +242,7 @@ export default function TeamsPage() {
                 </div>
 
                 {/* Card Body */}
-                <div className="px-6 pb-5 flex-1 space-y-5">
+                <div className="px-6 pb-6 flex-1 space-y-5">
                   {/* Stats Row */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center p-3 rounded-xl bg-surface">
@@ -295,28 +294,7 @@ export default function TeamsPage() {
                     <span className="text-[11px] text-outline">{team.membersCount} thành viên</span>
                   </div>
                 </div>
-
-                {/* Card Footer */}
-                <div className="px-6 py-4 bg-surface/50 border-t border-outline-variant/50 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                      <CheckCircle2 size={14} />
-                      <span>{team.completedCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
-                      <Clock size={14} />
-                      <span>{team.membersCount - team.completedCount}</span>
-                    </div>
-                  </div>
-                  <Link 
-                    href={`/teams/${team.id}`}
-                    className="text-primary text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
-                  >
-                    Chi tiết
-                    <ChevronRight size={16} />
-                  </Link>
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>
