@@ -220,7 +220,17 @@ export default function TeamDetailPage() {
         ) : (
           <div className="space-y-5">
             {/* SubLeader Blocks */}
-            {subLeaderBlocks.grouped.map(({ subLeader: sl, rows }) => (
+            {subLeaderBlocks.grouped.map(({ subLeader: sl, rows }) => {
+              const slEvaluation = evaluations.find((e: Evaluation) => e.employeeId === sl.id) || null;
+              const slSubmitted = slEvaluation?.rounds
+                ? [...slEvaluation.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
+                : [];
+              const slStatus = slEvaluation?.status || 'NotStarted';
+              const slBadge = getStatusBadge(slStatus, slSubmitted[0]?.round ?? slEvaluation?.currentRound ?? null);
+              const slGrade = slEvaluation?.finalGrade || (slSubmitted.length ? slSubmitted[0].grade : null);
+              const slGradeRound = slSubmitted[0]?.round ?? null;
+              const slScore = slSubmitted[0]?.totalScore ?? null;
+              return (
               <div
                 key={sl.id}
                 className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden p-4 space-y-3"
@@ -239,9 +249,42 @@ export default function TeamDetailPage() {
                       </span>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20 shrink-0">
-                    {rows.length} nhân viên
-                  </span>
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
+                        {slBadge.label}
+                      </span>
+                      {slGrade && slGrade !== 'Pending' && (
+                        <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                          slGrade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                          slGrade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                          slGrade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                          slGrade === 'B' ? 'bg-blue-100 text-blue-700' :
+                          slGrade === 'C' ? 'bg-amber-100 text-amber-700' :
+                          slGrade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                        }`}>
+                          {slGrade}
+                        </span>
+                      )}
+                      {slGrade && slGrade !== 'Pending' && slScore != null && (
+                        <div className="flex items-end gap-2 tabular-nums">
+                          {slGradeRound != null && (
+                            <div className="w-12 flex flex-col items-center leading-none">
+                              <span className="text-xs text-slate-700 font-bold">L{slGradeRound}</span>
+                              <span className="text-base text-slate-800 font-bold mt-1">{slScore}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {slEvaluation && (
+                        <Link
+                          href={`/evaluations/${sl.id}`}
+                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          title="Xem đánh giá"
+                        >
+                          <FileText size={18} />
+                        </Link>
+                      )}
+                    </div>
                 </div>
 
                 {/* Direct Employees List */}
@@ -324,8 +367,9 @@ export default function TeamDetailPage() {
                 </div>
               )}
               </div>
-            ))}
-
+            );
+            })}
+ 
             {/* Unassigned SubLeader Block */}
             {subLeaderBlocks.unassignedRows.length > 0 && (
               <div className="bg-white rounded-2xl border border-amber-200/80 shadow-sm overflow-hidden p-4 space-y-3">
