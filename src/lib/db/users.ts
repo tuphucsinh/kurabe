@@ -192,7 +192,9 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
     role: user.role || 'Employee',
     team_id: user.teamId || null,
     join_date: user.joinDate || null,
-    avatar_url: user.avatar || null
+    avatar_url: user.avatar || null,
+    subleader_id: user.subleaderId || null,
+    description: user.description || null,
   };
 
   const { data, error } = await supabase
@@ -236,6 +238,8 @@ export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
     team_id: user.teamId || null,
     join_date: user.joinDate || null,
     avatar_url: user.avatar || null,
+    subleader_id: user.subleaderId || null,
+    description: user.description || null,
     is_active: true
   }));
 
@@ -284,6 +288,8 @@ export function mapUserFromDb(dbUser: DbUser): User {
     teamId: dbUser.team_id || '',
     joinDate: dbUser.join_date || '',
     avatar: dbUser.avatar_url || undefined,
+    subleaderId: dbUser.subleader_id,
+    description: dbUser.description,
   };
 }
 

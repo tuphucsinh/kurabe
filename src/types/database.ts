@@ -472,6 +472,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          description: string | null
           employee_code: string
           id: string
           is_active: boolean | null
@@ -479,11 +480,13 @@ export type Database = {
           name: string
           password_hash: string | null
           role: string
+          subleader_id: string | null
           team_id: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          description?: string | null
           employee_code: string
           id?: string
           is_active?: boolean | null
@@ -491,11 +494,13 @@ export type Database = {
           name: string
           password_hash?: string | null
           role: string
+          subleader_id?: string | null
           team_id?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          description?: string | null
           employee_code?: string
           id?: string
           is_active?: boolean | null
@@ -503,6 +508,7 @@ export type Database = {
           name?: string
           password_hash?: string | null
           role?: string
+          subleader_id?: string | null
           team_id?: string | null
         }
         Relationships: [

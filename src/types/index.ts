@@ -26,6 +26,8 @@ export interface User {
   teamId: string;
   joinDate?: string;
   avatar?: string;
+  subleaderId?: string | null;
+  description?: string | null;
 }
 
 export interface Team {

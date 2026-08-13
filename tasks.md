@@ -124,7 +124,7 @@
 
 **Definition of Done**: migration chạy xong (cột tồn tại — query verify); build PASS (types khớp).
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
