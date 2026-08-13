@@ -20,13 +20,24 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Evaluation, User } from '@/types';
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  Approved: { label: 'Đã xong', className: 'bg-green-100 text-green-700' },
+  Approved: { label: 'Đã có KẾT QUẢ đánh giá', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
   NotStarted: { label: 'Chưa bắt đầu', className: 'bg-slate-100 text-slate-500' },
   InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Submitted: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
   Reviewed: { label: 'Đã xem xét', className: 'bg-indigo-100 text-indigo-700' },
 };
+
+function getStatusBadge(status: string, latestRound?: number | null): { label: string; className: string } {
+  if (status === 'Submitted') {
+    const roundText = latestRound ? ` vòng ${latestRound}` : '';
+    return {
+      label: `Đã nộp${roundText}`,
+      className: 'bg-blue-100 text-blue-700',
+    };
+  }
+  return STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+}
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   Leader: { label: 'Leader', className: 'bg-indigo-100 text-indigo-700' },
@@ -72,6 +83,7 @@ export default function TeamDetailPage() {
       const submittedRounds = ev?.rounds
         ? [...ev.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
         : [];
+      const latestSubmittedRound = submittedRounds[0]?.round ?? ev?.currentRound ?? null;
       const grade = ev?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
       const gradeRound = submittedRounds[0]?.round ?? null;
       const score = submittedRounds[0]?.totalScore ?? null;
@@ -79,7 +91,7 @@ export default function TeamDetailPage() {
         round: r.round,
         score: r.totalScore,
       }));
-      return { member: m, evaluation: ev || null, status, grade, gradeRound, score, previousRounds };
+      return { member: m, evaluation: ev || null, status, grade, gradeRound, latestSubmittedRound, score, previousRounds };
     });
   }, [members, evaluations]);
 
@@ -239,8 +251,8 @@ export default function TeamDetailPage() {
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {rows.map(({ member, evaluation, status, grade, gradeRound, score, previousRounds }) => {
-                      const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+                    {rows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                      const badge = getStatusBadge(status, latestSubmittedRound);
                       return (
                         <div
                           key={member.id}
@@ -329,8 +341,8 @@ export default function TeamDetailPage() {
 
                 {/* Unassigned Employees List */}
                 <div className="divide-y divide-slate-100">
-                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade, gradeRound, score, previousRounds }) => {
-                    const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                    const badge = getStatusBadge(status, latestSubmittedRound);
                     return (
                       <div
                         key={member.id}
