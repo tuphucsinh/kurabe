@@ -57,11 +57,11 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 **New interface**: `TargetTab` (useAuth allPeriods/currentPeriod) — select kỳ + input % (0-100) + select grade (S/A/AB/B/C/D) + nút Lưu; tab thứ 7 "Mục tiêu" (icon Target).
 
-### [#P55T03] [src/app/reports/page.tsx] Báo cáo dùng mục tiêu động
+- **P55T01**: migration target_rate/target_grade (default 75/AB) + types + savePeriodTarget (requireManager, admin, logAudit) ✅
+- **P55T02**: Tab "Mục tiêu" trong Cài đặt (chọn kỳ + % + grade + Lưu) ✅
+- **P55T03**: Báo cáo "Mục tiêu Kỳ này" đọc động từ kỳ ✅ (verify: lưu 80/A → reports hiển thị "Đạt tỉ lệ 80%... từ A"; restore 75/AB)
 
-**Goal**: Hộp "Mục tiêu Kỳ này" đọc target từ kỳ (thay hardcode 75/AB) — text + tiến độ % theo target_rate.
-
-**Depends on**: `[#P55T01]` — **Parallel-safe**: `no`
+**Phase 55 DONE** — verify browser PASS (Settings → Mục tiêu → Lưu → toast; Reports hiển thị đúng). Kèm P1: login ẩn "Tài khoản test" trên production (`NEXT_PUBLIC_SHOW_TEST_LOGIN=true` chỉ local). Commit `0605a3f` — đã push.
 
 ---
 
