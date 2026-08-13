@@ -73,7 +73,13 @@ export default function TeamDetailPage() {
         ? [...ev.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
         : [];
       const grade = ev?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
-      return { member: m, evaluation: ev || null, status, grade };
+      const gradeRound = submittedRounds[0]?.round ?? null;
+      const score = submittedRounds[0]?.totalScore ?? null;
+      const previousRounds = submittedRounds.slice(1).map((r) => ({
+        round: r.round,
+        score: r.totalScore,
+      }));
+      return { member: m, evaluation: ev || null, status, grade, gradeRound, score, previousRounds };
     });
   }, [members, evaluations]);
 
@@ -233,12 +239,12 @@ export default function TeamDetailPage() {
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {rows.map(({ member, evaluation, status, grade }) => {
+                    {rows.map(({ member, evaluation, status, grade, gradeRound, score, previousRounds }) => {
                       const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
                       return (
                         <div
                           key={member.id}
-                          className="flex items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                          className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
                           <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                             {member.name.charAt(0)}
@@ -260,20 +266,43 @@ export default function TeamDetailPage() {
                             {badge.label}
                           </span>
                           {grade && grade !== 'Pending' && (
-                            <span className="text-sm font-black text-primary shrink-0 w-8 text-center">
-                              {grade}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                                grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                                grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                                grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                                grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                                grade === 'C' ? 'bg-amber-100 text-amber-700' :
+                                grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {grade}
+                              </span>
+                              <div className="flex items-end gap-2 tabular-nums">
+                                {gradeRound != null && (
+                                  <div className="w-12 flex flex-col items-center leading-none">
+                                    <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
+                                    <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
+                                  </div>
+                                )}
+                                {previousRounds.map((roundData) => (
+                                  <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
+                                    <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                    <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                           <Link
-                          href={`/evaluations/${member.id}`}
-                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-                          title="Xem đánh giá"
-                        >
-                          <FileText size={18} />
-                        </Link>
-                      </div>
-                    );
-                  })}
+                            href={`/evaluations/${member.id}`}
+                            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                            title="Xem đánh giá"
+                          >
+                            <FileText size={18} />
+                          </Link>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
               </div>
@@ -300,12 +329,12 @@ export default function TeamDetailPage() {
 
                 {/* Unassigned Employees List */}
                 <div className="divide-y divide-slate-100">
-                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade }) => {
+                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade, gradeRound, score, previousRounds }) => {
                     const badge = STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
                     return (
                       <div
                         key={member.id}
-                        className="flex items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                        className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
                         <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
                           {member.name.charAt(0)}
@@ -320,9 +349,32 @@ export default function TeamDetailPage() {
                           {badge.label}
                         </span>
                         {grade && grade !== 'Pending' && (
-                          <span className="text-sm font-black text-primary shrink-0 w-8 text-center">
-                            {grade}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                              grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                              grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                              grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                              grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                              grade === 'C' ? 'bg-amber-100 text-amber-700' :
+                              grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                            }`}>
+                              {grade}
+                            </span>
+                            <div className="flex items-end gap-2 tabular-nums">
+                              {gradeRound != null && (
+                                <div className="w-12 flex flex-col items-center leading-none">
+                                  <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
+                                  <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
+                                </div>
+                              )}
+                              {previousRounds.map((roundData) => (
+                                <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
+                                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                         <Link
                           href={`/evaluations/${member.id}`}
