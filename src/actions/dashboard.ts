@@ -4,6 +4,7 @@ import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
+import { getSessionUser } from '@/lib/auth';
 import { User, Evaluation, CriteriaGroup } from '@/types';
 
 export interface DashboardData {
@@ -32,8 +33,12 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
   if (!periodId) return null;
 
   try {
+    // Viewer = user đang đăng nhập (session) — dashboard hiển thị đúng scope theo role;
+    // trước đây truyền undefined → filterEvaluationsForViewer trả [] → stats luôn 0.
+    const viewer = await getSessionUser();
+
     const [evaluations, users, teams, criteriaGroups] = await Promise.all([
-      getEvaluationsByPeriod(periodId),
+      getEvaluationsByPeriod(periodId, viewer),
       getUsers(),
       getTeams(),
       getAllCriteriaGroups()
