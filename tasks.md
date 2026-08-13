@@ -29,6 +29,18 @@ Tất cả task P52T01-T04 đã hoàn thành + verify browser (chi tiết: `.ai/
 
 ## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
 
+- **P54T01**: requireAuth/requireManager server-side — mọi action lấy actor từ session ✅ (commit `fbd418a`)
+- **P54T02**: RLS deny anon WRITE (evaluation_periods + grade_bands) + admin client ✅ (`e4bafa4`)
+- **P54T03**: audit_logs + logAudit + hook 10 action ✅ (`301d055`, `5388d45`)
+- **P54T04**: Tab "Nhật ký" trong Cài đặt ✅ (`469f8d0`)
+- **P54T05**: Dashboard "Đánh giá tồn đọng" + fix bug stats cũ ✅ (`469f8d0`, `a539635`)
+
+**Phase 54 DONE — Reviewer PASS (fresh, độc lập).** Chi tiết + rủi ro còn lại (Phase 44): `.ai/MASTER_PLAN.md` → Phase 54.
+
+---
+
+## Phase 54: Bảo mật (C2+C3) + Nhắc tồn đọng + Audit log 🔴 (CONTROLLED — auth/RLS)
+
 ### [#P54T01] [src/lib/auth.ts + src/actions/*] requireAuth/requireRole — server-side authz mọi action
 
 **Goal**: Server actions KHÔNG còn trust actorId từ client — lấy user từ session cookie `auth_session`, verify role. Đóng lỗ CRITICAL C2.
