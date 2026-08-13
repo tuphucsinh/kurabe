@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -26,6 +26,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   const mainLinks = [
@@ -109,6 +110,7 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, logout, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
+  const router = useRouter();
   return (
     <>
       {/* Logo & Close Button */}
@@ -181,6 +183,7 @@ function SidebarContent({ user, logout, mainLinks, bottomLinks, isActive, onClos
           onClick={() => {
             onClose?.();
             logout();
+            router.push('/login');
           }}
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/8 hover:text-red-400 transition-all duration-200 w-full text-left group"
         >
