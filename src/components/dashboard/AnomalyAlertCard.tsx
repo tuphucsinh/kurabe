@@ -33,25 +33,17 @@ export default function AnomalyAlertCard({ evaluations }: { evaluations: Evaluat
 
   if (!isManager) return null;
 
+  if (anomalies.length === 0) return null;
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <div className="flex items-center gap-2 mb-5">
         <AlertTriangle className="w-5 h-5 text-amber-500" />
         <h3 className="text-lg font-semibold text-slate-800">Cảnh báo đánh giá bất thường</h3>
-        {anomalies.length > 0 && (
-          <span className="ml-auto text-sm font-bold text-amber-600">{anomalies.length} cảnh báo</span>
-        )}
+        <span className="ml-auto text-sm font-bold text-amber-600">{anomalies.length} cảnh báo</span>
       </div>
 
-      {anomalies.length === 0 ? (
-        <EmptyState
-          icon={AlertTriangle}
-          title="Không có cảnh báo nào"
-          description="Chưa phát hiện chênh lệch điểm bất thường giữa các vòng đánh giá."
-          className="p-0"
-        />
-      ) : (
-        <div className="space-y-3">
+      <div className="space-y-3">
           {anomalies.map((a) => {
             const key = `${a.evaluationId}-${a.round}`;
             const isHigh = a.severity === 'high';
@@ -93,7 +85,6 @@ export default function AnomalyAlertCard({ evaluations }: { evaluations: Evaluat
             * Cảnh báo dựa trên quy tắc chênh lệch điểm giữa 2 vòng liên tiếp (≥20: chú ý, ≥30: nghiêm trọng).
           </p>
         </div>
-      )}
     </div>
   );
 }

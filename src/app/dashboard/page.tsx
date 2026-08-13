@@ -3,10 +3,12 @@ import { supabase } from '@/lib/supabase';
 import { getDashboardData } from '@/actions/dashboard';
 import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Users, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
 import PendingReviews from '@/components/dashboard/PendingReviews';
 import AnomalyAlertCard from '@/components/dashboard/AnomalyAlertCard';
 import { cookies } from 'next/headers';
 import ClientSkillGapRadar from '@/components/charts/ClientSkillGapRadar';
+import { GradeDistribution } from '@/components/charts/GradeDistribution';
 
 
 export default async function DashboardPage() {
@@ -71,17 +73,32 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
-          <PeriodSummary 
-            stats={dashboardData.stats} 
-            gradeDistribution={dashboardData.gradeDistribution} 
-            totalEvaluationsCount={dashboardData.rawEvaluations.length} 
-          />
+          {/* KPI Compact */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
+              <Users size={18} className="text-primary" />
+              <span className="text-lg font-black text-slate-900">{dashboardData.stats.total}</span>
+              <span className="text-sm text-slate-500">nhân sự</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
+              <TrendingUp size={18} className="text-emerald-600" />
+              <span className="text-lg font-black text-slate-900">{dashboardData.stats.percent}%</span>
+              <span className="text-sm text-slate-500">tiến độ</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-green-600" />
+              <span className="text-lg font-black text-slate-900">{dashboardData.stats.completed}/{dashboardData.stats.total}</span>
+              <span className="text-sm text-slate-500">đã đánh giá</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
+              <Clock size={18} className="text-amber-600" />
+              <span className="text-lg font-black text-slate-900">{dashboardData.stats.notStarted}</span>
+              <span className="text-sm text-slate-500">chưa xong</span>
+            </div>
+          </div>
 
-          <PendingReviews evaluations={dashboardData.rawEvaluations} />
-
-          <AnomalyAlertCard evaluations={dashboardData.rawEvaluations} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Grid: TeamStatus | GradeDistribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Team Status */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-1">
               <h3 className="text-lg font-semibold text-slate-800 mb-6">Trạng thái theo nhóm</h3>
@@ -103,16 +120,28 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Skill Gap Radar - Still needs raw evaluations for recharts, but we pass it directly */}
-            <div className="lg:col-span-1">
+            {/* Grade Distribution */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 mb-4">Phân bổ xếp loại</h3>
+              <GradeDistribution data={dashboardData.gradeDistribution} />
+            </div>
+          </div>
+
+          {/* Grid: PendingReviews | Anomaly */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PendingReviews evaluations={dashboardData.rawEvaluations} />
+            <AnomalyAlertCard evaluations={dashboardData.rawEvaluations} />
+          </div>
+
+          {/* Grid: Radar | Recent */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
               <ClientSkillGapRadar 
                 evaluations={dashboardData.rawEvaluations} 
                 criteriaGroups={dashboardData.rawCriteriaGroups} 
               />
             </div>
-
-            {/* Recent Activities */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-1 2xl:col-span-1">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
               <h3 className="text-lg font-semibold text-slate-800 mb-6">Hoạt động gần đây</h3>
               <div className="space-y-4 flex-1">
                 {dashboardData.recentActivities.map((activity) => (
