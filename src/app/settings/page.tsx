@@ -13,10 +13,20 @@ import AuditTab from '@/components/settings/AuditTab';
 import TargetTab from '@/components/settings/TargetTab';
 
 export default function SettingsPage() {
-  const { isLoading, isManager } = useAuth();
+  const { isLoading, isManager, user } = useAuth();
   const [activeTab, setActiveTab] = useState('periods');
 
   if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#003449] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Logout/chưa đăng nhập: KHÔNG hiện "Chỉ Quản lý" (tránh chớp màn hình khi logout) —
+  // middleware sẽ redirect /login; hiện spinner chờ chuyển trang.
+  if (!user) {
     return (
       <div className="min-h-screen bg-[#003449] flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
