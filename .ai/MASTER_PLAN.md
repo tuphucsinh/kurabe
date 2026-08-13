@@ -181,6 +181,7 @@
 > **Priority**: ASAP — App đang public trên Vercel, 3 lỗ hổng CRITICAL.
 
 - **[C1] Auth Fix**: Thêm password/PIN cho Manager login (hotfix). Dài hạn: migrate Supabase Auth.
+  - ⚠️ **Nguyên tắc khôi phục (chốt 2026-08-13)**: `password_hash = NULL` = "chưa đặt mật khẩu" → **vẫn cho đăng nhập bằng mã NV** (lối vào dự phòng). Manager quên mật khẩu → reset về NULL (qua Mika/MCP Supabase hoặc Supabase SQL Editor: `UPDATE users SET password_hash = NULL WHERE employee_code = '...'`) → login mã NV → đặt mật khẩu mới tại Cài đặt → Tài khoản. KHÔNG bao giờ để xảy ra trạng thái "quên là mất".
 - **[C2] Server Action Authorization**: Tạo `requireAuth()` wrapper — mỗi Server Action verify session trước khi thực thi, không trust `managerId`/`actorId` từ client.
 - **[C3] RLS Verification**: Audit toàn bộ RLS policies trên Supabase Dashboard. Tạo test case verify không query được data ngoài quyền.
 - **[Doc]** Cập nhật `DECISIONS_LOG.md` #7 (RLS đã bật ở Phase 43).
