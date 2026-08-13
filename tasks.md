@@ -76,7 +76,7 @@
 
 **Definition of Done**: browser qua hostname chính thức mở được kurabe; service tự chạy sau reboot (test `systemctl --user restart` + is-active).
 
-**Status**: `[x]`
+**Status**: `[ ]`
 
 ---
 
@@ -93,7 +93,7 @@
 
 **Definition of Done**: truy cập từ email ngoài allowlist bị chặn; email trong allowlist vào được app.
 
-**Status**: `[x]`
+**Status**: `[ ]`
 
 ---
 
@@ -105,4 +105,4 @@
 
 **Definition of Done**: docs cập nhật + commit.
 
-**Status**: `[x]`
+**Status**: `[ ]`
