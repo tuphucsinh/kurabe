@@ -280,3 +280,70 @@
 
 ### [#P68] [code] Fix nhỏ: default team form Thêm NV + dọn dead code upsertUserAction
 **Status**: `[x]` — DONE 14-08: (1) `employees/page.tsx` — `initialTeamId` bỏ `teams[0]?.id` (thêm mới default "Chọn nhóm..." thay vì nhóm đầu — tránh gán nhầm team thật; verified browser: teamDefault=Chọn nhóm..., submit thiếu team bị chặn + toast, user không tạo); (2) `actions/users.ts` — xóa `upsertUserAction` dead code + imports thừa. Lint 0 errors, build PASS (agy + Mika verify độc lập). Commit `[#P68]`.
+
+---
+
+## Phase 69: Bật đăng nhập mật khẩu thật (P44-C1) 🟡 (2026-08-14)
+
+> Yêu cầu anh: bật login password thật; **KHÔNG đặt pass sẵn account nào** (để nguyên NULL) — NV tự đặt sau qua Cài đặt → Tài khoản. Rule: NULL → login mã NV thuần; có hash → bắt buộc pass đúng. Chi tiết: `.ai/MASTER_PLAN.md` Phase 69.
+
+### [#P69T01] [src/actions/auth.ts + login page + AuthContext] Server actions login/logout + wire UI
+
+**Goal**: Login mật khẩu thật: server action verify (bcrypt + rule NULL fallback), cookie `auth_session` httpOnly; bật password field login page.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. File mới `src/actions/auth.ts` (`'use server'`):
+   - `loginAction(employeeCode, password)`: query user qua `supabaseAdmin` (src/lib/supabase-admin) theo `employee_code` + `is_active = true` (maybeSingle); **rule**: `password_hash = NULL` → không cần pass; `password_hash != NULL` → `bcrypt.compare` bắt buộc (sai → error "Mật khẩu không đúng."); không tìm thấy → error "Mã nhân viên không hợp lệ hoặc không tồn tại."; set cookie `auth_session` = user.id qua `cookies()` (httpOnly: true, secure: NODE_ENV==='production', sameSite: 'lax', path: '/', maxAge 7 ngày); trả `{ success, user?: User, error? }` — user qua `mapUserFromDb`, KHÔNG bao giờ trả password_hash.
+   - `logoutAction()`: `cookies().delete('auth_session')` → `{ success: true }`.
+2. `src/contexts/AuthContext.tsx`: `login(employeeCode, password)` → gọi `loginAction` (import từ '@/actions/auth'); error → throw; success → setUser + `localStorage.setItem('auth_user_id', ...)` (KHÔNG set cookie client nữa — server đã set). `logout()` → gọi `logoutAction` + xóa localStorage + setUser(null).
+3. `src/app/login/page.tsx`: bật password field (bỏ `disabled` + placeholder "Không yêu cầu mật khẩu (Mock)" → "Nhập mật khẩu (nếu đã đặt)"), thêm state password; `handleLogin` gọi `login(employeeCode, password)`; hint nhỏ "Chưa đặt mật khẩu → chỉ cần nhập mã NV"; giữ nguyên demo users block + `window.location.href = '/dashboard'`.
+
+**Constraints**: KHÔNG đổi tên cookie / middleware / getSessionUser; KHÔNG đụng changePassword/resetPassword (task T02); KHÔNG thêm rate-limit (ngoài scope — ghi nhận).
+
+**Definition of Done**: lint 0 errors + build PASS; browser: pass field active, account NULL vào được không cần pass, account có hash (tạo test tạm) sai pass bị chặn + đúng pass vào dashboard; cookie auth_session httpOnly.
+
+**Status**: `[ ]`
+
+---
+
+### [#P69T02] [db/migration + src/actions/account.ts] REVOKE password_hash anon + account actions sang admin client
+
+**Goal**: Chặn anon đọc `password_hash` (lộ qua API public khi có hash thật); chuyển changePassword/resetPassword sang `supabaseAdmin` (không phụ thuộc RLS anon).
+
+**Depends on**: `[#P69T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. File mới `db/migration-i-password-revoke.sql`: `REVOKE SELECT (password_hash) ON public.users FROM anon;` + comment. (Chạy trên Supabase qua Management API — Mika verify lúc thực thi.)
+2. `src/actions/account.ts`: `changePassword` + `resetPassword` đổi import `supabase` (anon) → `supabaseAdmin` (src/lib/supabase-admin); KHÔNG đổi logic.
+3. Verify PostgREST: sau REVOKE, client `select('*')` users (src/lib/db/users.ts dùng `select('*')`) KHÔNG lỗi — nếu lỗi → đổi query explicit bỏ cột password_hash.
+
+**Constraints**: KHÔNG siết thêm RLS khác (C3 còn lại defer); không đổi login/logout.
+
+**Definition of Done**: migration chạy OK; anon query users KHÔNG trả password_hash (test thật qua PostgREST); changePassword/resetPassword thao tác hash OK qua admin; app select('*') không vỡ (browser employees page load).
+
+**Status**: `[ ]`
+
+---
+
+### [#P69T03] [docs + test] Test E2E 3 case + docs + commit
+
+**Goal**: Verify đủ 3 case login trên user TEST (KHÔNG đụng account thật); dọn test data; docs + commit.
+
+**Depends on**: `[#P69T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Tạo user test tạm (employee_code `TST-PW`, role Employee, is_active, team NULL) qua Management API; đặt pass tạm (qua changePassword flow browser hoặc hash bcrypt trực tiếp).
+2. **Case 1** (NULL): user test chưa đặt pass → login mã NV không cần pass → dashboard OK.
+3. **Case 2** (có hash): login sai pass → bị chặn "Mật khẩu không đúng."; đúng pass → vào dashboard; verify cookie httpOnly (devtools/curl) + logout → về login.
+4. **Case 3** (reset): Manager reset pass (resetPassword) → hash NULL → login mã NV fallback lại.
+5. Verify anon không đọc được password_hash (query thật qua PostgREST anon key).
+6. Dọn user test (hard delete qua Management API — users test không có evaluation); verify DB nguyên trạng (22/3/22/1/8).
+7. Docs: MASTER_PLAN Phase 69 DONE + tasks.md sweep + KNOWN_BUGS nếu phát hiện + HANDOFF; commit từng task `[#P69T0x]` (T01, T02, T03 riêng).
+
+**Constraints**: KHÔNG đụng account thật (đặc biệt 158/lyly); push CHỈ khi anh báo.
+
+**Definition of Done**: 3 case PASS; anon hash ẩn verified; DB nguyên trạng; docs đủ; git log sạch.
+
+**Status**: `[ ]`

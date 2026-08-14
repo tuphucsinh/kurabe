@@ -337,3 +337,23 @@
 - **[C2] Server Action Authorization — ✅ XONG (Phase 54)**: `requireAuth()`/`requireManager()` wrapper trong `src/lib/auth.ts`; mọi Server Action verify session cookie trước khi thực thi; bỏ trust `managerId`/`actorId` từ client.
 - **[C3] RLS — ✅ XONG PHẦN WRITE (Phase 54)**: anon SELECT-only trên `evaluation_periods` + `grade_bands` (migration-d); server actions ghi 2 bảng đó qua service-role admin client. **CÒN LẠI**: client vẫn anon-write `users`/`teams`/`evaluations`/`evaluation_rounds`/`evaluation_responses`/`criteria` (cần refactor client writes sang server actions — làm cùng C1); `audit_logs` select mở anon (đồng bộ mô hình anon-read hiện tại).
 - **[Doc]** Cập nhật `DECISIONS_LOG.md` #7 (RLS đã bật ở Phase 43).
+
+---
+
+### Phase 69: Bật đăng nhập mật khẩu thật (P44-C1) 🟡 (2026-08-14)
+
+> **Yêu cầu anh (14-08)**: bật login bằng mật khẩu thật. **KHÔNG đặt pass sẵn cho account nào** — hiện mọi `password_hash` đều NULL, cứ để nguyên; nhân viên tự đặt/đổi sau qua Cài đặt → Tài khoản (đã có `changePassword` + `resetPassword` + UI AccountTab, verify P52/P65T03).
+
+**Rule login (chốt 13-08 — giữ nguyên)**: `password_hash = NULL` → login bằng mã NV thuần (không cần pass — lối vào dự phòng); `password_hash != NULL` → bắt buộc nhập pass đúng (bcrypt compare), sai → chặn.
+
+**Thiết kế**:
+- Login chuyển sang **server action** `loginAction(employeeCode, password)` (file mới `src/actions/auth.ts`): query user bằng `supabaseAdmin` (service role — KHÔNG lộ hash cho client), áp rule NULL/hash, set cookie `auth_session` qua `cookies()` (httpOnly + secure prod, maxAge 7 ngày — GIỮ NGUYÊN tên cookie → middleware + `getSessionUser` không đổi).
+- `logoutAction` server action xóa cookie (httpOnly không xóa được bằng `document.cookie`).
+- Login page: bật password field (bỏ `disabled` mock), placeholder đúng; submit → gọi action; KHÔNG required (account chưa đặt pass vẫn vào bằng mã NV). Demo-users block giữ nguyên.
+- `AuthContext.login/logout` gọi 2 action trên; giữ localStorage + loadAuth hiện tại (bảo mật thật nằm ở server `requireAuth`).
+- **Migration security (BẮT BUỘC cùng phase)**: `REVOKE SELECT (password_hash) ON public.users FROM anon` — anon hiện SELECT users trực tiếp → hash sẽ LỘ qua API public khi có pass thật. Hệ quả bắt buộc: `changePassword`/`resetPassword` (`src/actions/account.ts` — đang dùng `supabase` anon) chuyển sang `supabaseAdmin`; verify PostgREST `select('*')` sau REVOKE không lỗi (nếu lỗi → đổi query explicit, không đụng field password_hash).
+- Ngoài scope (follow-up, ghi nhận): rate-limit chống brute-force (rủi ro thấp — nội bộ + Cloudflare Access phía trước); refactor client anon-write users/teams/... (C3 còn lại — defer sau UAT).
+
+**WBS**: T01 login/logout server action + wire UI; T02 migration REVOKE + chuyển account actions sang admin + verify; T03 test E2E (3 case: NULL login không pass / đặt pass → đúng+sai / reset NULL → fallback) trên user TEST (KHÔNG đụng account thật) + docs + commit.
+
+**Verify**: lint 0 errors + build PASS + browser Chrome thật (login page pass field active; 3 case login; anon query password_hash trả rỗng) + DB hash verify từng bước.
