@@ -368,7 +368,7 @@
 
 **Definition of Done**: lint/build PASS; browser: chấm điểm + nộp + trả lại + approve chạy đúng (user test); anon write 3 bảng evaluation bị chặn (test thật).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: agy implement + Mika verify. actions/evaluation.ts → supabaseAdmin (14 writes, không đổi logic); **sync đủ 3 write admin** (teams.leader_id + evaluations + rounds — góp ý R1+R2) move vào actions/users.ts; `upsertUserAction`/`upsertUsersAction`/`softDeleteUserAction` (requireManager + audit + revalidate + ensure nội bộ); hooks bóc references client + xóa 2 hook thừa; `import 'server-only'` vào supabase-admin.ts + **tách `evaluations-write.ts`** (fix build fail: evaluations.ts client kéo admin); bỏ audit trùng ở UI. **Migration j1 đã chạy** (3 bảng evaluation SELECT-only): verify anon insert=ERROR, update/delete real-row=0 rows (RLS chặn ngầm — đúng semantics), anon SELECT vẫn OK. Lint 0 errors, build PASS, browser login+dashboard+employees 22 NV ✓. Commits `5649957`, `0d6a5ca`.
 
 ---
 
