@@ -1,24 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock, User as UserIcon } from 'lucide-react';
-import { getUsers } from '@/lib/db/users';
-import { User } from '@/types';
 
 export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [demoUsers, setDemoUsers] = useState<User[]>([]);
   const { login } = useAuth();
-
-  useEffect(() => {
-    getUsers().then(users => {
-      // Show first 5 users for demo convenience
-      setDemoUsers(users.slice(0, 5));
-    });
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,23 +89,6 @@ export default function LoginPage() {
               Đăng nhập
             </button>
           </form>
-
-          {demoUsers.length > 0 && process.env.NEXT_PUBLIC_SHOW_TEST_LOGIN === 'true' && (
-            <div className="mt-8 pt-6 border-t border-outline-variant">
-              <h3 className="text-sm font-medium text-on-surface mb-3">Tài khoản test (Real Data):</h3>
-              <div className="flex flex-wrap gap-2">
-                {demoUsers.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => setEmployeeCode(u.employeeCode || '')}
-                    className="text-xs bg-surface border border-outline-variant px-2 py-1 rounded hover:border-primary hover:text-primary transition-colors"
-                  >
-                    <span className="font-semibold">{u.employeeCode}</span> - {u.role}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
