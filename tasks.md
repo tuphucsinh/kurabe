@@ -423,7 +423,7 @@
 
 **Definition of Done**: 8/8 bảng anon write blocked; grep sạch; lint 0 errors; build PASS.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: **verify full 8 bảng** (users/teams/evaluations/evaluation_rounds/evaluation_responses/criteria/criteria_groups/criterion_levels): anon insert ERROR + update real-row 0-rows (RLS chặn ngầm) + select OK — **8/8 PASS**; grep: 0 chỗ supabase write ngoài actions + 0 client (.tsx) import supabase-admin; lint 0 errors + build PASS (đã chạy T03). Commit `757f36e`.
 
 ---
 
@@ -442,4 +442,4 @@
 
 **Definition of Done**: E2E PASS + Reviewer PASS + DB nguyên trạng + git clean.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: **E2E browser toàn diện PASS**: tạo/sửa NV qua UI (upsertUserAction — ensure nội bộ tạo evaluation + round 1; sync subleader → evaluator đúng — góp ý R1/R2); đánh giá **3 vòng đầy đủ** (432 SubLeader → 663 Leader → 158 Manager **Approved B/110**, round sau tự tạo đúng evaluator); password login (sai pass chặn "không đúng", đúng pass → dashboard); AccountTab hasPassword fix (`getAccountStatus` server-side — bỏ select password_hash anon); dọn TST-P70 + rounds + evals + audit → **NGUYÊN TRẠNG 22/3/22 + 158 hash NULL** ✓. Docs: MASTER_PLAN DONE + KNOWN_BUGS 7 bài học P70 + HANDOFF. Reviewer kết quả thực thi → PASS (R4).

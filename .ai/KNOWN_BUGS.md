@@ -54,3 +54,12 @@ Xem `.ai/E2E_LIVE_TEST.md`.
 - **PostgREST select('*') LỖI sau column grant**: `select('*')` và `.select()` trần (upsert) → `permission denied for table users`. Bắt buộc select tường minh: hằng `USER_SELECT` (src/lib/db/users.ts) dùng mọi nơi anon đọc users; `mapUserFromDb` nhận `Omit<DbUser,'password_hash'>`.
 - **PAT quyền project khác nhau**: `~/.supabase/access-token` (account ngothaoly) KHÔNG có quyền project kurabe (chỉ sangwebsite `iloaeaoojxdovedjtowt`) — dùng PAT trong `~/.hermes/profiles/mika/config.yaml` (`SUPABASE_ACCESS_TOKEN: sbp_...`) cho Management API `/database/query` project kurabe (`cliiqqthppxuzirabzla`).
 - **158 có hash sót từ P52** (test Phase B đặt pass trên account thật, không reset) — trước khi bật password login phải check `password_hash IS NOT NULL`; đã reset 158 về NULL. Không account thật nào còn hash.
+
+## [#P70] Bài học Phase 70 — C3 siết RLS write (anon chỉ SELECT) (2026-08-14)
+- **`import 'server-only'` vào supabase-admin.ts BẮT lỗi client-import NGAY build** (Turbopack: "You're importing a module that depends on server-only... Client Component") — phát hiện lib/db/evaluations.ts client kéo service key. Fix: tách write functions sang file riêng `src/lib/db/evaluations-write.ts` (server-only) — file lib có CẢ anon-read + admin-write sẽ vỡ client bundle.
+- **syncEvaluationAfterUserChange không thể chuyển admin tại chỗ**: nằm trong lib/db/users.ts (client import) → phải MOVE sang actions/users.ts cùng upsertUser (cùng commit) — nếu chỉ đổi client sẽ kéo service key vào bundle.
+- **RLS semantics khi verify**: INSERT không policy → ERROR "new row violates row-level security"; UPDATE/DELETE không policy → **0 rows, KHÔNG lỗi** (chặn ngầm). Test anon-blocked phải: insert → mong error; update/DELETE → mong 0-rows với id THẬT (nếu không chặn sẽ đổi được row → rows=1).
+- **RLS drop policy + create select_only theo NHÓM bảng** (users/teams → criteria → evaluations) + verify anon-blocked NGAY sau mỗi migration — chống cửa sổ app ghi fail im lặng (P65T06).
+- **Chống success giả trong server actions**: upsert/update/delete phải `.select()`/count verify — RLS chặn không throw → action trả success giả nếu không check (góp ý Reviewer R2).
+- **Route /evaluations/[id] dùng EMPLOYEE id** (useUser + useEvaluationByEmployee), không phải evaluation id — đi sai id → "Quyền truy cập bị từ chối" (không phải bug).
+- **Reviewer 3 vòng plan review** (R1: sync fail im lặng → R2: sót teams.leader_id + client bundle kéo admin → R3 PASS): plan chạm DB/auth nên review kỹ write-path TỪNG hàm + callers, không chỉ đọc summary.

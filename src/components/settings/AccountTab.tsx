@@ -5,8 +5,7 @@ import { UserCircle, KeyRound, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeams } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
-import { changePassword } from '@/actions/account';
-import { supabase } from '@/lib/supabase';
+import { changePassword, getAccountStatus } from '@/actions/account';
 
 const ROLE_BADGE: Record<string, string> = {
   Manager: 'bg-indigo-100 text-indigo-700',
@@ -33,18 +32,14 @@ export default function AccountTab() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Kiểm tra user đã đặt mật khẩu chưa (chỉ cần biết null hay không — không lộ hash)
+  // Kiểm tra user đã đặt mật khẩu chưa (chỉ cần biết null hay không — KHÔNG lộ hash, server-side)
   useEffect(() => {
     let cancelled = false;
     if (!user) return;
     (async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user.id)
-        .maybeSingle();
+      const res = await getAccountStatus();
       if (!cancelled) {
-        setHasPassword(Boolean(data?.password_hash));
+        setHasPassword(res.hasPassword);
       }
     })();
     return () => {

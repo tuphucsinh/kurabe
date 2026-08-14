@@ -7,6 +7,22 @@ import bcrypt from 'bcryptjs';
 
 const MIN_PASSWORD_LENGTH = 6;
 
+/** Trả về user hiện tại đã đặt mật khẩu chưa (server-side, KHÔNG lộ hash — P70T05 fix AccountTab). */
+export async function getAccountStatus(): Promise<{ hasPassword: boolean }> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return { hasPassword: false };
+  try {
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('password_hash')
+      .eq('id', auth.user.id)
+      .maybeSingle();
+    return { hasPassword: Boolean(data?.password_hash) };
+  } catch {
+    return { hasPassword: false };
+  }
+}
+
 /**
  * Đặt/đổi mật khẩu cho tài khoản ĐANG ĐĂNG NHẬP (actor từ session — KHÔNG trust userId từ client).
  * - User CHƯA có password_hash (mới) → đặt mật khẩu lần đầu (không cần mật khẩu cũ).

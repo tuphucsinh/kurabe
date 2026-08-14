@@ -391,3 +391,5 @@
 **Reviewer gate**: plan review trước khi thực thi + review package sau T05 (auth/DB → bắt buộc).
 
 **Verify phase**: lint 0 errors + build PASS + browser E2E + anon write blocked ×8 bảng + DB nguyên trạng + Reviewer PASS.
+
+**Kết quả thực thi (14-08)**: 5 tasks DONE (chi tiết `tasks.md`). **8/8 bảng data chính giờ anon chỉ SELECT** (verified: insert ERROR, update/delete 0-rows) — mọi write qua server actions (requireManager/requireAuth + supabaseAdmin + logAudit + revalidate + chống success giả bằng .select()/count). `import 'server-only'` + tách `evaluations-write.ts` chặn lộ service key. **E2E toàn diện browser PASS**: tạo/sửa NV qua UI (sync subleader → round 1 evaluator đúng) + đánh giá 3 vòng (SubLeader 432 → Leader 663 → Manager 158 approve B/110) + password login (sai chặn/đúng vào) + AccountTab hasPassword fix (getAccountStatus server-side). Dọn test → **NGUYÊN TRẠNG 22/3/22/1/8 + 158 hash NULL**. Reviewer: plan 3 vòng (R1/R2 CHANGES_REQUIRED → R3 PASS) + kết quả thực thi (R4). Commits: `5649957` `0d6a5ca` `cb2d02f` `1fd9235` `a8e61c8` `6d5239a` `6afc242` `e061233` `757f36e` + docs. Chưa push.
