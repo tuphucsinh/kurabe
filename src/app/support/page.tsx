@@ -11,6 +11,7 @@ import {
   Printer,
   ShieldCheck,
   Settings2,
+  Sparkles,
   UsersRound,
   LineChart,
 } from 'lucide-react';
@@ -58,7 +59,12 @@ const usageGuide = [
       'Khi bấm "Gửi Đánh giá", hệ thống sẽ khóa vòng hiện tại ngay sau khi gửi thành công. Bạn sẽ không còn sửa lại vòng đó qua giao diện. Nếu workflow còn bước tiếp theo, hệ thống tự mở vòng kế tiếp cho người có trách nhiệm tiếp theo. Sau đó trang sẽ quay về danh sách nhân viên và dữ liệu trên danh sách sẽ được cập nhật ngay mà không cần tự bấm reload.',
   },
   {
-    title: '9. Cách đọc lỗi và xử lý đúng',
+    title: '9. Khi đánh giá bị trả lại (Return) — phải sửa và nộp lại',
+    content:
+      'Người đánh giá vòng sau (Leader/Manager) có thể bấm "Trả lại đánh giá" khi thấy cần bổ sung hoặc chỉnh sửa. Khi đó: (1) phiếu của bạn được mở lại (trạng thái về bản nháp), (2) trên màn hình hiện banner màu vàng ghi rõ lý do trả lại, (3) bạn bấm vào phiếu, xem lý do, chỉnh sửa điểm/ghi chú rồi bấm "Gửi Đánh giá" lần nữa. Lý do trả lại là BẮT BUỘC phải nhập khi người đánh giá trả lại. Sau khi bạn nộp lại, lý do trả lại sẽ được xóa và vòng đánh giá tiếp tục như bình thường.',
+  },
+  {
+    title: '10. Cách đọc lỗi và xử lý đúng',
     content:
       'Nếu gặp lỗi quyền truy cập, không thử gửi lại nhiều lần; hãy kiểm tra đúng vai trò và đúng kỳ trước. Nếu gặp lỗi vì chưa có dữ liệu evaluation, cần kiểm tra xem nhân viên đó đã được khởi tạo trong kỳ hiện tại chưa. Nếu thấy vòng mới không mở đúng như mong đợi, hãy đối chiếu lại phần workflow theo vai trò bên dưới để xác định đang chờ ai đánh giá tiếp theo.',
   },
@@ -154,7 +160,7 @@ const managementGuide = [
       'Dùng biểu tượng thùng rác trên thẻ nhóm để xóa nhóm khi không còn sử dụng.',
     ],
     note:
-      'Quy tắc bắt buộc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER; SubLeader không giới hạn số lượng. Để thay đổi Leader, phải làm đúng 2 bước: (1) HẠ người đang giữ chức xuống "Nhân viên" trước, (2) rồi THĂNG người khác lên. Hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có Leader (hiện thông báo yêu cầu hạ người cũ trước). Với SubLeader thì thăng/hạ tự do, không cần hạ người cũ. Khi thay đổi chức vụ hoặc SubLeader, hệ thống tự đồng bộ leader hiển thị ở trang Nhóm, danh sách nhân viên và các vòng đánh giá (vòng 1 chưa nộp được gán lại đúng người đánh giá).',
+      'Quy tắc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER; SubLeader không giới hạn số lượng. Có 2 cách đổi Leader: (1) NHANH: vào Nhóm → "Chỉnh sửa nhóm" → chọn Leader mới trong danh sách → Cập nhật (hệ thống tự chuyển quyền). (2) QUA NHÂN VIÊN: hạ người đang giữ chức xuống "Nhân viên" trước, rồi thăng người khác lên Leader — hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có Leader. Khi thay đổi chức vụ, nhóm hoặc SubLeader, hệ thống TỰ ĐỘNG đồng bộ: leader hiển thị ở trang Nhóm, danh sách nhân viên, team trên phiếu đánh giá và gán lại người đánh giá cho các vòng CHƯA nộp (vòng đã nộp giữ nguyên).',
   },
   {
     title: 'Quản lý tiêu chuẩn đánh giá',
@@ -202,6 +208,29 @@ const permissionMatrix = [
   },
 ];
 
+const aiGuide = [
+  {
+    title: 'Gợi ý nhận xét (AI)',
+    content:
+      'Khi chấm điểm, bấm "Gợi ý nhận xét (AI)" để hệ thống tự viết nhận xét tổng quát dựa trên điểm và ghi chú của bạn (điền vào ô Ghi chú chung). AI chạy 10–60 giây — chờ thông báo hoàn tất, KHÔNG bấm lại nhiều lần. Bạn nên chỉnh sửa lại cho khớp thực tế trước khi gửi.',
+  },
+  {
+    title: 'Soạn thông báo kết quả (AI)',
+    content:
+      'Manager có thể bấm "Soạn thông báo kết quả (AI)" trên màn hình chi tiết đánh giá để tạo nháp thông báo kết quả cho nhân viên — rà soát và chỉnh sửa trước khi sử dụng.',
+  },
+  {
+    title: 'Giải thích cảnh báo bất thường (AI)',
+    content:
+      'Khi điểm giữa 2 vòng liên tiếp chênh lệch từ 20 điểm trở lên, Dashboard hiện cảnh báo (≥20: chú ý, ≥30: nghiêm trọng). Bấm "Giải thích bằng AI" để có phân tích nguyên nhân khả dĩ — dùng làm căn cứ trao đổi, không phải kết luận cuối cùng.',
+  },
+  {
+    title: 'Tóm tắt kỳ bằng AI (Báo cáo)',
+    content:
+      'Trên trang Báo cáo, bấm "Tạo tóm tắt" để AI tổng hợp toàn bộ kỳ: phân bổ xếp loại, điểm nổi bật, xu hướng nhận xét và gợi ý hành động. Bản tóm tắt lưu theo kỳ, tạo lại khi cần cập nhật số liệu mới.',
+  },
+];
+
 const faqItems = [
   {
     question: 'Vì sao tôi chỉ xem được mà không sửa được?',
@@ -238,6 +267,16 @@ const faqItems = [
     answer:
       'Có. Giao diện đã được tối ưu hoàn toàn cho thiết bị di động. Bạn có thể mở menu bên (Sidebar) thông qua nút menu ở góc màn hình, đồng thời các biểu đồ, bảng biểu và thao tác chấm điểm đều thân thiện với thao tác chạm/vuốt.',
   },
+  {
+    question: 'Tôi bị trả lại đánh giá thì phải làm gì?',
+    answer:
+      'Đánh giá của bạn được mở lại để sửa. Nhìn banner màu vàng ở đầu màn hình để đọc lý do trả lại, chỉnh sửa điểm/ghi chú theo yêu cầu rồi bấm "Gửi Đánh giá" lần nữa. Nếu không thấy nút sửa, kiểm tra lại bạn có đang đứng đúng lượt đánh giá của mình không.',
+  },
+  {
+    question: 'Cảnh báo "đánh giá bất thường" trên Dashboard là gì?',
+    answer:
+      'Hệ thống tự so sánh điểm giữa 2 vòng liên tiếp: chênh từ 20 điểm trở lên là bất thường (≥30 nghiêm trọng) và hiện cảnh báo trên Dashboard để người quản lý rà soát. Bấm "Giải thích bằng AI" để có phân tích hỗ trợ; sau khi kiểm tra, người đánh giá có thể điều chỉnh điểm ở vòng chưa nộp.',
+  },
 ];
 
 const quickLinks = [
@@ -245,6 +284,7 @@ const quickLinks = [
   { href: '#vai-tro', label: 'Theo vai trò' },
   { href: '#workflow', label: 'Workflow các vòng' },
   { href: '#bao-cao', label: 'Đọc báo cáo & Phân tích' },
+  { href: '#ai-ho-tro', label: 'AI hỗ trợ đánh giá' },
   { href: '#quan-ly-du-lieu', label: 'Quản lý dữ liệu nền' },
   { href: '#faq', label: 'Câu hỏi thường gặp' },
 ];
@@ -358,6 +398,20 @@ export default function SupportPage() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-6">
+              <figure className="rounded-[20px] border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/03-evaluation-detail.jpg"
+                  alt="Màn chi tiết đánh giá"
+                  className="w-full rounded-xl border border-slate-100"
+                />
+                <figcaption className="mt-2 px-1 text-xs leading-5 text-slate-500">
+                  Màn chi tiết đánh giá: chấm theo nhóm tiêu chí (A–F), so sánh điểm các vòng, ghi chú chung.
+                </figcaption>
+              </figure>
+            </div>
           </div>
 
           <div id="vai-tro" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -451,6 +505,51 @@ export default function SupportPage() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <figure className="rounded-[20px] border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/05-reports.jpg"
+                  alt="Trang Báo cáo"
+                  className="w-full rounded-xl border border-slate-100"
+                />
+                <figcaption className="mt-2 px-1 text-xs leading-5 text-slate-500">
+                  Trang Báo cáo: KPI, phân bổ xếp loại, so sánh nhóm, Top Performers, Tóm tắt bằng AI.
+                </figcaption>
+              </figure>
+              <figure className="rounded-[20px] border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/01-dashboard.jpg"
+                  alt="Dashboard tổng quan"
+                  className="w-full rounded-xl border border-slate-100"
+                />
+                <figcaption className="mt-2 px-1 text-xs leading-5 text-slate-500">
+                  Dashboard tổng quan: KPI, trạng thái theo nhóm, phân bổ, tồn đọng, hoạt động gần đây.
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <div id="ai-ho-tro" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-fuchsia-50 text-fuchsia-700">
+                <Sparkles size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">AI hỗ trợ đánh giá</h2>
+                <p className="text-sm text-slate-500">Các nút AI giúp tiết kiệm thời gian; nội dung AI sinh ra chỉ là gợi ý, bạn có thể chỉnh sửa trước khi lưu/gửi.</p>
+              </div>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {aiGuide.map((item) => (
+                <div key={item.title} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+                  <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">{item.content}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div id="quan-ly-du-lieu" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -503,6 +602,31 @@ export default function SupportPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <figure className="rounded-[20px] border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/02-employees.jpg"
+                  alt="Danh sách nhân viên"
+                  className="w-full rounded-xl border border-slate-100"
+                />
+                <figcaption className="mt-2 px-1 text-xs leading-5 text-slate-500">
+                  Danh sách nhân viên: badge xếp loại gần nhất theo vòng, nút thao tác cuối dòng.
+                </figcaption>
+              </figure>
+              <figure className="rounded-[20px] border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/screenshots/04-settings-log.jpg"
+                  alt="Cài đặt → Nhật ký hoạt động"
+                  className="w-full rounded-xl border border-slate-100"
+                />
+                <figcaption className="mt-2 px-1 text-xs leading-5 text-slate-500">
+                  Cài đặt → Nhật ký hoạt động: mọi thao tác quan trọng được ghi lại (ai, làm gì, khi nào).
+                </figcaption>
+              </figure>
             </div>
           </div>
         </section>

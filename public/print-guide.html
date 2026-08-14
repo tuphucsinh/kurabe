@@ -348,6 +348,29 @@
       line-height: 1.4;
     }
 
+    /* Images & Figures */
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    .img-figure {
+      margin: 10px 0;
+      text-align: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .img-figure img {
+      max-width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 8px auto;
+    }
+    .img-caption {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
     /* Page Break Marker */
     .page-break {
       page-break-before: always;
@@ -402,7 +425,7 @@
     <!-- CHƯƠNG 1: QUY TRÌNH THAO TÁC NÂNG CAO -->
     <div class="section">
       <div class="section-header">
-        CHƯƠNG 1: QUY TRÌNH 9 BƯỚC ĐÁNH GIÁ NĂNG LỰC CHUẨN
+        CHƯƠNG 1: QUY TRÌNH 10 BƯỚC ĐÁNH GIÁ NĂNG LỰC CHUẨN
         <span class="tag">Quy trình bắt buộc</span>
       </div>
 
@@ -477,11 +500,24 @@
         <div class="step-item">
           <div class="step-badge">9</div>
           <div class="step-body">
+            <div class="step-title">Khi Đánh Giá Bị Trả Lại (Return) — Phải Sửa và Nộp Lại</div>
+            <div class="step-desc">Người đánh giá vòng sau (Leader/Manager) có thể bấm "Trả lại đánh giá" khi thấy cần bổ sung hoặc chỉnh sửa. Khi đó: (1) phiếu của bạn được mở lại (trạng thái về bản nháp), (2) trên màn hình hiện banner màu vàng ghi rõ lý do trả lại, (3) bạn bấm vào phiếu, xem lý do, chỉnh sửa điểm/ghi chú rồi bấm "Gửi Đánh giá" lần nữa. Lý do trả lại là BẮT BUỘC phải nhập khi người đánh giá trả lại. Sau khi bạn nộp lại, lý do trả lại sẽ được xóa và vòng đánh giá tiếp tục như bình thường.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">10</div>
+          <div class="step-body">
             <div class="step-title">Theo Dõi Tiến Độ Trên Báo Cáo</div>
             <div class="step-desc">Quay lại trang <strong>"Bảng điều khiển"</strong> hoặc <strong>"Báo cáo"</strong> để theo dõi tỷ lệ hoàn thành (%), phân bổ xếp loại toàn phòng ban và trích xuất file Excel khi cần.</div>
           </div>
         </div>
 
+      </div>
+
+      <div class="img-figure">
+        <img src="screenshots/03-evaluation-detail.jpg" alt="Màn chi tiết đánh giá">
+        <div class="img-caption">Màn chi tiết đánh giá: chấm theo nhóm tiêu chí (A–F), so sánh điểm các vòng, ghi chú chung.</div>
       </div>
     </div>
 
@@ -606,6 +642,11 @@
       <p style="font-size: 8.5pt; color: #334155;">Khi thêm nhân viên mới vào kỳ đang hoạt động, hệ thống <strong>tự động tạo phiếu đánh giá</strong> (evaluation) và gán người đánh giá vòng 1 đúng chức vụ. Khi đổi chức vụ, hệ thống <strong>tự đồng bộ</strong> lại người đánh giá và các vòng tương ứng.</p>
       <p style="font-size: 8.5pt; color: #334155;"><strong>Phân quyền:</strong> Manager thêm/sửa/xóa toàn bộ. Leader chỉ thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý, không xóa được nhân viên.</p>
 
+      <div class="img-figure">
+        <img src="screenshots/02-employees.jpg" alt="Danh sách nhân viên">
+        <div class="img-caption">Danh sách nhân viên: badge xếp loại gần nhất theo vòng, nút thao tác cuối dòng.</div>
+      </div>
+
       <div class="sub-header">3. Import Nhân Viên Hàng Loạt Từ File Excel</div>
       <ol style="font-size: 8.5pt; color: #334155; padding-left: 18px; margin-bottom: 10px;">
         <li>Vào mục <strong>"Nhân viên"</strong> &rarr; Bấm nút <strong>"Nhập từ Excel"</strong> ở góc trên bên phải.</li>
@@ -620,7 +661,7 @@
         <li><strong>Sửa nhóm:</strong> Bấm biểu tượng <strong>bút chì ✏️</strong> trên thẻ nhóm &rarr; sửa tên hoặc Leader &rarr; bấm lưu.</li>
         <li><strong>Xóa nhóm:</strong> Bấm biểu tượng <strong>thùng rác 🗑️</strong> trên thẻ nhóm &rarr; xác nhận trong hộp thoại.</li>
       </ol>
-      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Quy tắc bắt buộc: Mỗi nhóm CHỈ có đúng 1 Leader; SubLeader không giới hạn số lượng. Muốn đổi Leader, phải HẠ người cũ xuống "Nhân viên" TRƯỚC, rồi THĂNG người mới lên SAU. Hệ thống sẽ từ chối nếu thăng người mới khi nhóm vẫn còn Leader cũ. Với SubLeader: thăng/hạ tự do, hệ thống tự cập nhật vòng đánh giá tương ứng.</p>
+      <p style="font-size: 8.5pt; color: #b91c1c; font-weight: 600;">⚠️ Quy tắc: MỖI NHÓM CHỈ CÓ ĐÚNG 1 LEADER; SubLeader không giới hạn số lượng. Có 2 cách đổi Leader: (1) NHANH: vào Nhóm &rarr; "Chỉnh sửa nhóm" &rarr; chọn Leader mới trong danh sách &rarr; Cập nhật (hệ thống tự chuyển quyền); (2) QUA NHÂN VIÊN: hạ người đang giữ chức xuống "Nhân viên" trước, rồi thăng người khác lên Leader — hệ thống sẽ từ chối nếu cố thăng người mới khi nhóm đã có Leader. Khi thay đổi chức vụ, nhóm hoặc SubLeader, hệ thống TỰ ĐỘNG đồng bộ: leader hiển thị ở trang Nhóm, danh sách nhân viên, team trên phiếu đánh giá và gán lại người đánh giá cho các vòng CHƯA nộp (vòng đã nộp giữ nguyên).</p>
 
       <div class="sub-header">5. Thêm / Sửa / Xóa Tiêu Chuẩn Đánh Giá (Chỉ Manager)</div>
       <p style="font-size: 8.5pt; color: #334155; margin-bottom: 6px;">Chỉ <strong>Manager</strong> mới được thêm, sửa, xóa tiêu chuẩn và nhóm tiêu chuẩn. Leader, SubLeader, Nhân viên chỉ xem được bảng tiêu chuẩn (không có nút thao tác). Các thao tác:</p>
@@ -652,6 +693,11 @@
         <li>Chưa có mật khẩu &rarr; bấm <strong>"Đặt mật khẩu"</strong> (tối thiểu 6 ký tự). Đã có mật khẩu &rarr; nhập mật khẩu cũ rồi bấm <strong>"Đổi mật khẩu"</strong>.</li>
       </ol>
       <p style="font-size: 8.5pt; color: #334155;">Hiện tại đăng nhập vẫn dùng mã nhân viên; mật khẩu được lưu sẵn sàng cho đợt bật đăng nhập bằng mật khẩu sắp tới. Manager có thể đặt lại mật khẩu của nhân viên (đưa về trống) từ nút <strong>"Đặt lại mật khẩu"</strong> trong trang Nhân viên — khi đó nhân viên vào Cài đặt để đặt mật khẩu mới.</p>
+
+      <div class="img-figure">
+        <img src="screenshots/04-settings-log.jpg" alt="Cài đặt → Nhật ký hoạt động">
+        <div class="img-caption">Cài đặt &rarr; Nhật ký hoạt động: mọi thao tác quan trọng được ghi lại (ai, làm gì, khi nào).</div>
+      </div>
     </div>
 
     <!-- CHƯƠNG 4: HƯỚNG DẪN ĐỌC BÁO CÁO VÀ PHÂN TÍCH NĂNG LỰC -->
@@ -692,12 +738,64 @@
           </tr>
         </tbody>
       </table>
+
+      <div class="img-figure">
+        <img src="screenshots/01-dashboard.jpg" alt="Dashboard tổng quan">
+        <div class="img-caption">Dashboard tổng quan: KPI, trạng thái theo nhóm, phân bổ, tồn đọng, hoạt động gần đây.</div>
+      </div>
+
+      <div class="img-figure">
+        <img src="screenshots/05-reports.jpg" alt="Trang Báo cáo">
+        <div class="img-caption">Trang Báo cáo: KPI, phân bổ xếp loại, so sánh nhóm, Top Performers, Tóm tắt bằng AI.</div>
+      </div>
     </div>
 
-    <!-- CHƯƠNG 5: HƯỚNG DẪN XỬ LÝ LỖI & THẮC MẮC THƯỜNG GẶP (FAQ) -->
+    <!-- CHƯƠNG 5: CÁC TÍNH NĂNG AI HỖ TRỢ ĐÁNH GIÁ -->
     <div class="section">
       <div class="section-header">
-        CHƯƠNG 5: HƯỚNG DẪN XỬ LÝ SỰ CỐ &amp; CÂU HỎI THƯỜNG GẶP
+        CHƯƠNG 5: CÁC TÍNH NĂNG AI HỖ TRỢ ĐÁNH GIÁ
+        <span class="tag">Trợ lý AI</span>
+      </div>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-badge">AI</div>
+          <div class="step-body">
+            <div class="step-title">Gợi ý nhận xét (AI)</div>
+            <div class="step-desc">Khi chấm điểm, bấm "Gợi ý nhận xét (AI)" để hệ thống tự viết nhận xét tổng quát dựa trên điểm và ghi chú của bạn (điền vào ô Ghi chú chung). AI chạy 10–60 giây — chờ thông báo hoàn tất, KHÔNG bấm lại nhiều lần. Bạn nên chỉnh sửa lại cho khớp thực tế trước khi gửi.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">AI</div>
+          <div class="step-body">
+            <div class="step-title">Soạn thông báo kết quả (AI)</div>
+            <div class="step-desc">Manager có thể bấm "Soạn thông báo kết quả (AI)" trên màn hình chi tiết đánh giá để tạo nháp thông báo kết quả cho nhân viên — rà soát và chỉnh sửa trước khi sử dụng.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">AI</div>
+          <div class="step-body">
+            <div class="step-title">Giải thích cảnh báo bất thường (AI)</div>
+            <div class="step-desc">Khi điểm giữa 2 vòng liên tiếp chênh lệch từ 20 điểm trở lên (&ge;20: chú ý, &ge;30: nghiêm trọng), Dashboard hiện cảnh báo. Bấm "Giải thích bằng AI" để có phân tích nguyên nhân khả dĩ — dùng làm căn cứ trao đổi, không phải kết luận cuối cùng.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">AI</div>
+          <div class="step-body">
+            <div class="step-title">Tóm tắt kỳ bằng AI (Báo cáo)</div>
+            <div class="step-desc">Trên trang Báo cáo, bấm "Tạo tóm tắt" để AI tổng hợp toàn bộ kỳ: phân bổ xếp loại, điểm nổi bật, xu hướng nhận xét và gợi ý hành động. Bản tóm tắt lưu theo kỳ, tạo lại khi cần cập nhật số liệu mới.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHƯƠNG 6: HƯỚNG DẪN XỬ LÝ LỖI & THẮC MẮC THƯỜNG GẶP (FAQ) -->
+    <div class="section">
+      <div class="section-header">
+        CHƯƠNG 6: HƯỚNG DẪN XỬ LÝ SỰ CỐ &amp; CÂU HỎI THƯỜNG GẶP
         <span class="tag">Xử lý sự cố</span>
       </div>
 
@@ -710,6 +808,16 @@
         <div class="faq-card">
           <h5>❓ Màn hình báo "Bạn không thể xem đánh giá của cấp trên"?</h5>
           <p><strong>Trả lời:</strong> Bạn đang mở phiếu đánh giá của cấp trên (ví dụ SubLeader mở phiếu của Leader) hoặc nhân sự không thuộc nhóm mình quản lý. Hệ thống phân quyền chặt chẽ theo phân cấp quản trị.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Tôi bị trả lại đánh giá thì phải làm gì?</h5>
+          <p><strong>Trả lời:</strong> Đánh giá của bạn được mở lại để sửa. Nhìn banner màu vàng ở đầu màn hình để đọc lý do trả lại, chỉnh sửa điểm/ghi chú theo yêu cầu rồi bấm "Gửi Đánh giá" lần nữa. Nếu không thấy nút sửa, kiểm tra lại bạn có đang đứng đúng lượt đánh giá của mình không.</p>
+        </div>
+
+        <div class="faq-card">
+          <h5>❓ Cảnh báo "đánh giá bất thường" trên Dashboard là gì?</h5>
+          <p><strong>Trả lời:</strong> Hệ thống tự so sánh điểm giữa 2 vòng liên tiếp: chênh từ 20 điểm trở lên là bất thường (&ge;30 nghiêm trọng) và hiện cảnh báo trên Dashboard để người quản lý rà soát. Bấm "Giải thích bằng AI" để có phân tích hỗ trợ; sau khi kiểm tra, người đánh giá có thể điều chỉnh điểm ở vòng chưa nộp.</p>
         </div>
 
         <div class="faq-card">
@@ -737,7 +845,7 @@
     <!-- FOOTER -->
     <div class="doc-footer">
       <span>KURABE QAQC EVALUATION SYSTEM &copy; 2026 - TÀI LIỆU CHUẨN VẬN HÀNH DÀNH CHO NHÂN SỰ</span>
-      <span>Trang 2 / 2</span>
+      <span>Tài liệu lưu hành nội bộ</span>
     </div>
 
   </div>
