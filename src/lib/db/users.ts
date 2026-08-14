@@ -58,10 +58,13 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
       }
     }
 
-    // 1. Đồng bộ employee_role trên mọi evaluation
+    // 1. Đồng bộ employee_role và team_id trên mọi evaluation
     await supabase
       .from('evaluations')
-      .update({ employee_role: user.role })
+      .update({
+        employee_role: user.role,
+        team_id: user.teamId || null,
+      })
       .eq('employee_id', user.id);
 
     // 2. Lấy toàn bộ user active để resolve evaluator
@@ -76,7 +79,16 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
       subleaderId: u.subleader_id || null,
     }));
 
-    // 3. Round 1 theo flow mới (chỉ khi chưa submit)
+    const subject: EvaluationSubject = {
+      id: user.id,
+      role: user.role,
+      teamId: user.teamId || null,
+      subleaderId: user.subleaderId || null,
+    };
+
+    const flow = getEvaluationFlow(user.role);
+
+    // 3. Round 1..3 theo flow mới (chỉ khi chưa submit)
     const { data: evs } = await supabase
       .from('evaluations')
       .select('id, team_id')
@@ -85,29 +97,26 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
     for (const ev of evs || []) {
       const { data: rounds } = await supabase
         .from('evaluation_rounds')
-        .select('id, status, submitted_at')
+        .select('id, round, status, submitted_at')
         .eq('evaluation_id', ev.id)
-        .eq('round', 1);
-      const r1 = rounds?.[0];
-      if (!r1) continue;
-      if (r1.status === 'Submitted' || r1.submitted_at) continue; // đã submit → giữ nguyên
+        .order('round');
 
-      const flow = getEvaluationFlow(user.role);
-      const firstStep = flow[0];
-      const evaluator = resolveEvaluatorFromList(firstStep.evaluator, {
-        id: user.id,
-        role: user.role,
-        teamId: user.teamId || null,
-        subleaderId: user.subleaderId || null,
-      }, subjects);
+      for (const r of rounds || []) {
+        if (r.status === 'Submitted' || r.submitted_at) continue; // đã submit → giữ nguyên
 
-      await supabase
-        .from('evaluation_rounds')
-        .update({
-          evaluator_id: evaluator?.id || null,
-          evaluator_role: evaluator?.role || (firstStep.evaluator as Role)
-        })
-        .eq('id', r1.id);
+        const step = flow.find(s => s.round === r.round);
+        if (!step) continue;
+
+        const evaluator = resolveEvaluatorFromList(step.evaluator, subject, subjects);
+
+        await supabase
+          .from('evaluation_rounds')
+          .update({
+            evaluator_id: evaluator?.id || null,
+            evaluator_role: evaluator?.role || (step.evaluator as Role),
+          })
+          .eq('id', r.id);
+      }
     }
   } catch (err) {
     // Sync là best-effort: không làm hỏng upsert user đã thành công

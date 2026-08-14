@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import TeamModal from '@/components/modals/TeamModal';
+import { logAuditAction } from '@/actions/audit';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
@@ -76,11 +77,16 @@ export default function TeamsPage() {
   };
 
   const handleSaveTeam = (data: Partial<Team>) => {
+    const teamId = editingTeam?.id || data.id || crypto.randomUUID();
     upsertTeam.mutate({
       ...editingTeam,
       ...data,
+      id: teamId,
     }, {
-      onSuccess: () => toast('Cập nhật nhóm thành công!', 'success'),
+      onSuccess: () => {
+        toast('Cập nhật nhóm thành công!', 'success');
+        void logAuditAction(editingTeam ? 'UPDATE_TEAM' : 'CREATE_TEAM', 'team', teamId);
+      },
       onError: () => toast('Lỗi khi cập nhật nhóm.', 'error')
     });
   };

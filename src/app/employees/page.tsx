@@ -9,6 +9,7 @@ import DataTable, { Column } from '@/components/ui/DataTable';
 import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, UserCheck, User as UserIcon, Shield, Hash, Calendar, X } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
+import { logAuditAction } from '@/actions/audit';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -587,7 +588,10 @@ export default function EmployeesPage() {
     }
     
     upsertUser(payload, {
-      onSuccess: () => toast('Cập nhật nhân viên thành công!', 'success'),
+      onSuccess: () => {
+        toast('Cập nhật nhân viên thành công!', 'success');
+        void logAuditAction(editingEmployee ? 'UPDATE_USER' : 'CREATE_USER', 'user', payload.id || '');
+      },
       onError: (err) => {
         const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật nhân viên.';
         toast(msg, 'error');
