@@ -15,7 +15,6 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import TeamModal from '@/components/modals/TeamModal';
-import { logAuditAction } from '@/actions/audit';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
@@ -85,7 +84,7 @@ export default function TeamsPage() {
     }, {
       onSuccess: () => {
         toast('Cập nhật nhóm thành công!', 'success');
-        void logAuditAction(editingTeam ? 'UPDATE_TEAM' : 'CREATE_TEAM', 'team', teamId);
+        // Audit CREATE_TEAM/UPDATE_TEAM đã ghi trong upsertTeamAction (P70T02) — không ghi trùng ở UI
       },
       onError: () => toast('Lỗi khi cập nhật nhóm.', 'error')
     });

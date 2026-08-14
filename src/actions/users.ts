@@ -326,13 +326,18 @@ export async function softDeleteUserAction(id: string): Promise<{ success: boole
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('users')
       .update({ is_active: false })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) {
       return { success: false, error: 'Error soft deleting user: ' + error.message };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Không tìm thấy nhân viên' };
     }
 
     revalidateUserPaths();
