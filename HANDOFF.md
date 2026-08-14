@@ -7,7 +7,8 @@
 - **T02**: migration REVOKE anon password_hash (GRANT 11 cột) + `USER_SELECT` thay mọi `select('*')` users + changePassword/resetPassword sang supabaseAdmin.
 - **T03**: 3 case login PASS trên user test (NULL không pass / sai pass chặn / đúng pass vào / reset fallback) — test data đã dọn, nguyên trạng 22/3/22/1/8.
 - **Dữ liệu**: reset hash 158 (sót từ P52) → NULL. Mọi account thật đều password_hash NULL = login mã NV như cũ; NV tự đặt pass sau (Cài đặt → Tài khoản).
-- Commits: `19476cd` `1b805d0` `656f1c0` + docs. Chưa push.
+- **P69FIX** (`41d3d9a`): login fail qua HTTP LAN (IP máy) — cookie Secure theo NODE_ENV bị trình duyệt từ chối; đã sửa theo x-forwarded-proto. Verify: login 158 OK qua localhost + 192.168.1.230.
+- Commits: `19476cd` `1b805d0` `656f1c0` `41d3d9a` + docs. Chưa push.
 
 ## Việc còn mở (chờ anh quyết)
 1. Thử lại 2 nút AI chưa verify ("Soạn thông báo", "Giải thích bằng AI")
