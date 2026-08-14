@@ -386,7 +386,7 @@
 
 **Rủi ro + kiểm soát**: (1) regression im lặng khi sót write anon → migration TỪNG NHÓM + test anon-blocked ngay; (2) quyền role đổi hành vi → mirror chính xác quyền hiện có (employees/teams/criteria = Manager — UI đã chặn); (3) cache stale → mọi action mới revalidate như cũ; (4) upsert().select() trong criteria — admin full quyền OK.
 
-**WBS (5 tasks)**: T01 actions/evaluation.ts → admin + rà callers + migration evaluations/rounds/responses; T02 actions users+teams + wire forms + migration users/teams; T03 actions criteria + wire + migration criteria; T04 verify anon-write BLOCKED toàn bộ (test PostgREST thật) + lint/build; T05 E2E toàn diện (P65-style: CRUD NV/nhóm/criteria + đánh giá 3 vòng trên user test) + docs + commit.
+**WBS (5 tasks)**: T01 actions/evaluation.ts → admin + **chuyển 3 write evaluations/rounds trong `syncEvaluationAfterUserChange` sang admin TRƯỚC migration j1** (đóng cửa sổ fail im lặng — góp ý Reviewer) + rà callers + migration evaluations/rounds/responses; T02 mở rộng actions/users.ts + teams.ts (**đã tồn tại delete actions — chuyển cả write path delete sang admin trong cùng task trước migration**) + wire forms qua hooks use-db.ts (GIỮ onSuccess side-effects: invalidateQueries + ensureEvaluationsForUsers) + migration users/teams; T03 mở rộng actions/criteria.ts (tương tự delete) + wire + migration criteria; T04 verify anon-write BLOCKED toàn bộ (test PostgREST thật) + lint/build; T05 E2E toàn diện (P65-style: CRUD NV/nhóm/criteria + đánh giá 3 vòng trên user test + **test sync khi đổi role/team sau j1**) + dọn AccountTab hasPassword (select password_hash anon hỏng từ P69) + docs + commit.
 
 **Reviewer gate**: plan review trước khi thực thi + review package sau T05 (auth/DB → bắt buộc).
 

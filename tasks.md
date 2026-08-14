@@ -362,8 +362,9 @@
 
 **Concrete changes**:
 1. `src/actions/evaluation.ts`: đổi import `supabase` → `supabaseAdmin`; verify từng hàm không phụ thuộc RLS anon.
-2. Rà callers: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) — nếu chỉ gọi từ server-side → chuyển `supabaseAdmin`; nếu client gọi → thêm action + wire.
-3. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
+2. **Đóng cửa sổ fail im lặng (góp ý Reviewer)**: chuyển 3 write evaluations/evaluation_rounds trong `syncEvaluationAfterUserChange` (src/lib/db/users.ts:71-76, 112-118, 120-126 — đang anon + try/catch im lặng) sang `supabaseAdmin` NGAY TRONG T01, TRƯỚC khi chạy migration j1. Test ngay sau j1: đổi role/team user test → verify sync evaluator R1/R2 + evaluation.team_id vẫn chạy (không fail im lặng).
+3. Rà callers: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) — nếu chỉ gọi từ server-side → chuyển `supabaseAdmin`; nếu client gọi → thêm action + wire (qua hooks use-db.ts, giữ onSuccess).
+4. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
 
 **Definition of Done**: lint/build PASS; browser: chấm điểm + nộp + trả lại + approve chạy đúng (user test); anon write 3 bảng evaluation bị chặn (test thật).
 
@@ -378,9 +379,9 @@
 **Depends on**: `[#P70T01]` — **Parallel-safe**: `no`
 
 **Concrete changes**:
-1. `src/actions/users.ts`: move logic `upsertUser` (+ syncEvaluationAfterUserChange — dùng admin), `upsertUsers`, `softDeleteUser` từ lib/db + requireManager + logAudit + revalidatePath.
-2. `src/actions/teams.ts`: `upsertTeam`, `softDeleteTeam` tương tự.
-3. Forms: `src/app/employees/page.tsx` (handleSubmit/delete), `src/app/teams/page.tsx` (handleSaveTeam/delete) gọi actions.
+1. `src/actions/users.ts` (ĐÃ TỒN TẠI — chứa deleteUserAction): mở rộng — move logic `upsertUser` (+ syncEvaluationAfterUserChange — đã admin từ T01), `upsertUsers`, `softDeleteUser` từ lib/db + requireManager + logAudit + revalidatePath; **chuyển write path của deleteUserAction sang admin trong CÙNG task (trước migration j2)**.
+2. `src/actions/teams.ts` (ĐÃ TỒN TẠI — deleteTeamAction): mở rộng `upsertTeam`, `softDeleteTeam` tương tự.
+3. Forms: `src/app/employees/page.tsx` (handleSubmit/delete), `src/app/teams/page.tsx` (handleSaveTeam/delete) — wire QUA hooks use-db.ts (`useUpsertUser`/`useUpsertTeam`... đổi mutationFn sang actions, **GIỮ onSuccess side-effects: invalidateQueries + ensureEvaluationsForUsers**).
 4. lib/db/users.ts + teams.ts: GIỮ read functions, XÓA hàm write anon.
 5. Migration `db/migration-j2-rls-users-teams.sql` + chạy + verify anon blocked.
 
@@ -397,8 +398,8 @@
 **Depends on**: `[#P70T02]` — **Parallel-safe**: `no`
 
 **Concrete changes**:
-1. `src/actions/criteria.ts`: move `upsertCriteriaGroup`, `upsertCriterion` (+ levels delete/insert), `updateDefaultLevel`, `softDeleteCriteriaGroup`, `softDeleteCriterion` từ lib/db + requireManager + logAudit + revalidatePath.
-2. Wire UI gọi actions (settings CriteriaTab, /criteria page) — giữ nguyên hành vi.
+1. `src/actions/criteria.ts` (ĐÃ TỒN TẠI — deleteCriteriaGroupAction/deleteCriterionAction): mở rộng — move `upsertCriteriaGroup`, `upsertCriterion` (+ levels delete/insert), `updateDefaultLevel`, `softDeleteCriteriaGroup`, `softDeleteCriterion` từ lib/db + requireManager + logAudit + revalidatePath; **chuyển write path delete sang admin trong CÙNG task (trước migration j3)**.
+2. Wire UI gọi actions (settings CriteriaTab, /criteria page — qua hooks use-db.ts, giữ onSuccess) — giữ nguyên hành vi.
 3. lib/db/criteria.ts: GIỮ read, XÓA write anon.
 4. Migration `db/migration-j3-rls-criteria.sql` + chạy + verify anon blocked.
 
@@ -432,10 +433,11 @@
 **Depends on**: `[#P70T04]` — **Parallel-safe**: `no`
 
 **Concrete changes**:
-1. User test tạm (TST-PW style): CRUD NV/nhóm/tiêu chí + đánh giá 3 vòng (draft → submit → return → approve) + password login — KHÔNG đụng data thật; dọn + nguyên trạng 22/3/22/1/8.
-2. Docs: MASTER_PLAN Phase 70 DONE + KNOWN_BUGS + HANDOFF + DECISIONS.
-3. **Reviewer package** (fresh session profile reviewer — plan review đã PASS trước khi T01; review này cho kết quả thực thi) → verdict PASS mới đóng phase.
-4. Commit từng task `[#P70T0x]`.
+1. User test tạm (TST-PW style): CRUD NV/nhóm/tiêu chí + đánh giá 3 vòng (draft → submit → return → approve) + password login + **test sync khi đổi role/team sau j1** (đổi role/team user test → verify evaluator R1/R2 + team_id sync) — KHÔNG đụng data thật; dọn + nguyên trạng 22/3/22/1/8.
+2. **Minor fix (góp ý Reviewer)**: AccountTab.tsx:41-45 vẫn select `password_hash` qua anon (REVOKE từ P69 → query lỗi → hasPassword luôn false → UI sai "Đặt mật khẩu" thay vì "Đổi mật khẩu") — chuyển check qua server action (vd `getAccountStatus` trong actions/account.ts) hoặc bỏ field.
+3. Docs: MASTER_PLAN Phase 70 DONE + KNOWN_BUGS + HANDOFF + DECISIONS.
+4. **Reviewer package** (fresh session profile reviewer — plan review đã PASS trước khi T01; review này cho kết quả thực thi) → verdict PASS mới đóng phase.
+5. Commit từng task `[#P70T0x]`.
 
 **Definition of Done**: E2E PASS + Reviewer PASS + DB nguyên trạng + git clean.
 
