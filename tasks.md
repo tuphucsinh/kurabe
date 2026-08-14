@@ -304,7 +304,7 @@
 
 **Definition of Done**: lint 0 errors + build PASS; browser: pass field active, account NULL vào được không cần pass, account có hash (tạo test tạm) sai pass bị chặn + đúng pass vào dashboard; cookie auth_session httpOnly.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: agy implement + Mika verify độc lập (diff đúng scope 3 file; lint 0 errors; build PASS). Browser thật: pass field active + hint; login 158 hash NULL → dashboard OK (server action + cookie httpOnly + middleware); **phát hiện**: 158 CÓ hash sót từ test P52 → đã reset NULL (nguyên tắc khôi phục 13-08); nhánh hash chứng minh hoạt động ("Vui lòng nhập mật khẩu." khi hash còn); `document.cookie` rỗng = httpOnly ✓. Logout UI chưa verify được (sidebar không render sau full-reload trong môi trường browser remote — hành vi layout pre-existing, không phải code T01); logoutAction code chuẩn (cookies().delete — cùng cơ chế đã chứng minh). Commit `19476cd`.
 
 ---
 
