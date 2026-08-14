@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, EvaluationPeriod } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { mapUserFromDb } from '@/lib/db/users';
+import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
 import { mapPeriodFromDb } from '@/lib/db/evaluations';
 import { loginAction, logoutAction } from '@/actions/auth';
 
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (savedUserId) {
           const { data: userData } = await supabase
             .from('users')
-            .select('*')
+            .select(USER_SELECT)
             .eq('id', savedUserId)
             .single();
             

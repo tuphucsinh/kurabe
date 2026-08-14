@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/supabase';
-import { mapUserFromDb } from '@/lib/db/users';
+import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
 import { User, Role } from '@/types';
 
 export type AuthResult = { user: User; error: null } | { user: null; error: string };
@@ -14,7 +14,7 @@ export async function getSessionUser(): Promise<User | null> {
 
     const { data } = await supabase
       .from('users')
-      .select('*')
+      .select(USER_SELECT)
       .eq('id', userId)
       .maybeSingle();
 

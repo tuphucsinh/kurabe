@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuth, requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
@@ -32,7 +32,7 @@ export async function changePassword(
     }
 
     // 1. Lấy user hiện tại
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, password_hash')
       .eq('id', userId)
@@ -57,7 +57,7 @@ export async function changePassword(
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     // 4. Cập nhật
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({ password_hash: passwordHash })
       .eq('id', userId);
@@ -90,7 +90,7 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
       return { success: false, error: 'Thiếu thông tin tài khoản.' };
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('users')
       .update({ password_hash: null })
       .eq('id', userId);

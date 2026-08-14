@@ -8,6 +8,14 @@ import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-res
 type DbUser = Tables<'users'>;
 
 /**
+ * Các cột users anon được phép SELECT (P69T02 — migration-i-password-revoke).
+ * KHÔNG bao gồm password_hash (anon bị REVOKE — select('*') sẽ lỗi "permission denied for table users").
+ * Mọi code đọc user qua anon client PHẢI dùng hằng này thay vì select('*').
+ */
+export const USER_SELECT =
+  'id, employee_code, name, role, team_id, join_date, avatar_url, created_at, is_active, subleader_id, description';
+
+/**
  * RULE: Team chỉ được 1 Leader; SubLeader không giới hạn số lượng.
  * Muốn thay đổi Leader → phải hạ người giữ chức hiện tại xuống
  * Employee TRƯỚC, rồi mới thăng người khác lên.
@@ -127,7 +135,7 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
 export async function getUsers(requester?: User | null, options?: { limit?: number; offset?: number }): Promise<User[]> {
   let query = supabase
     .from('users')
-    .select('*')
+    .select(USER_SELECT)
     .eq('is_active', true);
 
   if (requester && requester.role !== 'Manager') {
@@ -160,7 +168,7 @@ export async function getUsers(requester?: User | null, options?: { limit?: numb
 export async function getUserById(id: string): Promise<User | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('*')
+    .select(USER_SELECT)
     .eq('id', id)
     .eq('is_active', true)
     .single();
@@ -176,7 +184,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getUsersByTeam(teamId: string): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('*')
+    .select(USER_SELECT)
     .eq('team_id', teamId)
     .eq('is_active', true)
     .order('name');
@@ -214,7 +222,7 @@ export async function upsertUser(user: Partial<User>): Promise<User | null> {
   const { data, error } = await supabase
     .from('users')
     .upsert(dbUser)
-    .select()
+    .select(USER_SELECT)
     .single();
 
   if (error) {
@@ -264,7 +272,7 @@ export async function upsertUsers(users: Partial<User>[]): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
     .upsert(dbUsers)
-    .select();
+    .select(USER_SELECT);
 
   if (error) {
     throw new DatabaseError('Error batch upserting users', error);
@@ -299,7 +307,7 @@ export async function softDeleteUser(id: string): Promise<void> {
 
 }
 
-export function mapUserFromDb(dbUser: DbUser): User {
+export function mapUserFromDb(dbUser: Omit<DbUser, 'password_hash'>): User {
   return {
     id: dbUser.id,
     employeeCode: dbUser.employee_code || '',
