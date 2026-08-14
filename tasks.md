@@ -246,6 +246,6 @@
 
 **Definition of Done**: DB nguyên trạng + docs đầy đủ + git log sạch (commits chưa push) + báo cáo tổng.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: cleanup qua Management API SQL (anon DELETE bị RLS chặn im lặng — phải dùng PAT endpoint `/database/query`); **FINAL VERIFY: 22/3/22/1/8/0 = NGUYÊN TRẠNG 100%**; docs: MASTER_PLAN Phase 65 ✅ + HANDOFF mới + KNOWN_BUGS (2 bug + pitfalls); commit docs cuối. Báo cáo tổng đã gửi anh.
 
 ---

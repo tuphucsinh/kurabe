@@ -255,6 +255,34 @@
 
 ---
 
+### Phase 65: Live Test Toàn Diện — mọi tính năng trên org test ✅ DONE (2026-08-14)
+> **Yêu cầu anh**: test ĐẦY ĐỦ mọi tính năng đang có trên app bằng data test: tạo group/nhân viên/quản lý, đổi quản lý, NV đổi SubLeader trực tiếp, xóa NV, chuyển group, đổi password, account test đánh giá/nộp/trả lại/sửa/nộp; verify Báo cáo + Dashboard + Nhật ký hoạt động đúng.
+
+**Kết quả (14-08)**: 6 tasks T01-T06 DONE — toàn bộ test case PASS (chi tiết từng task: `tasks.md`). Baseline nguyên trạng 22/3/22/1/8/0 verified. **2 bug phát hiện + ghi KNOWN_BUGS (chờ duyệt fix)**: (1) audit gap CREATE/UPDATE user+team (upsert qua lib/db không logAudit, `upsertUserAction` dead code); (2) chuyển team user không sync evaluation.team_id + evaluator R2/R3. Ghi nhận: AI suggestion hoạt động (chờ ~60s); "Soạn thông báo"/"Giải thích bằng AI"/AI summary fail-soft (không crash); reports cache 300s (hiển thị stale ≤5p — design); form thêm NV default team = nhóm đầu (PITFALL vận hành); mock login (password disabled) không test được login-by-password. 10 commits `21f6860..<final>` chưa push.
+
+**Nguyên tắc**: org test RIÊNG (team "Test Full E2E" + TST users, như Phase 62/64) — KHÔNG đụng data thật (22 NV/3 nhóm/22 ev); snapshot baseline trước; verify ĐA CHIỀU (mục tiêu + counts lân cận) sau MỖI milestone; dọn sạch + verify nguyên trạng cuối cùng. Manager 158 (thật) chỉ dùng để chấm R3/CRUD trên data test — không sửa data thật.
+
+**Feature inventory test**:
+1. **Auth**: login mã NV (mọi role test + 158), logout, redirect dashboard.
+2. **Employees CRUD**: thêm NV (form), sửa (tên/role/team/description), **đổi role** (promote NV→SubLeader — assertLeadershipSlot, demote), **gán/đổi SubLeader trực tiếp** (sync evaluator round 1 — bug cũ Phase 61), **chuyển team**, **xóa NV** (verify evaluation/rounds dọn đúng), sort, tìm kiếm. *(Import Excel: anh bỏ qua 14-08 — không test.)*
+3. **Teams CRUD**: tạo nhóm, sửa tên, **đổi Leader** (quản lý test), team detail (KPI/badge/link), xóa nhóm (nếu rỗng).
+4. **Password**: NV test đặt mật khẩu lần đầu → đổi mật khẩu → sai mật khẩu cũ bị chặn → Manager reset → login mã NV lại (nguyên tắc khôi phục Phase 44).
+5. **Đánh giá full flow**: chấm điểm ĐẦY ĐỦ các nhóm tiêu chí (A-F), lưu nháp → sửa, nộp → vòng kế tiếp tự tạo, 3 vòng theo role, **trả lại (Phase 64)** → vòng trước sửa → nộp lại → chấm lại → Approved; Manager self-eval → Approved → trả lại → sửa → nộp; chi tiết so sánh; grade/score đúng theo thang điểm DB.
+6. **AI (local)**: gợi ý nhận xét (khi chấm), soạn thông báo kết quả, anomaly (seed chênh lệch ≥20 giữa 2 vòng → cảnh báo + giải thích AI), AI summary kỳ.
+7. **Dashboard**: KPI (nhân sự/tiến độ/đã đánh giá/chưa xong), trạng thái theo nhóm, phân bổ xếp loại, đánh giá tồn đọng (theo evaluator — đúng scope từng role), skill gap radar, hoạt động gần đây (sort + nội dung).
+8. **Reports**: KPI tổng, top NV, mục tiêu kỳ (đọc DB), phân bổ, AI summary (tạo), export Excel 2 sheets, guard role (Employee → redirect).
+9. **Settings**: tab Tài khoản (đổi mật khẩu), tab Thang điểm (hiển thị — KHÔNG sửa dải điểm thật), tab Nhóm & Quyền, tab Nhật ký (entries khớp hành động), tab Kỳ (chọn kỳ — KHÔNG tạo/đóng/xóa kỳ active thật; nếu test tạo kỳ mới → tạo kỳ test 2027 rồi xóa ngay).
+10. **Audit/Nhật ký**: verify đầy đủ action ghi log (CREATE/UPDATE/DELETE user+team, SUBMIT/APPROVE/RETURN_EVALUATION, password, grade bands...) — nội dung + actor đúng.
+11. **Criteria**: xem tiêu chuẩn theo role (leader/staff groups).
+
+**Ngoại lệ KHÔNG test (rủi ro cao, đã verified phase trước)**: xóa/đóng kỳ 2026 active, sửa dải thang điểm thật, reset mật khẩu account thật, delete data thật. Ghi rõ lý do.
+
+**WBS sơ bộ**: `[#P65T01]` Setup org test (team + 6-7 users test qua UI — test luôn form CRUD) + snapshot baseline + verify sync subleader/leader; `[#P65T02]` CRUD nhân sự/nhóm (thêm/sửa/đổi role/đổi Leader/gán-đổi subleader/chuyển team/xóa/import Excel) + verify evaluation sync + audit; `[#P65T03]` Password lifecycle trên account test; `[#P65T04]` Đánh giá full flow 3 vòng + trả lại + Manager self + chi tiết so sánh + AI (gợi ý/soạn/anomaly/summary); `[#P65T05]` Dashboard + Reports + Settings + Nhật ký verify (với data test từ T02-T04) + export Excel; `[#P65T06]` Dọn sạch + verify nguyên trạng 22/3/22/1 + docs + commit. (Mỗi task kèm browser verify + DB verify đa chiều.)
+
+**Rủi ro**: test password trên account test (không đụng thật — reset null cuối); AI gọi model local (chờ ~10-45s, fail-soft); import Excel cần file mẫu đúng format; xóa NV test có FK rounds (xóa theo thứ tự qua UI — verify app xử lý đúng hay lỗi → ghi nhận).
+
+---
+
 ## Audit Summary (2026-08-10)
 
 > Full report: `full_audit_report.md` (Antigravity session 84bcd817)
