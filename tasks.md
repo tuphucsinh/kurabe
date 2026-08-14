@@ -275,5 +275,8 @@
 
 **Status**: `[x]` — DONE 14-08: agy implement + Mika verify độc lập (diff đúng scope; lint 0 errors; build PASS; edge test tsx: evaluation.team_id sync + R2 evaluator reset; live UI: CREATE_USER audit xuất hiện ngay; cleanup P66 test data xong — nguyên trạng 22/3/22/1/8).
 
+### [#P67] [UI] Cập nhật Trang Hỗ trợ + In Hướng Dẫn (đầy đủ + đẹp + screenshot)
+**Status**: `[x]` — DONE 14-08: (1) 5 ảnh minh họa thật chụp từ app (dashboard/employees/evaluation-detail/settings-log/reports — `public/screenshots/`, 856KB tổng, không chứa data test); (2) `src/app/support/page.tsx` + `public/print-guide.html` đồng bộ: mục mới "Khi đánh giá bị trả lại" (P64), section "AI hỗ trợ đánh giá" (4 thẻ), sửa note đổi Leader thành 2 cách (nhanh qua Chỉnh sửa nhóm / qua Nhân viên), FAQ +2 (trả lại, cảnh báo bất thường ≥20 điểm), chèn ảnh vào 3 section chính. Sequential Thinking gate passed; agy implement; Mika verify: lint 0 errors, build PASS, /support render đủ, 5 ảnh HTTP 200, print-guide 6 chương OK. Commit `ce0ceb5`.
+
 ### [#P68] [code] Fix nhỏ: default team form Thêm NV + dọn dead code upsertUserAction
 **Status**: `[x]` — DONE 14-08: (1) `employees/page.tsx` — `initialTeamId` bỏ `teams[0]?.id` (thêm mới default "Chọn nhóm..." thay vì nhóm đầu — tránh gán nhầm team thật; verified browser: teamDefault=Chọn nhóm..., submit thiếu team bị chặn + toast, user không tạo); (2) `actions/users.ts` — xóa `upsertUserAction` dead code + imports thừa. Lint 0 errors, build PASS (agy + Mika verify độc lập). Commit `[#P68]`.
