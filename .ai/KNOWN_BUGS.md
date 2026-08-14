@@ -40,3 +40,9 @@ Xem `.ai/E2E_LIVE_TEST.md`.
 - **Root cause**: form thêm/sửa NV gọi `upsertUser` (src/lib/db/users.ts:182) và team gọi `upsertTeam` (src/lib/db/teams.ts:8) TRỰC TIẾP qua Supabase client — không có logAudit. Chỉ `deleteUserAction` (src/actions/users.ts:9) có audit và được UI dùng. `upsertUserAction` (users.ts:26) CÓ logAudit nhưng KHÔNG ai gọi (dead code).
 - **Hành vi đúng hiện có**: xóa NV = soft-delete (is_active=false, giữ evaluation lịch sử); xóa team = soft-delete; audit DELETE ghi đúng.
 - **Fix đề xuất** (chưa làm — chờ duyệt): thêm logAudit vào upsertUser/upsertTeam (lib/db) với actor từ session, hoặc chuyển UI sang dùng server actions.
+
+## [#P65T04] Chuyển team user KHÔNG sync evaluation.team_id + evaluator (2026-08-14)
+- **Triệu chứng**: user đổi team (Sửa NV → team khác) → evaluation của user GIỮ team_id cũ + round evaluator cũ. Hệ quả: Leader team MỚI không thấy evaluation (detail = "Chưa có dữ liệu đánh giá" vì canViewEvaluation fail: team mismatch), R2/R3 evaluator vẫn là leader team CŨ.
+- **Bằng chứng**: TST03 tạo (team bị default QC Gia dụng) → sửa team về Test Full E2E → evaluation.team_id VẪN 277411df (QC Gia dụng), R2 evaluator 2058dbe3 (leader QC Gia dụng) thay vì TST01.
+- **Root cause**: `upsertUser` (lib/db/users.ts:182) chỉ sync subleader→round1 evaluator (Phase 61 fix); KHÔNG sync team change → evaluation.team_id + evaluator R2 (Leader)/R3 (Manager).
+- **Fix đề xuất** (chờ duyệt): khi user.teamId đổi → update evaluation.team_id + re-assign round 2 (leader team mới) / round 3 (Manager) evaluator cho kỳ active, tương tự sync subleader.

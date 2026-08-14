@@ -203,7 +203,7 @@
 
 **Definition of Done**: 2 NV test Approved + Manager self Approved + trả lại loop chạy đúng + AI 3 feature chạy (hoặc fail-soft ghi nhận) + grade/score đúng + anomaly cảnh báo đúng + chi tiết so sánh OK.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: **TST05 Approved B/109** (R1 TST02 draft→nộp, R2 TST01 carry-forward + nút Trả lại ✓, R3 158, rounds auto, current_round advance ✓); **TST99 self Approved B/123**; **TST06 Leader self→R2 158 Approved B/123** (Leader flow ✓); anomaly seed R1=82 vs R2=109 → **dashboard cảnh báo "chênh 27 điểm" ✓** + đã RESTORE R1=109; **AI suggestion HOẠT ĐỘNG** (comment điền tiếng Việt phân tích F7/F8 — chờ ≥60s, click qua JS; ref cũ không ăn); "Soạn thông báo" + "Giải thích bằng AI" + AI summary không fire/không row (ghi nhận — fail-soft, chưa verify); reports cache 300s (hiển thị cũ 1 lần — sau session mới data đúng — KHÔNG bug); so sánh L1/L2 verified; grade/score/badge đúng.
 
 ---
 
