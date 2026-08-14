@@ -116,3 +116,136 @@
 > Đã hoàn thành + verify 2 flow E2E — chi tiết: `.ai/MASTER_PLAN.md` Phase 64. 4 commits `c663b4d..c8f981e` (chưa push).
 
 ---
+
+## Phase 65: Live Test Toàn Diện — mọi tính năng trên org test 🟡 (2026-08-14)
+
+> Đã duyệt 14-08 (bỏ import Excel). Feature inventory + ngoại lệ: `.ai/MASTER_PLAN.md` Phase 65. Nguyên tắc: org test RIÊNG "Test Full E2E" + TST users — KHÔNG đụng data thật; verify đa chiều sau mỗi milestone; dọn sạch + nguyên trạng 22/3/22/1 cuối.
+
+### [#P65T01] [UI + DB] Setup org test + snapshot baseline
+
+**Goal**: Tạo org test qua UI (test luôn form CRUD): team "Test Full E2E" + TST01 Leader / TST02 SubLeader / TST03-05 Employee (TST03-04 gán SubLeader TST02; TST05 CHƯA gán) / TST99 Manager; snapshot baseline; verify sync + scope.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes** (browser Manager 158 + DB verify — data test, không commit code):
+1. Snapshot baseline DB: counts users/teams/evaluations/approved/audit + period active + ai_summaries hiện trạng (ghi vào `.tmp/p65-baseline.json`).
+2. Tạo qua UI: team "Test Full E2E" → thêm TST01 (Leader, team), TST02 (SubLeader, team), TST03 + TST04 (Employee, team, subleader=TST02), TST05 (Employee, team, subleader=TRỐNG — cố ý), TST99 (Manager).
+3. Verify: users count +4? (26→? — đếm đúng), team detail (Leader/SubLeader/NV), dashboard KPI 158 (nhân sự = baseline+6, Test Full E2E xuất hiện), evaluations auto-tạo đủ cho TST users (ensureEvaluationsForUsers) + round 1 evaluator đúng (TST03/04 → TST02; TST01/TST99 → SELF; TST05 → null).
+4. Login từng role test: TST02 thấy đúng scope (NV của mình), TST05 (chưa gán subleader) mở đánh giá mình → trạng thái đúng.
+
+**Constraints**: KHÔNG đụng data thật (không sửa/xóa user thật); KHÔNG test import Excel (đã bỏ); không commit.
+
+**Definition of Done**: org test hoạt động đủ 6 users + evaluation auto + round 1 đúng evaluator; baseline lưu; counts khớp.
+
+**Status**: `[x]` — DONE 14-08: baseline lưu `.tmp/p65-baseline.json` (22/3/22/1, audit 8, ai_summaries 0); team Test Full E2E + 6 users test (TST01 Leader, TST02 SubLeader, TST03-04 Employee gán TST02, TST05 Employee chưa gán, TST99 Manager team NULL) qua UI; evaluations auto-đủ 6; R1 evaluator verified (SELF/NULL/TST02 đúng). PITFALL: form thêm NV default team = nhóm đầu (QC Gia dụng — team THẬT!) → TST02/TST03 bị gán nhầm, đã sửa qua UI; pattern fill form: native setter + input/change event cho input/select (KHÔNG Enter trong select — submit sớm), verify team_id DB ngay sau mỗi thêm.
+
+---
+
+### [#P65T02] [UI + DB] CRUD nhân sự/nhóm: sửa, đổi role, gán/đổi SubLeader, chuyển team, đổi Leader, xóa
+
+**Goal**: Test mọi thao tác quản lý nhân sự/nhóm trên data test + verify sync downstream (evaluator round 1, team leader) + audit log.
+
+**Depends on**: `[#P65T01]` — **Parallel-safe**: `no`
+
+**Concrete changes** (browser Manager 158, verify DB từng bước):
+1. Sửa NV: đổi tên + description của TST03 → hiển thị đúng.
+2. Đổi role: promote TST04 Employee→SubLeader (assertLeadershipSlot KHÔNG chặn — chỉ giới hạn Leader); demote TST02 SubLeader→Employee (verify xử lý NV đang trực thuộc TST02 — TST03/04 subleader_id thế nào; sync round 1 evaluator).
+3. Gán/đổi SubLeader trực tiếp: gán TST05 → TST04; đổi TST03 từ TST02 → TST04 → **verify evaluator round 1 SYNC** (bug cũ Phase 61: upsertUser phải sync khi subleaderId đổi).
+4. Teams: tạo team "Test E2E B"; chuyển TST05 sang team B (verify team_id + evaluation.team_id?); sửa tên team B; đổi Leader team A: TST01 → TST06 (tạo TST06 Leader) — verify team detail + scope (TST01 hết quyền team?).
+5. Xóa NV: xóa TST04 (có evaluation + rounds) — verify app xử lý (evaluation/rounds bị xóa kèm hay báo lỗi — GHI NHẬN hành vi); xóa team B khi rỗng.
+6. Verify audit log: mỗi action có entry đúng (CREATE/UPDATE/DELETE user/team + actor 158).
+
+**Constraints**: KHÔNG đụng data thật; ghi nhận mọi hành vi lạ (bug candidate → ghi `.tmp/diary.md` + báo Mika); không commit.
+
+**Definition of Done**: mọi thao tác CRUD chạy đúng + sync evaluator round 1 verified (query DB) + audit entries đủ + không ảnh hưởng data thật.
+
+**Status**: `[ ]`
+
+---
+
+### [#P65T03] [UI + DB] Password lifecycle trên account test
+
+**Goal**: Test đặt/đổi/reset mật khẩu trên account TEST (không đụng account thật) theo nguyên tắc Phase 44: hash NULL = chưa đặt → login mã NV.
+
+**Depends on**: `[#P65T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. TST03 (account test) đặt mật khẩu lần đầu: Settings → Tài khoản → đặt (≥6 ký tự) → verify DB `password_hash` = bcrypt 60 ký tự.
+2. Logout → login bằng mã NV + mật khẩu → vào dashboard OK (nếu app hỗ trợ password login — verify hành vi thật: nếu vẫn login mã NV thuần → ghi nhận).
+3. Đổi mật khẩu: nhập sai mật khẩu cũ → bị chặn "Mật khẩu cũ không đúng"; đúng → đổi thành công → login lại bằng mật khẩu mới.
+4. Manager 158 reset: /employees → Đặt lại mật khẩu TST03 → DB hash = NULL → login mã NV không cần password (lối vào dự phòng).
+5. Verify audit: entries đặt/đổi/reset password.
+
+**Constraints**: CHỈ thao tác trên TST03 (account test); cuối test hash phải về NULL (dọn — nhưng user sẽ bị xóa ở T06 nên chỉ cần không ảnh hưởng thật); không commit.
+
+**Definition of Done**: 4 bước chạy đúng + DB hash verify từng bước + login fallback hoạt động.
+
+**Status**: `[ ]`
+
+---
+
+### [#P65T04] [UI + DB] Đánh giá full flow + trả lại + AI
+
+**Goal**: Test chuỗi đánh giá hoàn chỉnh trên data test: nháp → nộp → 3 vòng → trả lại → sửa → nộp lại → Approved; Manager self; AI features; chi tiết so sánh; grade đúng thang điểm DB.
+
+**Depends on**: `[#P65T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. TST02 chấm TST03 ĐẦY ĐỦ các nhóm A-F → Lưu nháp → verify (scores/notes lưu) → sửa 1 điểm → Nộp → R2 tự tạo (evaluator TST01).
+2. TST01 (Leader) mở R2 TST03 → chi tiết so sánh (L1 vs L2) → chấm → Nộp → R3 tự tạo (Manager 158).
+3. **Trả lại**: 158 ở R3 bấm "Trả lại đánh giá" (lý do) → TST02 sửa R1 → nộp lại → TST01 chấm lại R2 → nộp → 158 chấm R3 → **Approved** (grade/score verify theo grade_bands DB).
+4. TST05 (đã gán subleader T04 ở T02; nếu T04 đã xóa → gán lại TST02) chấm R1 → nộp → TST01 R2 → nộp → 158 R3 → Approved (2 evaluation Approved test).
+5. Manager self: TST99 tự đánh giá → Nộp → Approved → "Trả lại báo cáo" → sửa → nộp → Approved.
+6. AI: "Gợi ý nhận xét (AI)" khi chấm (TST01 R2) → text điền; "Soạn thông báo kết quả (AI)" (readonly) → draft hiện; **anomaly**: seed chênh lệch ≥20 giữa R1/R2 của 1 evaluation test → dashboard 158 hiện cảnh báo + "Giải thích bằng AI" chạy (verify content); AI summary: kiểm tra ai_summaries hiện trạng — nếu kỳ 2026 CHƯA có → tạo qua nút (ghi chú sẽ xóa ở T06); nếu ĐÃ có → KHÔNG tạo lại (tránh đụng).
+7. Verify từng bước: status/current_round/final_grade DB + badge UI + pending dashboard cập nhật.
+
+**Constraints**: AI chờ 10-45s (fail-soft — không chặn flow); anomaly seed phải RESTORE đúng (điểm gốc); KHÔNG tạo AI summary kỳ 2026 nếu đã tồn tại row (đụng data thật — kiểm tra trước); không commit.
+
+**Definition of Done**: 2 NV test Approved + Manager self Approved + trả lại loop chạy đúng + AI 3 feature chạy (hoặc fail-soft ghi nhận) + grade/score đúng + anomaly cảnh báo đúng + chi tiết so sánh OK.
+
+**Status**: `[ ]`
+
+---
+
+### [#P65T05] [UI] Dashboard + Reports + Settings + Nhật ký + Export verify
+
+**Goal**: Verify Báo cáo + Bảng điều khiển + Cài đặt + Nhật ký hoạt động hiển thị ĐÚNG với data (thật + test) — theo từng role.
+
+**Depends on**: `[#P65T04]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Dashboard 158: KPI nhân sự/tiến độ/đã đánh giá/chưa xong đúng (counts DB); trạng thái theo nhóm (Test Full E2E % đúng); phân bổ xếp loại (gồm test Approved); đánh giá tồn đọng (evaluator 158 còn NV chưa chấm? đúng); skill gap radar hiển thị; hoạt động gần đây (sort DESC theo thời gian + nội dung khớp audit: SUBMIT/APPROVE/RETURN...).
+2. Dashboard theo role test: TST02 (thấy NV trực thuộc + self), TST01 (thấy team), TST99 (self) — counts đúng scope.
+3. Reports 158: KPI tổng + Top NV (gồm test? verify logic) + mục tiêu kỳ (đọc DB) + phân bổ + AI summary (nếu row tồn tại) — số liệu khớp DB.
+4. Reports Employee (TST03): redirect/chặn đúng.
+5. Settings 158: tab Thang điểm (hiển thị đúng grade_bands), tab Nhóm & Quyền (3 team thật + team test đúng Leader/SubLeader), tab Nhật ký (entries T01-T04 khớp: actor, action, thời gian).
+6. Export Excel (158): tải file → verify 2 sheets (Tổng hợp + Chi tiết) + đủ rows (22 + test) + không lỗi.
+
+**Constraints**: KHÔNG sửa gì (read-only verify); số liệu đối chiếu DB query; không commit.
+
+**Definition of Done**: mọi chỉ số dashboard/reports khớp DB; nhật ký đầy đủ đúng thứ tự; export file OK; ghi nhận mọi lệch (bug candidate).
+
+**Status**: `[ ]`
+
+---
+
+### [#P65T06] [docs + DB] Dọn test data + verify nguyên trạng + docs + commit
+
+**Goal**: Xóa sạch org test, verify DB nguyên trạng, cập nhật docs, commit (và báo cáo tổng hợp PASS/FAIL từng feature).
+
+**Depends on**: `[#P65T05]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Dọn (Management API, thứ tự FK — pattern skill supabase-remote-ops): rounds → evaluations → audit_logs (actor TST% / Test E2E) → users (TST%) → teams (Test Full E2E / Test E2E B); xóa ai_summaries test nếu T04 tạo (chỉ row mới tạo cho kỳ 2026 — verify trước/sau).
+2. Verify NGUYÊN TRẠNG đa chiều: 22 users / 3 teams / 22 evs / 1 Approved / audit count = baseline / dashboard 158 KPI về baseline (cache revalidate) / password accounts thật không đổi.
+3. Docs: MASTER_PLAN Phase 65 DONE + kết quả thực thi (bảng feature → PASS/FAIL + issues); sweep tasks.md; KNOWN_BUGS thêm pitfalls/phát hiện mới; HANDOFF mới; DECISIONS_LOG nếu có quyết định mới.
+4. Commit từng task theo thứ tự thực hiện (P65T01..T06 — message `[#P65T0x] ...`); bug phát hiện trong test → fix riêng `[#FIX]` (nếu anh duyệt) hoặc ghi KNOWN_BUGS.
+5. Báo cáo tổng cho anh: bảng feature → PASS/FAIL + lệch phát hiện + đề xuất fix.
+
+**Constraints**: verify count=0 test data; không để sót; push CHỈ khi anh báo.
+
+**Definition of Done**: DB nguyên trạng + docs đầy đủ + git log sạch (commits chưa push) + báo cáo tổng.
+
+**Status**: `[ ]`
+
+---
