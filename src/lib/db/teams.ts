@@ -1,25 +1,9 @@
 import { supabase } from '../supabase';
 import { Team, User } from '@/types';
 import { DatabaseError } from '../errors';
-import { Tables, TablesInsert, TablesUpdate } from '@/types/database';
+import { Tables } from '@/types/database';
 
 type DbTeam = Tables<'teams'>;
-
-export async function upsertTeam(team: Partial<Team>): Promise<void> {
-  const dbTeam: TablesInsert<'teams'> = {
-    id: team.id,
-    name: team.name || '',
-    leader_id: team.leaderId || null
-  };
-
-  const { error } = await supabase
-    .from('teams')
-    .upsert(dbTeam);
-
-  if (error) throw new DatabaseError('Error upserting team', error);
-
-
-}
 
 export async function getTeams(requester?: User | null): Promise<Team[]> {
   let query = supabase
@@ -61,18 +45,6 @@ export async function getTeamById(id: string): Promise<Team | null> {
   return mapTeamFromDb(data);
 }
 
-export async function softDeleteTeam(id: string): Promise<void> {
-  const update: TablesUpdate<'teams'> = { is_active: false };
-  const { error } = await supabase
-    .from('teams')
-    .update(update)
-    .eq('id', id);
-
-  if (error) throw new DatabaseError('Error soft deleting team', error);
-
-
-}
-
 function mapTeamFromDb(dbTeam: DbTeam): Team {
   return {
     id: dbTeam.id,
@@ -80,4 +52,3 @@ function mapTeamFromDb(dbTeam: DbTeam): Team {
     leaderId: dbTeam.leader_id || null,
   };
 }
-

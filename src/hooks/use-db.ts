@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsers, getUserById, getUsersByTeam } from '@/lib/db/users';
-import { getTeams, getTeamById, upsertTeam } from '@/lib/db/teams';
+import { getTeams, getTeamById } from '@/lib/db/teams';
 import { 
   getPeriods, 
   getActivePeriod, 
@@ -11,10 +11,10 @@ import {
 } from '@/lib/db/evaluations';
 import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefaultLevel } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
-import { deleteTeamAction } from '@/actions/teams';
+import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
 import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
 
-import { Criterion, User } from '@/types';
+import { Criterion, Team, User } from '@/types';
 
 // Users
 export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({ 
@@ -81,9 +81,14 @@ export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryF
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: upsertTeam,
+    mutationFn: async (team: Partial<Team>) => {
+      const res = await upsertTeamAction(team);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật nhóm');
+      return res.team;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
 };
@@ -91,9 +96,14 @@ export const useUpsertTeam = () => {
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: deleteTeamAction,
+    mutationFn: async (id: string) => {
+      const res = await deleteTeamAction(id);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi xóa nhóm');
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
   });
 };
