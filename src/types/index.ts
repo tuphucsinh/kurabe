@@ -78,6 +78,7 @@ export interface Evaluation {
   status: EvalStatus;
   finalGrade?: Grade;
   finalScore?: number;
+  returnNote?: string | null;
   createdAt: string;
   updatedAt: string;
 }

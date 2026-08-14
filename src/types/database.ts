@@ -295,6 +295,7 @@ export type Database = {
           final_score: number | null
           id: string
           period_id: string
+          return_note: string | null
           status: string
           team_id: string | null
           updated_at: string | null
@@ -308,6 +309,7 @@ export type Database = {
           final_score?: number | null
           id?: string
           period_id: string
+          return_note?: string | null
           status: string
           team_id?: string | null
           updated_at?: string | null
@@ -321,6 +323,7 @@ export type Database = {
           final_score?: number | null
           id?: string
           period_id?: string
+          return_note?: string | null
           status?: string
           team_id?: string | null
           updated_at?: string | null

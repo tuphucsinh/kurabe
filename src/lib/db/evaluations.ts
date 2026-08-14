@@ -404,6 +404,7 @@ function mapEvaluationFromDb(db: DbEvaluation): Evaluation {
     status: db.status as EvalStatus,
     finalGrade: db.final_grade as Grade || undefined,
     finalScore: db.final_score || undefined,
+    returnNote: db.return_note || undefined,
     createdAt: db.created_at || '',
     updatedAt: db.updated_at || '',
   };
