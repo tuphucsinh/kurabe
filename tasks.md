@@ -405,7 +405,7 @@
 
 **Definition of Done**: lint/build PASS; browser: CRUD tiêu chí + thang điểm mặc định chạy đúng; anon write 3 bảng criteria bị chặn.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: agy implement + Mika verify. `actions/criteria.ts`: `upsertCriteriaGroupAction` + `upsertCriterionAction` (appliesTo mapping giữ nguyên + levels delete/insert transactional + chống success giả .select().single()) + `updateDefaultLevelAction` + delete actions chuyển admin (count 0 → fail); hooks 5 mutation → actions; lib/db/criteria.ts xóa write (giữ read). **Migration j3 đã chạy** (3 bảng criteria SELECT-only): verify insert ERROR + update 0-rows + select OK. Lint 0 errors, build PASS, browser criteria 6 nhóm render ✓. Commits `6afc242`, `e061233`.
 
 ---
 
