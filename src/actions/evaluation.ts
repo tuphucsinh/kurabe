@@ -5,8 +5,9 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { calculateRoundScore } from '@/lib/scoring';
-import { RoundNumber, EvaluationRound, Grade, Role } from '@/types';
+import { RoundNumber, EvaluationRound, Grade, Role, EvalStatus } from '@/types';
 import {
+  getEvaluationFlow,
   getNextEvaluationStep,
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
@@ -16,6 +17,11 @@ import {
 } from '@/lib/evaluator-resolver';
 import { Database } from '@/types/database';
 import { composeRoundNotes, SelectedLevelIndexes } from '@/lib/round-level-selection';
+import {
+  canReturnEvaluation,
+  resetRoundFields,
+  nextStatusAfterReturn,
+} from '@/lib/return-evaluation';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -200,6 +206,7 @@ export async function saveEvaluationRound(
         const evalUpdate: UpdateEvaluation = {
           status: nextStep.status,
           current_round: nextStep.round,
+          return_note: null,
           updated_at: now
         };
 
@@ -249,3 +256,232 @@ export async function saveEvaluationRound(
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+
+/**
+ * Trả lại kết quả đánh giá (Return Evaluation Round).
+ * Case B: Manager round 1 Approved -> trả về Draft để chỉnh sửa lại.
+ * Case A: Round > 1 -> reset round hiện tại về NotStarted và mở khóa round trước về Draft.
+ */
+export async function returnEvaluationRound(
+  evaluationId: string,
+  round: RoundNumber,
+  reason: string
+) {
+  if (!reason || !reason.trim()) {
+    return { success: false, error: 'Lý do trả lại không được để trống.' };
+  }
+
+  const auth = await requireAuth();
+  if (auth.error !== null) return { success: false, error: auth.error };
+  const actorId = auth.user.id;
+
+  try {
+    const { data: evalInfo, error: evalInfoError } = await supabase
+      .from('evaluations')
+      .select('id, employee_id, employee_role, current_round, status')
+      .eq('id', evaluationId)
+      .single();
+
+    if (evalInfoError || !evalInfo) {
+      return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
+    }
+
+    const { data: roundsData, error: roundsError } = await supabase
+      .from('evaluation_rounds')
+      .select('*')
+      .eq('evaluation_id', evaluationId);
+
+    if (roundsError || !roundsData) {
+      return { success: false, error: 'Lỗi tải thông tin các vòng đánh giá.' };
+    }
+
+    const currentRoundRecord = roundsData.find((r) => r.round === round);
+    const prevRound = (round - 1) as RoundNumber;
+    const prevRoundRecord = roundsData.find((r) => r.round === prevRound);
+
+    const flow = getEvaluationFlow(evalInfo.employee_role as Role);
+    const flowStep = flow.find((step) => step.round === round);
+    const flowEvaluator = flowStep?.evaluator ?? null;
+
+    const check = canReturnEvaluation({
+      round,
+      actorId,
+      employeeId: evalInfo.employee_id,
+      actorRole: auth.user.role,
+      evaluationStatus: evalInfo.status as EvalStatus,
+      currentRound: (evalInfo.current_round ?? 1) as RoundNumber,
+      currentRoundEvaluatorId: currentRoundRecord?.evaluator_id ?? null,
+      currentRoundSubmitted: Boolean(currentRoundRecord?.submitted_at),
+      prevRoundExists: Boolean(prevRoundRecord),
+      prevRoundSubmitted: Boolean(prevRoundRecord?.submitted_at),
+      flowEvaluator,
+    });
+
+    if (!check.ok) {
+      return { success: false, error: check.error ?? 'Không thể trả lại đánh giá.' };
+    }
+
+    const now = new Date().toISOString();
+    const trimmedReason = reason.trim();
+
+    // Case B: round === 1 (Manager tự đánh giá đã Approved)
+    if (round === 1) {
+      const { data: updatedEval, error: evalUpError } = await supabase
+        .from('evaluations')
+        .update({
+          current_round: 1,
+          status: 'Draft',
+          final_grade: null,
+          final_score: null,
+          return_note: trimmedReason,
+          updated_at: now,
+        })
+        .eq('id', evaluationId)
+        .eq('status', 'Approved')
+        .select('id');
+
+      if (evalUpError || !updatedEval || updatedEval.length === 0) {
+        return { success: false, error: 'Báo cáo không ở trạng thái Approved.' };
+      }
+
+      const { data: updatedRound, error: roundUpError } = await supabase
+        .from('evaluation_rounds')
+        .update({
+          status: 'Draft',
+          submitted_at: null,
+        })
+        .eq('evaluation_id', evaluationId)
+        .eq('round', 1)
+        .not('submitted_at', 'is', null)
+        .select('id');
+
+      if (roundUpError || !updatedRound || updatedRound.length === 0) {
+        // Best-effort rollback evaluations về Approved
+        await supabase
+          .from('evaluations')
+          .update({
+            status: 'Approved',
+            return_note: null,
+            updated_at: now,
+          })
+          .eq('id', evaluationId);
+
+        return { success: false, error: 'Không thể mở khóa vòng 1.' };
+      }
+
+      await logAudit(auth.user, 'RETURN_EVALUATION', 'evaluation', evaluationId, {
+        round,
+        reason: trimmedReason,
+      });
+
+      revalidatePath(`/evaluations/${evaluationId}`);
+      revalidateTag('dashboard-data', 'default');
+      revalidateTag('report-aggregation', 'default');
+
+      return { success: true };
+    }
+
+    // Case A: round > 1
+    const currentRoundSnapshot: UpdateRound = {
+      scores: currentRoundRecord?.scores ?? {},
+      notes: currentRoundRecord?.notes ?? {},
+      comment: currentRoundRecord?.comment ?? null,
+      total_score: currentRoundRecord?.total_score ?? 0,
+      grade: (currentRoundRecord?.grade as Grade) ?? 'Pending',
+      status: currentRoundRecord?.status ?? 'NotStarted',
+      submitted_at: currentRoundRecord?.submitted_at ?? null,
+    };
+
+    // (2) RESET round hiện tại
+    const resetData = resetRoundFields();
+    const { data: resetResult, error: resetError } = await supabase
+      .from('evaluation_rounds')
+      .update(resetData)
+      .eq('evaluation_id', evaluationId)
+      .eq('round', round)
+      .eq('evaluator_id', actorId)
+      .is('submitted_at', null)
+      .select('id');
+
+    if (resetError || !resetResult || resetResult.length === 0) {
+      return { success: false, error: 'Vòng đánh giá đã khóa.' };
+    }
+
+    // (3) Unlock round - 1
+    const { data: unlockResult, error: unlockError } = await supabase
+      .from('evaluation_rounds')
+      .update({
+        status: 'Draft',
+        submitted_at: null,
+      })
+      .eq('evaluation_id', evaluationId)
+      .eq('round', prevRound)
+      .not('submitted_at', 'is', null)
+      .select('id');
+
+    if (unlockError || !unlockResult || unlockResult.length === 0) {
+      // Rollback round hiện tại về snapshot
+      await supabase
+        .from('evaluation_rounds')
+        .update(currentRoundSnapshot)
+        .eq('evaluation_id', evaluationId)
+        .eq('round', round)
+        .eq('evaluator_id', actorId);
+
+      return { success: false, error: 'Vòng trước không thể mở khóa.' };
+    }
+
+    // (4) Update evaluations
+    const newStatus = nextStatusAfterReturn(round);
+    const { data: updateEvalResult, error: updateEvalError } = await supabase
+      .from('evaluations')
+      .update({
+        current_round: prevRound,
+        status: newStatus,
+        final_grade: null,
+        final_score: null,
+        return_note: trimmedReason,
+        updated_at: now,
+      })
+      .eq('id', evaluationId)
+      .eq('current_round', round)
+      .select('id');
+
+    if (updateEvalError || !updateEvalResult || updateEvalResult.length === 0) {
+      // Rollback round trước và round hiện tại
+      if (prevRoundRecord) {
+        await supabase
+          .from('evaluation_rounds')
+          .update({
+            status: prevRoundRecord.status,
+            submitted_at: prevRoundRecord.submitted_at,
+          })
+          .eq('evaluation_id', evaluationId)
+          .eq('round', prevRound);
+      }
+      await supabase
+        .from('evaluation_rounds')
+        .update(currentRoundSnapshot)
+        .eq('evaluation_id', evaluationId)
+        .eq('round', round)
+        .eq('evaluator_id', actorId);
+
+      return { success: false, error: 'Lỗi cập nhật trạng thái đánh giá.' };
+    }
+
+    // (5) Log audit + revalidate
+    await logAudit(auth.user, 'RETURN_EVALUATION', 'evaluation', evaluationId, {
+      round,
+      reason: trimmedReason,
+    });
+
+    revalidatePath(`/evaluations/${evaluationId}`);
+    revalidateTag('dashboard-data', 'default');
+    revalidateTag('report-aggregation', 'default');
+
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+

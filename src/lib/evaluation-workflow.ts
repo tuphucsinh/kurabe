@@ -34,7 +34,7 @@ const EVALUATION_FLOWS: Record<Role, EvaluationFlowStep[]> = {
   ],
 };
 
-const ACTIVE_STEP_STATUSES: Record<RoundNumber, EvalStatus> = {
+export const ACTIVE_STEP_STATUSES: Record<RoundNumber, EvalStatus> = {
   1: 'Draft',
   2: 'Submitted',
   3: 'Reviewed',

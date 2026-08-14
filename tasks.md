@@ -159,7 +159,7 @@
 
 **Definition of Done**: edge tests `.tmp/test-return-logic.ts` ALL PASS (tsx, chạy được, in rõ kết quả); `npm run lint` 0 errors; `npm run build` PASS.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: `src/lib/return-evaluation.ts` (canReturnEvaluation + resetRoundFields + nextStatusAfterReturn, thuần) + export ACTIVE_STEP_STATUSES + `returnEvaluationRound` (Case A reset/unlock/update có điều kiện + rollback; Case B Manager Approved; audit RETURN_EVALUATION; revalidate) + clear return_note khi submit; Mika verify bổ sung guard `round === currentRound` (chống trả lại vòng cũ) + test case 19; edge tests 20/20 PASS; lint 0 errors + build PASS.
 
 ---
 
