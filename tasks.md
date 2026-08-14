@@ -362,9 +362,9 @@
 
 **Concrete changes**:
 1. `src/actions/evaluation.ts`: đổi import `supabase` → `supabaseAdmin`; verify từng hàm không phụ thuộc RLS anon.
-2. **Đóng cửa sổ fail im lặng (góp ý Reviewer)**: chuyển 3 write evaluations/evaluation_rounds trong `syncEvaluationAfterUserChange` (src/lib/db/users.ts:71-76, 112-118, 120-126 — đang anon + try/catch im lặng) sang `supabaseAdmin` NGAY TRONG T01, TRƯỚC khi chạy migration j1. Test ngay sau j1: đổi role/team user test → verify sync evaluator R1/R2 + evaluation.team_id vẫn chạy (không fail im lặng).
-3. Rà callers: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) — nếu chỉ gọi từ server-side → chuyển `supabaseAdmin`; nếu client gọi → thêm action + wire (qua hooks use-db.ts, giữ onSuccess).
-4. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
+2. **Đóng cửa sổ fail im lặng (góp ý Reviewer R1+R2)**: chuyển **ĐỦ 3 write** trong `syncEvaluationAfterUserChange` sang `supabaseAdmin` NGAY TRONG T01, TRƯỚC migration j1: (a) `teams.leader_id` khi đổi role Leader/Employee (users.ts:59-66 — SÓT ở vòng 1), (b) `evaluations` employee_role/team_id (L70-76), (c) `evaluation_rounds` evaluator (L120-126). L112-118 không phải write (logic loop — không đụng). Test ngay sau j1 MỞ RỘNG: đổi user test → Leader → verify `teams.leader_id` sync + đổi xuống Employee → leader_id = null + evaluator R1/R2 + evaluation.team_id (không fail im lặng).
+3. Rà callers + **bóc references client (góp ý R2 — chống lộ service key)**: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) chuyển `supabaseAdmin`; **XÓA import module-level của chúng khỏi `src/hooks/use-db.ts` (L10-11) + xóa 2 hook thừa `useUpsertEvaluation`/`useUpsertEvaluationRound` (L136-157, không page nào dùng)** — nếu không, client bundle (employees/teams/criteria pages import use-db.ts) sẽ kéo `supabase-admin.ts` → lộ service key; thêm `import 'server-only'` vào `src/lib/supabase-admin.ts` (fail-fast — build/browser sẽ throw nếu còn client import). onSuccess client chỉ invalidateQueries — ensure gọi NỘI BỘ trong action upsert user.
+4. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d; evaluation_responses KHÔNG có write path trong src — khóa bảng vẫn đúng, không cần action riêng). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
 
 **Definition of Done**: lint/build PASS; browser: chấm điểm + nộp + trả lại + approve chạy đúng (user test); anon write 3 bảng evaluation bị chặn (test thật).
 
@@ -381,8 +381,8 @@
 **Concrete changes**:
 1. `src/actions/users.ts` (ĐÃ TỒN TẠI — chứa deleteUserAction): mở rộng — move logic `upsertUser` (+ syncEvaluationAfterUserChange — đã admin từ T01), `upsertUsers`, `softDeleteUser` từ lib/db + requireManager + logAudit + revalidatePath; **chuyển write path của deleteUserAction sang admin trong CÙNG task (trước migration j2)**.
 2. `src/actions/teams.ts` (ĐÃ TỒN TẠI — deleteTeamAction): mở rộng `upsertTeam`, `softDeleteTeam` tương tự.
-3. Forms: `src/app/employees/page.tsx` (handleSubmit/delete), `src/app/teams/page.tsx` (handleSaveTeam/delete) — wire QUA hooks use-db.ts (`useUpsertUser`/`useUpsertTeam`... đổi mutationFn sang actions, **GIỮ onSuccess side-effects: invalidateQueries + ensureEvaluationsForUsers**).
-4. lib/db/users.ts + teams.ts: GIỮ read functions, XÓA hàm write anon.
+3. Forms: `src/app/employees/page.tsx` (handleSubmit/delete), `src/app/teams/page.tsx` (handleSaveTeam/delete) — wire QUA hooks use-db.ts (`useUpsertUser`/`useUpsertTeam`... đổi mutationFn sang actions, **onSuccess chỉ invalidateQueries — ensureEvaluationsForUsers gọi NỘI BỘ trong action upsert user (không gọi từ client)**).
+4. lib/db/users.ts + teams.ts: GIỮ read functions, XÓA hàm write anon. **Chống success giả (góp ý R2)**: delete/upsert actions verify số dòng đổi (dùng .select() hoặc count) — không trả success khi 0 rows (RLS chặn không throw → success giả, bài học P65T06).
 5. Migration `db/migration-j2-rls-users-teams.sql` + chạy + verify anon blocked.
 
 **Definition of Done**: lint/build PASS; browser: thêm/sửa/xóa NV + tạo/sửa/xóa nhóm + đổi leader/subleader chạy đúng + audit entry; anon write users/teams bị chặn.
@@ -400,7 +400,7 @@
 **Concrete changes**:
 1. `src/actions/criteria.ts` (ĐÃ TỒN TẠI — deleteCriteriaGroupAction/deleteCriterionAction): mở rộng — move `upsertCriteriaGroup`, `upsertCriterion` (+ levels delete/insert), `updateDefaultLevel`, `softDeleteCriteriaGroup`, `softDeleteCriterion` từ lib/db + requireManager + logAudit + revalidatePath; **chuyển write path delete sang admin trong CÙNG task (trước migration j3)**.
 2. Wire UI gọi actions (settings CriteriaTab, /criteria page — qua hooks use-db.ts, giữ onSuccess) — giữ nguyên hành vi.
-3. lib/db/criteria.ts: GIỮ read, XÓA write anon.
+3. lib/db/criteria.ts: GIỮ read, XÓA write anon. **Chống success giả (góp ý R2)**: các action criteria verify số dòng đổi (RLS chặn không throw → success giả).
 4. Migration `db/migration-j3-rls-criteria.sql` + chạy + verify anon blocked.
 
 **Definition of Done**: lint/build PASS; browser: CRUD tiêu chí + thang điểm mặc định chạy đúng; anon write 3 bảng criteria bị chặn.
