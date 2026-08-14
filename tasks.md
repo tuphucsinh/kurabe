@@ -225,7 +225,7 @@
 
 **Definition of Done**: mọi chỉ số dashboard/reports khớp DB; nhật ký đầy đủ đúng thứ tự; export file OK; ghi nhận mọi lệch (bug candidate).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: Dashboard 158 đúng (28 NV, 11%, 3/28, Test Full E2E 25%, phân bổ S1/B3, tồn đọng, anomaly "chênh 27" ✓ đã restore); hoạt động gần đây khớp audit; reports đúng (TST99 123 B, TST05 109 B, TST06 PENDING — cache 300s làm stale 1 lần, sau session mới đúng — không bug); export Excel ✓ (2 sheets Tổng Hợp 30 rows + Chi Tiết Vòng 39 rows, chứa TST05/109 — file `~/Downloads/Kurabe_Kỳ_2026_2026-08-14T03-59-57.xlsx`); Settings 158: 6 tabs, Thang điểm hiển thị, Nhóm & Quyền (3 NV chưa gán = data thật đúng), Mục tiêu hiển thị, **Nhật ký đầy đủ đúng thứ tự actor/thời gian** (SUBMIT/APPROVE/RESET/CHANGE_PASSWORD/DELETE). Ghi nhận: AI summary không tạo row (fail-soft); "Soạn thông báo" không fire qua automation.
 
 ---
 
