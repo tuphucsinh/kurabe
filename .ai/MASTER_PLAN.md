@@ -223,6 +223,29 @@
 
 ---
 
+### Phase 64: Trả lại đánh giá (Return/Reject) 🟡 (2026-08-14)
+> **Yêu cầu anh**: khi cấp dưới nộp cho cấp trên → cấp trên thấy nút **"Trả lại đánh giá"** trong chi tiết NV → evaluation quay về **vòng trước** → người chấm vòng trước mở khóa + sửa + nộp lại. Manager nộp **báo cáo tự đánh giá** của mình (R1 SELF → Approved) → nút **"Trả lại báo cáo"** để tự sửa. **Employee KHÔNG tự đánh giá** — giữ nguyên flow hiện tại (không đổi EVALUATION_FLOWS).
+
+**Thiết kế (chốt 14-08, sequential-thinking 4 steps + REVIEWER non-PASS → vá 3 điểm ①guard SELF/round≤1 ②RESET thay DELETE ③invalidate client)**:
+- **Server action mới `returnEvaluationRound(evaluationId, round, reason)`** (`src/actions/evaluation.ts`), requireAuth:
+  - **Guard trước (2 lớp)**: server — `round <= 1 || flowStep(round).evaluator === 'SELF'` → error (không cho trả về round 0); UI — nút Case A chỉ hiện khi `editableRound > 1`.
+  - **A — Reviewer return**: actor = evaluator của currentRound, round CHƯA submit (submitted_at null) → về round-1: round-1 `status=Draft` + `submitted_at=null` (mở khóa — update CÓ điều kiện `submitted_at is not null`); **RESET round hiện tại** (status NotStarted, `scores={}`, `notes={}`, `comment=null`, `total_score=0`, `grade='Pending'`, `submitted_at=null`) thay vì DELETE — né FK `evaluation_responses.round_id` (legacy — 0 usage trong src, verified 14-08) + không state mồ côi + idempotent; `current_round=round-1`; `status=ACTIVE_STEP_STATUSES[round-1]` ('Draft' R1 / 'Submitted' R2); `final_grade/final_score=null`; `return_note=reason`. Resubmit vòng trước → `existingNextRound` thấy record NotStarted → tái sử dụng (giữ evaluator cũ = đúng người review lại) — KHÔNG cần sửa saveEvaluationRound phần tạo round.
+  - **B — Manager self-return**: = Case A với round=1 (SELF) + điều kiện riêng `status Approved && actor === employeeId && role Manager` → R1 `status=Draft` + `submitted_at=null`; `current_round=1`; `status='Draft'`; clear final; `return_note=reason`. **Gộp chung 1 code path** + helper `unlockRound(evaluationId, round)` dùng chung A/B.
+  - **Thứ tự thực thi an toàn** (mỗi bước 0 rows → abort trả lỗi): (a) guard → (b) reset round hiện tại (verify 1 row) → (c) unlock round-1 (`submitted_at is not null` trong điều kiện) → (d) update evaluation (`current_round` match + clear final) → (e) audit + revalidate.
+- **Migration**: `ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS return_note text;` (Management API / MCP supabase) + types `database.ts` (Row/Insert/Update) + `Evaluation.returnNote` + `mapEvaluationFromDb`.
+- **saveEvaluationRound**: khi `isSubmit` → `return_note=null` (clear sau khi nộp lại).
+- **Audit**: `logAudit(actor, 'RETURN_EVALUATION', 'evaluation', id, {round, reason})`; cache: `revalidatePath(/evaluations/[id])` + `revalidateTag('dashboard-data'|'report-aggregation', 'default')` + **client `invalidateQueries(['evaluation-by-employee', ...])` + `['evaluations']`** (copy page.tsx:386-389 — detail page dùng react-query, KHÔNG dùng unstable_cache → revalidate server không đủ).
+- **UI** `/evaluations/[id]`: nút **"Trả lại đánh giá"** (danger) trong vùng edit khi `editableRound > 1` (case A — không hiện ở R1 SELF); nút **"Trả lại báo cáo"** ở vùng readonly khi `role==='Manager' && employeeId===user.id && status==='Approved'` (case B — KHÔNG dựa access edit vì Approved là readonly); **ConfirmDialog + textarea lý do BẮT BUỘC** (cảnh báo sẽ reset dữ liệu vòng hiện tại); banner amber "⚠️ Đánh giá bị trả lại: {reason}" khi `return_note != null`; round trước hiển thị badge Nháp sau trả lại (normalizeRoundStatus đọc submitted_at null → Draft — đã đúng sẵn).
+- **Chống abuse/race**: toàn bộ update/reset có điều kiện (evaluator_id match + submitted_at null + current_round match) — 0 rows → fail an toàn (pattern saveEvaluationRound).
+
+**WBS sơ bộ**: `[#P64T01]` migration + types (return_note Row/Insert/Update + Evaluation.returnNote + map); `[#P64T02]` action `returnEvaluationRound` (guard SELF/round≤1 + reset an toàn + unlock + update evaluation theo thứ tự, mỗi bước 0 rows → abort) + helper unlockRound + clear return_note ở saveEvaluationRound + **edge tests tsx riêng** (race, round=1, SELF, resubmit tái sử dụng round); `[#P64T03]` UI nút + dialog + banner + invalidateQueries client; `[#P64T04]` docs + verify (lint/build + browser 2 flow: Leader trả lại → SubLeader sửa → nộp → chấm lại; Manager trả lại → sửa → nộp → Approved + check dashboard pending/reports).
+
+**Đề xuất mở rộng (chưa làm — chờ anh duyệt)**: self-return cho Leader/SubLeader khi vòng sau chưa chấm (hiện chỉ Manager).
+
+**Rủi ro**: reset làm mất dữ liệu draft vòng hiện tại của reviewer — đã cảnh báo trong dialog; loop trả lại không giới hạn (chấp nhận — quy trình nội bộ); RESET giữ evaluator cũ của round hiện tại (khi vòng trước submit lại — đúng người review lại, chấp nhận); review vòng 2 không cần (3 điểm vá đã verify bằng code: guard, evaluation_responses legacy 0 usage, react-query page.tsx:386-389).
+
+---
+
 ## Audit Summary (2026-08-10)
 
 > Full report: `full_audit_report.md` (Antigravity session 84bcd817)
