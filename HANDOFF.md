@@ -1,21 +1,16 @@
-# HANDOFF — Kurabe QAQC (2026-08-14, P69 password login)
+# HANDOFF — Kurabe QAQC (cập nhật 2026-08-14, đêm)
 
-## Trạng thái: main sạch, chưa push (chờ anh báo)
+## Trạng thái
+- **Phase 69 (password login thật)**: DONE — login mã NV + mật khẩu (bcrypt, cookie httpOnly, NULL fallback), secure theo protocol, logout server-side, hash ẩn anon. + fix bỏ block "Tài khoản test" + dọn dead logout.ts.
+- **Phase 70 (C3 — siết RLS write)**: **DONE + Reviewer PASS (R5)** — 8/8 bảng data chính anon chỉ SELECT; mọi write qua server actions (requireManager/requireAuth + supabaseAdmin + audit + revalidate + chống success giả); server-only + evaluations-write.ts chặn lộ service key; E2E 3 vòng Approved B/110; nguyên trạng 22/3/22 + 158 hash NULL. Migrations j1/j2/j3 đã chạy (file trong db/).
+- Git: main, sạch, **CHƯA PUSH** (~20 commits Phase 69-70). Server local chạy port 3000 (login mã NV).
 
-## Phiên này đã hoàn thành — Phase 69: Bật đăng nhập mật khẩu thật ✅
-- **T01**: login/logout server action — bcrypt + rule NULL fallback; cookie `auth_session` httpOnly 7 ngày; login page bật password field. Fix bug logout (Sidebar cũ document.cookie bất lực với httpOnly).
-- **T02**: migration REVOKE anon password_hash (GRANT 11 cột) + `USER_SELECT` thay mọi `select('*')` users + changePassword/resetPassword sang supabaseAdmin.
-- **T03**: 3 case login PASS trên user test (NULL không pass / sai pass chặn / đúng pass vào / reset fallback) — test data đã dọn, nguyên trạng 22/3/22/1/8.
-- **Dữ liệu**: reset hash 158 (sót từ P52) → NULL. Mọi account thật đều password_hash NULL = login mã NV như cũ; NV tự đặt pass sau (Cài đặt → Tài khoản).
-- **P69FIX** (`41d3d9a`): login fail qua HTTP LAN (IP máy) — cookie Secure theo NODE_ENV bị trình duyệt từ chối; đã sửa theo x-forwarded-proto. Verify: login 158 OK qua localhost + 192.168.1.230.
-- Commits: `19476cd` `1b805d0` `656f1c0` `41d3d9a` + docs. Chưa push.
+## Còn mở (ngoài phase, chờ anh quyết)
+1. 2 nút AI chưa verify ("Soạn thông báo", "Giải thích bằng AI") — action đã có (actions/ai.ts).
+2. Deploy Vercel (⚠️ AI env chưa set trên Vercel) + Cloudflare Tunnel chờ domain vorigin.vn.
+3. [THẤP] deleteEvaluationPeriod (actions/period.ts:182) hard-delete không check dòng — góp ý Reviewer R5, để phase sau.
+4. Rate-limit login chống brute-force (ghi nhận, rủi ro thấp nội bộ).
 
-## Việc còn mở (chờ anh quyết)
-1. Thử lại 2 nút AI chưa verify ("Soạn thông báo", "Giải thích bằng AI")
-2. Deploy production lên Vercel (⚠️ AI env chưa set: AI_API_KEY, AI_BASE_URL, AI_MODEL)
-3. Cloudflare Tunnel: chờ anh trỏ nameserver `vorigin.vn` → Cloudflare
-4. Khi muốn siết thật: rate-limit login + refactor client anon-write (C3)
-
-## Lưu ý vận hành
-- Server local port 3000 đang chạy (`npm run start`) — kill trước khi build (`ss -tlnp | grep 3000`).
-- PAT Supabase cho kurabe: dùng PAT trong `~/.hermes/profiles/mika/config.yaml` (MCP), KHÔNG dùng `~/.supabase/access-token`.
+## Việc tiếp theo gợi ý
+- Anh quyết: push commits? verify 2 nút AI? hay deploy Vercel?
+- Session sau mở: đọc AGENTS.md + tasks.md (Phase 70 [x] 5/5) + .ai/KNOWN_BUGS.md P70.
