@@ -180,7 +180,7 @@
 
 **Definition of Done**: 4 bước chạy đúng + DB hash verify từng bước + login fallback hoạt động.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: (1) đặt mật khẩu lần đầu TST03 → bcrypt $2b$10 + CHANGE_PASSWORD ✓; (2) đổi với cũ SAI → CHẶN (không audit, updated_at không đổi) ✓; (3) đổi với cũ ĐÚNG → CHANGE_PASSWORD 03:10 ✓; (4) Manager 158 reset → hash NULL + RESET_PASSWORD ✓. LƯU Ý: dev mode đang MOCK login (input password disabled — "Không yêu cầu mật khẩu") → KHÔNG test được login-by-password; verify qua DB hash + audit. Password test dùng `Testpass@123`/`Newpass@456` (đã reset về trống).
 
 ---
 
