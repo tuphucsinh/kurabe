@@ -363,7 +363,7 @@
 **Concrete changes**:
 1. `src/actions/evaluation.ts`: đổi import `supabase` → `supabaseAdmin`; verify từng hàm không phụ thuộc RLS anon.
 2. **Đóng cửa sổ fail im lặng (góp ý Reviewer R1+R2)**: chuyển **ĐỦ 3 write** trong `syncEvaluationAfterUserChange` sang `supabaseAdmin` NGAY TRONG T01, TRƯỚC migration j1: (a) `teams.leader_id` khi đổi role Leader/Employee (users.ts:59-66 — SÓT ở vòng 1), (b) `evaluations` employee_role/team_id (L70-76), (c) `evaluation_rounds` evaluator (L120-126). L112-118 không phải write (logic loop — không đụng). Test ngay sau j1 MỞ RỘNG: đổi user test → Leader → verify `teams.leader_id` sync + đổi xuống Employee → leader_id = null + evaluator R1/R2 + evaluation.team_id (không fail im lặng).
-3. Rà callers + **bóc references client (góp ý R2 — chống lộ service key)**: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) chuyển `supabaseAdmin`; **XÓA import module-level của chúng khỏi `src/hooks/use-db.ts` (L10-11) + xóa 2 hook thừa `useUpsertEvaluation`/`useUpsertEvaluationRound` (L136-157, không page nào dùng)** — nếu không, client bundle (employees/teams/criteria pages import use-db.ts) sẽ kéo `supabase-admin.ts` → lộ service key; thêm `import 'server-only'` vào `src/lib/supabase-admin.ts` (fail-fast — build/browser sẽ throw nếu còn client import). onSuccess client chỉ invalidateQueries — ensure gọi NỘI BỘ trong action upsert user.
+3. Rà callers + **bóc references client (góp ý R2 — chống lộ service key)**: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) chuyển `supabaseAdmin`; **XÓA import module-level của chúng khỏi `src/hooks/use-db.ts` (L10-13) + xóa 2 hook thừa `useUpsertEvaluation`/`useUpsertEvaluationRound` (L136-157, không page nào dùng)** — nếu không, client bundle (employees/teams/criteria pages import use-db.ts) sẽ kéo `supabase-admin.ts` → lộ service key; thêm `import 'server-only'` vào `src/lib/supabase-admin.ts` (fail-fast — build/browser sẽ throw nếu còn client import). onSuccess client chỉ invalidateQueries — ensure gọi NỘI BỘ trong action upsert user.
 4. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d; evaluation_responses KHÔNG có write path trong src — khóa bảng vẫn đúng, không cần action riêng). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
 
 **Definition of Done**: lint/build PASS; browser: chấm điểm + nộp + trả lại + approve chạy đúng (user test); anon write 3 bảng evaluation bị chặn (test thật).
@@ -418,7 +418,8 @@
 **Concrete changes**:
 1. Script node anon key: INSERT/UPDATE/DELETE thử trên cả 8 bảng → phải trả lỗi permission.
 2. Grep code: 0 chỗ `supabase.from(...)` write ngoài actions (verify bằng search).
-3. `npm run lint` + `npm run build` (kill server 3000 trước build).
+3. **Grep verify: KHÔNG client component/page import `supabase-admin`** (server-only fail-fast đã chặn build nếu còn — verify thêm bằng search để khớp acceptance).
+4. `npm run lint` + `npm run build` (kill server 3000 trước build).
 
 **Definition of Done**: 8/8 bảng anon write blocked; grep sạch; lint 0 errors; build PASS.
 

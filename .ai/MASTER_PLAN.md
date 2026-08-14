@@ -370,7 +370,7 @@
 
 **Phạm vi write sites (đếm code 14-08)**:
 - `src/actions/evaluation.ts` — server action NHƯNG dùng `supabase` ANON: **14 writes** (saveEvaluationRound + flow submit/return/approve) → đổi import sang `supabaseAdmin`, KHÔNG đổi logic.
-- `src/lib/db/users.ts` — 7 writes (upsertUser, upsertUsers, softDeleteUser, syncEvaluationAfterUserChange ×3, assertLeadershipSlot đọc) — gọi từ form employees (client anon).
+- `src/lib/db/users.ts` — 6 writes (upsertUser, upsertUsers, softDeleteUser, syncEvaluationAfterUserChange ×3 — assertLeadershipSlot là đọc) — gọi từ form employees (client anon).
 - `src/lib/db/teams.ts` — 2 writes (upsertTeam, softDeleteTeam) — gọi từ form teams.
 - `src/lib/db/criteria.ts` — 7 writes (upsertCriteriaGroup, upsertCriterion + levels delete/insert, updateDefaultLevel, softDeleteCriteriaGroup, softDeleteCriterion) — gọi từ settings/criteria.
 - `src/lib/db/evaluations.ts` — 4 writes (upsertEvaluation, upsertRound, ensureEvaluationsForUsers ×2 insert) — gọi từ server-side flow + upsertUser.
