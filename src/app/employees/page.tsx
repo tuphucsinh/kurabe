@@ -88,9 +88,10 @@ function EmployeeModalContent({
   restrictToTeamId,
   roleOptions,
 }: EmployeeModalContentProps) {
+  const { toast } = useToast();
   const allowedRoles: Role[] = roleOptions && roleOptions.length > 0 ? roleOptions : ['Manager', 'Leader', 'SubLeader', 'Employee'];
   const defaultRole = employee?.role && allowedRoles.includes(employee.role) ? employee.role : (allowedRoles[0] || 'Employee');
-  const initialTeamId = employee?.teamId || restrictToTeamId || teams[0]?.id || '';
+  const initialTeamId = employee?.teamId || restrictToTeamId || '';
 
   const [formData, setFormData] = useState<Partial<User>>({
     name: employee?.name || '',
@@ -135,6 +136,11 @@ function EmployeeModalContent({
 
     if (restrictToTeamId) {
       finalData.teamId = restrictToTeamId;
+    }
+
+    if (finalData.role !== 'Manager' && !finalData.teamId) {
+      toast('Vui lòng chọn nhóm cho nhân viên.', 'error');
+      return;
     }
 
     if (finalData.role === 'Manager') {
