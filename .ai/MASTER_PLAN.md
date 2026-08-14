@@ -359,3 +359,35 @@
 **Verify**: lint 0 errors + build PASS + browser Chrome thật (login page pass field active; 3 case login; anon query password_hash trả rỗng) + DB hash verify từng bước.
 
 **Kết quả thực thi (14-08)**: 3 tasks DONE (chi tiết `tasks.md`). Login thật hoạt động: server action `loginAction` (bcrypt + rule NULL fallback + cookie httpOnly 7 ngày) + `logoutAction`; Sidebar logout qua server action; migration REVOKE anon password_hash (GRANT lại 11 cột) + `USER_SELECT` thay `select('*')`; account actions sang supabaseAdmin. Test E2E 3 case PASS trên user test TST-PW (NULL login không pass / sai pass chặn "Mật khẩu không đúng." / đúng pass vào / reset NULL fallback) — user test đã xóa, nguyên trạng 22/3/22/1/8. **Dữ liệu**: reset hash 158 (sót từ P52) về NULL — account thật không bị khóa. Commits: `19476cd`, `1b805d0`, `656f1c0`, `9a78229`, docs. Chưa push.
+
+---
+
+### Phase 70: C3 — Siết RLS write (anon chỉ SELECT) 🔴 (2026-08-14)
+
+> **Yêu cầu anh**: xử lý lỗ hổng bảo mật còn lại — 8 bảng data chính đang "Enable all access for anon" (anon key công khai trong bundle → ai cũng ghi/sửa/xóa data qua API). **CONTROLLED** — chạm DB/schema/auth → Reviewer gate bắt buộc.
+
+**Bằng chứng (pg_policies verified 14-08)**: `users`, `teams`, `evaluations`, `evaluation_rounds`, `evaluation_responses`, `criteria`, `criteria_groups`, `criterion_levels` = policy "Enable all access for anon" (ALL). Đã select-only OK: `audit_logs`, `evaluation_periods`, `grade_bands`, `ai_summaries`.
+
+**Phạm vi write sites (đếm code 14-08)**:
+- `src/actions/evaluation.ts` — server action NHƯNG dùng `supabase` ANON: **14 writes** (saveEvaluationRound + flow submit/return/approve) → đổi import sang `supabaseAdmin`, KHÔNG đổi logic.
+- `src/lib/db/users.ts` — 7 writes (upsertUser, upsertUsers, softDeleteUser, syncEvaluationAfterUserChange ×3, assertLeadershipSlot đọc) — gọi từ form employees (client anon).
+- `src/lib/db/teams.ts` — 2 writes (upsertTeam, softDeleteTeam) — gọi từ form teams.
+- `src/lib/db/criteria.ts` — 7 writes (upsertCriteriaGroup, upsertCriterion + levels delete/insert, updateDefaultLevel, softDeleteCriteriaGroup, softDeleteCriterion) — gọi từ settings/criteria.
+- `src/lib/db/evaluations.ts` — 4 writes (upsertEvaluation, upsertRound, ensureEvaluationsForUsers ×2 insert) — gọi từ server-side flow + upsertUser.
+- Đã admin OK: actions/period, grade-bands, ai-summary, account, auth + lib/audit.
+- False positives đã loại: ReportFilters (URLSearchParams), CriteriaTab (Set state).
+
+**Thiết kế**:
+1. **Server actions là lớp ghi DUY NHẤT**: requireManager/requireAuth (GIỮ NGUYÊN mức quyền nghiệp vụ hiện tại — chỉ chuyển lớp, không siết thêm) + `supabaseAdmin` + `logAudit` + `revalidatePath/revalidateTag` (cache 300s — mutation phải invalidate như cũ).
+2. `actions/evaluation.ts`: đổi import anon → admin (14 writes) — verify từng hàm (không phụ thuộc RLS anon).
+3. Tạo `src/actions/users.ts` (upsertUser/upsertUsers/softDeleteUser — move logic từ lib/db + requireManager), `src/actions/teams.ts` (upsertTeam/softDeleteTeam), `src/actions/criteria.ts` (5 hàm). FORMS gọi actions. lib/db GIỮ read functions, **XÓA hàm write anon** (chống tái sử dụng); `ensureEvaluationsForUsers` + `upsertEvaluation/upsertRound` chuyển `supabaseAdmin` (chỉ gọi từ server-side sau refactor — task T01 rà callers).
+4. **Migration từng nhóm theo task** (giảm cửa sổ rủi ro, verify ngay): `migration-j-rls-write-lock-users-teams.sql` (sau T02), `...-criteria.sql` (sau T03), `...-evaluations.sql` (sau T01) — drop "Enable all access for anon" → `CREATE POLICY <table>_select_only FOR SELECT USING (true)` (pattern migration-d). anon vẫn SELECT (app đọc qua anon như hiện tại).
+5. **Verify chống regression im lặng** (bài học P65T06): sau mỗi migration — PostgREST anon INSERT/UPDATE/DELETE phải trả lỗi; E2E browser từng flow.
+
+**Rủi ro + kiểm soát**: (1) regression im lặng khi sót write anon → migration TỪNG NHÓM + test anon-blocked ngay; (2) quyền role đổi hành vi → mirror chính xác quyền hiện có (employees/teams/criteria = Manager — UI đã chặn); (3) cache stale → mọi action mới revalidate như cũ; (4) upsert().select() trong criteria — admin full quyền OK.
+
+**WBS (5 tasks)**: T01 actions/evaluation.ts → admin + rà callers + migration evaluations/rounds/responses; T02 actions users+teams + wire forms + migration users/teams; T03 actions criteria + wire + migration criteria; T04 verify anon-write BLOCKED toàn bộ (test PostgREST thật) + lint/build; T05 E2E toàn diện (P65-style: CRUD NV/nhóm/criteria + đánh giá 3 vòng trên user test) + docs + commit.
+
+**Reviewer gate**: plan review trước khi thực thi + review package sau T05 (auth/DB → bắt buộc).
+
+**Verify phase**: lint 0 errors + build PASS + browser E2E + anon write blocked ×8 bảng + DB nguyên trạng + Reviewer PASS.

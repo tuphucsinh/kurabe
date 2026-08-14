@@ -347,3 +347,96 @@
 **Definition of Done**: 3 case PASS; anon hash ẩn verified; DB nguyên trạng; docs đủ; git log sạch.
 
 **Status**: `[x]` — DONE 14-08: user test TST-PW tạo qua service (KHÔNG đụng account thật); **Case 1** NULL → login TST-PW không pass → /dashboard ✓; **Case 2** đặt hash bcrypt `Testpass@123` → sai pass chặn "Mật khẩu không đúng." (ở lại login, không set session) ✓ + đúng pass → /dashboard ✓; **Case 3** reset NULL → login mã NV fallback → /dashboard ✓. Anon hash ẩn verified (T02). Dọn: xóa TST-PW + logout sạch → **NGUYÊN TRẠNG 22/3/22/1/8 + 158 hash NULL** ✓. Docs: MASTER_PLAN Phase 69 ✅ + KNOWN_BUGS 5 bài học mới + DECISIONS #12 (đã ghi ở /plan).
+
+---
+
+## Phase 70: C3 — Siết RLS write (anon chỉ SELECT) 🔴 (2026-08-14)
+
+> Yêu cầu anh: đóng lỗ hổng còn lại — 8 bảng data chính đang anon-write full. **CONTROLLED** (chạm DB/schema/auth) → Reviewer gate. Chi tiết bằng chứng + thiết kế: `.ai/MASTER_PLAN.md` Phase 70.
+
+### [#P70T01] [src/actions/evaluation.ts + db] Đổi anon → supabaseAdmin + rà callers + migration evaluations/rounds/responses
+
+**Goal**: actions/evaluation.ts (14 writes) hiện server action nhưng dùng `supabase` ANON → đổi `supabaseAdmin` (không đổi logic); rà callers các write của lib/db/evaluations.ts; migration siết 3 bảng evaluation.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. `src/actions/evaluation.ts`: đổi import `supabase` → `supabaseAdmin`; verify từng hàm không phụ thuộc RLS anon.
+2. Rà callers: `upsertEvaluation`/`upsertRound`/`ensureEvaluationsForUsers` (lib/db/evaluations.ts) — nếu chỉ gọi từ server-side → chuyển `supabaseAdmin`; nếu client gọi → thêm action + wire.
+3. Migration `db/migration-j1-rls-evaluations.sql`: drop "Enable all access for anon" trên `evaluations`/`evaluation_rounds`/`evaluation_responses` → policy SELECT-only (pattern migration-d). Mika chạy qua Management API + verify anon INSERT/UPDATE/DELETE BLOCKED ngay.
+
+**Definition of Done**: lint/build PASS; browser: chấm điểm + nộp + trả lại + approve chạy đúng (user test); anon write 3 bảng evaluation bị chặn (test thật).
+
+**Status**: `[ ]`
+
+---
+
+### [#P70T02] [src/actions/users.ts + teams.ts + forms + db] Server actions users/teams + wire + migration
+
+**Goal**: Chuyển mọi write users/teams từ lib/db anon → server actions (requireManager + admin + audit + revalidate); forms gọi actions; migration siết users/teams.
+
+**Depends on**: `[#P70T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. `src/actions/users.ts`: move logic `upsertUser` (+ syncEvaluationAfterUserChange — dùng admin), `upsertUsers`, `softDeleteUser` từ lib/db + requireManager + logAudit + revalidatePath.
+2. `src/actions/teams.ts`: `upsertTeam`, `softDeleteTeam` tương tự.
+3. Forms: `src/app/employees/page.tsx` (handleSubmit/delete), `src/app/teams/page.tsx` (handleSaveTeam/delete) gọi actions.
+4. lib/db/users.ts + teams.ts: GIỮ read functions, XÓA hàm write anon.
+5. Migration `db/migration-j2-rls-users-teams.sql` + chạy + verify anon blocked.
+
+**Definition of Done**: lint/build PASS; browser: thêm/sửa/xóa NV + tạo/sửa/xóa nhóm + đổi leader/subleader chạy đúng + audit entry; anon write users/teams bị chặn.
+
+**Status**: `[ ]`
+
+---
+
+### [#P70T03] [src/actions/criteria.ts + wire + db] Server actions criteria + migration
+
+**Goal**: Chuyển 5 hàm write criteria (group/criterion/levels/default/soft-delete) sang server actions; wire settings/criteria UI; migration siết 3 bảng criteria.
+
+**Depends on**: `[#P70T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. `src/actions/criteria.ts`: move `upsertCriteriaGroup`, `upsertCriterion` (+ levels delete/insert), `updateDefaultLevel`, `softDeleteCriteriaGroup`, `softDeleteCriterion` từ lib/db + requireManager + logAudit + revalidatePath.
+2. Wire UI gọi actions (settings CriteriaTab, /criteria page) — giữ nguyên hành vi.
+3. lib/db/criteria.ts: GIỮ read, XÓA write anon.
+4. Migration `db/migration-j3-rls-criteria.sql` + chạy + verify anon blocked.
+
+**Definition of Done**: lint/build PASS; browser: CRUD tiêu chí + thang điểm mặc định chạy đúng; anon write 3 bảng criteria bị chặn.
+
+**Status**: `[ ]`
+
+---
+
+### [#P70T04] [verify] Anon-write BLOCKED toàn bộ + lint/build
+
+**Goal**: Verify độc lập: 8 bảng anon chỉ SELECT (PostgREST thật), không sót write anon trong code.
+
+**Depends on**: `[#P70T03]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Script node anon key: INSERT/UPDATE/DELETE thử trên cả 8 bảng → phải trả lỗi permission.
+2. Grep code: 0 chỗ `supabase.from(...)` write ngoài actions (verify bằng search).
+3. `npm run lint` + `npm run build` (kill server 3000 trước build).
+
+**Definition of Done**: 8/8 bảng anon write blocked; grep sạch; lint 0 errors; build PASS.
+
+**Status**: `[ ]`
+
+---
+
+### [#P70T05] [docs + test] E2E toàn diện + docs + Reviewer gate + commit
+
+**Goal**: Test E2E P65-style mọi flow nghiệp vụ trên user test; docs; Reviewer package; commit.
+
+**Depends on**: `[#P70T04]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. User test tạm (TST-PW style): CRUD NV/nhóm/tiêu chí + đánh giá 3 vòng (draft → submit → return → approve) + password login — KHÔNG đụng data thật; dọn + nguyên trạng 22/3/22/1/8.
+2. Docs: MASTER_PLAN Phase 70 DONE + KNOWN_BUGS + HANDOFF + DECISIONS.
+3. **Reviewer package** (fresh session profile reviewer — plan review đã PASS trước khi T01; review này cho kết quả thực thi) → verdict PASS mới đóng phase.
+4. Commit từng task `[#P70T0x]`.
+
+**Definition of Done**: E2E PASS + Reviewer PASS + DB nguyên trạng + git clean.
+
+**Status**: `[ ]`
