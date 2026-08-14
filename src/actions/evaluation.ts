@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
@@ -53,7 +53,7 @@ export async function saveEvaluationRound(
   const actorId = auth.user.id;
 
   try {
-    const { data: evalInfo, error: evalInfoError } = await supabase
+    const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
       .select('employee_id, employee_role, team_id, status')
       .eq('id', evaluationId)
@@ -113,7 +113,7 @@ export async function saveEvaluationRound(
       updateData.submitted_at = now;
     }
 
-    const roundQuery = supabase
+    const roundQuery = supabaseAdmin
       .from('evaluation_rounds')
       .update(updateData)
       .eq('evaluation_id', evaluationId)
@@ -135,7 +135,7 @@ export async function saveEvaluationRound(
 
     // Nếu không có row nào được update, có nghĩa là record đã được submit (lock) hoặc không tồn tại hoặc sai evaluator
     if (!updatedRounds || updatedRounds.length === 0) {
-      const { data: checkRound } = await supabase
+      const { data: checkRound } = await supabaseAdmin
         .from('evaluation_rounds')
         .select('status')
         .eq('evaluation_id', evaluationId)
@@ -156,7 +156,7 @@ export async function saveEvaluationRound(
 
     // Cập nhật trạng thái evaluation nếu là Draft và đang ở NotStarted
     if (!isSubmit && evalInfo.status === 'NotStarted') {
-      await supabase
+      await supabaseAdmin
         .from('evaluations')
         .update({ status: 'Draft', updated_at: now })
         .eq('id', evaluationId)
@@ -182,7 +182,7 @@ export async function saveEvaluationRound(
           created_at: now
         };
 
-        const { data: existingNextRound, error: existingNextRoundError } = await supabase
+        const { data: existingNextRound, error: existingNextRoundError } = await supabaseAdmin
           .from('evaluation_rounds')
           .select('id')
           .eq('evaluation_id', evaluationId)
@@ -192,7 +192,7 @@ export async function saveEvaluationRound(
         if (existingNextRoundError) {
           submitFlowError = 'Lỗi kiểm tra vòng đánh giá tiếp theo: ' + existingNextRoundError.message;
         } else if (!existingNextRound) {
-          const { error: nextRoundError } = await supabase
+          const { error: nextRoundError } = await supabaseAdmin
             .from('evaluation_rounds')
             .insert(nextRoundData);
 
@@ -215,7 +215,7 @@ export async function saveEvaluationRound(
           evalUpdate.final_score = totalScore;
         }
 
-        const { error: eError } = await supabase
+        const { error: eError } = await supabaseAdmin
           .from('evaluations')
           .update(evalUpdate)
           .eq('id', evaluationId);
@@ -227,7 +227,7 @@ export async function saveEvaluationRound(
 
       if (submitFlowError) {
         // Best-effort rollback để giảm trạng thái nửa chừng nếu submit flow fail.
-        await supabase
+        await supabaseAdmin
           .from('evaluation_rounds')
           .update({ submitted_at: null, status: 'Draft' })
           .eq('evaluation_id', evaluationId)
@@ -276,7 +276,7 @@ export async function returnEvaluationRound(
   const actorId = auth.user.id;
 
   try {
-    const { data: evalInfo, error: evalInfoError } = await supabase
+    const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
       .select('id, employee_id, employee_role, current_round, status')
       .eq('id', evaluationId)
@@ -286,7 +286,7 @@ export async function returnEvaluationRound(
       return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
     }
 
-    const { data: roundsData, error: roundsError } = await supabase
+    const { data: roundsData, error: roundsError } = await supabaseAdmin
       .from('evaluation_rounds')
       .select('*')
       .eq('evaluation_id', evaluationId);
@@ -326,7 +326,7 @@ export async function returnEvaluationRound(
 
     // Case B: round === 1 (Manager tự đánh giá đã Approved)
     if (round === 1) {
-      const { data: updatedEval, error: evalUpError } = await supabase
+      const { data: updatedEval, error: evalUpError } = await supabaseAdmin
         .from('evaluations')
         .update({
           current_round: 1,
@@ -344,7 +344,7 @@ export async function returnEvaluationRound(
         return { success: false, error: 'Báo cáo không ở trạng thái Approved.' };
       }
 
-      const { data: updatedRound, error: roundUpError } = await supabase
+      const { data: updatedRound, error: roundUpError } = await supabaseAdmin
         .from('evaluation_rounds')
         .update({
           status: 'Draft',
@@ -357,7 +357,7 @@ export async function returnEvaluationRound(
 
       if (roundUpError || !updatedRound || updatedRound.length === 0) {
         // Best-effort rollback evaluations về Approved
-        await supabase
+        await supabaseAdmin
           .from('evaluations')
           .update({
             status: 'Approved',
@@ -394,7 +394,7 @@ export async function returnEvaluationRound(
 
     // (2) RESET round hiện tại
     const resetData = resetRoundFields();
-    const { data: resetResult, error: resetError } = await supabase
+    const { data: resetResult, error: resetError } = await supabaseAdmin
       .from('evaluation_rounds')
       .update(resetData)
       .eq('evaluation_id', evaluationId)
@@ -408,7 +408,7 @@ export async function returnEvaluationRound(
     }
 
     // (3) Unlock round - 1
-    const { data: unlockResult, error: unlockError } = await supabase
+    const { data: unlockResult, error: unlockError } = await supabaseAdmin
       .from('evaluation_rounds')
       .update({
         status: 'Draft',
@@ -421,7 +421,7 @@ export async function returnEvaluationRound(
 
     if (unlockError || !unlockResult || unlockResult.length === 0) {
       // Rollback round hiện tại về snapshot
-      await supabase
+      await supabaseAdmin
         .from('evaluation_rounds')
         .update(currentRoundSnapshot)
         .eq('evaluation_id', evaluationId)
@@ -433,7 +433,7 @@ export async function returnEvaluationRound(
 
     // (4) Update evaluations
     const newStatus = nextStatusAfterReturn(round);
-    const { data: updateEvalResult, error: updateEvalError } = await supabase
+    const { data: updateEvalResult, error: updateEvalError } = await supabaseAdmin
       .from('evaluations')
       .update({
         current_round: prevRound,
@@ -450,7 +450,7 @@ export async function returnEvaluationRound(
     if (updateEvalError || !updateEvalResult || updateEvalResult.length === 0) {
       // Rollback round trước và round hiện tại
       if (prevRoundRecord) {
-        await supabase
+        await supabaseAdmin
           .from('evaluation_rounds')
           .update({
             status: prevRoundRecord.status,
@@ -459,7 +459,7 @@ export async function returnEvaluationRound(
           .eq('evaluation_id', evaluationId)
           .eq('round', prevRound);
       }
-      await supabase
+      await supabaseAdmin
         .from('evaluation_rounds')
         .update(currentRoundSnapshot)
         .eq('evaluation_id', evaluationId)

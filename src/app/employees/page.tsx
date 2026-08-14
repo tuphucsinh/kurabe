@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useUsers, useTeams, useEvaluations, useUpsertUser, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUsers, useTeams, useEvaluations, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Role } from '@/types';
 import { hasRoundDraft } from '@/data/workflow';
@@ -341,7 +343,7 @@ export default function EmployeesPage() {
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
-  const { mutate: upsertUser } = useUpsertUser();
+  const queryClient = useQueryClient();
   const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();
   const { toast } = useToast();
@@ -556,7 +558,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleSaveEmployee = (data: Partial<User>) => {
+  const handleSaveEmployee = async (data: Partial<User>) => {
     if (!canManageEmployees) {
       toast('Bạn không có quyền lưu thay đổi nhân viên.', 'error');
       return;
@@ -593,16 +595,21 @@ export default function EmployeesPage() {
       payload.teamId = user.teamId;
     }
     
-    upsertUser(payload, {
-      onSuccess: () => {
+    try {
+      const result = await upsertUserAction(payload);
+      if (result.success) {
         toast('Cập nhật nhân viên thành công!', 'success');
-        void logAuditAction(editingEmployee ? 'UPDATE_USER' : 'CREATE_USER', 'user', payload.id || '');
-      },
-      onError: (err) => {
-        const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật nhân viên.';
-        toast(msg, 'error');
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+        queryClient.invalidateQueries({ queryKey: ['teams'] });
+        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        // Audit CREATE_USER/UPDATE_USER đã ghi trong upsertUserAction (P70T01) — không ghi trùng ở UI
+      } else {
+        toast(result.error || 'Lỗi khi cập nhật nhân viên.', 'error');
       }
-    });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật nhân viên.';
+      toast(msg, 'error');
+    }
   };
 
   const handleImportClick = () => {

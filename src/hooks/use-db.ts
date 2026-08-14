@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, getUserById, getUsersByTeam, upsertUser, upsertUsers } from '@/lib/db/users';
+import { getUsers, getUserById, getUsersByTeam } from '@/lib/db/users';
 import { getTeams, getTeamById, upsertTeam } from '@/lib/db/teams';
 import { 
   getPeriods, 
@@ -7,18 +7,14 @@ import {
   getEvaluations, 
   getEvaluationsByPeriod,
   getEvaluationById, 
-  upsertEvaluation, 
-  upsertEvaluationRound,
-  getEvaluationByEmployee,
-  ensureEvaluationsForUsers
+  getEvaluationByEmployee
 } from '@/lib/db/evaluations';
 import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefaultLevel } from '@/lib/db/criteria';
-import { deleteUserAction } from '@/actions/users';
+import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction } from '@/actions/teams';
 import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
 
-
-import { EvaluationRound, Criterion, User } from '@/types';
+import { Criterion, User } from '@/types';
 
 // Users
 export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({ 
@@ -32,20 +28,16 @@ export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-user
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: upsertUser,
-    onSuccess: async (data) => {
+    mutationFn: async (user: Partial<User>) => {
+      const res = await upsertUserAction(user);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật nhân viên');
+      return res.user;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      // Tự tạo evaluation + round 1 nếu user mới vào kỳ active
-      if (data) {
-        try {
-          await ensureEvaluationsForUsers([data]);
-          queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        } catch (err) {
-          console.error('ensureEvaluationsForUsers (single) error:', err);
-        }
-      }
+      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
     },
   });
 };
@@ -53,20 +45,16 @@ export const useUpsertUser = () => {
 export const useBatchUpsertUsers = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: upsertUsers,
-    onSuccess: async (data) => {
+    mutationFn: async (users: Partial<User>[]) => {
+      const res = await upsertUsersAction(users);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi import nhân viên');
+      return res.users;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      // Tự tạo evaluation + round 1 cho user mới vào kỳ active
-      if (data && data.length > 0) {
-        try {
-          await ensureEvaluationsForUsers(data);
-          queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        } catch (err) {
-          console.error('ensureEvaluationsForUsers (batch) error:', err);
-        }
-      }
+      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
     },
   });
 };
@@ -132,29 +120,6 @@ export const useEvaluationByEmployee = (employeeId: string, periodId?: string, u
   queryFn: () => getEvaluationByEmployee(employeeId, periodId, user), 
   enabled: !!employeeId 
 });
-
-export const useUpsertEvaluation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: upsertEvaluation,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      if (data) queryClient.invalidateQueries({ queryKey: ['evaluation', data.id] });
-    },
-  });
-};
-
-export const useUpsertEvaluationRound = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ evaluationId, round }: { evaluationId: string; round: Partial<EvaluationRound> }) => 
-      upsertEvaluationRound(evaluationId, round),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['evaluation', variables.evaluationId] });
-      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-    },
-  });
-};
 
 // Criteria
 export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: getAllCriteriaGroups, staleTime: 5 * 60 * 1000 });
