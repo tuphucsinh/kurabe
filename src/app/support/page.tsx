@@ -59,12 +59,17 @@ const usageGuide = [
       'Khi bấm "Gửi Đánh giá", hệ thống sẽ khóa vòng hiện tại ngay sau khi gửi thành công. Bạn sẽ không còn sửa lại vòng đó qua giao diện. Nếu workflow còn bước tiếp theo, hệ thống tự mở vòng kế tiếp cho người có trách nhiệm tiếp theo. Sau đó trang sẽ quay về danh sách nhân viên và dữ liệu trên danh sách sẽ được cập nhật ngay mà không cần tự bấm reload.',
   },
   {
-    title: '9. Khi đánh giá bị trả lại (Return) — phải sửa và nộp lại',
+    title: '9. Vòng trước chưa nộp thì người đánh giá vòng sau chưa mở được',
+    content:
+      'Quy trình đánh giá diễn ra TUẦN TỰ: vòng 1 (SubLeader) nộp xong thì vòng 2 (Leader) mới mở được; vòng 2 nộp xong thì vòng 3 (Manager) mới mở được. Nếu nhân viên chưa được SubLeader nộp đánh giá lên thì dù là Leader hay Manager cũng KHÔNG mở được đánh giá của nhân viên đó (hệ thống báo vòng hiện tại chưa sẵn sàng). Đây là hành vi đúng để bảo đảm mỗi người đánh giá dựa trên kết quả vòng trước, không phải lỗi hệ thống. Nếu cần thúc tiến độ, hãy nhắc người đang giữ lượt (SubLeader vòng 1, Leader vòng 2) nộp trước.',
+  },
+  {
+    title: '10. Khi đánh giá bị trả lại (Return) — phải sửa và nộp lại',
     content:
       'Người đánh giá vòng sau (Leader/Manager) có thể bấm "Trả lại đánh giá" khi thấy cần bổ sung hoặc chỉnh sửa. Khi đó: (1) phiếu của bạn được mở lại (trạng thái về bản nháp), (2) trên màn hình hiện banner màu vàng ghi rõ lý do trả lại, (3) bạn bấm vào phiếu, xem lý do, chỉnh sửa điểm/ghi chú rồi bấm "Gửi Đánh giá" lần nữa. Lý do trả lại là BẮT BUỘC phải nhập khi người đánh giá trả lại. Sau khi bạn nộp lại, lý do trả lại sẽ được xóa và vòng đánh giá tiếp tục như bình thường.',
   },
   {
-    title: '10. Cách đọc lỗi và xử lý đúng',
+    title: '11. Cách đọc lỗi và xử lý đúng',
     content:
       'Nếu gặp lỗi quyền truy cập, không thử gửi lại nhiều lần; hãy kiểm tra đúng vai trò và đúng kỳ trước. Nếu gặp lỗi vì chưa có dữ liệu evaluation, cần kiểm tra xem nhân viên đó đã được khởi tạo trong kỳ hiện tại chưa. Nếu thấy vòng mới không mở đúng như mong đợi, hãy đối chiếu lại phần workflow theo vai trò bên dưới để xác định đang chờ ai đánh giá tiếp theo.',
   },
@@ -246,6 +251,11 @@ const faqItems = [
     question: 'Tôi muốn thay đổi Leader hoặc SubLeader của nhóm thì làm thế nào?',
     answer:
       'Quy tắc này chỉ áp dụng cho Leader: mỗi nhóm chỉ có đúng 1 Leader. Muốn đổi Leader, hãy làm 2 bước theo đúng thứ tự: (1) vào "Nhân viên", hạ người đang giữ chức xuống "Nhân viên" trước; (2) sau đó thăng người mới lên Leader. Hệ thống sẽ chặn nếu bạn thăng người mới khi nhóm vẫn còn Leader cũ. Với SubLeader thì không giới hạn: thăng thêm hoặc hạ bớt bất cứ lúc nào, hệ thống tự cập nhật vòng đánh giá tương ứng.',
+  },
+  {
+    question: 'Vì sao tôi (Leader/Manager) không mở được đánh giá của nhân viên?',
+    answer:
+      'Quy trình đánh giá tuần tự: vòng 1 (SubLeader) chưa nộp thì vòng 2 (Leader) và vòng 3 (Manager) CHƯA mở được — kể cả Manager cũng không mở sớm được. Đây là hành vi đúng của hệ thống, không phải lỗi. Hãy nhắc người đang giữ lượt nộp trước: SubLeader nộp vòng 1 thì Leader mở vòng 2; Leader nộp vòng 2 thì Manager mở vòng 3.',
   },
   {
     question: 'Vì sao có nhân viên chưa có dữ liệu evaluation?',
