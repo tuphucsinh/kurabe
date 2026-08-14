@@ -29,6 +29,8 @@
 - **Browser verify**: sau build lại, navigate fresh (`/login` → route) tránh chunk cache cũ. UI verify bằng bounding box (`getBoundingClientRect`): icon vs text cùng baseline (diff ≤2px), badge/grid left đồng nhất giữa các row.
 - **Login redirect & flash**: login xong dùng `window.location.href = '/dashboard'` (full reload → middleware đọc cookie redirect chắc chắn) thay `router.push` (có thể kẹt im lặng trên production nếu RSC nav fail). `AppLayout`: `if (pathname === '/login') return login-only` — tránh hiện sidebar + login card cùng lúc sau set session.
 - **Next 16 cache** (chi tiết MASTER_PLAN Phase 63): `unstable_cache(fn, keys, options)` — keys (mảng) là tham số 2 BẮT BUỘC, `{tags, revalidate}` ở options (tham số 3); `revalidateTag(tag, 'default')` cần 2 tham số (Next 16 khác Next 15); cache fn KHÔNG chứa dynamic APIs (cookies/getSessionUser) — lấy viewer ngoài cache truyền vào; KHÔNG import `next/cache` trong `src/lib/db/*` (AuthContext/hooks import chúng → lỗi build "Pages Router"); lazy recharts phải qua wrapper `'use client'` riêng (không `next/dynamic` + `ssr:false` trong Server Component).
+- **URL /evaluations/[id] dùng employeeId** (Phase 64, 14-08): route param là employee id, KHÔNG phải evaluation id — navigate sai id → "Quyền truy cập bị từ chối" + "Error fetching user". Query evaluations để lấy employee_id trước.
+- **React controlled input (Phase 64, 14-08)**: set `.value` trực tiếp qua JS console KHÔNG cập nhật React state (nút submit vẫn disabled dù DOM hiển thị value) — phải gõ qua browser_type (sự kiện thật) hoặc native setter + input event; tương tự với browser_console khi test form.
 
 ## E2E live test
 Xem `.ai/E2E_LIVE_TEST.md`.

@@ -223,7 +223,7 @@
 
 ---
 
-### Phase 64: Trả lại đánh giá (Return/Reject) 🟡 (2026-08-14)
+### Phase 64: Trả lại đánh giá (Return/Reject) [DONE] ✅ (2026-08-14)
 > **Yêu cầu anh**: khi cấp dưới nộp cho cấp trên → cấp trên thấy nút **"Trả lại đánh giá"** trong chi tiết NV → evaluation quay về **vòng trước** → người chấm vòng trước mở khóa + sửa + nộp lại. Manager nộp **báo cáo tự đánh giá** của mình (R1 SELF → Approved) → nút **"Trả lại báo cáo"** để tự sửa. **Employee KHÔNG tự đánh giá** — giữ nguyên flow hiện tại (không đổi EVALUATION_FLOWS).
 
 **Thiết kế (chốt 14-08, sequential-thinking 4 steps + REVIEWER non-PASS → vá 3 điểm ①guard SELF/round≤1 ②RESET thay DELETE ③invalidate client)**:
@@ -243,6 +243,15 @@
 **Đề xuất mở rộng (chưa làm — chờ anh duyệt)**: self-return cho Leader/SubLeader khi vòng sau chưa chấm (hiện chỉ Manager).
 
 **Rủi ro**: reset làm mất dữ liệu draft vòng hiện tại của reviewer — đã cảnh báo trong dialog; loop trả lại không giới hạn (chấp nhận — quy trình nội bộ); RESET giữ evaluator cũ của round hiện tại (khi vòng trước submit lại — đúng người review lại, chấp nhận); review vòng 2 không cần (3 điểm vá đã verify bằng code: guard, evaluation_responses legacy 0 usage, react-query page.tsx:386-389).
+
+**Kết quả thực thi (14-08, 4 commits `c663b4d..c8f981e` + docs, chưa push — main ahead 4)**:
+- **T01** migration `return_note text NULL` (verified information_schema) + types Row/Insert/Update + map — commit `c30b04e`.
+- **T02** `src/lib/return-evaluation.ts` (canReturnEvaluation + resetRoundFields + nextStatusAfterReturn, thuần) + export ACTIVE_STEP_STATUSES + action `returnEvaluationRound` (Case A reset/unlock/update có điều kiện + rollback; Case B Manager Approved; audit RETURN_EVALUATION; revalidate) + clear return_note khi submit — Mika verify bổ sung guard `round === currentRound` — edge tests 20/20 PASS — commit `3572c07`.
+- **T03** UI page.tsx: nút "Trả lại đánh giá" (editableRound > 1) + "Trả lại báo cáo" (Manager Approved) + dialog lý do bắt buộc + banner amber + invalidateQueries — browser verified — commit `c8f981e`.
+- **T04** Live E2E 2 flow (data test TST%, dọn sạch, DB nguyên trạng 22/3/22/1):
+  - **Flow 1**: SubLeader chấm NV R1 110đ → Leader trả lại (lý do) → R1 unlock (banner + sửa được 109) → nộp lại → return_note clear + R2 tái sử dụng đúng evaluator → Leader chấm lại → Manager R3 → **Approved B 110** ✓ (DB verify từng bước).
+  - **Flow 2**: Manager test tự đánh giá → Approved → nút "Trả lại báo cáo" (readonly zone) → về Draft (final cleared, note set) → sửa điểm → nộp lại → **Approved B 123** (điểm mới) ✓.
+- Pitfall mới ghi KNOWN_BUGS: (1) URL /evaluations/[id] dùng employeeId — không phải evaluationId; (2) React controlled textarea: set .value qua console KHÔNG update state — phải browser_type.
 
 ---
 
