@@ -5,7 +5,7 @@ import { useState, useReducer, use, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { useUser, useUsers, useEvaluationByEmployee } from '@/hooks/use-db';
-import { User, Evaluation, EvaluationRound, CriteriaGroup } from '@/types';
+import { User, Evaluation, EvaluationRound, CriteriaGroup, RoundNumber } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
@@ -20,10 +20,12 @@ import {
   Loader2,
   Sparkles,
   Send,
+  Undo2,
+  AlertTriangle,
 } from 'lucide-react';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
-import { saveEvaluationRound } from '@/actions/evaluation';
+import { saveEvaluationRound, returnEvaluationRound } from '@/actions/evaluation';
 import {
   getMaxEvaluationRound,
   isLeaderGradingRole,
@@ -109,6 +111,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [draftMessage, setDraftMessage] = useState('');
   const [isDrafting, setIsDrafting] = useState(false);
+
+  // Return dialog state
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [isReturning, setIsReturning] = useState(false);
 
   const [criteriaGroups, setCriteriaGroups] = useState<CriteriaGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState('A');
@@ -406,6 +413,43 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     }
   };
 
+  const handleReturnEvaluation = async () => {
+    const roundToReturn = accessState.editableRound ?? activeRound;
+    if (!evaluation || !roundToReturn || !user?.id) return;
+
+    const reason = returnReason.trim();
+    if (!reason) {
+      toast('Vui lòng nhập lý do trả lại.', 'error');
+      return;
+    }
+
+    setIsReturning(true);
+    try {
+      const res = await returnEvaluationRound(
+        evaluation.id,
+        roundToReturn as RoundNumber,
+        reason
+      );
+
+      if (res.success) {
+        toast('Đã trả lại đánh giá.', 'success');
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
+          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
+        ]);
+        setReturnDialogOpen(false);
+        setReturnReason('');
+      } else {
+        toast(`Lỗi: ${res.error}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      toast('Đã xảy ra lỗi khi trả lại đánh giá.', 'error');
+    } finally {
+      setIsReturning(false);
+    }
+  };
+
   // Helper for type-safe round data
   const currentSummaryRound: EvaluationRound = {
     id: activeRoundData.id || '',
@@ -565,6 +609,16 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             <div className="flex flex-row gap-3 w-full md:w-auto">
               {!isReadOnly ? (
                 <>
+                  {accessState.editableRound !== null && accessState.editableRound > 1 && (
+                    <button 
+                      onClick={() => setReturnDialogOpen(true)}
+                      disabled={isSaving}
+                      className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                    >
+                      <Undo2 size={18} className="shrink-0" />
+                      <span>Trả lại đánh giá</span>
+                    </button>
+                  )}
                   <button 
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
@@ -582,12 +636,24 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                   </button>
                 </>
               ) : (
-                <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
-                  <Lock size={16} />
-                  {activeRoundData.status === 'Submitted'
-                    ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
-                    : 'Đang xem bản nháp của vòng này'}
-                </div>
+                <>
+                  {user?.role === 'Manager' && evaluation?.employeeId === user.id && evaluation?.status === 'Approved' && (
+                    <button
+                      onClick={() => setReturnDialogOpen(true)}
+                      disabled={isSaving}
+                      className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                    >
+                      <Undo2 size={18} className="shrink-0" />
+                      <span>Trả lại báo cáo</span>
+                    </button>
+                  )}
+                  <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                    <Lock size={16} />
+                    {activeRoundData.status === 'Submitted'
+                      ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
+                      : 'Đang xem bản nháp của vòng này'}
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -604,6 +670,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             totalCriteria={criteriaGroups.reduce((sum, g) => sum + g.criteria.length, 0)}
             currentRound={activeRound}
           />
+
+          {evaluation?.returnNote && (
+            <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-sm font-medium flex items-start gap-2">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <span>Đánh giá bị trả lại: {evaluation.returnNote}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -681,6 +754,56 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           </div>
         </div>
       </div>
+
+      {returnDialogOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!isReturning) setReturnDialogOpen(false);
+            }}
+          />
+          <div className="relative w-full max-w-md bg-surface p-6 rounded-2xl border shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-on-surface">
+              {(accessState.editableRound ?? activeRound) === 1
+                ? 'Trả lại báo cáo'
+                : 'Trả lại đánh giá'}
+            </h3>
+            <p className="text-sm text-outline">
+              {(accessState.editableRound ?? activeRound) === 1
+                ? 'Báo cáo sẽ quay về bản nháp để chỉnh sửa.'
+                : `Đánh giá sẽ quay về vòng ${(accessState.editableRound ?? activeRound) - 1} để chỉnh sửa. Dữ liệu vòng hiện tại sẽ bị reset.`}
+            </p>
+            <textarea
+              className="w-full mt-4 p-3 border border-outline-variant rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Lý do trả lại (bắt buộc)"
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              rows={3}
+              disabled={isReturning}
+            />
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReturnDialogOpen(false)}
+                disabled={isReturning}
+                className="px-4 py-2 text-sm font-semibold text-outline hover:text-on-surface disabled:opacity-50 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleReturnEvaluation}
+                disabled={!returnReason.trim() || isReturning}
+                className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {isReturning && <Loader2 size={16} className="animate-spin" />}
+                <span>Xác nhận trả lại</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LazyMotion>
   );
 }

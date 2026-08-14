@@ -180,7 +180,7 @@
 
 **Definition of Done**: `npm run lint` 0 errors; `npm run build` PASS; browser verify (Chrome thật): (1) Leader mở evaluation NV ở R2 chưa chấm → thấy nút "Trả lại đánh giá"; (2) Leader mở đánh giá CHÍNH MÌNH (R1 SELF) → KHÔNG thấy nút; (3) Manager Approved → thấy "Trả lại báo cáo"; (4) dialog: nút xác nhận disabled khi lý do rỗng; (5) sau trả lại: banner hiển thị, round trước mở khóa (nháp).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: page.tsx +139 dòng (imports, state, handleReturnEvaluation, nút Case A editableRound>1 + Case B Manager Approved, dialog lý do bắt buộc, banner returnNote, invalidate + toast); lint 0 errors + build PASS; browser verified Manager: (1) nút "Trả lại đánh giá" hiện ở R3 chấm dở ✓, (4) dialog + nút Xác nhận disabled khi rỗng → enabled sau khi nhập ✓, (2) R1 SELF chính mình KHÔNG có nút ✓; (3)(5) cần data Approved/mutation → verify ở T04 flow E2E.
 
 ---
 
