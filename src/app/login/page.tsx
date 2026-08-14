@@ -8,6 +8,7 @@ import { User } from '@/types';
 
 export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [demoUsers, setDemoUsers] = useState<User[]>([]);
   const { login } = useAuth();
@@ -24,12 +25,12 @@ export default function LoginPage() {
     setError('');
     
     try {
-      await login(employeeCode);
+      await login(employeeCode, password);
       // Full reload — middleware đọc cookie auth_session và redirect chắc chắn
       // (router.push có thể bị kẹt nếu RSC navigation fail)
       window.location.href = '/dashboard';
-    } catch {
-      setError('Mã nhân viên không hợp lệ hoặc không tồn tại.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }
   };
 
@@ -65,11 +66,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Note: Password field is disabled for this mock version */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-on-surface mb-1">
                 Mật khẩu
               </label>
+              <p className="text-xs text-outline mb-1.5">Chưa đặt mật khẩu → chỉ cần nhập mã NV</p>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock size={18} className="text-outline" />
@@ -77,9 +78,10 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type="password"
-                  className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-md leading-5 bg-surface text-outline cursor-not-allowed sm:text-sm"
-                  placeholder="Không yêu cầu mật khẩu (Mock)"
-                  disabled
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-md leading-5 bg-white placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm"
+                  placeholder="Nhập mật khẩu (nếu đã đặt)"
                 />
               </div>
             </div>

@@ -5,12 +5,13 @@ import { User, EvaluationPeriod } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { mapUserFromDb } from '@/lib/db/users';
 import { mapPeriodFromDb } from '@/lib/db/evaluations';
+import { loginAction, logoutAction } from '@/actions/auth';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (employeeCode: string) => Promise<void>;
-  logout: () => void;
+  login: (employeeCode: string, password?: string) => Promise<void>;
+  logout: () => void | Promise<void>;
   isManager: boolean;
   isLeader: boolean;
   isSubLeader: boolean;
@@ -99,27 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.cookie = `selected_period_id=${period.id}; path=/; max-age=31536000`; // 1 year expiry
   };
 
-  const login = async (employeeCode: string) => {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('employee_code', employeeCode)
-      .single();
-      
-    if (userData) {
-      const user = mapUserFromDb(userData);
-      setUser(user);
-      localStorage.setItem('auth_user_id', user.id);
-      document.cookie = `auth_session=${user.id}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-    } else {
-      throw new Error('User not found');
+  const login = async (employeeCode: string, password?: string) => {
+    const res = await loginAction(employeeCode, password || '');
+    if (!res.success || !res.user) {
+      throw new Error(res.error || 'Login failed');
     }
+    setUser(res.user);
+    localStorage.setItem('auth_user_id', res.user.id);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutAction();
+    } catch {}
     setUser(null);
     localStorage.removeItem('auth_user_id');
-    document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
   };
 
   const isManager = user?.role === 'Manager';
