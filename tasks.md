@@ -387,7 +387,7 @@
 
 **Definition of Done**: lint/build PASS; browser: thêm/sửa/xóa NV + tạo/sửa/xóa nhóm + đổi leader/subleader chạy đúng + audit entry; anon write users/teams bị chặn.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: agy implement + Mika verify. `actions/teams.ts`: `upsertTeamAction` + `softDeleteTeamAction` (requireManager + admin + **chống success giả** .select().single()/count + audit + revalidate); deleteTeamAction alias giữ backward compat; hooks useUpsertTeam/useDeleteTeam → actions (throw khi fail, invalidate teams+users); lib/db/teams.ts xóa write (giữ read); fix thiếu import Team. **Migration j2 đã chạy** (users/teams SELECT-only): verify insert ERROR + update real-row 0-rows + select OK. Lint 0 errors, build PASS, browser teams 3 nhóm render ✓. Commits `1fd9235`, `a8e61c8`.
 
 ---
 
