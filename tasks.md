@@ -159,7 +159,7 @@
 
 **Definition of Done**: mọi thao tác CRUD chạy đúng + sync evaluator round 1 verified (query DB) + audit entries đủ + không ảnh hưởng data thật.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: promote TST04→SubLeader (R1 sync SELF ✓); gán/đổi SubLeader TST05+TST03→TST04 (R1 evaluator sync ✓ ×2); tạo team "Test E2E B"; chuyển team TST05 A→B (tự xóa subleader+R1 NULL ✓) + B→A; tạo TST06 Leader (assertLeadershipSlot chặn team đã có Leader ✓); đổi Leader team A→TST06 (leader ngoài team được phép — ghi nhận); xóa NV TST04 = soft-delete ✓ (is_active=false, UI ẩn); xóa team B = soft-delete ✓; audit DELETE ghi đúng. PITFALL: keyboard ArrowUp/Down trên select đôi khi KHÔNG vào React state (TST06 chuyển team fail im lặng) — verify DB sau mỗi mutation; **BUG phát hiện**: audit gap CREATE/UPDATE user+team (KNOWN_BUGS — fix chờ duyệt).
 
 ---
 

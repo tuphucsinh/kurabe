@@ -34,3 +34,9 @@
 
 ## E2E live test
 Xem `.ai/E2E_LIVE_TEST.md`.
+
+## [#P65T02] Audit gap: CREATE/UPDATE user & team không ghi nhật ký (2026-08-14)
+- **Triệu chứng**: audit_logs chỉ có DELETE_USER/DELETE_TEAM từ phiên test; mọi thêm/sửa NV + tạo/sửa team (đổi leader, chuyển team, promote, gán subleader) KHÔNG có entry.
+- **Root cause**: form thêm/sửa NV gọi `upsertUser` (src/lib/db/users.ts:182) và team gọi `upsertTeam` (src/lib/db/teams.ts:8) TRỰC TIẾP qua Supabase client — không có logAudit. Chỉ `deleteUserAction` (src/actions/users.ts:9) có audit và được UI dùng. `upsertUserAction` (users.ts:26) CÓ logAudit nhưng KHÔNG ai gọi (dead code).
+- **Hành vi đúng hiện có**: xóa NV = soft-delete (is_active=false, giữ evaluation lịch sử); xóa team = soft-delete; audit DELETE ghi đúng.
+- **Fix đề xuất** (chưa làm — chờ duyệt): thêm logAudit vào upsertUser/upsertTeam (lib/db) với actor từ session, hoặc chuyển UI sang dùng server actions.
