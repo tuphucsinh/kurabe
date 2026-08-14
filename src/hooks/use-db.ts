@@ -9,12 +9,18 @@ import {
   getEvaluationById, 
   getEvaluationByEmployee
 } from '@/lib/db/evaluations';
-import { getAllCriteriaGroups, upsertCriteriaGroup, upsertCriterion, updateDefaultLevel } from '@/lib/db/criteria';
+import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
-import { deleteCriteriaGroupAction, deleteCriterionAction } from '@/actions/criteria';
+import { 
+  deleteCriteriaGroupAction, 
+  deleteCriterionAction,
+  upsertCriteriaGroupAction,
+  upsertCriterionAction,
+  updateDefaultLevelAction
+} from '@/actions/criteria';
 
-import { Criterion, Team, User } from '@/types';
+import { CriteriaGroup, Criterion, Team, User } from '@/types';
 
 // Users
 export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({ 
@@ -137,7 +143,11 @@ export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: get
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: upsertCriteriaGroup,
+    mutationFn: async (group: Partial<CriteriaGroup>) => {
+      const res = await upsertCriteriaGroupAction(group);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật nhóm tiêu chí');
+      return res.group;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
     },
@@ -147,7 +157,11 @@ export const useUpsertCriteriaGroup = () => {
 export const useDeleteCriteriaGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: deleteCriteriaGroupAction,
+    mutationFn: async (id: string) => {
+      const res = await deleteCriteriaGroupAction(id);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi xóa nhóm tiêu chí');
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
     },
@@ -158,8 +172,11 @@ export const useDeleteCriteriaGroup = () => {
 export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ criterion, groupId }: { criterion: Criterion; groupId: string }) => 
-      upsertCriterion(criterion, groupId),
+    mutationFn: async ({ criterion, groupId }: { criterion: Partial<Criterion>; groupId: string }) => {
+      const res = await upsertCriterionAction(criterion, groupId);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật tiêu chí');
+      return res.criterion;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
     },
@@ -169,7 +186,11 @@ export const useUpsertCriterion = () => {
 export const useDeleteCriterion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: deleteCriterionAction,
+    mutationFn: async (id: string) => {
+      const res = await deleteCriterionAction(id);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi xóa tiêu chí');
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
     },
@@ -180,8 +201,11 @@ export const useDeleteCriterion = () => {
 export const useUpdateDefaultLevel = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ criterionId, levelIndex }: { criterionId: string; levelIndex: number | null }) => 
-      updateDefaultLevel(criterionId, levelIndex),
+    mutationFn: async ({ criterionId, levelIndex }: { criterionId: string; levelIndex: number | null }) => {
+      const res = await updateDefaultLevelAction(criterionId, levelIndex);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật mức mặc định');
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['criteria'] });
     },
