@@ -50,7 +50,7 @@ export default function LoginPage() {
                   value={employeeCode}
                   onChange={(e) => setEmployeeCode(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-md leading-5 bg-white placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm"
-                  placeholder="Nhập mã NV (vd: K0001, M0001...)"
+                  placeholder="Nhập mã NV"
                   required
                 />
               </div>
@@ -71,7 +71,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-md leading-5 bg-white placeholder-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm"
-                  placeholder="Nhập mật khẩu (nếu đã đặt)"
+                  placeholder="Nhập mật khẩu"
                 />
               </div>
             </div>
