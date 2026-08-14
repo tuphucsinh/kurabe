@@ -304,7 +304,7 @@
 
 **Definition of Done**: lint 0 errors + build PASS; browser: pass field active, account NULL vào được không cần pass, account có hash (tạo test tạm) sai pass bị chặn + đúng pass vào dashboard; cookie auth_session httpOnly.
 
-**Status**: `[x]` — DONE 14-08: agy implement + Mika verify độc lập (diff đúng scope 3 file; lint 0 errors; build PASS). Browser thật: pass field active + hint; login 158 hash NULL → dashboard OK (server action + cookie httpOnly + middleware); **phát hiện**: 158 CÓ hash sót từ test P52 → đã reset NULL (nguyên tắc khôi phục 13-08); nhánh hash chứng minh hoạt động ("Vui lòng nhập mật khẩu." khi hash còn); `document.cookie` rỗng = httpOnly ✓. Logout UI chưa verify được (sidebar không render sau full-reload trong môi trường browser remote — hành vi layout pre-existing, không phải code T01); logoutAction code chuẩn (cookies().delete — cùng cơ chế đã chứng minh). Commit `19476cd`.
+**Status**: `[x]` — DONE 14-08: agy implement + Mika verify độc lập (diff đúng scope 3 file; lint 0 errors; build PASS). Browser thật: pass field active + hint; login 158 hash NULL → dashboard OK (server action + cookie httpOnly + middleware); **phát hiện**: 158 CÓ hash sót từ test P52 → đã reset NULL (nguyên tắc khôi phục 13-08); nhánh hash chứng minh hoạt động ("Vui lòng nhập mật khẩu." khi hash còn); `document.cookie` rỗng = httpOnly ✓. **BUG phát hiện + fix**: logout UI cũ xóa cookie bằng `document.cookie` → bất lực với httpOnly → không đăng xuất được (middleware redirect loop). Fix Sidebar.tsx gọi `logout()` (server action); verify CDP chuẩn (profile sạch): login → click Đăng xuất → POST action → /login → /dashboard bị chặn = **LOGOUT_VERIFIED_PASS** (commit `1b805d0`). Commit chính `19476cd`.
 
 ---
 
@@ -323,7 +323,7 @@
 
 **Definition of Done**: migration chạy OK; anon query users KHÔNG trả password_hash (test thật qua PostgREST); changePassword/resetPassword thao tác hash OK qua admin; app select('*') không vỡ (browser employees page load).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: agy viết migration + account.ts; Mika verify độc lập. **Migration thật đã chạy** (MCP PAT config.yaml — PAT ~/.supabase/access-token hết quyền kurabe): anon đang GRANT ALL table-level → column REVOKE vô hiệu → `REVOKE SELECT ON users FROM anon` + `GRANT SELECT (11 cột trừ password_hash)` → `anon_can_select_hash=false` ✓. **Hệ quả bắt buộc đã xử lý**: PostgREST `select('*')` users LỖI "permission denied" → thêm hằng `USER_SELECT` (users.ts, không hash) thay mọi `select('*')`/`.select()` (users.ts ×5, lib/auth.ts, AuthContext.tsx) + `mapUserFromDb` nhận `Omit<DbUser,'password_hash'>`. Verify: anon explicit hash BLOCKED ✓, USER_SELECT 22 rows ✓, service đọc hash OK ✓, lint 0 errors, build PASS, browser login 158 → dashboard + /employees 22 NV ✓. Commit `656f1c0`.
 
 ---
 
