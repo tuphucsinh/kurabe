@@ -1,6 +1,6 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 import { mapUserFromDb } from '@/lib/db/users';
@@ -32,9 +32,14 @@ export async function loginAction(
       }
     }
 
+    // P69 fix (14-08): secure flag theo PROTOCOL THẬT, KHÔNG theo NODE_ENV —
+    // npm run start (production build) trên HTTP LAN/localhost sẽ bị trình duyệt
+    // TỪ CHỐI cookie Secure (chỉ chấp nhận trên https/localhost) → login "chớp rồi về login".
+    // Vercel gửi x-forwarded-proto: https → secure=true. LAN HTTP → secure=false.
+    const proto = (await headers()).get('x-forwarded-proto') || 'http';
     (await cookies()).set('auth_session', user.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: proto === 'https',
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
