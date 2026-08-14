@@ -346,4 +346,4 @@
 
 **Definition of Done**: 3 case PASS; anon hash ẩn verified; DB nguyên trạng; docs đủ; git log sạch.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 14-08: user test TST-PW tạo qua service (KHÔNG đụng account thật); **Case 1** NULL → login TST-PW không pass → /dashboard ✓; **Case 2** đặt hash bcrypt `Testpass@123` → sai pass chặn "Mật khẩu không đúng." (ở lại login, không set session) ✓ + đúng pass → /dashboard ✓; **Case 3** reset NULL → login mã NV fallback → /dashboard ✓. Anon hash ẩn verified (T02). Dọn: xóa TST-PW + logout sạch → **NGUYÊN TRẠNG 22/3/22/1/8 + 158 hash NULL** ✓. Docs: MASTER_PLAN Phase 69 ✅ + KNOWN_BUGS 5 bài học mới + DECISIONS #12 (đã ghi ở /plan).

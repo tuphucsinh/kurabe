@@ -340,7 +340,7 @@
 
 ---
 
-### Phase 69: Bật đăng nhập mật khẩu thật (P44-C1) 🟡 (2026-08-14)
+### Phase 69: Bật đăng nhập mật khẩu thật (P44-C1) ✅ DONE (2026-08-14)
 
 > **Yêu cầu anh (14-08)**: bật login bằng mật khẩu thật. **KHÔNG đặt pass sẵn cho account nào** — hiện mọi `password_hash` đều NULL, cứ để nguyên; nhân viên tự đặt/đổi sau qua Cài đặt → Tài khoản (đã có `changePassword` + `resetPassword` + UI AccountTab, verify P52/P65T03).
 
@@ -357,3 +357,5 @@
 **WBS**: T01 login/logout server action + wire UI; T02 migration REVOKE + chuyển account actions sang admin + verify; T03 test E2E (3 case: NULL login không pass / đặt pass → đúng+sai / reset NULL → fallback) trên user TEST (KHÔNG đụng account thật) + docs + commit.
 
 **Verify**: lint 0 errors + build PASS + browser Chrome thật (login page pass field active; 3 case login; anon query password_hash trả rỗng) + DB hash verify từng bước.
+
+**Kết quả thực thi (14-08)**: 3 tasks DONE (chi tiết `tasks.md`). Login thật hoạt động: server action `loginAction` (bcrypt + rule NULL fallback + cookie httpOnly 7 ngày) + `logoutAction`; Sidebar logout qua server action; migration REVOKE anon password_hash (GRANT lại 11 cột) + `USER_SELECT` thay `select('*')`; account actions sang supabaseAdmin. Test E2E 3 case PASS trên user test TST-PW (NULL login không pass / sai pass chặn "Mật khẩu không đúng." / đúng pass vào / reset NULL fallback) — user test đã xóa, nguyên trạng 22/3/22/1/8. **Dữ liệu**: reset hash 158 (sót từ P52) về NULL — account thật không bị khóa. Commits: `19476cd`, `1b805d0`, `656f1c0`, `9a78229`, docs. Chưa push.

@@ -46,3 +46,10 @@ Xem `.ai/E2E_LIVE_TEST.md`.
 - **Bằng chứng**: TST03 tạo (team bị default QC Gia dụng) → sửa team về Test Full E2E → evaluation.team_id VẪN 277411df (QC Gia dụng), R2 evaluator 2058dbe3 (leader QC Gia dụng) thay vì TST01.
 - **Root cause**: `upsertUser` (lib/db/users.ts:182) chỉ sync subleader→round1 evaluator (Phase 61 fix); KHÔNG sync team change → evaluation.team_id + evaluator R2 (Leader)/R3 (Manager).
 - **Fix đề xuất** (chờ duyệt): khi user.teamId đổi → update evaluation.team_id + re-assign round 2 (leader team mới) / round 3 (Manager) evaluator cho kỳ active, tương tự sync subleader.
+
+## [#P69] Bài học Phase 69 — bật password login thật (2026-08-14)
+- **Logout UI phải qua server action khi cookie httpOnly**: cookie `auth_session` giờ httpOnly (P69T01) → xóa bằng `document.cookie` KHÔNG được (JS không chạm httpOnly) → Sidebar cũ logout fail: cookie còn → middleware redirect /login → /dashboard → không logout được. Fix: `await logout()` (logoutAction `cookies().delete`). Verify bằng CDP click thật + navigate /dashboard → /login.
+- **GRANT ALL table-level → column REVOKE vô hiệu**: anon đang `GRANT ALL ON users` → `REVOKE SELECT (password_hash) FROM anon` KHÔNG ăn (column_privileges rỗng — không có column-grant để gỡ). Phải `REVOKE SELECT ON users FROM anon` + `GRANT SELECT (<các cột trừ hash>) ON users TO anon`.
+- **PostgREST select('*') LỖI sau column grant**: `select('*')` và `.select()` trần (upsert) → `permission denied for table users`. Bắt buộc select tường minh: hằng `USER_SELECT` (src/lib/db/users.ts) dùng mọi nơi anon đọc users; `mapUserFromDb` nhận `Omit<DbUser,'password_hash'>`.
+- **PAT quyền project khác nhau**: `~/.supabase/access-token` (account ngothaoly) KHÔNG có quyền project kurabe (chỉ sangwebsite `iloaeaoojxdovedjtowt`) — dùng PAT trong `~/.hermes/profiles/mika/config.yaml` (`SUPABASE_ACCESS_TOKEN: sbp_...`) cho Management API `/database/query` project kurabe (`cliiqqthppxuzirabzla`).
+- **158 có hash sót từ P52** (test Phase B đặt pass trên account thật, không reset) — trước khi bật password login phải check `password_hash IS NOT NULL`; đã reset 158 về NULL. Không account thật nào còn hash.
