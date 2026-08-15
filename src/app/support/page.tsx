@@ -61,7 +61,7 @@ export default function SupportPage() {
   const activeGuide = guideContent[isManager ? viewRole : currentRole] || guideContent.Employee;
 
   const handlePrintGuide = () => {
-    window.open(`/support/print?role=${isManager ? viewRole : currentRole}`, '_blank');
+    window.open(`/support/print?role=${isManager ? viewRole : currentRole}&autoPrint=1`, '_blank');
   };
 
   return (

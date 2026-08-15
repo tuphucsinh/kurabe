@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { getSessionUser } from '@/lib/auth';
 import { guideContent, type GuideRole } from '@/lib/guide-content';
 
@@ -45,6 +46,7 @@ type PageProps = {
 
 export default async function PrintGuidePage({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const autoPrint = sp?.autoPrint === '1';
   const roleParam = typeof sp?.role === 'string' ? sp.role : '';
 
   const sessionUser = await getSessionUser();
@@ -106,6 +108,27 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
         }
       `}</style>
 
+      {autoPrint && (
+        <Script
+          id="auto-print"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var printed = false;
+                function fire() {
+                  if (printed) return;
+                  printed = true;
+                  window.print();
+                }
+                if (document.readyState === 'complete') { fire(); }
+                else { window.addEventListener('load', fire); }
+                setTimeout(fire, 1000);
+              })();
+            `,
+          }}
+        />
+      )}
 
       {/* Container bản in A4 */}
       <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-none print:p-0">
