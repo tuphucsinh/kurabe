@@ -1,35 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, User, Shield, Users as TeamsIcon, Hash, Calendar } from 'lucide-react';
-import { User as UserType, Role } from '@/types';
-import { useTeams } from '@/hooks/use-db';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useMemo } from 'react';
+import { X, User as UserIcon, Shield, FileText, Users, UserCheck, Hash, Calendar } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { User, Role } from '@/types';
 
-interface EmployeeModalProps {
+export interface EmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (employee: Partial<UserType>) => void;
-  employee?: UserType | null;
+  onSave: (employee: Partial<User>) => void;
+  employee?: User | null;
   restrictToTeamId?: string | null;
   roleOptions?: Role[];
+  allUsers: User[];
+  teams: { id: string; name: string }[];
 }
 
-export default function EmployeeModal({ isOpen, onClose, onSave, employee, restrictToTeamId, roleOptions }: EmployeeModalProps) {
-  const { user } = useAuth();
-  const { data: teams = [] } = useTeams(user);
-  const firstTeamId = teams[0]?.id || '';
-
+export default function EmployeeModal({
+  isOpen,
+  onClose,
+  onSave,
+  employee,
+  restrictToTeamId,
+  roleOptions,
+  allUsers,
+  teams,
+}: EmployeeModalProps) {
   if (!isOpen) return null;
 
   return (
     <EmployeeModalContent
-      key={`${employee?.id || 'new'}-${firstTeamId}`}
+      key={`${employee?.id || 'new'}-${teams[0]?.id || ''}`}
       onClose={onClose}
       onSave={onSave}
       employee={employee}
       teams={teams}
-      firstTeamId={firstTeamId}
+      allUsers={allUsers}
       restrictToTeamId={restrictToTeamId}
       roleOptions={roleOptions}
     />
@@ -38,10 +44,10 @@ export default function EmployeeModal({ isOpen, onClose, onSave, employee, restr
 
 interface EmployeeModalContentProps {
   onClose: () => void;
-  onSave: (employee: Partial<UserType>) => void;
-  employee?: UserType | null;
+  onSave: (employee: Partial<User>) => void;
+  employee?: User | null;
   teams: { id: string; name: string }[];
-  firstTeamId: string;
+  allUsers: User[];
   restrictToTeamId?: string | null;
   roleOptions?: Role[];
 }
@@ -51,32 +57,78 @@ function EmployeeModalContent({
   onSave,
   employee,
   teams,
-  firstTeamId,
+  allUsers,
   restrictToTeamId,
-  roleOptions
+  roleOptions,
 }: EmployeeModalContentProps) {
+  const { toast } = useToast();
   const allowedRoles: Role[] = roleOptions && roleOptions.length > 0 ? roleOptions : ['Manager', 'Leader', 'SubLeader', 'Employee'];
   const defaultRole = employee?.role && allowedRoles.includes(employee.role) ? employee.role : (allowedRoles[0] || 'Employee');
-  const initialTeamId = employee?.teamId || restrictToTeamId || firstTeamId;
-  const [formData, setFormData] = useState<Partial<UserType>>({
+  const initialTeamId = employee?.teamId || restrictToTeamId || '';
+
+  const [formData, setFormData] = useState<Partial<User>>({
     name: employee?.name || '',
     employeeCode: employee?.employeeCode || '',
     role: defaultRole,
     teamId: initialTeamId,
+    subleaderId: employee?.subleaderId || '',
+    description: employee?.description || '',
     joinDate: employee?.joinDate || new Date().toISOString().split('T')[0],
   });
 
+  // Filter options for SubLeader: role === 'SubLeader' AND teamId === current teamId AND id !== current employee id
+  const subleaderOptions = useMemo(() => {
+    if (!formData.teamId) return [];
+    return allUsers.filter(
+      (u) => u.role === 'SubLeader' && u.teamId === formData.teamId && u.id !== employee?.id
+    );
+  }, [allUsers, formData.teamId, employee?.id]);
+
+  const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = e.target.value as Role;
+    setFormData((prev) => ({
+      ...prev,
+      role: newRole,
+      teamId: newRole === 'Manager' ? undefined : prev.teamId,
+      subleaderId: newRole === 'Employee' ? prev.subleaderId : '',
+    }));
+  };
+
+  const handleTeamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newTeamId = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      teamId: newTeamId,
+      subleaderId: '', // Reset subleader when team changes
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalData: Partial<UserType> = { ...formData };
+    const finalData: Partial<User> = { ...formData };
 
     if (restrictToTeamId) {
       finalData.teamId = restrictToTeamId;
     }
 
-    if (finalData.role === 'Manager') {
-      finalData.teamId = undefined; // Supabase upsert handles undefined as null/don't update if configured, but here we want to remove it
+    if (finalData.role !== 'Manager' && !finalData.teamId) {
+      toast('Vui lòng chọn nhóm cho nhân viên.', 'error');
+      return;
     }
+
+    if (finalData.role === 'Manager') {
+      finalData.teamId = undefined;
+      finalData.subleaderId = null;
+    } else if (finalData.role !== 'Employee') {
+      finalData.subleaderId = null;
+    } else if (finalData.subleaderId) {
+      // Validate client-side: subleader must belong to the same team
+      const selectedSubLeader = allUsers.find((u) => u.id === finalData.subleaderId);
+      if (selectedSubLeader && selectedSubLeader.teamId !== finalData.teamId) {
+        finalData.subleaderId = null;
+      }
+    }
+
     onSave(finalData);
     onClose();
   };
@@ -96,6 +148,7 @@ function EmployeeModalContent({
           </h2>
           <button 
             onClick={onClose}
+            type="button"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
             <X size={20} />
@@ -115,13 +168,13 @@ function EmployeeModalContent({
                 required
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
                 placeholder="VD: EMP001"
-                value={formData.employeeCode}
+                value={formData.employeeCode || ''}
                 onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <User size={14} />
+                <UserIcon size={14} />
                 Họ và tên
               </label>
               <input
@@ -129,7 +182,7 @@ function EmployeeModalContent({
                 required
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
                 placeholder="Nhập họ tên..."
-                value={formData.name}
+                value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
@@ -143,8 +196,8 @@ function EmployeeModalContent({
               </label>
               <select
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+                value={formData.role || 'Employee'}
+                onChange={handleRoleChange}
               >
                 {allowedRoles.map((role) => (
                   <option key={role} value={role}>
@@ -153,17 +206,33 @@ function EmployeeModalContent({
                 ))}
               </select>
             </div>
- 
-            {formData.role !== 'Manager' && (
-              <div className="space-y-2">
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <FileText size={14} />
+                Chức danh
+              </label>
+              <input
+                type="text"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
+                placeholder="vd: Tổ trưởng, Trưởng ca..."
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {formData.role !== 'Manager' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className={`space-y-2 ${formData.role !== 'Employee' ? 'col-span-2' : ''}`}>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <TeamsIcon size={14} />
+                  <Users size={14} />
                   Nhóm
                 </label>
                 <select
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white"
                   value={formData.teamId || ''}
-                  onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                  onChange={handleTeamChange}
                   disabled={!!restrictToTeamId}
                 >
                   <option value="" disabled>Chọn nhóm...</option>
@@ -174,8 +243,36 @@ function EmployeeModalContent({
                   ))}
                 </select>
               </div>
-            )}
-          </div>
+
+              {formData.role === 'Employee' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <UserCheck size={14} />
+                    SubLeader phụ trách
+                  </label>
+                  <select
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                    value={formData.subleaderId || ''}
+                    onChange={(e) => setFormData({ ...formData, subleaderId: e.target.value || null })}
+                    disabled={!formData.teamId}
+                  >
+                    {!formData.teamId ? (
+                      <option value="">Chọn team trước</option>
+                    ) : (
+                      <>
+                        <option value="">Chưa gán</option>
+                        {subleaderOptions.map((sl) => (
+                          <option key={sl.id} value={sl.id}>
+                            {sl.name}{sl.employeeCode ? ` (${sl.employeeCode})` : ''}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -186,7 +283,7 @@ function EmployeeModalContent({
               type="date"
               required
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
-              value={formData.joinDate}
+              value={formData.joinDate || ''}
               onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
             />
           </div>
