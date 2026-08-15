@@ -40,7 +40,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Thêm, sửa, xóa nhân viên',
-        body: 'Vào Nhân viên ở sidebar, bấm Thêm nhân viên mới: nhập mã NV, họ tên, chọn nhóm và chức vụ (Nhân viên/SubLeader/Leader), bấm lưu. Sửa: bấm bút chì ở cuối dòng. Xóa: bấm thùng rác và xác nhận (nhân viên bị xóa mềm, lịch sử đánh giá cũ vẫn giữ). Có thể import hàng loạt bằng nút Nhập từ Excel với file mẫu.',
+        body: 'Vào Nhân viên ở sidebar, bấm Thêm nhân viên: nhập mã NV, họ tên, chọn nhóm và chức vụ (Nhân viên/SubLeader/Leader), bấm lưu. Cách nhanh hơn: vào Nhóm → mở nhóm cần thêm → bấm nút Thêm nhân viên ngay trên trang chi tiết nhóm — NHÓM TỰ CHỌN SẴN là nhóm đang mở (không cần chọn lại). Sửa: bấm bút chì ở cuối dòng. Xóa: bấm thùng rác và xác nhận (nhân viên bị xóa mềm, lịch sử đánh giá cũ vẫn giữ). Có thể import hàng loạt bằng nút Nhập từ Excel với file mẫu.',
         screenshotPath: '/screenshots/guide/manager-04-employees.jpg',
         annotate: null,
       },
@@ -70,7 +70,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Xem quy trình đánh giá (workflow)',
-        body: 'Hệ thống đánh giá theo 3 vòng tuần tự: Vòng 1 SubLeader chấm, Vòng 2 Leader chấm, Vòng 3 Manager (bạn) chấm và chốt. Vòng sau chỉ mở khi vòng trước đã nộp. Bạn có thể xem lại quy trình này ở trang Hướng dẫn (mục Workflow các vòng).',
+        body: 'Hệ thống đánh giá tuần tự theo vòng: Mỗi vai trò có số vòng riêng — Manager 1 vòng (tự đánh giá SELF là xong), Leader 2 vòng, SubLeader 3 vòng, Nhân viên 3 vòng. Vòng sau chỉ mở khi vòng trước đã nộp. Xem sơ đồ đầy đủ 4 vai trò ở trang Hướng dẫn, mục \'Quy trình 3 vòng đánh giá\'.',
         screenshotPath: null,
         annotate: null,
       },
@@ -82,13 +82,13 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Chờ Leader nộp đánh giá',
-        body: 'Sau khi SubLeader nộp vòng 1, Leader đánh giá vòng 2. Bạn theo dõi tiến độ ở Dashboard (cột trạng thái từng nhóm) và Nhân viên (badge trạng thái từng người: Chưa bắt đầu / Đã nộp vòng X). Chỉ nhắc người đang giữ lượt nộp, hệ thống không tự mở sớm được.',
+        body: 'Sau khi SubLeader nộp vòng 1, Leader đánh giá vòng 2. Bạn theo dõi tiến độ ở Dashboard (cột trạng thái từng nhóm) và Nhân viên (badge trạng thái từng người: Chưa bắt đầu / Đã nộp vòng X). Chỉ nhắc người đang giữ lượt nộp, hệ thống không tự mở sớm được. Mẹo đọc nhanh: ở trang Nhân viên và trang chi tiết nhóm, nhân viên nào đã có kết quả cuối thì ô xếp loại có viền xanh lá kèm dấu ✓; bấm vào TÊN nhân viên cũng mở được phiếu đánh giá (không cần bấm icon tài liệu).',
         screenshotPath: '/screenshots/guide/manager-10-dashboard.jpg',
         annotate: null,
       },
       {
         title: 'Đánh giá vòng cuối (vòng 3) cho từng nhân viên',
-        body: 'Khi Leader đã nộp vòng 2, phiếu của nhân viên mở cho bạn chấm vòng 3. Mở phiếu, xem điểm và nhận xét các vòng trước, chấm điểm theo tiêu chuẩn, ghi nhận xét (có thể dùng Gợi ý nhận xét AI), kiểm tra rồi bấm Gửi Đánh giá. Đây là kết quả chốt của nhân viên.',
+        body: 'Khi Leader đã nộp vòng 2, phiếu của nhân viên mở cho bạn chấm vòng 3. Mở phiếu, xem điểm và nhận xét các vòng trước, chấm điểm theo tiêu chuẩn, ghi nhận xét (có thể dùng Gợi ý nhận xét AI), kiểm tra rồi bấm Gửi Đánh giá. Đây là kết quả chốt của nhân viên. Trong phiếu đánh giá: nhóm tiêu chuẩn đầu tiên đã được highlight sẵn; đánh xong nhóm nào, dùng dãy nhóm tiêu chuẩn ở CUỐI trang để chuyển sang nhóm kế tiếp — hệ thống tự cuộn lên đầu, không cần cuộn tay.',
         screenshotPath: '/screenshots/guide/manager-11-round3.jpg',
         annotate: null,
       },
@@ -174,7 +174,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Quản lý nhân viên trong nhóm (theo quyền)',
-        body: 'Bạn được thêm và sửa Nhân viên hoặc SubLeader TRONG nhóm của mình: vào Nhân viên, bấm Thêm nhân viên mới hoặc bút chì ở cuối dòng để sửa. Bạn KHÔNG được xóa nhân viên và không được đổi Leader (việc đó chỉ Manager làm).',
+        body: 'Bạn được thêm và sửa Nhân viên hoặc SubLeader TRONG nhóm của mình: vào Nhân viên bấm Thêm nhân viên, HOẶC vào Nhóm → mở nhóm của bạn → bấm nút Thêm nhân viên ngay trên trang chi tiết nhóm (nhóm tự chọn sẵn là nhóm của bạn). Bạn KHÔNG được xóa nhân viên và không được đổi Leader (việc đó chỉ Manager làm).',
         screenshotPath: '/screenshots/guide/leader-04-team-members.jpg',
         annotate: null,
       },
@@ -186,7 +186,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Đánh giá nhân viên vòng 2 (khi SubLeader đã nộp vòng 1)',
-        body: 'Chờ SubLeader nộp vòng 1 xong, phiếu nhân viên mới mở cho bạn chấm vòng 2. Mở phiếu từ danh sách Nhân viên, xem điểm vòng 1, chấm điểm theo tiêu chuẩn, ghi nhận xét (có thể dùng Gợi ý nhận xét AI), kiểm tra rồi bấm Gửi Đánh giá.',
+        body: 'Chờ SubLeader nộp vòng 1 xong, phiếu nhân viên mới mở cho bạn chấm vòng 2. Mở phiếu từ danh sách Nhân viên, xem điểm vòng 1, chấm điểm theo tiêu chuẩn, ghi nhận xét (có thể dùng Gợi ý nhận xét AI), kiểm tra rồi bấm Gửi Đánh giá. Trong phiếu: nhóm đầu đã highlight sẵn; dùng dãy nhóm ở cuối trang để chuyển nhóm nhanh (tự cuộn lên đầu).',
         screenshotPath: '/screenshots/guide/leader-06-round2.jpg',
         annotate: null,
       },
@@ -247,7 +247,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Đánh giá vòng 1 cho nhân viên trong nhóm phụ trách',
-        body: 'Mở phiếu từng nhân viên (biểu tượng tài liệu ở cuối dòng), chấm từng tiêu chí theo các nhóm A, B, C..., bấm Lưu bản nháp thường xuyên, kiểm tra lại rồi bấm Gửi Đánh giá. Sau khi nộp, Leader mới mở được vòng 2.',
+        body: 'Mở phiếu từng nhân viên (biểu tượng tài liệu ở cuối dòng), chấm từng tiêu chí theo các nhóm A, B, C..., bấm Lưu bản nháp thường xuyên, kiểm tra lại rồi bấm Gửi Đánh giá. Sau khi nộp, Leader mới mở được vòng 2. Có thể bấm vào TÊN nhân viên để mở phiếu (không cần icon tài liệu). Trong phiếu, dùng dãy nhóm tiêu chuẩn ở cuối trang để chuyển nhóm nhanh.',
         screenshotPath: '/screenshots/guide/subleader-04-round1.jpg',
         annotate: null,
       },
@@ -302,7 +302,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Xem kết quả đánh giá của mình',
-        body: 'Vào Nhân viên, tìm tên bạn và mở phiếu (biểu tượng tài liệu ở cuối dòng). Bạn xem được điểm và nhận xét của mình theo từng vòng; khi Manager chốt xong, bạn thấy xếp loại và tổng điểm cuối kỳ.',
+        body: 'Vào Nhân viên, tìm tên bạn và mở phiếu (biểu tượng tài liệu ở cuối dòng). Bạn xem được điểm và nhận xét của mình theo từng vòng; khi Manager chốt xong, bạn thấy xếp loại và tổng điểm cuối kỳ. Có thể bấm vào tên mình trong danh sách để mở phiếu.',
         screenshotPath: '/screenshots/guide/employee-03-result.jpg',
         annotate: null,
       },
