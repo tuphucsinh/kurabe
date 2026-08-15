@@ -408,6 +408,24 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_usage: {
+        Row: {
+          id: string
+          user_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string

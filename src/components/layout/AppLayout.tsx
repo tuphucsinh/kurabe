@@ -8,6 +8,7 @@ import { Menu, Home, Users, Layout, Settings, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 import PageTransition from '@/components/layout/PageTransition';
+import ChatWidget from '@/components/chat/ChatWidget';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -90,6 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <PageTransition>
             {children}
           </PageTransition>
+          <ChatWidget />
         </main>
       </div>
 
