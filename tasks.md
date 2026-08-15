@@ -688,3 +688,11 @@
 > Yêu cầu anh: chat widget góc dưới phải giải đáp thắc mắc cho Manager/Leader/SubLeader; tham khảo file .md mô tả toàn bộ webapp; không trả lời ngoài lề; 15 lượt/account/2h; model gpt-5.6-luna (opencode go); gọi "chị"/xưng "em"; chào ngắn theo trang khi mở; không emoji. Reviewer R1→R2 PASS (plan). CONTROLLED (chạm DB chat_usage + LLM backend).
 
 **Status**: `[ ]` — chờ anh duyệt thực thi (6 tasks: T01 knowledge.md / T02a action / T02b bảng + type / T03 widget / T04 mount / T05 verify).
+
+### Phase 75 tick
+- T01 knowledge.md: `[x]` — 11KB PII-sanitized.
+- T02a actions/chat.ts: `[x]` — chatGreetingAction + chatAskAction (requireRole 3 role, rate-limit 15/2h, system prompt phân role, callAI gpt-5.6-luna).
+- T02b bảng chat_usage + type: `[x]` — migration push OK, RLS verified (anon BỊ CHẶN, service role OK), type database.ts.
+- T03 ChatWidget: `[x]` — nút fixed + panel chat + greeting + role filter + không emoji + mobile offset.
+- T04 mount AppLayout: `[x]`.
+- T05 verify: `[x]` — build PASS, tsc/lint 0, E2E thật: Manager nút ✓ + greeting "Chào chị" ✓ + trả lời thật (gpt-5.6-luna) ✓ + Employee không thấy ✓ + rate-limit chặn "hết 15 lượt" ✓. Rows test đã dọn (0).
