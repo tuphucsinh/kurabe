@@ -670,7 +670,7 @@
 **Thiết kế (chạm backend webhook + UI chat — CONTROLLED, Reviewer bắt buộc)**:
 
 1. **T01 [UI — nút "Báo lỗi" thủ công]**: ChatWidget thêm icon bug (lucide Bug) cạnh ô nhập chat (trước nút Gửi):
-   - Bấm → **state inline confirm** (KHÔNG window.confirm — R1 L1) "Gửi báo lỗi hiện tại cho Developer?" → gọi `chatReportErrorAction({question: input.trim() || 'User bấm nút báo lỗi (không mô tả) — ' + 'trang: ' + pathname, pathname, history: visibleMessages.slice(-6)})` → hiện reply xác nhận.
+   - Bấm → **state inline confirm** (KHÔNG window.confirm — R1 L1) "Gửi báo lỗi hiện tại cho Developer?" → gọi `chatReportErrorAction({question: input.trim() || 'User bấm nút báo lỗi (không mô tả) — ' + 'trang: ' + pathname, pathname, history: visibleMessages})` (history TOÀN BỘ — không slice) → hiện reply xác nhận.
    - **GIỚI HẠN 1 LẦN/NGÀY/ACCOUNT** (anh chốt 15-08, out-of-band — thay cooldown 60s): server-side check — chatReportErrorAction đếm report của user_id hôm nay ≥ 1 → chặn: "Hôm nay {addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé." Client hiện state lỗi từ reply.
    - Disabled khi loading/sendingShot.
 2. **T02 [chatReportErrorAction — user_id + cap + history + report_id]**: 
@@ -684,7 +684,8 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 ```
    - **Cap question ≤ 2000 chars** (R1 M1) — cắt nếu dài.
    - insert chat_reports `.select('id')` + user_id → lấy **report_id** (R1 M2).
-   - webhook payload thêm `history: historyText.slice(0, 2000)` (R1 L2: 2000 CHARS) + `report_id` (R1 M2).
+   - **HISTORY TOÀN BỘ** (anh chốt 15-08): lưu bảng + webhook payload gửi **toàn bộ** history (KHÔNG slice 6 — agent điều tra cần full context); cap kỹ thuật 8000 chars (đề phòng payload quá lớn fail webhook/DB TEXT — an toàn vì chat hỗ trợ ngắn).
+   - **Telegram = TÓM TẮT** (anh chốt 15-08): summary giữ ngắn — người/vai trò/trang/câu hỏi + **3 lượt gần nhất** (không đổ toàn bộ vào tin nhắn Telegram).
 
 3. **T03 [Webhook prompt — cập nhật + trung thực]**: UPDATE subscription prompt `kurabe-bao-loi` — CLI KHÔNG có lệnh update (xác nhận R1) → **remove + subscribe lại với `--secret <secret CŨ>`** (R1 H2 — KHÔNG để auto-generate xoay secret → app ký sai → 401 im lặng); sau đó verify `hermes webhook test`:
    - Prompt mới THÊM `{history}` (R1 H1) + `{report_id}` (R1 M2).
