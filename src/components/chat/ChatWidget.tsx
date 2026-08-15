@@ -60,7 +60,7 @@ export default function ChatWidget() {
 
       {/* Panel chat */}
       {open && (
-        <div className="fixed right-4 bottom-40 md:bottom-24 z-[9999] w-[calc(100vw-2rem)] max-w-sm h-[28rem] bg-white rounded-2xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed right-4 bottom-40 md:bottom-24 z-[9999] w-[calc(100vw-2rem)] max-w-sm h-[calc(100dvh-5rem)] bg-white rounded-2xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden">
           <div className="px-4 py-3 bg-primary text-white flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">Trợ lý KURABE</p>
