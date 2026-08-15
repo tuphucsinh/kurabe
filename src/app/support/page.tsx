@@ -351,17 +351,15 @@ export default function SupportPage() {
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto print:p-0 print:space-y-6">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm lg:col-span-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 print:border-none print:shadow-none print:p-0">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm print:border-none print:shadow-none print:p-0">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-6">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Trang hỗ trợ</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">
-              Hướng dẫn sử dụng và quyền thao tác trong hệ thống đánh giá
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">HƯỚNG DẪN</p>
+            <h1 className="mt-2 text-2xl md:text-3xl font-black text-slate-950">
+              Hướng dẫn sử dụng theo vai trò
             </h1>
-            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600 md:text-base">
-              Trang này gom toàn bộ hướng dẫn quan trọng theo đúng luồng sử dụng thực tế: chọn kỳ,
-              mở hồ sơ, chấm điểm, lưu nháp, gửi đánh giá, đọc workflow nhiều vòng và hiểu rõ ai
-              được phép làm gì.
+            <p className="mt-2 text-sm text-slate-600">
+              Hướng dẫn từng bước cho Manager, Leader, SubLeader và Nhân viên — kèm ảnh minh họa và bản in A4.
             </p>
           </div>
           <button
@@ -373,30 +371,16 @@ export default function SupportPage() {
           </button>
         </div>
 
-        <div className="rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-800 shadow-sm">
-              <BookOpen size={20} />
-            </div>
-            <div>
-              <p className="text-sm font-black text-slate-900">Đọc theo thứ tự này</p>
-              <p className="text-xs leading-5 text-slate-500">Giúp người mới không bị lạc luồng.</p>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            {quickLinks.map((item, index) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-cyan-200 hover:text-cyan-900"
-              >
-                <span>
-                  {index + 1}. {item.label}
-                </span>
-                <ArrowRight size={16} className="text-slate-400" />
-              </a>
-            ))}
-          </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {quickLinks.map((item, index) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-cyan-200 hover:text-cyan-900"
+            >
+              {index + 1}. {item.label}
+            </a>
+          ))}
         </div>
       </div>
 
