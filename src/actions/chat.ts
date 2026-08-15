@@ -140,8 +140,10 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     // /employees — getUsers(requester) scope
     if (pathname.startsWith('/employees')) {
       const users = await getUsers(user);
-      const active = users.length;
-      return `\nNgữ cảnh trang Nhân viên: ${active} nhân viên đang hoạt động.`;
+      const byRole: Record<string, number> = {};
+      for (const u of users) byRole[u.role] = (byRole[u.role] || 0) + 1;
+      const roleStr = Object.entries(byRole).map(([r, c]) => `${r}: ${c}`).join(', ');
+      return `\nNgữ cảnh trang Nhân viên: ${users.length} nhân viên đang hoạt động (${roleStr}).`;
     }
     // /teams — getUsers(requester) scope nhóm theo team
     if (pathname.startsWith('/teams') && !pathname.startsWith('/teams/')) {
@@ -167,10 +169,21 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
   const role = auth.user?.role ?? 'Employee';
   const addr = address(auth.user?.gender);
   const Addr = capitalize(addr);
-  const page = pageName(pathname || '');
-  const hint = role === 'Manager'
-    ? `${Addr} cần xem tiến độ, báo cáo hay giải đáp thắc mắc về đánh giá, em hỗ trợ được ạ.`
-    : `${Addr} gặp thắc mắc về thao tác hay gặp lỗi gì, em hướng dẫn giúp ${addr} ạ.`;
+  const path = pathname || '';
+  const page = pageName(path);
+  let hint: string;
+  if (role === 'Manager') {
+    if (path.includes('/evaluations')) hint = `${Addr} cần hỗ trợ chấm điểm, trả lại đánh giá hay xem kết quả vòng, em giúp được ạ.`;
+    else if (path.includes('/employees')) hint = `${Addr} cần thêm/sửa nhân viên, nhập Excel hay xem kết quả, em hỗ trợ ạ.`;
+    else if (path.includes('/settings')) hint = `${Addr} cần cấu hình kỳ đánh giá, thang điểm hay tài khoản, em hướng dẫn ạ.`;
+    else if (path.includes('/reports') || path.includes('/dashboard')) hint = `${Addr} cần xem tiến độ, báo cáo hay giải đáp bất thường đánh giá, em hỗ trợ được ạ.`;
+    else if (path.includes('/teams')) hint = `${Addr} cần quản lý nhóm, bổ nhiệm Leader hay thêm nhân viên, em hỗ trợ ạ.`;
+    else if (path.includes('/criteria')) hint = `${Addr} cần rà soát tiêu chuẩn hay mức điểm, em hỗ trợ ạ.`;
+    else hint = `${Addr} cần xem tiến độ, báo cáo hay giải đáp thắc mắc về đánh giá, em hỗ trợ được ạ.`;
+  } else {
+    if (path.includes('/evaluations')) hint = `${Addr} cần hỗ trợ chấm điểm hay trả lại đánh giá trong phạm vi nhóm, em hướng dẫn ạ.`;
+    else hint = `${Addr} gặp thắc mắc về thao tác hay gặp lỗi gì, em hướng dẫn giúp ${addr} ạ.`;
+  }
   const fullName = (auth.user?.name || '').trim();
   const firstName = fullName ? fullName.split(/\s+/).pop() : '';
   const greet = firstName ? `Chào ${addr} ${firstName}` : `Chào ${addr}`;
@@ -256,14 +269,16 @@ export async function chatAskWithScreenshotAction(input: {
   }
   if (!isAIConfigured()) return { error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
   const page = pageName(input.pathname || '');
+  const pageContext = await buildPageContext(input.pathname || '', role, auth.user);
   const history = (input.history || []).slice(-12);
-  let prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.\n\nCâu hỏi mới của ${addr}:\n${question}`;
+  let prompt = `Câu hỏi mới của ${addr}:\n${question}`;
   if (history.length > 0) {
     const historyText = history
       .map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`)
       .join('\n');
-    prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.\n\nLịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\nCâu hỏi mới của ${addr}:\n${question}`;
+    prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\n${prompt}`;
   }
+  prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.${pageContext}\n\n${prompt}`;
   const system = buildSystem(role, auth.user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
   const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500 });
   if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };

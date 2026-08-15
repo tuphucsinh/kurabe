@@ -91,28 +91,53 @@ export async function callAIVision(
   const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
   const model = process.env.AI_VISION_MODEL || DEFAULT_VISION_MODEL;
   const dataUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 60000);
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: [
-          { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: dataUrl } },
-        ] }],
-        max_tokens: opts.maxTokens ?? 500,
-        temperature: 0.3,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (!res.ok) { console.error('callAIVision HTTP error:', res.status); return null; }
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
-    return typeof text === 'string' && text.trim() ? text.trim() : null;
-  } catch (err) { console.error('callAIVision error:', err); return null; }
+
+  const attempt = async (maxTokens: number, extraSystem: string): Promise<string | null> => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60000);
+      const textContent = extraSystem ? `${prompt}\n\n${extraSystem}` : prompt;
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: textContent },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.3,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        console.error('callAIVision HTTP error:', res.status);
+        return null;
+      }
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      return typeof text === 'string' && text.trim() ? text.trim() : null;
+    } catch (err) {
+      console.error('callAIVision error:', err);
+      return null;
+    }
+  };
+
+  const baseTokens = opts.maxTokens ?? 500;
+
+  // Lần 1
+  const first = await attempt(baseTokens, '');
+  if (first) return first;
+
+  // Lần 2 (retry): tăng maxTokens (×1.5) + nhấn mạnh trả lời ngắn gọn
+  const second = await attempt(Math.round(baseTokens * 1.5), 'TRẢ LỜI NGẮN GỌN, KHÔNG PHÂN TÍCH DÀI.');
+  return second;
 }
 
