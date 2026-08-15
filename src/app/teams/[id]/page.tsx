@@ -268,9 +268,6 @@ export default function TeamDetailPage() {
                   <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                     <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                          {leader.name.charAt(0)}
-                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
                           <span className="text-xs text-slate-500 font-medium">Mã: {leader.employeeCode}</span>
@@ -340,9 +337,6 @@ export default function TeamDetailPage() {
                 {/* Block Header */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <div className="w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                      {sl.name.charAt(0)}
-                    </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
                       <span className="text-xs text-slate-500 font-medium">Mã: {sl.employeeCode}</span>
@@ -403,9 +397,6 @@ export default function TeamDetailPage() {
                           key={member.id}
                           className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
-                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                            {member.name.charAt(0)}
-                          </div>
                           <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
@@ -500,9 +491,6 @@ export default function TeamDetailPage() {
                         key={member.id}
                         className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
-                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
-                          {member.name.charAt(0)}
-                        </div>
                         <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
