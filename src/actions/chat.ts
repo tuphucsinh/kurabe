@@ -5,7 +5,8 @@ import { callAI, callAIVision, isAIConfigured } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getActivePeriod, getEvaluationByEmployee } from '@/lib/db/evaluations';
 import { getDashboardData } from '@/actions/dashboard';
-import { getUsers } from '@/lib/db/users';
+import { getUsers, getUserById } from '@/lib/db/users';
+import { getTeamById } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { User } from '@/types';
 import fs from 'node:fs';
@@ -93,14 +94,25 @@ async function recordUsage(userId: string): Promise<void> {
 
 async function buildPageContext(pathname: string, role: string, user: User): Promise<string> {
   try {
-    // /evaluations/{id} — GIỮ NGUYÊN logic hiện có (getEvaluationByEmployee + getActivePeriod) — ẨN DANH
+    // /evaluations/{id}
     const evMatch = (pathname || '').match(/^\/evaluations\/([0-9a-f-]{36})$/);
     if (evMatch) {
       const period = await getActivePeriod();
       const ev = await getEvaluationByEmployee(evMatch[1], period?.id, user);
       if (ev) {
         const submitted = (ev.rounds || []).filter((r) => r.status === 'Submitted' || r.submittedAt);
-        return `\nNgữ cảnh phiếu đánh giá đang mở (ẨN DANH — không có tên): vai trò nhân viên = ${ev.employeeRole || '?'}; trạng thái phiếu = ${ev.status || '?'}; vòng hiện tại = ${ev.currentRound ?? '?'}; số vòng đã nộp = ${submitted.length}; các vòng đã nộp = [${submitted.map((r) => 'V' + r.round).join(', ')}].`;
+        // Tên cụ thể (tên cuối — gọi thân mật, data nội bộ không nhạy cảm)
+        const employee = await getUserById(ev.employeeId).catch(() => null);
+        const empName = employee ? (employee.name || '').split(/\s+/).pop() : null;
+        const subName = employee?.subleaderId ? (await getUserById(employee.subleaderId).catch(() => null))?.name : null;
+        const subFirst = subName ? subName.split(/\s+/).pop() : null;
+        const team = employee?.teamId ? await getTeamById(employee.teamId).catch(() => null) : null;
+        const leaderName = team?.leaderId ? (await getUserById(team.leaderId).catch(() => null))?.name : null;
+        const leaderFirst = leaderName ? leaderName.split(/\s+/).pop() : null;
+        const who = empName ? `Nhân viên ${empName}` : `nhân viên`;
+        const subWho = subFirst ? `SubLeader ${subFirst}` : 'SubLeader phụ trách';
+        const leaderWho = leaderFirst ? `Leader ${leaderFirst}` : 'Leader';
+        return `\nNgữ cảnh phiếu đánh giá đang mở: ${who}; vai trò = ${ev.employeeRole || '?'}; trạng thái phiếu = ${ev.status || '?'}; vòng hiện tại = ${ev.currentRound ?? '?'}; vòng đã nộp = ${submitted.length} (${submitted.map((r) => 'V' + r.round).join(', ') || 'chưa có'}); người chấm hiện tại: ${subWho} (V1) → ${leaderWho} (V2) → Manager (V3).`;
       }
     }
     // /dashboard — CHỈ Manager (getDashboardData không scope)
