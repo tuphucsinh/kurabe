@@ -1,7 +1,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { requireManager } from '@/lib/auth';
+import { requireManager, requireRole } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { User, Role } from '@/types';
@@ -146,8 +146,48 @@ function revalidateUserPaths() {
 export async function upsertUserAction(
   user: Partial<User>
 ): Promise<{ success: boolean; user?: User; error?: string }> {
-  const auth = await requireManager();
+  const auth = await requireRole(['Manager', 'Leader']);
   if (auth.error !== null) return { success: false, error: auth.error };
+
+  const isLeader = auth.user.role === 'Leader';
+  if (isLeader) {
+    // Leader chỉ thao tác trong team của mình
+    if (!auth.user.teamId) {
+      return { success: false, error: 'Bạn chưa được gán nhóm nào — liên hệ Manager.' };
+    }
+    const leaderTeamId = auth.user.teamId;
+
+    // Chặn tạo/sửa Manager, Leader — Leader chỉ quản Employee/SubLeader
+    if (user.role && user.role !== 'Employee' && user.role !== 'SubLeader') {
+      return { success: false, error: 'Leader chỉ được tạo hoặc sửa Nhân viên/SubLeader trong nhóm của mình.' };
+    }
+
+    // ÉP teamId = team của Leader (chặn gán nhóm khác / null-strip khi sửa)
+    user.teamId = leaderTeamId;
+
+    // Check EDIT (payload có id):
+    if (user.id) {
+      const { data: existingUser } = await supabaseAdmin
+        .from('users')
+        .select('id, team_id, role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (existingUser) {
+        // (a) Chỉ được sửa NV trong team mình
+        if (existingUser.team_id !== leaderTeamId) {
+          return { success: false, error: 'Bạn chỉ được sửa nhân viên trong nhóm của mình.' };
+        }
+        // (b) Chặn hạ chức Manager/Leader
+        if (existingUser.role !== 'Employee' && existingUser.role !== 'SubLeader') {
+          return { success: false, error: 'Bạn không được sửa đổi Manager/Leader.' };
+        }
+        // (c) payload.role rỗng khi sửa → giữ nguyên role cũ (chặn hạ SubLeader→Employee vô tình)
+        if (!user.role) {
+          user.role = existingUser.role as Role;
+        }
+      }
+    }
+  }
 
   try {
     let isNewUser = true;
