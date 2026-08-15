@@ -6,7 +6,6 @@ import { useUsers, useTeams, useEvaluations, useBatchUpsertUsers, useDeleteUser 
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
-import { hasRoundDraft } from '@/data/workflow';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
@@ -74,7 +73,9 @@ export default function EmployeesPage() {
         ? [...userEvals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
         : null;
 
-      const latestScoredRound = latestEval?.rounds?.filter(hasRoundDraft) || [];
+      const latestScoredRound = latestEval?.rounds?.filter(
+        (r) => r.status !== 'Draft' && r.status !== 'NotStarted' && (r.status === 'Submitted' || (r.status as string) === 'Reviewed' || (r.status as string) === 'Approved' || !!r.submittedAt)
+      ) || [];
       const latestRound = latestScoredRound.length
         ? latestScoredRound.reduce((max, r) => r.round > max.round ? r : max, latestScoredRound[0])
         : null;
