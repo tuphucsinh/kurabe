@@ -309,6 +309,18 @@ export async function chatReportErrorAction(input: {
     const name = auth.user?.name || '?';
     const role = auth.user?.role || '?';
     const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${input.question}\nHội thoại gần nhất:\n${historyText || '(không có)'}\nThời gian: ${new Date().toLocaleString('vi-VN')}`;
+    // Lưu vào chat_reports (service role) để Mika cron tự điều tra
+    try {
+      await supabaseAdmin.from('chat_reports').insert({
+        user_name: name,
+        role,
+        pathname: input.pathname || '',
+        question: input.question,
+        history: historyText || '',
+      });
+    } catch (err) {
+      console.error('chat_reports insert error:', err);
+    }
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

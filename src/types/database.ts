@@ -426,6 +426,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_reports: {
+        Row: {
+          id: string
+          user_name: string
+          role: string
+          pathname: string
+          question: string
+          history: string
+          created_at: string | null
+          status: string
+        }
+        Insert: {
+          id?: string
+          user_name?: string
+          role?: string
+          pathname?: string
+          question?: string
+          history?: string
+          created_at?: string | null
+          status?: string
+        }
+        Update: {
+          id?: string
+          user_name?: string
+          role?: string
+          pathname?: string
+          question?: string
+          history?: string
+          created_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
