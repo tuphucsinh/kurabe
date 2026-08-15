@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
+import AutoPrint from '@/components/support/AutoPrint';
 import { getSessionUser } from '@/lib/auth';
 import { guideContent, type GuideRole } from '@/lib/guide-content';
 
@@ -109,27 +109,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {autoPrint && (
-        <Script
-          id="auto-print"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var printed = false;
-                function fire() {
-                  if (printed) return;
-                  printed = true;
-                  window.print();
-                }
-                if (document.readyState === 'complete') { fire(); }
-                else { window.addEventListener('load', fire); }
-                setTimeout(fire, 1000);
-              })();
-            `,
-          }}
-        />
-      )}
+      {autoPrint && <AutoPrint />}
 
       {/* Container bản in A4 */}
       <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-[190mm] print:p-0">
