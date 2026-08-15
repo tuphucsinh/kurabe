@@ -590,7 +590,7 @@
 
 **Definition of Done**: lint 0 + build PASS + E2E 4 role PASS + visual 3 phần + ảnh 01-05 còn.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: Mika verify. Build PASS (kill server trước build), E2E 4 role ALL PASS (Manager 16/6/15, Leader 8/4/8, SubLeader 6/4/6, Employee 4/3/3 — không đổi), visual vision-verified: trang chỉ còn header gọn + block #huong-dan-vai-tro + Nguyên tắc quyền truy cập; KHÔNG còn 6 section cũ. Ảnh /screenshots/01-05 còn nguyên (5 file — print-guide.html không vỡ).
 
 ---
 
@@ -607,4 +607,4 @@
 
 **Definition of Done**: git clean (không push — chờ anh).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: MASTER_PLAN Phase 72 DONE + HANDOFF update + commits `879308c` (T01) + docs (T03).
