@@ -69,6 +69,7 @@ function EmployeeModalContent({
   const [formData, setFormData] = useState<Partial<User>>({
     name: employee?.name || '',
     employeeCode: employee?.employeeCode || '',
+    gender: employee?.gender || 'Nữ',
     role: defaultRole,
     teamId: initialTeamId,
     subleaderId: employee?.subleaderId || '',
@@ -274,18 +275,51 @@ function EmployeeModalContent({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <Calendar size={14} />
-              Ngày vào công ty
-            </label>
-            <input
-              type="date"
-              required
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
-              value={formData.joinDate || ''}
-              onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <Calendar size={14} />
+                Ngày vào công ty
+              </label>
+              <input
+                type="date"
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
+                value={formData.joinDate || ''}
+                onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <UserIcon size={14} />
+                Giới tính
+              </label>
+              <div className="flex items-center gap-6 h-[42px]">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="Nữ"
+                    checked={formData.gender !== 'Nam'}
+                    onChange={() => setFormData({ ...formData, gender: 'Nữ' })}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Nữ
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="Nam"
+                    checked={formData.gender === 'Nam'}
+                    onChange={() => setFormData({ ...formData, gender: 'Nam' })}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Nam
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 flex gap-3">

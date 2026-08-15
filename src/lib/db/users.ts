@@ -11,7 +11,7 @@ type DbUser = Tables<'users'>;
  * Mọi code đọc user qua anon client PHẢI dùng hằng này thay vì select('*').
  */
 export const USER_SELECT =
-  'id, employee_code, name, role, team_id, join_date, avatar_url, created_at, is_active, subleader_id, description';
+  'id, employee_code, name, role, team_id, join_date, avatar_url, created_at, is_active, subleader_id, description, gender';
 
 export async function getUsers(requester?: User | null, options?: { limit?: number; offset?: number }): Promise<User[]> {
   let query = supabase
@@ -88,5 +88,6 @@ export function mapUserFromDb(dbUser: Omit<DbUser, 'password_hash'>): User {
     avatar: dbUser.avatar_url || undefined,
     subleaderId: dbUser.subleader_id,
     description: dbUser.description,
+    gender: dbUser.gender || 'Nữ',
   };
 }

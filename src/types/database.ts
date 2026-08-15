@@ -495,6 +495,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           employee_code: string
+          gender: string
           id: string
           is_active: boolean | null
           join_date: string | null
@@ -509,6 +510,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           employee_code: string
+          gender?: string
           id?: string
           is_active?: boolean | null
           join_date?: string | null
@@ -523,6 +525,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           employee_code?: string
+          gender?: string
           id?: string
           is_active?: boolean | null
           join_date?: string | null

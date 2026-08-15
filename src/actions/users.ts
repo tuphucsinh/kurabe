@@ -211,6 +211,7 @@ export async function upsertUserAction(
       assertLeadershipSlot(user, (existing || []).map(mapSlot));
     }
 
+    const gender = user.gender === 'Nam' || user.gender === 'Nữ' ? user.gender : 'Nữ';
     const role = user.role || 'Employee';
     const userId = user.id || crypto.randomUUID();
     const dbUser: DbUserInsert = {
@@ -218,6 +219,7 @@ export async function upsertUserAction(
       employee_code: user.employeeCode || '',
       name: user.name || '',
       role,
+      gender,
       team_id: user.teamId || null,
       join_date: user.joinDate || null,
       avatar_url: user.avatar || null,
@@ -301,6 +303,7 @@ export async function upsertUsersAction(
         employee_code: user.employeeCode || '',
         name: user.name || '',
         role,
+        gender: user.gender === 'Nam' || user.gender === 'Nữ' ? user.gender : undefined,
         team_id: user.teamId || null,
         join_date: user.joinDate || null,
         avatar_url: user.avatar || null,

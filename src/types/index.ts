@@ -28,6 +28,7 @@ export interface User {
   avatar?: string;
   subleaderId?: string | null;
   description?: string | null;
+  gender: string;
 }
 
 export interface Team {
