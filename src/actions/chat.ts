@@ -41,7 +41,8 @@ Quy tắc:
 2. Ngôn ngữ tự nhiên, tinh tế, khéo léo; TUYỆT ĐỐI không dùng emoji.
 3. Chỉ trả lời về hệ thống KURABE; không trả lời ngoài lề.
 4. Trả lời ngắn gọn, đúng trọng tâm, tối đa ~120 từ.
-5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, chị có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.`;
+5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, chị có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.
+6. Nếu cần xem ảnh màn hình của chị để trả lời chính xác (vd lỗi giao diện, thao tác khó diễn tả), kết thúc câu trả lời bằng đúng dòng: [CẦN_ẢNH]`;
 
 function buildSystem(role: string): string {
   const knowledge = getKnowledge();
@@ -49,12 +50,12 @@ function buildSystem(role: string): string {
     return `${knowledge}
 
 ${BASE_RULES}
-6. Chị là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ.`;
+7. Chị là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ.`;
   }
   return `${knowledge}
 
 ${BASE_RULES}
-6. Chị là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của chị. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu chị hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
+7. Chị là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của chị. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu chị hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
 }
 
 async function countRecent(userId: string): Promise<number> {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, X, Send, Loader2, Camera } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction } from '@/actions/chat';
@@ -43,31 +43,35 @@ export default function ChatWidget() {
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setLoading(true);
     const res = await chatAskAction({ question: q, pathname: pathname || '/', history: messages.slice(-12) });
-    const reply = res.reply || res.error || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.';
-    setMessages((m) => [...m, { role: 'assistant', text: reply }]);
-    setLoading(false);
+    const raw = res.reply || res.error || '';
+    const needShot = raw.includes('[CẦN_ẢNH]');
+    const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
+    if (needShot) {
+      // hiện dòng trung gian + cảnh báo PII rồi TỰ chụp
+      setMessages((m) => [...m, { role: 'assistant', text: cleanReply + '\n\nEm cần xem ảnh màn hình của chị để phân tích chính xác. Em sẽ tự chụp — ảnh chỉ dùng cho câu trả lời này và không được lưu lại.' }]);
+      setLoading(false);
+      await autoCaptureAndSend(q);
+    } else {
+      setMessages((m) => [...m, { role: 'assistant', text: cleanReply || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.' }]);
+      setLoading(false);
+    }
   };
 
-  const captureAndSend = async () => {
-    if (loading || sendingShot) return;
-    const q = input.trim() || 'Chị gửi ảnh màn hình này để em xem giúp.';
-    setInput('');
-    setMessages((m) => [...m, { role: 'user', text: q + ' (kèm ảnh màn hình)' }]);
+  const autoCaptureAndSend = async (question: string) => {
     setSendingShot(true);
     try {
       const dataUrl = await domToPng(document.body, { scale: 0.5, backgroundColor: '#f8fafc', quality: 0.8 });
       let b64 = dataUrl.split(',')[1] || '';
       if (b64.length > 921600) {
-        // giảm scale tiếp nếu quá 900KB base64
-        const dataUrl2 = await domToPng(document.body, { scale: 0.3, backgroundColor: '#f8fafc', quality: 0.7 });
-        b64 = dataUrl2.split(',')[1] || '';
+        const d2 = await domToPng(document.body, { scale: 0.3, backgroundColor: '#f8fafc', quality: 0.7 });
+        b64 = d2.split(',')[1] || '';
       }
       if (b64.length > 921600) {
-        setMessages((m) => [...m, { role: 'assistant', text: 'Ảnh quá lớn, chị có thể thu nhỏ cửa sổ rồi thử lại ạ.' }]);
+        setMessages((m) => [...m, { role: 'assistant', text: 'Ảnh màn hình quá lớn, chị có thể thu nhỏ cửa sổ rồi thử lại ạ.' }]);
         setSendingShot(false);
         return;
       }
-      const res = await chatAskWithScreenshotAction({ question: q, pathname: pathname || '/', history: messages.slice(-12), imageBase64: b64 });
+      const res = await chatAskWithScreenshotAction({ question, pathname: pathname || '/', history: messages.slice(-12), imageBase64: b64 });
       setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em chưa phân tích được lúc này.' }]);
     } catch {
       setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa chụp được màn hình, chị thử lại nhé.' }]);
@@ -136,16 +140,6 @@ export default function ChatWidget() {
                 disabled={loading || sendingShot}
                 className="flex-1 px-3 py-2 rounded-xl border border-outline-variant text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               />
-              <button
-                type="button"
-                onClick={captureAndSend}
-                disabled={loading || sendingShot}
-                className="p-2.5 rounded-xl border border-outline-variant text-outline hover:text-primary hover:border-primary/50 disabled:opacity-40 transition-all"
-                aria-label="Gửi ảnh màn hình"
-                title="Gửi ảnh màn hình"
-              >
-                <Camera size={18} />
-              </button>
               <button
                 type="button"
                 onClick={send}
