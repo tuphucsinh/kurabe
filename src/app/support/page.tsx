@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -16,6 +17,7 @@ import {
   LineChart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { guideContent, type GuideRole } from '@/lib/guide-content';
 
 const usageGuide = [
   {
@@ -318,11 +320,33 @@ const reportingGuide = [
   },
 ];
 
+const roleLabels: Record<GuideRole, string> = {
+  Manager: 'Manager',
+  Leader: 'Leader',
+  SubLeader: 'SubLeader',
+  Employee: 'Nhân viên',
+};
+
 export default function SupportPage() {
-  const { isManager } = useAuth();
+  const { user, isManager } = useAuth();
+
+  const currentRole: GuideRole =
+    user?.role === 'Manager'
+      ? 'Manager'
+      : user?.role === 'Leader'
+      ? 'Leader'
+      : user?.role === 'SubLeader'
+      ? 'SubLeader'
+      : 'Employee';
+
+  // Trang chỉ render sau khi auth load (AppLayout guard) → currentRole đúng ngay lần render đầu.
+  // viewRole chỉ có ý nghĩa khi Manager đổi role xem; role khác luôn dùng currentRole.
+  const [viewRole, setViewRole] = useState<GuideRole>(currentRole);
+
+  const activeGuide = guideContent[isManager ? viewRole : currentRole] || guideContent.Employee;
 
   const handlePrintGuide = () => {
-    window.open('/print-guide.html?autoPrint=true', '_blank');
+    window.open(`/support/print?role=${isManager ? viewRole : currentRole}`, '_blank');
   };
 
   return (
@@ -378,6 +402,99 @@ export default function SupportPage() {
 
       <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-6">
+          <div id="huong-dan-vai-tro" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-800">
+                  <UsersRound size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">Hướng dẫn theo vai trò của bạn</h2>
+                  <p className="text-sm text-slate-500">
+                    Các bước thực hiện chuẩn theo quy trình cho vai trò đang chọn.
+                  </p>
+                </div>
+              </div>
+              {isManager ? (
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/60">
+                  {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setViewRole(role)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        viewRole === role
+                          ? 'bg-[#07384d] text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                    >
+                      {roleLabels[role]}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 border border-slate-200/60 px-3.5 py-1.5 text-xs font-bold text-slate-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Vai trò: {roleLabels[currentRole]}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 rounded-[20px] border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-medium leading-7 text-cyan-950">
+              {activeGuide.intro}
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              {activeGuide.steps.map((step, index) => (
+                <div
+                  key={`${viewRole}-step-${index}`}
+                  className="grid gap-4 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4 md:grid-cols-[56px_minmax(0,1fr)] md:items-start"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-lg font-black text-cyan-800 shadow-sm shrink-0">
+                    {String(index + 1).padStart(2, '0')}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 md:text-base">{step.title}</h3>
+                      <p className="mt-2 text-sm leading-7 text-slate-600 whitespace-pre-line">{step.body}</p>
+                    </div>
+                    {step.screenshotPath && (
+                      <figure className="rounded-[16px] border border-slate-200 bg-white p-2.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={step.screenshotPath}
+                          alt={step.title}
+                          className="w-full rounded-xl border border-slate-100"
+                          loading="lazy"
+                        />
+                        <figcaption className="mt-1.5 px-1 text-xs text-slate-500">
+                          Minh họa: {step.title}
+                        </figcaption>
+                      </figure>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {activeGuide.faq && activeGuide.faq.length > 0 && (
+              <div className="mt-6 space-y-3 pt-2">
+                <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
+                  <HelpCircle size={18} className="text-slate-600" />
+                  Câu hỏi thường gặp — {roleLabels[viewRole]}
+                </h3>
+                <div className="grid gap-3">
+                  {activeGuide.faq.map((item, idx) => (
+                    <div key={idx} className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-sm font-black text-slate-900">{item.question}</p>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div id="huong-dan" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-800">

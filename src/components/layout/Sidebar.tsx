@@ -39,7 +39,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const bottomLinks = [
     { href: '/settings', label: 'Cài đặt', icon: Settings },
-    { href: '/support', label: 'Hỗ trợ', icon: HelpCircle },
+    { href: '/support', label: 'Hướng dẫn', icon: HelpCircle },
   ];
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
