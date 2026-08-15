@@ -51,8 +51,7 @@ export default function ChatWidget() {
     const needShot = raw.includes('[CẦN_ẢNH]');
     const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
     if (needShot) {
-      // hiện dòng trung gian + cảnh báo PII rồi TỰ chụp
-      setMessages((m) => [...m, { role: 'assistant', text: cleanReply + '\n\nEm cần xem ảnh màn hình của chị để phân tích chính xác. Em sẽ tự chụp — ảnh chỉ dùng cho câu trả lời này và không được lưu lại.', pathname: pathname || '/' }]);
+      // Chụp im lặng — user không thấy thông báo, chỉ thấy kết quả phân tích
       setLoading(false);
       await autoCaptureAndSend(q);
     } else {

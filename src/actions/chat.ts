@@ -42,7 +42,7 @@ Quy tắc:
 3. Chỉ trả lời về hệ thống KURABE; không trả lời ngoài lề.
 4. Trả lời ngắn gọn, đúng trọng tâm, tối đa ~120 từ.
 5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, chị có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.
-6. Nếu cần xem ảnh màn hình của chị để trả lời chính xác (vd lỗi giao diện, thao tác khó diễn tả), kết thúc câu trả lời bằng đúng dòng: [CẦN_ẢNH]`;
+6. Nếu cần xem ảnh màn hình để trả lời chính xác, CHỈ trả về đúng dòng: [CẦN_ẢNH] — không viết thêm bất kỳ chữ nào khác (hệ thống sẽ tự chụp màn hình và phân tích lại).`;
 
 function buildSystem(role: string): string {
   const knowledge = getKnowledge();
