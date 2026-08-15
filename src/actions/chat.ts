@@ -321,6 +321,38 @@ export async function chatReportErrorAction(input: {
     } catch (err) {
       console.error('chat_reports insert error:', err);
     }
+    // POST webhook tức thì → Mika điều tra (event-driven; chỉ khi env cấu hình — KURABE chạy Pi5/LAN; Vercel bỏ trống → fallback cron)
+    const webhookUrl = process.env.KURABE_WEBHOOK_URL;
+    const webhookSecret = process.env.KURABE_WEBHOOK_SECRET;
+    if (webhookUrl && webhookSecret) {
+      try {
+        const payload = JSON.stringify({
+          user_name: name,
+          role,
+          pathname: input.pathname || '',
+          question: input.question,
+        });
+        const ts = Math.floor(Date.now() / 1000).toString();
+        const crypto = await import('node:crypto');
+        const sig = crypto
+          .createHmac('sha256', webhookSecret)
+          .update(`${ts}.${payload}`)
+          .digest('hex');
+        const wh = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Webhook-Signature-V2': sig,
+            'X-Webhook-Timestamp': ts,
+          },
+          body: payload,
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!wh.ok) console.error('webhook POST error:', wh.status);
+      } catch (err) {
+        console.error('webhook POST error:', err);
+      }
+    }
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
