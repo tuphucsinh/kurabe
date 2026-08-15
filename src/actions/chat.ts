@@ -91,9 +91,11 @@ export async function chatAskAction(input: {
   if (!question) return { error: 'Chị chưa nhập câu hỏi.' };
   if (question.length > 500) return { error: 'Câu hỏi hơi dài, chị rút gọn lại giúp em ạ.' };
 
-  const recent = await countRecent(userId);
-  if (recent >= CHAT_LIMIT) {
-    return { error: 'Chị đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.' };
+  if (role !== 'Manager') {
+    const recent = await countRecent(userId);
+    if (recent >= CHAT_LIMIT) {
+      return { error: 'Chị đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.' };
+    }
   }
   if (!isAIConfigured()) {
     return { error: 'Tính năng trợ lý chưa sẵn sàng, chị vui lòng thử lại sau ạ.' };
@@ -107,6 +109,8 @@ export async function chatAskAction(input: {
   if (!reply) {
     return { error: 'Em chưa trả lời được lúc này, chị thử lại sau nhé.' };
   }
-  await recordUsage(userId);
+  if (role !== 'Manager') {
+    await recordUsage(userId);
+  }
   return { reply };
 }
