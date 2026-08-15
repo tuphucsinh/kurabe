@@ -46,10 +46,14 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
     const targetUsers = users;
     const totalCount = targetUsers.length;
 
-    const completed = evaluations.filter((e) => e.status === 'Approved').length;
-    const dbNotStarted = evaluations.filter((e) => e.status === 'NotStarted').length;
-    const inProgress = evaluations.filter((e) => e.status !== 'Approved' && e.status !== 'NotStarted').length;
-    const notStarted = Math.max(0, totalCount - evaluations.length) + dbNotStarted;
+    // Chỉ tính evaluation của user ĐANG ACTIVE — evaluation của user đã xóa mềm (is_active=false) không tính vào dashboard
+    const activeIds = new Set(users.map((u) => u.id));
+    const activeEvaluations = evaluations.filter((e) => activeIds.has(e.employeeId));
+
+    const completed = activeEvaluations.filter((e) => e.status === 'Approved').length;
+    const dbNotStarted = activeEvaluations.filter((e) => e.status === 'NotStarted').length;
+    const inProgress = activeEvaluations.filter((e) => e.status !== 'Approved' && e.status !== 'NotStarted').length;
+    const notStarted = Math.max(0, totalCount - activeEvaluations.length) + dbNotStarted;
     
     const stats = {
       completed,
@@ -60,7 +64,7 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
     };
 
     const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-    evaluations.forEach((e) => {
+    activeEvaluations.forEach((e) => {
       const grade = e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
       if (grade && counts[grade as string] !== undefined) {
         counts[grade as string]++;
@@ -97,7 +101,7 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
     const teamStatus = teams.map((team) => {
       const members = usersByTeam.get(team.id) || [];
       const completedMembers = members.filter((m) => 
-        evaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
+        activeEvaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
       ).length;
       const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
       
