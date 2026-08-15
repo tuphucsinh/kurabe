@@ -40,7 +40,7 @@ export default function ChatWidget() {
     setInput('');
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setLoading(true);
-    const res = await chatAskAction({ question: q, pathname: pathname || '/' });
+    const res = await chatAskAction({ question: q, pathname: pathname || '/', history: messages.slice(-12) });
     const reply = res.reply || res.error || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.';
     setMessages((m) => [...m, { role: 'assistant', text: reply }]);
     setLoading(false);

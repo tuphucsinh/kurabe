@@ -80,6 +80,7 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
 export async function chatAskAction(input: {
   question: string;
   pathname: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
 }): Promise<{ reply?: string; error?: string }> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { error: auth.error };
@@ -101,7 +102,16 @@ export async function chatAskAction(input: {
     return { error: 'Tính năng trợ lý chưa sẵn sàng, chị vui lòng thử lại sau ạ.' };
   }
 
-  const reply = await callAI(question, {
+  const history = (input.history || []).slice(-12);
+  let prompt = question;
+  if (history.length > 0) {
+    const historyText = history
+      .map((m) => `${m.role === 'user' ? 'Chị' : 'Em'}: ${m.text}`)
+      .join('\n');
+    prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\nCâu hỏi mới của chị:\n${question}`;
+  }
+
+  const reply = await callAI(prompt, {
     system: buildSystem(role),
     maxTokens: 400,
     temperature: 0.4,
