@@ -68,7 +68,7 @@ function buildSystem(role: string, gender?: string | null): string {
     return `${knowledge}
 
 ${baseRules}
-7. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ.`;
+7. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu.`;
   }
   return `${knowledge}
 
@@ -110,6 +110,18 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
         const d = await getDashboardData(period.id);
         if (d) {
           return `\nNgữ cảnh Bảng điều khiển (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}% (${t.membersCount} thành viên)`).join('; ')}. Phân bổ xếp loại: ${(d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ')}.`;
+        }
+      }
+    }
+    // /reports — CHỈ Manager (dùng getDashboardData — số liệu tổng hợp)
+    if (pathname.startsWith('/reports') && role === 'Manager') {
+      const period = await getActivePeriod();
+      if (period) {
+        const d = await getDashboardData(period.id);
+        if (d) {
+          const dist = (d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ');
+          const recent = (d.recentActivities || []).slice(0, 3).map((a) => `${a.employeeName} ${a.status || ''}`).join('; ');
+          return `\nNgữ cảnh trang Báo cáo (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}%`).join('; ')}. Phân bổ xếp loại: ${dist || 'chưa có'}. Hoạt động gần đây: ${recent || 'chưa có'}.`;
         }
       }
     }
