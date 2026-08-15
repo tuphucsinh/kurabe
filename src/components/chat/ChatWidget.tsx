@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Bug } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction, chatReportErrorAction } from '@/actions/chat';
@@ -22,6 +22,8 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [sendingShot, setSendingShot] = useState(false);
   const [greeted, setGreeted] = useState(false);
+  const [confirmReport, setConfirmReport] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   // Chỉ hiển thị cho Manager/Leader/SubLeader
   if (!user || !['Manager', 'Leader', 'SubLeader'].includes(user.role)) return null;
@@ -39,9 +41,20 @@ export default function ChatWidget() {
     }
   };
 
+  const submitManualReport = async () => {
+    setConfirmReport(false);
+    setReporting(true);
+    const q = input.trim() || `User bấm nút báo lỗi (không mô tả) — trang ${pathname || ''}`;
+    const res = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
+    setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em đã ghi nhận báo lỗi.', pathname: pathname || '/' }]);
+    setInput('');
+    setReporting(false);
+  };
+
   const send = async () => {
+    setConfirmReport(false);
     const q = input.trim();
-    if (!q || loading || sendingShot) return;
+    if (!q || loading || sendingShot || reporting) return;
     setInput('');
     const history = visibleMessages.slice(-12);
     setMessages((m) => [...m, { role: 'user', text: q, pathname: pathname || '/' }]);
@@ -50,7 +63,7 @@ export default function ChatWidget() {
     const raw = res.reply || res.error || '';
     const needDev = raw.includes('[CẦN_DEV]');
     if (needDev) {
-      const res2 = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages.slice(-6) });
+      const res2 = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
       setMessages((m) => [...m, { role: 'assistant', text: res2.reply || res2.error || 'Em đã ghi nhận lỗi.', pathname: pathname || '/' }]);
       setLoading(false);
       return;
@@ -132,10 +145,10 @@ export default function ChatWidget() {
                 </div>
               </div>
             ))}
-            {(loading || sendingShot) && (
+            {(loading || sendingShot || reporting) && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-2xl text-sm bg-white border border-outline-variant flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-outline" /> Em đang xem giúp chị...
+                  <Loader2 size={14} className="animate-spin text-outline" /> {reporting ? 'Em đang gửi báo lỗi...' : 'Em đang xem giúp chị...'}
                 </div>
               </div>
             )}
@@ -148,13 +161,34 @@ export default function ChatWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
                 placeholder="Nhập câu hỏi..."
-                disabled={loading || sendingShot}
+                disabled={loading || sendingShot || reporting}
                 className="flex-1 px-3 py-2 rounded-xl border border-outline-variant text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               />
+              {confirmReport ? (
+                <button
+                  type="button"
+                  onClick={submitManualReport}
+                  disabled={reporting || loading}
+                  className="px-3 py-2 rounded-xl bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 disabled:opacity-50 transition-all whitespace-nowrap"
+                >
+                  {reporting ? 'Đang gửi...' : 'Xác nhận gửi'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmReport(true)}
+                  disabled={loading || sendingShot || reporting}
+                  title="Báo lỗi cho Developer"
+                  aria-label="Báo lỗi"
+                  className="p-2.5 rounded-xl border border-outline-variant text-outline hover:text-primary transition-all"
+                >
+                  <Bug size={18} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={send}
-                disabled={loading || sendingShot || !input.trim()}
+                disabled={loading || sendingShot || reporting || !input.trim()}
                 className="p-2.5 rounded-xl bg-primary text-white disabled:opacity-40 hover:bg-primary/90 transition-all"
                 aria-label="Gửi"
               >

@@ -294,8 +294,24 @@ export async function chatReportErrorAction(input: {
 }): Promise<{ reply?: string; error?: string }> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { error: auth.error };
+  const userId = auth.user?.id;
+  if (!userId) return { error: 'Không xác định được tài khoản.' };
   const addr = address(auth.user?.gender);
   const Addr = capitalize(addr);
+
+  const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+  const vnNow = new Date(Date.now() + VN_OFFSET_MS);
+  const startOfDayVn = Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate());
+  const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString();
+  const { count, error: countErr } = await supabaseAdmin
+    .from('chat_reports').select('id', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', startOfDay);
+  if (!countErr && (count ?? 0) >= 1) {
+    return { reply: `Hôm nay ${addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé. Em vẫn theo dõi và sẽ phản hồi sớm ạ.` };
+  }
+
+  const question = (input.question || '').trim().slice(0, 2000);
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_HOME_CHANNEL;
   if (!token || !chatId) {
@@ -303,24 +319,40 @@ export async function chatReportErrorAction(input: {
   }
   try {
     const page = pageName(input.pathname || '');
-    const historyText = (input.history || []).slice(-6)
-      .map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`)
-      .join('\n');
     const name = auth.user?.name || '?';
     const role = auth.user?.role || '?';
-    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${input.question}\nHội thoại gần nhất:\n${historyText || '(không có)'}\nThời gian: ${new Date().toLocaleString('vi-VN')}`;
-    // Lưu vào chat_reports (service role) để Mika cron tự điều tra
+
+    const historyText = (input.history || []).map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n').slice(0, 8000);
+    // Tóm tắt AI (gpt-5.6-luna) — ngữ cảnh lỗi gọn; fallback: 6 lượt gần nhất
+    let contextSummary = historyText.split('\n').slice(-6).join('\n');
     try {
-      await supabaseAdmin.from('chat_reports').insert({
-        user_name: name,
-        role,
-        pathname: input.pathname || '',
-        question: input.question,
-        history: historyText || '',
-      });
+      if (isAIConfigured()) {
+        const s = await callAI(
+          `Hãy tóm tắt NGẮN GỌN (~100 từ) nội dung hội thoại hỗ trợ dưới đây để developer điều tra lỗi: vấn đề chính, user đã thử gì, kết quả. Không thêm giả định.\n\nHội thoại:\n${historyText || '(không có)'}`,
+          { system: 'Bạn là trợ lý tóm tắt kỹ thuật tiếng Việt. Trả về đúng ~100 từ, không dẫn dắt.', maxTokens: 200, temperature: 0.2 }
+        );
+        if (s) contextSummary = s;
+      }
+    } catch { /* fallback giữ 6 lượt */ }
+
+    // Lưu vào chat_reports (service role) để Mika cron tự điều tra
+    let reportId: string | null = null;
+    try {
+      const { data: reportRow } = await supabaseAdmin
+        .from('chat_reports').insert({
+          user_name: name,
+          role,
+          pathname: input.pathname || '',
+          question,
+          history: historyText,
+          user_id: userId,
+        })
+        .select('id').single();
+      reportId = reportRow?.id || null;
     } catch (err) {
       console.error('chat_reports insert error:', err);
     }
+
     // POST webhook tức thì → Mika điều tra (event-driven; chỉ khi env cấu hình — KURABE chạy Pi5/LAN; Vercel bỏ trống → fallback cron)
     const webhookUrl = process.env.KURABE_WEBHOOK_URL;
     const webhookSecret = process.env.KURABE_WEBHOOK_SECRET;
@@ -330,7 +362,9 @@ export async function chatReportErrorAction(input: {
           user_name: name,
           role,
           pathname: input.pathname || '',
-          question: input.question,
+          question,
+          summary: contextSummary,
+          report_id: reportId,
         });
         const ts = Math.floor(Date.now() / 1000).toString();
         const crypto = await import('node:crypto');
@@ -353,6 +387,8 @@ export async function chatReportErrorAction(input: {
         console.error('webhook POST error:', err);
       }
     }
+    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${question}\nBối cảnh: ${contextSummary.slice(0, 400)}\nLúc: ${new Date().toLocaleString('vi-VN')}`;
+
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
