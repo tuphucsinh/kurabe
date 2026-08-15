@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     ".understand-anything/**",
     ".gitnexus/**",
     ".claude/**",
+    // Vercel build artifacts (vercel build local tạo .vercel/output):
+    ".vercel/**",
   ]),
 ]);
 

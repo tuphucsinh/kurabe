@@ -81,7 +81,10 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
   const hint = role === 'Manager'
     ? 'Chị cần xem tiến độ, báo cáo hay giải đáp thắc mắc về đánh giá, em hỗ trợ được ạ.'
     : 'Chị gặp thắc mắc về thao tác hay gặp lỗi gì, em hướng dẫn giúp chị ạ.';
-  return { greeting: `Chào chị. Chị đang ở ${page} — ${hint}` };
+  const fullName = (auth.user?.name || '').trim();
+  const firstName = fullName ? fullName.split(/\s+/).pop() : '';
+  const greet = firstName ? `Chào chị ${firstName}` : 'Chào chị';
+  return { greeting: `${greet}. Chị đang ở ${page} — ${hint}` };
 }
 
 export async function chatAskAction(input: {
