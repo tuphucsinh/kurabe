@@ -700,3 +700,26 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **WBS (4 tasks)**: T01 nút UI / T02 payload history / T03 prompt webhook / T04 verify.
 
 **Reviewer R1 (15-08)**: CHANGES_REQUIRED — (H1) prompt webhook phải dùng `{history}` template (payload gửi history nhưng prompt chưa include); (H2) remove+subscribe XOAY HMAC secret → phải giữ secret cũ (`--secret <cũ>`) hoặc đồng bộ env + test; (M1) nút báo lỗi cần cooldown 60s + cap question ≤ 2000 chars; (M2) thêm report_id vào payload/prompt (insert .select('id')); (L1) bỏ window.confirm → state inline; (L2) cap chars.
+
+### Phase 76.3: LIVE TEST đầy đủ — Trợ giúp AI + Báo lỗi + Tự lên plan xử lý 🟢 (2026-08-15, chạy tự động KHÔNG dừng)
+
+> **Yêu cầu anh** (15-08, trước khi đi ngủ): lên plan live test đầy đủ các tính năng trợ giúp AI, báo lỗi, tự lên plan xử lý; chạy NHIỀU test bao phủ hết trường hợp (nhất là phần hỗ trợ — phải trả lời ĐÚNG, CỤ THỂ, THÔNG MINH, TỰ NHIÊN); Reviewer check; kế hoạch TỰ CHẠY THÔNG SUỐT đến hết rồi báo cáo — KHÔNG dừng chờ approve (anh không hiện diện).
+
+**Phạm vi test (21 case, chia 5 nhóm)**:
+- **A. UI/config (3)**: nút chat hiện đúng role (Manager/Leader/SubLeader có, Employee không); panel (X to, neo đáy, nút bottom ẩn khi mở); nút Báo lỗi hiển thị.
+- **B. Hỗ trợ AI — trả lời ĐÚNG/CỤ THỂ/THÔNG MINH/TỰ NHIÊN (10)**: /evaluations "sao không đánh giá được" → tên cụ thể (Leader Hòa...); /dashboard "tình hình" → số liệu DB thật + phân tích súc tích (không menu/chụp); /reports "tóm tắt" → số liệu; /employees "bao nhiêu quản lý" → breakdown role; hướng dẫn thao tác Leader đúng phạm vi; hỏi ngoài phạm vi (Leader) → từ chối khéo + gợi ý Manager; chức danh Nhân viên → không có; history 2 câu nhớ ngữ cảnh; đổi trang không lẫn + quay lại nhớ; greeting theo trang.
+- **C. Báo lỗi (4)**: nút bug + confirm; gửi → reply + chat_reports (user_id); lần 2 chặn 1/ngày; AI detect [CẦN_DEV] (caveat: không ép được AI quyết định — ghi log + đánh giá, test chính là nút thủ công).
+- **D. Webhook/điều tra (3)**: HMAC sai 401 / đúng 202; agent webhook nhận payload {summary, report_id} → điều tra → MASTER_PLAN → status planned; Telegram tin báo lỗi.
+- **E. Tổng hợp (1)**: build/tsc/lint + không crash.
+
+**Cơ chế chạy (KHÔNG dừng)**:
+- Script E2E CDP tự chạy toàn bộ A/B/C (login user thật, mở trang, hỏi, đánh giá PASS/FAIL theo tiêu chí keyword/pattern).
+- D: test webhook HMAC (401/202) + trigger agent (202) → agent chạy nền → sau ~3-5 phút verify chat_reports status='planned' + MASTER_PLAN có mục KURABE BUG.
+- Kết quả ghi /tmp/kurabe-live-test-report.md + tóm tắt cuối cho anh (Telegram qua báo cáo).
+- KHÔNG hỏi approve giữa chừng; nếu case fail → ghi FAIL + lý do + tiếp tục (không dừng).
+- Reviewer check plan TRƯỚC khi chạy.
+
+**Ràng buộc**: không đụng dữ liệu production (test user 158/16735 login đọc; report test dọn sau); server local port 3000 giữ chạy; không push. **DEFER**: rate-limit 15/2h đã verify ở Phase 75 — không test lại trong suite này (tránh đụng chat_usage thật).
+
+**Reviewer R1 (15-08)**: gần PASS — bổ sung: (7) C.4 [CẦN_DEV] không ép được AI quyết định → ghi "không ép, đánh giá qua log/manual, test chính là nút thủ công"; (8) rate-limit 15/2h → DEFER (không đụng chat_usage thật trong live suite — đã verify ở Phase 75); (9) THÊM case: SubLeader hỏi ngoài phạm vi → từ chối; Manager hỏi nâng cao (báo cáo chi tiết) → trả lời; (10) PREFLIGHT: assert port 3000 + 8644 nghe, env KURABE đủ, unset NEXT_PUBLIC_SUPABASE_URL (chống ô nhiễm shell), ETA ~20-30 phút.
+- Lưu ý chạy: test-webhook.cjs cũ chỉ dùng cho HMAC; D.2 phải trigger webhook payload THẬT (có report_id/summary) mới verify status='planned'.
