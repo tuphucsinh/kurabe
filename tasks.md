@@ -515,7 +515,7 @@
 
 **Definition of Done**: lint/build PASS; browser: login từng role → /support hiển thị guide đúng role + selector đúng quyền.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. Sidebar "Hỗ trợ"→"Hướng dẫn" (Sidebar.tsx:42); metadata title "Hướng dẫn | Kurabe QAQC"; `/support` thêm block "Hướng dẫn theo vai trò của bạn" render từ guide-content: intro + 16 bước (kèm ảnh screenshotPath) + FAQ theo role; selector role — Manager 4 nút (Manager/Leader/SubLeader/Nhân viên), Leader/SubLeader/Employee badge cố định; nút in mở `/support/print?role=<đang chọn>`. Fix lint React 19 (setState in effect — bỏ useEffect, currentRole đúng lúc render vì AppLayout guard). lint 0 errors, tsc PASS. Commit `f5224d0`.
 
 ---
 
@@ -533,7 +533,7 @@
 
 **Definition of Done**: browser: /support/print?role=manager|leader|subleader|employee render đúng nội dung role đó; print A4 không tràn trang; nút in mặc định role hiện tại.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. Route `/support/print/page.tsx` (server component): đọc `?role=` validate 4 role, mặc định session role; selector role mọi vai trò chọn được (in phát cho người khác) + nút In window.print(); render A4 từ guide-content: doc header (mã tài liệu/khổ giấy/ngày phát hành), alert intro, steps đánh số + ảnh screenshotPath, FAQ 2 cột, footer; CSS @page A4 portrait 12mm/15mm, font 9.5pt, print-color-adjust exact, break-inside avoid; print-guide.html cũ giữ nguyên (không xóa). tsc PASS, lint 0 errors. Commit `4984110`.
 
 ---
 
@@ -551,4 +551,4 @@
 
 **Definition of Done**: lint 0 + build PASS + E2E 4 role PASS + manifest verify PASS + git clean (không push — chờ anh).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: Mika verify toàn diện. **E2E browser 4 role ALL PASS** (login 158/663/432/16735 → /support intro đúng role + Manager 4 nút selector / role khác badge cố định → /support/print?role= steps/faq/ảnh đúng: Manager 16/6/15, Leader 9/4/9, SubLeader 7/4/7, Employee 4/3/3). **Interactive**: Manager click "Nhân viên" → intro đổi guide Employee ✓. **Console**: CDP clean (0 errors). **Visual**: /support block vai trò + selector đẹp; print A4 sạch chuyên nghiệp (vision verified). **Manifest**: 34/34 khớp, không thiếu/thừa. Lint 0 errors + build PASS (kill server trước build). Server local chạy port 3000. Commits `373ffac` `a58d653` `ddb8173` `f5224d0` `4984110` — chưa push.
