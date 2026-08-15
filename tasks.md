@@ -572,7 +572,7 @@
 
 **Definition of Done**: tsc PASS + lint 0 errors + page.tsx còn ~210-260 dòng.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. page.tsx **738 → 208 dòng** (−529). Xóa 6 section cũ (#huong-dan/#vai-tro/#workflow/#bao-cao/#ai-ho-tro/#quan-ly-du-lieu) + 7 hằng data (usageGuide/roleGuides/roleWorkflows/managementGuide/permissionMatrix/aiGuide/quickLinks/reportingGuide) + khối render chips quickLinks + dọn import 7 icon (ArrowRight/BookOpen/ClipboardCheck/FilePenLine/LineChart/ShieldCheck/Sparkles) — giữ 5 (HelpCircle/Lock/Printer/Settings2/UsersRound). Trang chỉ còn: header gọn + block #huong-dan-vai-tro (guide-content) + cột phải Nguyên tắc. tsc PASS + lint 0 errors + 0 hằng cũ + 0 id cũ.
 
 ---
 
