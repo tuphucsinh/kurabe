@@ -581,3 +581,40 @@
 - T03 [src/components/chat/ChatWidget.tsx] Widget client (nút fixed, role filter, greeting theo trang, chat UI không emoji, mobile offset).
 - T04 [src/components/layout/AppLayout.tsx] Mount ChatWidget.
 - T05 [verify + docs] lint/tsc/build/E2E (3 role thấy + Employee không + hỏi được + greeting + chặn hết lượt) + HANDOFF/MASTER_PLAN + commit.
+
+### Phase 75.1: Nâng cấp chat AI — context vai trò/trang + chẩn đoán cụ thể + phân tích screenshot 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08, sau khi thấy reply chung chung "Chị đang ở vai trò nào..."): chat AI phải (1) NẮM vai trò người hỏi + trang đang mở khi nhận câu hỏi, (2) xác định nhanh vấn đề cụ thể → trả lời trực tiếp, KHÔNG liệt kê chung chung, (3) KHI CẦN có thể chụp màn hình để phân tích.
+
+**Bằng chứng (code thật 15-08)**:
+- `src/actions/chat.ts` chatAskAction: input {question, pathname, history?}; buildSystem(role) đã phân theo role NHƯNG prompt KHÔNG nhắc rõ "chị đang ở vai trò X, trang Y" trong context → AI hỏi lại vai trò (reply vd 5 nguyên nhân chung).
+- `src/lib/ai.ts` callAI: CHỈ text (messages: system + user string). KHÔNG hỗ trợ image/vision. Không có qwen/vision trong code.
+- `pathname` đã có sẵn từ ChatWidget (usePathname) — chỉ cần đưa vào prompt.
+- Không có thư viện screenshot trong package.json (chưa cài html2canvas/dom-to-image).
+
+**Thiết kế (chạm backend LLM + có thể thêm dependency → CONTROLLED, Reviewer)**:
+
+1. **T01 [chat.ts — context rõ ràng]**: chatAskAction thêm vào prompt (cả greeting + ask): `Thông tin người hỏi: vai trò = {role}; trang đang mở = {pageName từ pathname}.` — AI khỏi hỏi lại; dùng role/trang để chẩn đoán hẹp (vd /evaluations → nói về vòng/khóa phiếu; /employees → quyền thêm/sửa; /settings → kỳ/thang điểm).
+
+2. **T02 [chat.ts — chẩn đoán cụ thể]**: nếu pathname match `/evaluations/{id}` (regex chuẩn — pathname UNTRUSTED, không dùng trực tiếp): **REUSE `getEvaluationByEmployee(id, period, user)`** (đã có scope check theo quyền — KHÔNG query supabaseAdmin trực tiếp, tránh lộ dữ liệu chéo team — Reviewer R1 [HIGH]) với **period resolve qua `getActivePeriod()`** (evaluations.ts L25 — không để undefined vì sẽ match nhầm period khi có nhiều kỳ — Reviewer R2 [L1]) → lấy status/currentRound/rounds đã nộp/employee role (ẩn danh: KHÔNG gửi tên/mã) → đưa vào prompt `Ngữ cảnh phiếu đang mở: ...` → AI trả lời chính xác "vì vòng 1 chưa nộp". Fail-soft: lỗi/không có quyền → bỏ qua context.
+
+3. **T03 [lib/ai.ts — mở rộng vision]**: thêm `callAIVision(prompt, imageBase64, opts)` — gửi OpenAI-compatible `messages: [{role:'user', content:[{type:'text',text},{type:'image_url',image_url:{url:'data:image/png;base64,...'}}]}]`. **HARD GATE (Reviewer R1)**: verify VISION THẬT trước khi làm T04 — test 1 ảnh qua gpt-5.6-luna; nếu không nhận image_url → dùng model vision riêng (env AI_VISION_MODEL, mặc định qwen3.7-plus — theo memory opencode-go vision) qua cùng base URL. Chỉ khi test thật PASS mới chốt T03 và làm T04.
+
+4. **T04 [ChatWidget — nút chụp + gửi]**: thêm nút "Chụp màn hình gửi em phân tích" trong panel chat:
+   - Cài dependency `html2canvas` (hoặc dom-to-image) — chụp `document.body` (hoặc main content) → dataURL PNG (scale 0.5 để giảm size).
+   - **SERVER-ACTION LIMIT (Reviewer R2+R3)**: Next.js server action body limit mặc định ~1MB → **cap: độ dài chuỗi dataURL/base64 gửi lên ≤ 900KB** (base64 inflation ~33% đã tính — 900KB base64 ≈ 675KB raw; server check độ dài chuỗi trước khi decode — Reviewer R3). Nếu vượt → client tự giảm scale/JPEG 0.8 rồi thử lại; vẫn quá → báo "ảnh quá lớn". KHÔNG bump bodySizeLimit (tránh mở rộng bề mặt).
+   - **PII BOUNDARY (Reviewer R1 [HIGH])**: ảnh chụp có thể chứa tên thật/PII trên màn hình → hiện CẢNH BÁO trước khi gửi: "Em sẽ xem ảnh màn hình của chị để phân tích. Ảnh chỉ dùng cho câu trả lời này và không được lưu lại." + **server-side check: max size 900KB + rate-limit tính như câu hỏi thường** (Leader/SubLeader đếm lượt; Manager không giới hạn).
+   - Gửi qua `chatAskWithScreenshotAction({question, pathname, history, imageBase64})` → server gọi callAIVision → trả phân tích.
+   - KHÔNG lưu ảnh vào DB; KHÔNG emoji, gọi chị/xưng em.
+
+5. **T05 [verify + docs]**: lint/tsc/build + E2E thật: (a) hỏi "sao không đánh giá được?" ở /evaluations/{id} với role Leader → trả lời nêu đúng vòng chưa nộp (không hỏi lại role); (b) chụp màn hình → gửi → AI phân tích đúng nội dung ảnh; (c) rate-limit vẫn hoạt động. HANDOFF + commit.
+
+**Ràng buộc**: không gửi tên thật/PII vào LLM (ẩn danh hóa context); không lưu screenshot vào DB; model vision verify thực tế trước (T03).
+
+**WBS (5 tasks)**: T01 context / T02 fetch context / T03 callAIVision / T04 widget screenshot / T05 verify.
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — T02 phải reuse getEvaluationByEmployee (chống lộ dữ liệu chéo team) + T04 PII boundary + T03 hard gate verify vision.
+**Reviewer R2 (15-08)**: gần PASS — period resolve qua getActivePeriod + cap ảnh ≤ server-action limit (không bump bodySizeLimit).
+**Reviewer R3 (15-08)**: PASS ✅ — cap 900KB là độ dài chuỗi base64 gửi lên (đã sửa); lưu ý T02 chỉ gửi status/round/submitted/role, KHÔNG gửi notes/comment (có thể chứa tên).
+
+**WBS (5 tasks)**: T01 context role/trang / T02 fetch context evaluation / T03 callAIVision (hard gate verify vision thật) / T04 widget screenshot (html2canvas + PII warning + cap 900KB) / T05 verify.
