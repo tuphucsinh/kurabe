@@ -70,7 +70,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
       <style>{`
         @page {
           size: A4 portrait;
-          margin: 12mm 15mm;
+          margin: 10mm 12mm;
         }
         @media print {
           html, body {
@@ -88,6 +88,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
+            zoom: 0.95;
           }
           .step-item-card {
             break-inside: avoid;
@@ -131,7 +132,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
       )}
 
       {/* Container bản in A4 */}
-      <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-none print:p-0">
+      <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-[190mm] print:p-0">
         <div className="print-a4-page rounded-xl border border-slate-200 bg-white p-8 shadow-sm text-[9.5pt] leading-[1.5] text-[#1e293b]">
           {/* Doc Header */}
           <header className="border-b-[3px] border-[#07384d] pb-3 mb-4 flex justify-between items-end">
