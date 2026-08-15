@@ -497,7 +497,7 @@
 
 **Definition of Done**: mọi bước có khai báo ảnh đều có file annotate; không ảnh thừa ngoài manifest.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: Mika thực hiện (task vận hành — runner agy headless không chạy browser/PIL được). **34/34 ảnh chụp thật** login 4 role (158/663/432/16735) qua Chrome thật + CDP: manager 15, leader 9, subleader 7, employee 3. **Vision-verified** ảnh then chốt: login thật, subleader R1 Lần 1/3 (1720 Cẩm Loan), leader R2 Lần 2/3, manager R3 Lần 3/3 + nút AI, modal Sửa nhóm, employee 16735 kết quả L3 B/110. **Annotate khoanh vùng bằng PIL** (box đỏ + số + nhãn) 34/34 — verified 2 ảnh đại diện. **Data tạm restore nguyên trạng**: 1720 R1:NotStarted(432), không R2/R3 (verified). Manifest 34/34 khớp, không thiếu/thừa. Server local port 3000 đang chạy. Chưa commit ảnh (chờ tick).
 
 ---
 
