@@ -272,7 +272,7 @@ export default function TeamDetailPage() {
                           {leader.name.charAt(0)}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-800 text-sm md:text-base">{leader.name}</span>
+                          <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
                           <span className="text-xs text-slate-500 font-medium">Mã: {leader.employeeCode}</span>
                           <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/70">
                             Leader
@@ -344,7 +344,7 @@ export default function TeamDetailPage() {
                       {sl.name.charAt(0)}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-800 text-sm md:text-base">{sl.name}</span>
+                      <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
                       <span className="text-xs text-slate-500 font-medium">Mã: {sl.employeeCode}</span>
                       <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200/70">
                         {sl.description && sl.description.trim() !== '' ? sl.description : 'Chưa có chức danh'}
@@ -409,7 +409,7 @@ export default function TeamDetailPage() {
                           <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                                <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
                                 {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
@@ -506,7 +506,7 @@ export default function TeamDetailPage() {
                         <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-on-surface truncate">{member.name}</p>
+                              <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
                             </div>
                             <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                           </div>

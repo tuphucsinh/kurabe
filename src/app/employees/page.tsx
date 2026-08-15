@@ -374,7 +374,13 @@ export default function EmployeesPage() {
             {item.name.charAt(0)}
           </div>
           <div>
-            <p className="font-semibold text-slate-900">{item.name}</p>
+            <Link
+              href={`/evaluations/${item.id}`}
+              className="font-semibold text-slate-900 hover:text-primary hover:underline"
+              title="Đánh giá"
+            >
+              {item.name}
+            </Link>
             <p className="text-[11px] text-slate-400">Mã: {item.employeeCode || item.id.slice(0, 8)}</p>
           </div>
         </div>
