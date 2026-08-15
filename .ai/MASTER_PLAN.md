@@ -618,3 +618,42 @@
 **Reviewer R3 (15-08)**: PASS ✅ — cap 900KB là độ dài chuỗi base64 gửi lên (đã sửa); lưu ý T02 chỉ gửi status/round/submitted/role, KHÔNG gửi notes/comment (có thể chứa tên).
 
 **WBS (5 tasks)**: T01 context role/trang / T02 fetch context evaluation / T03 callAIVision (hard gate verify vision thật) / T04 widget screenshot (html2canvas + PII warning + cap 900KB) / T05 verify.
+
+### Phase 76: Data context theo trang (thay chụp ảnh) + Giới tính nhân viên (Nam/Nữ) + AI gọi anh/chị theo giới tính 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08): (1) thay vì chụp ảnh, thu thập data từ DATABASE theo trang đang mở để AI đánh giá — làm đủ hết các trang; (2) thêm "Giới tính": Nam/Nữ cho TẤT CẢ nhân viên — khi Thêm nhân viên có ô tick chọn Nam/Nữ, bổ sung giới tính Nữ cho tất cả nhân viên hiện có; (3) AI giao tiếp dựa trên giới tính: Nam → "anh", Nữ → "chị".
+
+**Bằng chứng (code thật 15-08)**:
+- `src/actions/dashboard.ts`: `getDashboardData(periodId)` (L148) trả DashboardData {stats, gradeDistribution, teamStatus, recentActivities, rawEvaluations, rawCriteriaGroups} — TÁI SỬ DỤNG cho chat context dashboard (KHÔNG có pendingReviews/anomalies — anomaly tính client-side).
+- `src/types/index.ts` User (L21): id/employeeCode/name/role/team_id/joinDate/... — CHƯA có gender.
+- `src/lib/db/users.ts`: USER_SELECT (L13-14) — thêm `gender`; mapUserFromDb — map gender.
+- `src/actions/chat.ts`: greeting hiện `Chào chị {firstName}` (hardcode chị); buildSystem(role) — hardcode chị.
+- `src/components/modals/EmployeeModal.tsx`: shared modal thêm/sửa NV — thêm field giới tính.
+- `src/actions/users.ts` upsertUserAction: nhận payload tạo/sửa user — thêm gender.
+
+**Thiết kế (chạm DB users + backend + LLM → CONTROLLED, Reviewer bắt buộc)**:
+
+1. **T01 [DB + type — gender]**: migration `users` thêm cột `gender text not null default 'Nữ'` (DEFAULT tự backfill user cũ = 'Nữ' — KHÔNG cần UPDATE riêng — Reviewer R1 note) + **BẮT BUỘC thêm `grant select (id, employee_code, name, role, team_id, join_date, avatar_url, created_at, is_active, subleader_id, description, gender) on public.users to anon, authenticated;`** (Reviewer R1 [HIGH] — RLS row-level không đủ; thiếu GRANT cột gender → USER_SELECT qua anon client lỗi → getSessionUser catch null → MỌI người bị coi chưa đăng nhập, vỡ toàn app). RLS policy giữ nguyên. `src/types/database.ts` users thêm gender. `src/types/index.ts` User thêm `gender: string`. USER_SELECT + mapUserFromDb thêm gender.
+
+2. **T02 [EmployeeModal + upsertUserAction + upsertUsersAction — gender]**: modal Thêm/Sửa nhân viên thêm **radio Nam/Nữ** (mặc định Nữ); `upsertUserAction` nhận + lưu gender (validate server-side: whitelist 'Nam'|'Nữ', thiếu → 'Nữ'); **`upsertUsersAction` (import Excel, users.ts L271-362) cũng phải xử lý** — chốt: Insert type gender optional + DB default (Reviewer R1 [MEDIUM]).
+
+3. **T03 [chat.ts — anh/chị theo giới tính]**: tạo **1 helper `address(gender)` duy nhất → 'anh'/'chị'** (whitelist gender — KHÔNG chèn gender thô vào prompt, chống prompt injection — Reviewer R1 note) áp cho **TẤT CẢ site hardcode chị/em** trong chat.ts (~15 chỗ: greeting, buildSystem/BASE_RULES, history map "Chị"/"Em", prompt "Câu hỏi mới của chị", các message lỗi/limit — Reviewer R1 [MEDIUM]); fallback mặc định "chị" nếu gender thiếu.
+
+4. **T04 [chat.ts — data context theo trang]**: mở rộng chẩn đoán: khi pathname match trang → fetch data thật từ DB (TÁI SỬ DỤNG action/hàm có scope check — KHÔNG query raw supabaseAdmin):
+   - `/dashboard` → **CHỈ Manager** (Reviewer R1 [HIGH] — getDashboardData gọi getUsers/getTeams KHÔNG scope → SubLeader/Leader sẽ nhận headcount toàn công ty qua AI = LỘ data + sai số): `getDashboardData(activePeriod.id)` → tóm tắt field THẬT `{stats, gradeDistribution, teamStatus, recentActivities}` (KHÔNG có pendingReviews/anomalies — anomaly tính client-side lib/anomaly.ts — Reviewer R1 [MEDIUM]); Leader/SubLeader ở /dashboard → KHÔNG bật data context (fallback chụp ảnh hoặc trả lời chung).
+   - `/reports` → **CHỈ Manager** (getReportAggregation cũng gọi getUsers/getTeams không scope — R1 [HIGH]): getReportAggregation(periodId, ...) signature đọc khi code.
+   - `/employees` → `getUsers(auth.user)` (lib/db/users.ts L16 — scope theo requester — R1) + thống kê nhanh (tổng/đã xong/chưa).
+   - `/teams` → getUsers(auth.user) nhóm theo team + tiến độ (hoặc hàm teams sẵn có scope — kiểm tra khi code).
+   - `/criteria` → `getAllCriteriaGroups()` (lib/db/criteria.ts L14).
+   - `/evaluations/{id}` → GIỮ NGUYÊN T02 Phase 75.1 (getEvaluationByEmployee + getActivePeriod).
+   - `/settings`, `/support` → KHÔNG có data context (chấp nhận — R1 [LOW]): fallback chụp ảnh.
+
+5. **T05 [verify + docs]**: lint/tsc/build + E2E thật: (a) hỏi "tình hình đánh giá?" ở /dashboard → AI trả lời số liệu DB thật KHÔNG chụp; (b) greeting user Nam → "anh", Nữ → "chị"; (c) modal thêm NV có radio Nam/Nữ + lưu đúng; (d) user cũ đều có gender='Nữ'. HANDOFF + commit.
+
+**Ràng buộc**: gender validate server-side; migration an toàn (add column default — không phá data); data context tóm tắt gọn (không tốn token); không lộ password; không tự push (theo quy tắc anh).
+
+**WBS (5 tasks)**: T01 gender DB/type / T02 modal+action / T03 anh-chị / T04 data context / T05 verify.
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — 2 HIGH (GRANT cột gender cho anon/authenticated — thiếu sẽ vỡ toàn app; dashboard/reports data context CHỈ Manager — getDashboardData/getReportAggregation gọi getUsers/getTeams không scope) + MEDIUM (field DashboardData thật; helper address() ~15 chỗ; upsertUsersAction Excel) + LOW (settings/support không data context). Đã sửa hết.
+**Reviewer R2 (15-08)**: gần PASS — fix L67 bằng chứng field DashboardData.
+**Reviewer R3 (15-08)**: **PASS** ✅ (ghi chú cosmetic team_id→teamId).
