@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
   ArrowRight,
+  Bot,
   ClipboardCheck,
   HelpCircle,
   Lock,
@@ -86,6 +87,63 @@ export default function SupportPage() {
 
       <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-6">
+          <div id="tro-giup-ai" className="rounded-[24px] border-2 border-emerald-300 bg-gradient-to-br from-white via-emerald-50/50 to-emerald-100/70 p-6 md:p-8 shadow-lg relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md">
+                <Bot size={32} />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-emerald-600">Tính năng quan trọng nhất</p>
+                <h2 className="text-2xl md:text-3xl font-black text-slate-950">Trợ lý AI — giúp bạn ngay khi gặp lỗi hoặc chưa biết cách làm</h2>
+              </div>
+            </div>
+            <div className="mt-5 space-y-3 text-[15px] leading-7 text-slate-700">
+              <p><b>Việc đầu tiên</b> khi gặp lỗi hay không biết cách thao tác: <b>nhấn icon trợ giúp (góc phải dưới màn hình)</b> để mở chat với Trợ lý AI.</p>
+              <p>AI hiểu <b>vai trò của bạn</b> (Manager/Leader/SubLeader) và <b>trang bạn đang mở</b> — nên trả lời đúng trọng tâm: hướng dẫn thao tác, giải thích quy trình, trạng thái đánh giá, số liệu báo cáo.</p>
+              <p>Khi cần, AI <b>tự xem màn hình</b> của bạn để phân tích chính xác; nếu gặp lỗi hệ thống, bạn có thể <b>bấm nút Báo lỗi</b> trong chat (tối đa 1 lần/ngày) — lỗi được gửi về Developer để xử lý.</p>
+              <p className="text-sm text-slate-500">Gợi ý: hãy thử đặt câu hỏi đơn giản như "tôi phải đánh giá ở đâu?" hoặc "sao không đánh giá được?".</p>
+            </div>
+          </div>
+
+          <div id="workflow" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+                <ClipboardCheck size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Quy trình 3 vòng đánh giá</h2>
+                <p className="text-sm text-slate-500">
+                  Luồng đánh giá tuần tự: vòng sau chỉ mở khi vòng trước đã nộp.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                <div key={role} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
+                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
+                  </h3>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {roleWorkflows[role].map((step, index) => (
+                      <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
+                        <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
+                        </div>
+                        {index < roleWorkflows[role].length - 1 && (
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/70 text-slate-500">
+                            <ArrowRight size={14} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div id="huong-dan-vai-tro" className="rounded-[24px] border-2 border-cyan-200 bg-gradient-to-br from-white via-cyan-50/40 to-cyan-100/60 p-6 md:p-8 shadow-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -156,45 +214,6 @@ export default function SupportPage() {
                         </figcaption>
                       </figure>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div id="workflow" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
-                <ClipboardCheck size={22} />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-slate-900">Quy trình 3 vòng đánh giá</h2>
-                <p className="text-sm text-slate-500">
-                  Luồng đánh giá tuần tự: vòng sau chỉ mở khi vòng trước đã nộp.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
-                <div key={role} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
-                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
-                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
-                  </h3>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {roleWorkflows[role].map((step, index) => (
-                      <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
-                        <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
-                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
-                        </div>
-                        {index < roleWorkflows[role].length - 1 && (
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/70 text-slate-500">
-                            <ArrowRight size={14} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               ))}
