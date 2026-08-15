@@ -563,7 +563,7 @@ export default function EmployeesPage() {
               className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
             >
               <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-              Thêm nhân viên mới
+              Thêm nhân viên
             </button>
           </div>
         )}
@@ -683,7 +683,7 @@ export default function EmployeesPage() {
                 : "Chưa có nhân viên nào trong hệ thống. Hãy thêm nhân viên mới hoặc nhập từ Excel."
               }
               action={canManageEmployees ? {
-                label: "Thêm nhân viên mới",
+                label: "Thêm nhân viên",
                 onClick: handleAdd,
                 icon: Plus
               } : undefined}
