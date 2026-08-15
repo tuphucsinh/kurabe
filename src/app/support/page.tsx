@@ -178,25 +178,29 @@ export default function SupportPage() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
-              <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
-                {roleLabels[viewRole]} — {roleWorkflows[viewRole].length} vòng
-              </h3>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {roleWorkflows[viewRole].map((step, index) => (
-                  <div key={`${viewRole}-wf-${index}`} className="flex items-center gap-2">
-                    <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
-                    </div>
-                    {index < roleWorkflows[viewRole].length - 1 && (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/70 text-slate-500">
-                        <ArrowRight size={14} />
+            <div className="mt-6 space-y-4">
+              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                <div key={role} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+                  <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
+                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
+                  </h3>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {roleWorkflows[role].map((step, index) => (
+                      <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
+                        <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
+                        </div>
+                        {index < roleWorkflows[role].length - 1 && (
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/70 text-slate-500">
+                            <ArrowRight size={14} />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
