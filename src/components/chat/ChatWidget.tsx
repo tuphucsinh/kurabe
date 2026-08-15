@@ -48,15 +48,17 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Nút mở: desktop bottom-6, mobile bottom-24 (trên BottomNav) */}
-      <button
-        onClick={open ? () => setOpen(false) : openWidget}
-        className="fixed right-4 bottom-24 md:bottom-6 z-[9998] w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
-        aria-label="Hỗ trợ"
-        title="Hỗ trợ"
-      >
-        {open ? <X size={24} /> : <MessageCircle size={24} />}
-      </button>
+      {/* Nút mở: chỉ hiện khi widget ĐÓNG (khi mở đã có nút X ở header panel) */}
+      {!open && (
+        <button
+          onClick={openWidget}
+          className="fixed right-4 bottom-24 md:bottom-6 z-[9998] w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
+          aria-label="Hỗ trợ"
+          title="Hỗ trợ"
+        >
+          <MessageCircle size={24} />
+        </button>
+      )}
 
       {/* Panel chat */}
       {open && (
