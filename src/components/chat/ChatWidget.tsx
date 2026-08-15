@@ -68,8 +68,8 @@ export default function ChatWidget() {
               <p className="font-bold text-sm">Trợ lý KURABE</p>
               <p className="text-[11px] text-white/80">Hỏi đáp về cách sử dụng hệ thống</p>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Đóng" className="p-1 rounded-lg hover:bg-white/10">
-              <X size={18} />
+            <button onClick={() => setOpen(false)} aria-label="Đóng" className="p-2 rounded-lg hover:bg-white/10 transition-all">
+              <X size={24} />
             </button>
           </div>
 
