@@ -238,67 +238,14 @@ const aiGuide = [
   },
 ];
 
-const faqItems = [
-  {
-    question: 'Vì sao tôi chỉ xem được mà không sửa được?',
-    answer:
-      'Bạn đang ở ngoài lượt đánh giá của mình, hoặc vòng đó đã được nộp. Hệ thống khóa chỉnh sửa để giữ đúng quy trình nhiều vòng.',
-  },
-  {
-    question: 'Vì sao mở vào chỉ thấy thông báo "Bạn không thể xem đánh giá của cấp trên"?',
-    answer:
-      'Thông báo này xuất hiện khi người dùng cấp thấp hơn cố mở đánh giá của người giữ chức vụ cao hơn (ví dụ SubLeader mở đánh giá của Leader, hoặc Nhân viên mở đánh giá của SubLeader/Leader). Mỗi vai trò chỉ được xem đánh giá trong phạm vi công việc của mình.',
-  },
-  {
-    question: 'Tôi muốn thay đổi Leader hoặc SubLeader của nhóm thì làm thế nào?',
-    answer:
-      'Quy tắc này chỉ áp dụng cho Leader: mỗi nhóm chỉ có đúng 1 Leader. Muốn đổi Leader, hãy làm 2 bước theo đúng thứ tự: (1) vào "Nhân viên", hạ người đang giữ chức xuống "Nhân viên" trước; (2) sau đó thăng người mới lên Leader. Hệ thống sẽ chặn nếu bạn thăng người mới khi nhóm vẫn còn Leader cũ. Với SubLeader thì không giới hạn: thăng thêm hoặc hạ bớt bất cứ lúc nào, hệ thống tự cập nhật vòng đánh giá tương ứng.',
-  },
-  {
-    question: 'Vì sao tôi (Leader/Manager) không mở được đánh giá của nhân viên?',
-    answer:
-      'Quy trình đánh giá tuần tự: vòng 1 (SubLeader) chưa nộp thì vòng 2 (Leader) và vòng 3 (Manager) CHƯA mở được — kể cả Manager cũng không mở sớm được. Đây là hành vi đúng của hệ thống, không phải lỗi. Hãy nhắc người đang giữ lượt nộp trước: SubLeader nộp vòng 1 thì Leader mở vòng 2; Leader nộp vòng 2 thì Manager mở vòng 3.',
-  },
-  {
-    question: 'Vì sao có nhân viên chưa có dữ liệu evaluation?',
-    answer:
-      'Kỳ đang chọn có thể chưa được khởi tạo cho nhân viên đó, hoặc bạn đang đứng ở một kỳ cũ/chưa có dữ liệu. Hãy kiểm tra lại bộ chọn kỳ trước.',
-  },
-  {
-    question: 'Điểm các vòng trước dùng để làm gì?',
-    answer:
-      'Điểm cũ giúp đối chiếu mức thay đổi qua từng lượt đánh giá. Tại danh sách nhân viên và màn hình chi tiết, vòng hiện tại luôn nổi bật hơn để tránh đọc nhầm.',
-  },
-  {
-    question: 'Hệ thống thông báo và cảnh báo hoạt động như thế nào?',
-    answer:
-      'Hệ thống sử dụng các thông báo nổi (Toast) ở góc màn hình để báo trạng thái thành công/lỗi nhằm không làm gián đoạn công việc. Với các thao tác rủi ro cao (Xóa, Gửi đánh giá), hệ thống sẽ hiển thị hộp thoại xác nhận (Confirm Dialog) rõ ràng để tránh bấm nhầm.',
-  },
-  {
-    question: 'Tôi có thể dùng hệ thống trên điện thoại không?',
-    answer:
-      'Có. Giao diện đã được tối ưu hoàn toàn cho thiết bị di động. Bạn có thể mở menu bên (Sidebar) thông qua nút menu ở góc màn hình, đồng thời các biểu đồ, bảng biểu và thao tác chấm điểm đều thân thiện với thao tác chạm/vuốt.',
-  },
-  {
-    question: 'Tôi bị trả lại đánh giá thì phải làm gì?',
-    answer:
-      'Đánh giá của bạn được mở lại để sửa. Nhìn banner màu vàng ở đầu màn hình để đọc lý do trả lại, chỉnh sửa điểm/ghi chú theo yêu cầu rồi bấm "Gửi Đánh giá" lần nữa. Nếu không thấy nút sửa, kiểm tra lại bạn có đang đứng đúng lượt đánh giá của mình không.',
-  },
-  {
-    question: 'Cảnh báo "đánh giá bất thường" trên Dashboard là gì?',
-    answer:
-      'Hệ thống tự so sánh điểm giữa 2 vòng liên tiếp: chênh từ 20 điểm trở lên là bất thường (≥30 nghiêm trọng) và hiện cảnh báo trên Dashboard để người quản lý rà soát. Bấm "Giải thích bằng AI" để có phân tích hỗ trợ; sau khi kiểm tra, người đánh giá có thể điều chỉnh điểm ở vòng chưa nộp.',
-  },
-];
-
 const quickLinks = [
   { href: '#huong-dan', label: 'Cách thao tác' },
   { href: '#vai-tro', label: 'Theo vai trò' },
+  { href: '#huong-dan-vai-tro', label: 'Hướng dẫn theo vai trò' },
   { href: '#workflow', label: 'Workflow các vòng' },
   { href: '#bao-cao', label: 'Đọc báo cáo & Phân tích' },
   { href: '#ai-ho-tro', label: 'AI hỗ trợ đánh giá' },
   { href: '#quan-ly-du-lieu', label: 'Quản lý dữ liệu nền' },
-  { href: '#faq', label: 'Câu hỏi thường gặp' },
 ];
 
 const reportingGuide = [
@@ -743,27 +690,6 @@ export default function SupportPage() {
         </section>
 
         <section className="space-y-6 xl:sticky xl:top-6 xl:self-start">
-          <div id="faq" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
-                <HelpCircle size={22} />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-slate-900">Câu hỏi thường gặp</h2>
-                <p className="text-sm text-slate-500">Những tình huống dễ gây nhầm trong lúc sử dụng.</p>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {faqItems.map((item) => (
-                <div key={item.question} className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
-                  <h3 className="text-sm font-black text-slate-900">{item.question}</h3>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{item.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="rounded-[24px] border border-slate-200 bg-[#07384d] p-6 text-white shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">

@@ -18,7 +18,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
   Manager: {
     role: 'Manager',
     intro:
-      'Bạn là người quản trị hệ thống: lo dữ liệu nhân sự/nhóm, tiêu chuẩn, kỳ đánh giá, chốt kết quả vòng cuối và đóng kỳ. Làm theo đúng thứ tự các bước dưới đây.',
+      'Bạn là Manager: lo dữ liệu nhân sự/nhóm, tiêu chuẩn, kỳ đánh giá, chốt kết quả vòng cuối và đóng kỳ. Làm theo đúng thứ tự các bước dưới đây.',
     steps: [
       {
         title: 'Đăng nhập vào hệ thống',
