@@ -98,10 +98,9 @@ export default function SupportPage() {
               </div>
             </div>
             <div className="mt-5 space-y-3 text-[15px] leading-7 text-slate-700">
-              <p><b>Việc đầu tiên</b> khi gặp lỗi hay không biết cách thao tác: <b>nhấn icon trợ giúp</b> <img src="/screenshots/guide/ai-chat-icon.png" alt="Icon trợ giúp chat" className="inline-block w-9 h-9 rounded-full shadow-md align-middle mx-1" /> <b>(góc phải dưới màn hình)</b> để mở chat với Trợ lý AI.</p>
-              <p>AI hiểu <b>vai trò của bạn</b> (Manager/Leader/SubLeader) và <b>trang bạn đang mở</b> — nên trả lời đúng trọng tâm: hướng dẫn thao tác, giải thích quy trình, trạng thái đánh giá, số liệu báo cáo.</p>
-              <p>Khi cần, AI <b>tự xem màn hình</b> của bạn để phân tích chính xác; nếu gặp lỗi hệ thống, bạn có thể <b>bấm nút Báo lỗi</b> trong chat (tối đa 1 lần/ngày) — lỗi được gửi về Developer để xử lý.</p>
-              <p className="text-sm text-slate-500">Gợi ý: hãy thử đặt câu hỏi đơn giản như "tôi phải đánh giá ở đâu?" hoặc "sao không đánh giá được?".</p>
+              <p><b>Việc đầu tiên</b> khi gặp lỗi hay không biết cách thao tác: <b>nhấn icon trợ giúp</b> <img src="/screenshots/guide/ai-chat-icon.png" alt="Icon trợ giúp chat" className="inline-block w-9 h-9 rounded-full shadow-md align-middle mx-1" /> <b>(góc phải dưới màn hình)</b> — AI hiểu vai trò và trang bạn đang mở, trả lời đúng trọng tâm: thao tác, quy trình, trạng thái đánh giá; khi cần AI tự xem màn hình để phân tích chính xác.</p>
+              <p>Gặp lỗi hệ thống? Bấm nút <b>Báo lỗi</b> trong chat (1 lần/ngày) — lỗi được gửi về Developer xử lý.</p>
+              <p><b>Các tính năng nâng cao</b> (phân tích số liệu, báo cáo, thống kê, giải thích bất thường đánh giá...) <b>chỉ mở cho Manager</b>.</p>
             </div>
           </div>
 

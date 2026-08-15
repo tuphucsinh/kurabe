@@ -145,6 +145,49 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
             {currentGuide.intro}
           </div>
 
+          {/* Section: Trợ lý AI */}
+          <section className="mb-6">
+            <div className="section-header-banner mb-3 flex items-center justify-between rounded-md bg-[#059669] px-3 py-1.5 text-white">
+              <span className="text-[10pt] font-extrabold uppercase">TRỢ LÝ AI — GIÚP BẠN NGAY KHI CẦN</span>
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[7.5pt] font-semibold">Quan trọng nhất</span>
+            </div>
+            <div className="rounded-md border border-[#d1fae5] bg-[#ecfdf5] p-3 text-[8.5pt] leading-relaxed text-[#064e3b] space-y-1.5">
+              <p><strong>Việc đầu tiên</strong> khi gặp lỗi hay không biết cách thao tác: <strong>nhấn icon trợ giúp (góc phải dưới màn hình)</strong> — AI hiểu vai trò và trang bạn đang mở, trả lời đúng trọng tâm: thao tác, quy trình, trạng thái đánh giá; khi cần AI tự xem màn hình để phân tích chính xác.</p>
+              <p>Gặp lỗi hệ thống? Bấm nút <strong>Báo lỗi</strong> trong chat (1 lần/ngày) — lỗi được gửi về Developer xử lý.</p>
+              <p><strong>Các tính năng nâng cao</strong> (phân tích số liệu, báo cáo, thống kê, giải thích bất thường đánh giá...) <strong>chỉ mở cho Manager</strong>.</p>
+            </div>
+          </section>
+
+          {/* Section: Quy trình 3 vòng */}
+          <section className="mb-6">
+            <div className="section-header-banner mb-3 flex items-center justify-between rounded-md bg-[#4f46e5] px-3 py-1.5 text-white">
+              <span className="text-[10pt] font-extrabold uppercase">QUY TRÌNH 3 VÒNG ĐÁNH GIÁ</span>
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[7.5pt] font-semibold">Vòng sau mở khi vòng trước đã nộp</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                <div key={`print-wf-${role}`} className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] p-2.5 break-inside-avoid">
+                  <h3 className="text-[8.5pt] font-extrabold uppercase text-[#0f172a]">
+                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
+                  </h3>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {roleWorkflows[role].map((step, index) => (
+                      <div key={`${role}-pw-${index}`} className="flex items-center gap-1.5">
+                        <div className="min-w-[96px] rounded-md border border-[#e2e8f0] bg-white px-2 py-1.5">
+                          <p className="text-[7pt] font-black uppercase text-[#94a3b8]">{step.round}</p>
+                          <p className="text-[7.5pt] font-semibold leading-4 text-[#1e293b]">{step.evaluator}</p>
+                        </div>
+                        {index < roleWorkflows[role].length - 1 && (
+                          <span className="text-[8pt] text-[#94a3b8]">→</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* Section: Quy trình thao tác */}
           <section className="mb-6">
             <div className="section-header-banner mb-3 flex items-center justify-between rounded-md bg-[#07384d] px-3 py-1.5 text-white">
@@ -186,35 +229,6 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
                         </figcaption>
                       </figure>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Section: Quy trình 3 vòng đánh giá */}
-          <section className="mb-6">
-            <div className="section-header-banner mb-3 flex items-center justify-between rounded-md bg-[#07384d] px-3 py-1.5 text-white">
-              <span className="text-[10pt] font-extrabold uppercase">QUY TRÌNH 3 VÒNG ĐÁNH GIÁ — TẤT CẢ VAI TRÒ</span>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
-                <div key={role} className="step-item-card rounded-md border border-[#e2e8f0] bg-[#f8fafc] p-2.5">
-                  <h4 className="text-[9pt] font-bold text-[#0f172a] uppercase">
-                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
-                  </h4>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {roleWorkflows[role].map((step, index) => (
-                      <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
-                        <div className="rounded-md border border-[#e2e8f0] bg-white px-3 py-2 shadow-sm">
-                          <p className="text-[7pt] font-black uppercase tracking-wider text-[#64748b]">{step.round}</p>
-                          <p className="mt-0.5 text-[8pt] font-semibold text-[#1e293b]">{step.evaluator}</p>
-                        </div>
-                        {index < roleWorkflows[role].length - 1 && (
-                          <span className="text-[8pt] text-[#94a3b8]">→</span>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               ))}
