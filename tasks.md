@@ -443,3 +443,112 @@
 **Definition of Done**: E2E PASS + Reviewer PASS + DB nguyên trạng + git clean.
 
 **Status**: `[x]` — DONE 14-08: **E2E browser toàn diện PASS**: tạo/sửa NV qua UI (upsertUserAction — ensure nội bộ tạo evaluation + round 1; sync subleader → evaluator đúng — góp ý R1/R2); đánh giá **3 vòng đầy đủ** (432 SubLeader → 663 Leader → 158 Manager **Approved B/110**, round sau tự tạo đúng evaluator); password login (sai pass chặn "không đúng", đúng pass → dashboard); AccountTab hasPassword fix (`getAccountStatus` server-side — bỏ select password_hash anon); dọn TST-P70 + rounds + evals + audit → **NGUYÊN TRẠNG 22/3/22 + 158 hash NULL** ✓. Docs: MASTER_PLAN DONE + KNOWN_BUGS 7 bài học P70 + HANDOFF. Reviewer kết quả thực thi → PASS (R4).
+
+## Phase 71: Hướng dẫn 3 vai trò chi tiết + sidebar "Hỗ trợ"→"Hướng dẫn" + in theo vai trò 🟡 (2026-08-15)
+
+> Yêu cầu anh: hướng dẫn THẬT chi tiết 3 vai trò (Manager/Leader/SubLeader — + Employee cho đủ 4 role thật) theo thứ tự luồng dùng app, tinh gọn dễ hiểu, kèm screenshot khoanh vùng cụ thể; sidebar "Hỗ trợ"→"Hướng dẫn"; hiển thị theo role đang login; nút in có chọn vai trò, mặc định role đang login. Reviewer PASS (R2) sau khi sửa 5 góp ý R1 + 3 góp ý minor R2. Chi tiết: `.ai/MASTER_PLAN.md` Phase 71.
+
+### [#P71T01] [src/lib/guide-content.ts] Tạo manifest + data guide Manager
+
+**Goal**: Tạo `src/lib/guide-content.ts` — nguồn data DUY NHẤT cho web + print; guide Manager đầy đủ luồng thật, mỗi bước khai báo screenshotPath (nullable) + vùng annotate.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Định nghĩa type `GuideStep` (title, body, screenshotPath: string|null, annotate: {x,y,w,h,label}[] | null), `GuideSection` (role, title, steps[], faq[]), `GuideContent` (map theo role: Manager/Leader/SubLeader/Employee).
+2. Guide Manager theo thứ tự: login → đặt/đổi pass → tạo nhóm + leader + ấn định leader → thêm/sửa/xóa nhân viên → kiểm tra tiêu chuẩn có sẵn → chỉnh sửa/bổ sung/tạo thêm tiêu chuẩn + đặt giá trị mặc định → chỉnh thang điểm (Cài đặt) → tạo kỳ đánh giá (nếu chưa có) → xem workflow → tự đánh giá mình → chờ leader nộp → đánh giá vòng cuối → trả đánh giá lại cho leader → dùng AI (gợi ý nhận xét / soạn thông báo / giải thích cảnh báo / tóm tắt kỳ) → xem báo cáo/dashboard → đóng kỳ → FAQ.
+3. Mỗi bước khai báo `screenshotPath` = `public/screenshots/guide/manager-<step>.jpg` (nullable cho bước text-only/FAQ) + `annotate` vùng khoanh (box + số thứ tự) — đúng thứ tự bước trong manifest.
+
+**Definition of Done**: file tạo + type-check PASS; manifest Manager đủ luồng; không ảnh hưởng UI cũ (chưa wire).
+
+**Status**: `[ ]`
+
+---
+
+### [#P71T02] [src/lib/guide-content.ts] Data guide Leader + SubLeader + Employee
+
+**Goal**: Bổ sung guide 3 role còn lại theo quyền thật (Leader CRUD NV trong nhóm, SubLeader đánh giá vòng 1, Employee xem kết quả) — web + print không role nào rỗng.
+
+**Depends on**: `[#P71T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Guide Leader: login → đặt/đổi pass → xem dashboard/nhóm → quản lý dữ liệu theo quyền (thêm/sửa Employee/SubLeader TRONG nhóm mình; không xóa, không đổi Leader — đúng page.tsx:201-202) → chờ SubLeader nộp vòng 1 → tự đánh giá mình (vòng riêng) → đánh giá nhân viên vòng 2 → trả lại vòng 1 nếu cần → AI gợi ý → xem báo cáo phạm vi nhóm → FAQ.
+2. Guide SubLeader: login → đặt/đổi pass → xem dashboard → đánh giá vòng 1 (NV trong nhóm phụ trách) + tự đánh giá mình → sửa sau khi bị trả lại → AI gợi ý → FAQ.
+3. Guide Employee: login → đặt/đổi pass → xem kết quả đánh giá/phản hồi của mình → workflow 3 vòng (SubLeader → Leader → Manager) → FAQ (tái sử dụng nội dung card "Nhân viên" hiện có page.tsx:78-86, 210-213).
+4. Khai báo screenshotPath + annotate cho từng bước (nullable text-only).
+
+**Definition of Done**: 3 role đủ guide + type-check PASS; manifest đủ 4 role.
+
+**Status**: `[ ]`
+
+---
+
+### [#P71T03] [public/screenshots/guide/] Chụp thật + annotate khoanh vùng (PIL) theo manifest
+
+**Goal**: Chụp screenshot thật từng màn chính (browser/CDP, login 4 role: 158 Manager / 663 Leader / 432 SubLeader / 1 Employee) + khoanh vùng bằng Python PIL theo đúng manifest (box + số thứ tự) — iterate manifest, không bỏ sót bước.
+
+**Depends on**: `[#P71T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Viết script chụp (Chrome thật + CDP, user-data-dir riêng từng role) → navigate từng route theo manifest → save `public/screenshots/guide/<role>-<step>.jpg`.
+2. Viết script annotate (Pillow): vẽ rectangle + label số thứ tự lên vùng `annotate` đã khai báo → ghi đè ảnh.
+3. Iterate manifest — mọi bước có screenshotPath != null phải có ảnh annotate; bước null bỏ qua.
+4. Đảm bảo ảnh mới rõ ràng, đúng màn hình thật (không fake).
+
+**Definition of Done**: mọi bước có khai báo ảnh đều có file annotate; không ảnh thừa ngoài manifest.
+
+**Status**: `[ ]`
+
+---
+
+### [#P71T04] [src/components/layout/Sidebar.tsx + src/app/support/page.tsx + support/layout.tsx] UI: label "Hướng dẫn" + render theo role đang login + selector
+
+**Goal**: Đổi sidebar "Hỗ trợ"→"Hướng dẫn" + metadata title; `/support` render guide theo role đang login (mặc định) + selector đổi role (Manager cả 4; Leader/SubLeader/Employee chỉ guide mình).
+
+**Depends on**: `[#P71T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. `Sidebar.tsx:42`: label "Hỗ trợ" → "Hướng dẫn" (giữ icon HelpCircle, href /support).
+2. `support/layout.tsx:4`: metadata title "Hỗ trợ | Kurabe QAQC" → "Hướng dẫn | Kurabe QAQC".
+3. `support/page.tsx`: thay data hardcode cũ bằng import guide-content; render guide theo role đang login (useAuth → role); selector đổi role — Manager thấy 4 role, Leader/SubLeader/Employee chỉ thấy role mình; nút "In hướng dẫn" mở `/support/print?role=<đang chọn>`.
+4. Giữ nguyên các section hiện có nếu hữu ích (workflow/FAQ/AI) — chuyển sang data chung, KHÔNG duplicate.
+
+**Definition of Done**: lint/build PASS; browser: login từng role → /support hiển thị guide đúng role + selector đúng quyền.
+
+**Status**: `[ ]`
+
+---
+
+### [#P71T05] [src/app/support/print/page.tsx] Route in A4 theo vai trò
+
+**Goal**: Route print server component render A4 theo `?role=` từ guide-content (4 role, không rỗng) — nút in từ /support; trang in cho phép chọn role cho MỌI vai trò (mặc định role hiện tại); xử lý print-guide.html cũ.
+
+**Depends on**: `[#P71T04]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Tạo `src/app/support/print/page.tsx` (server component): đọc `?role=` (validate trong 4 role, mặc định từ session role) → render guide theo role từ guide-content với CSS print A4 (kế thừa style print-guide.html hiện có: @page A4 portrait, font 9.5pt, print-color-adjust exact).
+2. Selector role trên trang in (mọi vai trò chọn được — in hướng dẫn phát cho người khác), mặc định role hiện tại.
+3. Nút in từ `/support` mở `/support/print?role=<đang chọn>`.
+4. `public/print-guide.html`: bỏ hoặc redirect sang route mới (tránh 2 nguồn data).
+
+**Definition of Done**: browser: /support/print?role=manager|leader|subleader|employee render đúng nội dung role đó; print A4 không tràn trang; nút in mặc định role hiện tại.
+
+**Status**: `[ ]`
+
+---
+
+### [#P71T06] [verify + docs] E2E 4 role + manifest verify + docs + commit
+
+**Goal**: Verify toàn diện: lint/build + browser E2E 4 role (guide đúng role, print đúng nội dung role chọn) + manifest screenshot đủ/không thừa; docs; commit.
+
+**Depends on**: `[#P71T05]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Lint 0 errors + build PASS (kill PID 3000 trước build — rule KNOWN_BUGS).
+2. Browser E2E 4 role: login (158/663/432/1) → /support hiển thị guide đúng role + selector đúng quyền → /support/print?role=... render đúng nội dung + in A4.
+3. Manifest verify: iterate guide-content — mọi bước screenshotPath != null phải có file annotate tồn tại; không file thừa.
+4. Docs: MASTER_PLAN Phase 71 DONE + HANDOFF; commit `[#P71T0x]` từng task (đã commit dọc đường) + tick `[x]`.
+
+**Definition of Done**: lint 0 + build PASS + E2E 4 role PASS + manifest verify PASS + git clean (không push — chờ anh).
+
+**Status**: `[ ]`
