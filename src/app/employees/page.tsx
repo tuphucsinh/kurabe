@@ -7,7 +7,7 @@ import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, Check } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import { logAuditAction } from '@/actions/audit';
@@ -24,6 +24,7 @@ interface EmployeeTableItem extends User {
   score: number;
   gradeRound: number | null;
   previousRoundScores: Array<{ round: number; score: number }>;
+  hasFinalResult: boolean;
 }
 
 // Thứ tự chức vụ cho sort theo nhóm: Manager cuối (Toàn bộ bộ phận), Leader > SubLeader > Employee
@@ -91,6 +92,7 @@ export default function EmployeesPage() {
         score: latestEval?.finalScore ?? latestRound?.totalScore ?? 0,
         gradeRound: latestRound?.round ?? null,
         previousRoundScores,
+        hasFinalResult: !!latestEval?.finalGrade,
       };
     });
   }, [users, teams, evaluations]);
@@ -455,9 +457,14 @@ export default function EmployeesPage() {
               item.grade === 'B' ? 'bg-blue-100 text-blue-700' :
               item.grade === 'C' ? 'bg-amber-100 text-amber-700' :
               item.grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-            }`}>
+            } ${item.hasFinalResult ? 'ring-2 ring-emerald-500' : ''}`}>
               {item.grade}
             </span>
+            {item.hasFinalResult && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0" title="Đã có kết quả cuối">
+                <Check size={12} strokeWidth={3} />
+              </span>
+            )}
             <div className="flex items-end gap-2 tabular-nums">
               {item.gradeRound != null && (
                 <div className="w-12 flex flex-col items-center leading-none">
