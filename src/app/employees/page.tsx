@@ -440,7 +440,8 @@ export default function EmployeesPage() {
       hiddenOnMobile: true,
       render: (item) => (
         <span className="text-xs text-slate-600">
-          {item.description || '—'}
+          {/* Chỉ quản lý (Manager/Leader/SubLeader) mới có chức danh — Nhân viên bỏ */}
+          {item.role !== 'Employee' ? (item.description || '—') : '—'}
         </span>
       ),
     },
