@@ -15,7 +15,6 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  Crown,
   ChevronRight,
   AlertTriangle,
   UserPlus,
@@ -202,10 +201,6 @@ export default function TeamDetailPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{team.name}</h1>
-            <p className="text-on-surface-variant mt-1 text-sm md:text-base flex items-center gap-2">
-              <Crown size={16} className="text-indigo-500" />
-              Leader: <span className="font-semibold text-on-surface">{leader?.name || 'Chưa xác định'}</span>
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
