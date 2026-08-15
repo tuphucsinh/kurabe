@@ -257,6 +257,75 @@ export default function TeamDetailPage() {
           </div>
         ) : (
           <div className="space-y-5">
+            {/* Leader Block */}
+            {leader && (
+              (() => {
+                const leaderEvaluation = evaluations.find((e: Evaluation) => e.employeeId === leader.id) || null;
+                const leaderSubmitted = leaderEvaluation?.rounds
+                  ? [...leaderEvaluation.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
+                  : [];
+                const leaderStatus = leaderEvaluation?.status || 'NotStarted';
+                const leaderBadge = getStatusBadge(leaderStatus, leaderSubmitted[0]?.round ?? leaderEvaluation?.currentRound ?? null);
+                const leaderGrade = leaderEvaluation?.finalGrade || (leaderSubmitted.length ? leaderSubmitted[0].grade : null);
+                const leaderGradeRound = leaderSubmitted[0]?.round ?? null;
+                const leaderScore = leaderSubmitted[0]?.totalScore ?? null;
+                return (
+                  <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
+                    <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                          {leader.name.charAt(0)}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-800 text-sm md:text-base">{leader.name}</span>
+                          <span className="text-xs text-slate-500 font-medium">Mã: {leader.employeeCode}</span>
+                          <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+                            Leader
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap shrink-0">
+                        {leaderGrade && leaderGrade !== 'Pending' && (
+                          <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                            leaderGrade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                            leaderGrade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                            leaderGrade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                            leaderGrade === 'B' ? 'bg-blue-100 text-blue-700' :
+                            leaderGrade === 'C' ? 'bg-amber-100 text-amber-700' :
+                            leaderGrade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            {leaderGrade}
+                          </span>
+                        )}
+                        {leaderGrade && leaderGrade !== 'Pending' && leaderScore != null && (
+                          <div className="flex items-end gap-2 tabular-nums">
+                            {leaderGradeRound != null && (
+                              <div className="w-12 flex flex-col items-center leading-none">
+                                <span className="text-xs text-slate-700 font-bold">L{leaderGradeRound}</span>
+                                <span className="text-base text-slate-800 font-bold mt-1">{leaderScore}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${leaderBadge.className}`}>
+                          {leaderBadge.label}
+                        </span>
+                        {leaderEvaluation && (
+                          <Link
+                            href={`/evaluations/${leader.id}`}
+                            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                            title="Xem đánh giá"
+                          >
+                            <FileText size={18} />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
             {/* SubLeader Blocks */}
             {subLeaderBlocks.grouped.map(({ subLeader: sl, rows }) => {
               const slEvaluation = evaluations.find((e: Evaluation) => e.employeeId === sl.id) || null;
