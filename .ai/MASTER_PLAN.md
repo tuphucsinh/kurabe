@@ -524,3 +524,57 @@
 **Verify phase**: lint 0 + build PASS + E2E Leader card hiển thị đúng (tên/mã/grade/score/status/link) + không vỡ SubLeader blocks.
 
 **Kết quả thực thi (15-08)**: T01 DONE (commit `7817898`, đã push). Leader Block đặt đầu `<div className="space-y-5">` (L260), trước SubLeader blocks: avatar indigo + tên + Mã + badge Leader + grade/score (L{round}) + status badge + Link `/evaluations/{leader.id}` — pattern y hệt nhân viên. Verified thật (CDP + vision): team "QC Gia dụng" → Leader Mai Thị Hòa (8707) thẻ ĐẦU danh sách, **AB – L2 – 147**, "Đã có KẾT QUẢ đánh giá", icon xem đánh giá ✓; SubLeader blocks không vỡ. Build PASS + tsc/lint 0.
+
+### Phase 75: Chat widget hỗ trợ (Manager/Leader/SubLeader) 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08): thêm chat widget góc dưới phải giải đáp thắc mắc cho **Manager, Leader, SubLeader**. Chat widget tham khảo file `.md` mô tả toàn bộ webapp (kiến trúc/workflow/quy trình/tiêu chuẩn) khi trả lời. Ràng buộc: KHÔNG trả lời ngoài lề; giới hạn **15 lượt/account/2h**; model **gpt-5.6-luna (opencode go)**; gọi user là **chị**, xưng **em**; khi mở kiểm tra trang đang ở → chào ngắn "Chào chị" + gợi ý theo trang; ngôn ngữ tự nhiên tinh tế, **KHÔNG emoji**.
+
+**Bằng chứng (code thật 15-08)**:
+- `src/lib/ai.ts`: `DEFAULT_MODEL = 'gpt-5.6-luna'` (L10) — model đã đúng yêu cầu; `callAI(prompt, {system, maxTokens})` gọi OpenAI-compatible, fail-soft trả null; `isAIConfigured()` check AI_API_KEY.
+- `src/actions/ai.ts`: pattern server action + requireManager + callAI + error text.
+- `src/contexts/AuthContext.tsx`: user (id/name/role/employeeCode), isManager/isLeader/isSubLeader.
+- `src/components/layout/AppLayout.tsx` (124 dòng): layout chung mọi trang đã login — nơi mount ChatWidget; dùng usePathname sẵn.
+- KHÔNG có sẵn rate-limit → cần bảng mới.
+
+**Thiết kế (chạm DB — bảng chat_usage + backend LLM → CONTROLLED, Reviewer bắt buộc)**:
+
+1. **T01 [src/lib/chat-knowledge.md — tạo]**: File kiến thức toàn app (Mika tổng hợp từ guide-content.ts + MASTER_PLAN + code): tổng quan, kiến trúc (Next.js + Supabase), vai trò + quyền 4 role, workflow 3 vòng (Manager 1 / Leader 2 / SubLeader 3 / Nhân viên 3), quy trình đánh giá tuần tự, tiêu chuẩn A-F, thang điểm, kỳ đánh giá, cách dùng từng trang (Dashboard/Nhóm/Nhân viên/Báo cáo/Tiêu chuẩn/Cài đặt/Hướng dẫn/Đánh giá), FAQ chính. Mục tiêu ≤ ~15-20KB. **PII-SANITIZED: KHÔNG chứa tên thật/mã NV/cấu trúc nhân sự thật — chỉ mô tả chức năng + quy trình (Reviewer R1 [HIGH])**. Server action đọc MỘT LẦN ở module load (cache biến) — không fs-read mỗi request (R1 [MEDIUM]).
+
+2. **T02a [src/actions/chat.ts — tạo]**: `chatGreetingAction(pathname)` + `chatAskAction(question, pathname)`:
+   - `requireRole(['Manager','Leader','SubLeader'])` (Employee KHÔNG dùng — theo yêu cầu).
+   - Rate limit (T02b): đếm lượt user trong cửa sổ 2h; ≥ 15 → trả "Chị đã dùng hết 15 lượt hỏi trong 2 giờ, vui lòng quay lại sau." — KHÔNG gọi LLM.
+   - System prompt: đọc chat-knowledge.md + role của user + luật: "gọi khách là chị, xưng em; ngôn ngữ tự nhiên tinh tế khéo léo; KHÔNG dùng emoji; CHỈ trả lời về hệ thống KURABE, không trả lời ngoài lề; ngắn gọn". maxTokens ~400.
+   - Greeting: dựa pathname → "Chào chị" + gợi ý theo trang (dashboard: tiến độ; teams: nhóm; employees: nhân viên; reports: báo cáo; criteria/settings: cấu hình; evaluations: chấm điểm; support: hướng dẫn; mặc định: chung).
+   - Gọi `callAI`; lưu lượt chat vào bảng chat_usage SAU khi thành công.
+
+3. **T02b [Supabase — bảng `chat_usage`]**: `id uuid PK default gen_random_uuid(), user_id uuid NOT NULL, created_at timestamptz default now()` + index (user_id, created_at). **RLS: ENABLE + KHÔNG policy nào cho anon/authenticated** — chỉ supabaseAdmin (service role) đọc/ghi (Reviewer R1 [HIGH]); **thêm type `chat_usage` vào `src/types/database.ts`** (pattern ai_summaries L387-410) — BẮT BUỘC (supabaseAdmin đã typed, thiếu sẽ build fail) (R1 [HIGH]). Migration SQL qua supabase CLI/script (đúng pattern các phase trước).
+
+4. **T03 [src/components/chat/ChatWidget.tsx — tạo]**: client component:
+   - Nút tròn fixed **bottom-24 right-6 trên mobile (trên BottomNav AppLayout L97 fixed bottom-6 left-6 right-6), bottom-6 right-6 trên desktop** (Reviewer R1 [MEDIUM] — tránh đè BottomNav); icon MessageCircle, tooltip "Hỗ trợ".
+   - Chỉ render khi `user && ['Manager','Leader','SubLeader'].includes(user.role)`.
+   - Mở → gọi `chatGreetingAction(pathname)` → hiện lời chào + gợi ý (đậm chữ "Chào chị").
+   - Input chat + nút Gửi; loading; lỗi hiển thị text; KHÔNG emoji ở mọi text UI.
+   - Đóng/mở toggle.
+
+5. **T04 [src/components/layout/AppLayout.tsx]**: mount `<ChatWidget />` trước khi đóng main (sau children).
+
+6. **T05 [verify + docs]**: lint 0 + tsc + build + E2E thật (Manager/Leader/SubLeader thấy widget; Employee không thấy; gửi câu hỏi → trả lời từ knowledge; test rate-limit tạm hạ 15→3 để xác nhận chặn rồi khôi phục 15; greeting theo trang). HANDOFF + MASTER_PLAN update. Commit.
+
+**Ràng buộc kỹ thuật**:
+- KHÔNG import lib/ai.ts vào client (key bí mật) — mọi LLM qua server action.
+- chat-knowledge.md không chứa secrets; ngôn ngữ tiếng Việt.
+- Rate limit tính theo `user.id` (account), không theo session.
+- Emoji cấm: check bằng regex khi render (hoặc system prompt mạnh + maxTokens vừa đủ).
+
+**Verify phase**: lint 0 + build PASS + E2E (3 role thấy + Employee không + hỏi được + greeting theo trang + chặn khi hết lượt).
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — 3 HIGH (RLS chat_usage anon không access; type database.ts bắt buộc; chat-knowledge.md PII-sanitized) + 2 MEDIUM (cache knowledge module load; widget tránh mobile BottomNav). Đã sửa hết.
+**Reviewer R2 (15-08)**: **PASS** ✅ — ghi chú: sau thực thi cần gói review code riêng (RLS thật, anon-write blocked, rate-limit 15/2h, PII thực tế) trước khi đóng Phase 75.
+
+**WBS (6 tasks)**:
+- T01 [src/lib/chat-knowledge.md] Viết knowledge toàn app (PII-sanitized ≤ ~20KB).
+- T02a [src/actions/chat.ts] chatGreetingAction + chatAskAction (requireRole 3 role, system prompt từ knowledge cache, callAI maxTokens ~400).
+- T02b [Supabase + src/types/database.ts] Bảng chat_usage (RLS no policy, service role only) + type.
+- T03 [src/components/chat/ChatWidget.tsx] Widget client (nút fixed, role filter, greeting theo trang, chat UI không emoji, mobile offset).
+- T04 [src/components/layout/AppLayout.tsx] Mount ChatWidget.
+- T05 [verify + docs] lint/tsc/build/E2E (3 role thấy + Employee không + hỏi được + greeting + chặn hết lượt) + HANDOFF/MASTER_PLAN + commit.

@@ -682,3 +682,9 @@
 **Definition of Done**: git clean (chưa push).
 
 **Status**: `[x]` — DONE 15-08: MASTER_PLAN Phase 73 DONE + HANDOFF update + commits `3714a7c` (T01a) + `7856725` (T01c) + `f94f1a1` (T01b) + docs (T03).
+
+## Phase 75: Chat widget hỗ trợ (Manager/Leader/SubLeader) 🟡 (2026-08-15)
+
+> Yêu cầu anh: chat widget góc dưới phải giải đáp thắc mắc cho Manager/Leader/SubLeader; tham khảo file .md mô tả toàn bộ webapp; không trả lời ngoài lề; 15 lượt/account/2h; model gpt-5.6-luna (opencode go); gọi "chị"/xưng "em"; chào ngắn theo trang khi mở; không emoji. Reviewer R1→R2 PASS (plan). CONTROLLED (chạm DB chat_usage + LLM backend).
+
+**Status**: `[ ]` — chờ anh duyệt thực thi (6 tasks: T01 knowledge.md / T02a action / T02b bảng + type / T03 widget / T04 mount / T05 verify).
