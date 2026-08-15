@@ -112,10 +112,10 @@ export default function ChatWidget() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-surface">
-            {visibleMessages.length === 0 && (
+            {messages.length === 0 && (
               <p className="text-sm text-outline italic">Chị có thắc mắc gì về hệ thống, em hỗ trợ được ạ.</p>
             )}
-            {visibleMessages.map((m, i) => (
+            {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
                   m.role === 'user'
