@@ -500,3 +500,27 @@
 **Bổ sung yêu cầu anh (15-08)**: "Ngoài Manager, Leader cũng có quyền thêm nhân viên dưới quyền trong nhóm" → Reviewer R3 (CHANGES_REQUIRED: 2 lỗ CAO — ép teamId server + null-strip EDIT) → R4 (CHANGES_REQUIRED: guard existing.role + role default rỗng + import giữ requireManager) → R5: PASS thiết kế, yêu cầu thực thi. Đã thực thi T01c đúng spec R3+R4.
 
 **Kết quả thực thi (15-08)**: 5 tasks DONE (chi tiết `tasks.md`). T01a: EmployeeModal shared (employees 1012→709 dòng). T01b: nút "Thêm nhân viên" trang nhóm (Manager mọi nhóm / Leader nhóm mình) + restrictToTeamId. T01c: upsertUserAction requireRole(['Manager','Leader']) + ép teamId server-side + chặn role Manager/Leader + 3 check EDIT (team/role/role-empty). Build PASS + lint 0 + E2E thật: Manager thêm NV team "QC Gia dụng" OK, Leader 663 thêm NV team mình OK, SubLeader không thấy nút. NV tạm đã xóa mềm. ⚠️ Môi trường: shell env ô nhiễm NEXT_PUBLIC_SUPABASE_URL=sangwebsite → build/start phải `unset` (đã phát hiện khi E2E login fail).
+
+### Phase 74: Thẻ Leader riêng ở đầu danh sách nhân viên (trang chi tiết nhóm) 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08): trang chi tiết nhóm — tạo thẻ riêng cho **Leader**, nằm TRÊN CÙNG danh sách nhân viên, hiển thị kết quả đánh giá + nút đánh giá như nhân viên. **UI render thuần** (không chạm auth/DB write) → FAST route, Mika verify đủ.
+
+**Bằng chứng (code thật 15-08)**:
+- `src/app/teams/[id]/page.tsx` (519 dòng): header hiển thị Leader dạng text (L170-174, Crown icon + tên); danh sách = SubLeader blocks (L261-409, mỗi block có grade/score/badge + Link /evaluations/{sl.id}) + block "Chưa gán SubLeader" (L412+). Leader hiện KHÔNG có thẻ riêng với kết quả đánh giá.
+- `leader` đã có sẵn (L60-63: users.find(u => u.id === team.leaderId)); `evaluations` đã load (L55) — Leader có evaluation riêng (SELF vòng 1) như Employee.
+- Pattern grade/score/badge/link của SubLeader block (L262-324) — dùng lại cho Leader.
+
+**Thiết kế**:
+1. **Thẻ Leader Block** đặt TRƯỚC các SubLeader blocks (ngay sau check EmptyState, đầu `<div className="space-y-5">`) — render khi `leader` tồn tại:
+   - Header: avatar indigo (chữ cái đầu) + tên + "Mã: {employeeCode}" + badge "Leader" (indigo).
+   - Kết quả đánh giá GIỐNG SubLeader: grade badge (S/A/AB/B/C/D màu chuẩn) + score (L{round} + điểm) + status badge (getStatusBadge) + Link `/evaluations/{leader.id}` (icon FileText, title "Xem đánh giá").
+   - Tính: leaderEvaluation (find by employeeId === leader.id), leaderSubmitted (rounds Submitted/SubmittedAt sort desc), leaderStatus, leaderGrade, leaderGradeRound, leaderScore.
+2. KHÔNG đụng: header, KPI, SubLeader blocks, unassigned block, EmployeeModal, workflow.
+
+**WBS (2 tasks)**:
+- T01 [src/app/teams/[id]/page.tsx] Thêm Leader Block (thẻ riêng đầu danh sách, kết quả đánh giá + nút Xem đánh giá như nhân viên).
+- T02 [verify] lint 0 + tsc + build + browser E2E: team "QC Gia dụng" (leader Mai Thị Hòa) → thẻ Leader hiện đầu danh sách + đúng dữ liệu; team khác không leader → ẩn.
+
+**Verify phase**: lint 0 + build PASS + E2E Leader card hiển thị đúng (tên/mã/grade/score/status/link) + không vỡ SubLeader blocks.
+
+**Kết quả thực thi (15-08)**: T01 DONE (commit `7817898`, đã push). Leader Block đặt đầu `<div className="space-y-5">` (L260), trước SubLeader blocks: avatar indigo + tên + Mã + badge Leader + grade/score (L{round}) + status badge + Link `/evaluations/{leader.id}` — pattern y hệt nhân viên. Verified thật (CDP + vision): team "QC Gia dụng" → Leader Mai Thị Hòa (8707) thẻ ĐẦU danh sách, **AB – L2 – 147**, "Đã có KẾT QUẢ đánh giá", icon xem đánh giá ✓; SubLeader blocks không vỡ. Build PASS + tsc/lint 0.
