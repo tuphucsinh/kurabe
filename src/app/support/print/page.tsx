@@ -20,7 +20,6 @@ const roleLabels: Record<GuideRole, string> = {
 const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> = {
   Manager: [
     { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
-    { round: 'Kết thúc', evaluator: 'Hoàn tất sau vòng 1' },
   ],
   Leader: [
     { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
