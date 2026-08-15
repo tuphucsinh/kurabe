@@ -657,3 +657,45 @@
 **Reviewer R1 (15-08)**: CHANGES_REQUIRED — 2 HIGH (GRANT cột gender cho anon/authenticated — thiếu sẽ vỡ toàn app; dashboard/reports data context CHỈ Manager — getDashboardData/getReportAggregation gọi getUsers/getTeams không scope) + MEDIUM (field DashboardData thật; helper address() ~15 chỗ; upsertUsersAction Excel) + LOW (settings/support không data context). Đã sửa hết.
 **Reviewer R2 (15-08)**: gần PASS — fix L67 bằng chứng field DashboardData.
 **Reviewer R3 (15-08)**: **PASS** ✅ (ghi chú cosmetic team_id→teamId).
+
+### Phase 76.2: Tối ưu luồng báo lỗi — nút báo lỗi thủ công + webhook history + prompt webhook 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08, sau Sequential Thinking audit 5 bước): hệ thống AI hỗ trợ → báo lỗi → điều tra → plan chờ duyệt đã tối ưu cơ bản (webhook tức thì), còn 3 GAP: (A) thiếu nút "Báo lỗi" thủ công (chỉ AI tự detect [CẦN_DEV]); (B) webhook payload thiếu history hội thoại; (C) prompt webhook thiếu cập nhật chat_reports status + trung thực khi không tìm ra root cause.
+
+**Bằng chứng (code thật 15-08)**:
+- `src/actions/chat.ts` chatReportErrorAction: gửi Telegram + insert chat_reports (có history) + POST webhook payload {user_name, role, pathname, question} — THIẾU history.
+- `src/components/chat/ChatWidget.tsx`: send() nhánh needDev — chỉ trigger khi AI trả [CẦN_DEV]; KHÔNG có nút báo lỗi thủ công.
+- Webhook subscription `kurabe-bao-loi` prompt: điều tra + plan + KHÔNG cập nhật chat_reports status; không dặn nói rõ khi không tìm ra nguyên nhân.
+
+**Thiết kế (chạm backend webhook + UI chat — CONTROLLED, Reviewer bắt buộc)**:
+
+1. **T01 [UI — nút "Báo lỗi" thủ công]**: ChatWidget thêm icon bug (lucide Bug) cạnh ô nhập chat (trước nút Gửi):
+   - Bấm → **state inline confirm** (KHÔNG window.confirm — R1 L1) "Gửi báo lỗi hiện tại cho Developer?" → gọi `chatReportErrorAction({question: input.trim() || 'User bấm nút báo lỗi (không mô tả) — ' + 'trang: ' + pathname, pathname, history: visibleMessages.slice(-6)})` → hiện reply xác nhận.
+   - **GIỚI HẠN 1 LẦN/NGÀY/ACCOUNT** (anh chốt 15-08, out-of-band — thay cooldown 60s): server-side check — chatReportErrorAction đếm report của user_id hôm nay ≥ 1 → chặn: "Hôm nay {addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé." Client hiện state lỗi từ reply.
+   - Disabled khi loading/sendingShot.
+2. **T02 [chatReportErrorAction — user_id + cap + history + report_id]**: 
+   - **Migration**: chat_reports thêm cột `user_id uuid` (nullable — report cũ giữ null) + type database.ts (R1 M2 liên quan).
+   - **Check 1 lần/ngày**: trước khi insert — count chat_reports `eq(user_id, userId)` + `gte(created_at, startOfDay)` → ≥ 1 → return chặn (KHÔNG gửi Telegram/webhook). **startOfDay theo Asia/Ho_Chi_Minh (UTC+7, KHÔNG DST)** — công thức DUY NHẤT (R4):
+```ts
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+const vnNow = new Date(Date.now() + VN_OFFSET_MS);            // giờ VN (UTC+7)
+const startOfDayVn = Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate()); // 00:00 giờ VN
+const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về UTC ISO để so created_at (timestamptz)
+```
+   - **Cap question ≤ 2000 chars** (R1 M1) — cắt nếu dài.
+   - insert chat_reports `.select('id')` + user_id → lấy **report_id** (R1 M2).
+   - webhook payload thêm `history: historyText.slice(0, 2000)` (R1 L2: 2000 CHARS) + `report_id` (R1 M2).
+
+3. **T03 [Webhook prompt — cập nhật + trung thực]**: UPDATE subscription prompt `kurabe-bao-loi` — CLI KHÔNG có lệnh update (xác nhận R1) → **remove + subscribe lại với `--secret <secret CŨ>`** (R1 H2 — KHÔNG để auto-generate xoay secret → app ký sai → 401 im lặng); sau đó verify `hermes webhook test`:
+   - Prompt mới THÊM `{history}` (R1 H1) + `{report_id}` (R1 M2).
+   - Thêm bước: "Cập nhật bảng chat_reports: PATCH status='planned' cho report_id đã cho (supabase service key từ /home/pi5/projects/kurabe/.env.local, REST PATCH status only)."
+   - Thêm: "Nếu KHÔNG tìm ra nguyên nhân gốc rễ: nói rõ 'chưa xác định được nguyên nhân, cần thêm thông tin từ user' — KHÔNG bịa plan."
+   - Giữ nguyên: không code fix, không commit, chờ anh duyệt, trả lời tiếng Việt ngắn gọn.
+
+4. **T04 [verify + docs]**: tsc/lint/build + E2E thật: (a) bấm nút báo lỗi → Telegram + chat_reports + webhook 202; (b) webhook payload có history; (c) agent điều tra plan + status='planned'. HANDOFF + commit (KHÔNG push — chờ anh).
+
+**Ràng buộc**: nút báo lỗi KHÔNG yêu cầu AI; webhook payload giới hạn history ≤ 2KB; không đụng rate-limit chat hiện có; không lộ secret.
+
+**WBS (4 tasks)**: T01 nút UI / T02 payload history / T03 prompt webhook / T04 verify.
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — (H1) prompt webhook phải dùng `{history}` template (payload gửi history nhưng prompt chưa include); (H2) remove+subscribe XOAY HMAC secret → phải giữ secret cũ (`--secret <cũ>`) hoặc đồng bộ env + test; (M1) nút báo lỗi cần cooldown 60s + cap question ≤ 2000 chars; (M2) thêm report_id vào payload/prompt (insert .select('id')); (L1) bỏ window.confirm → state inline; (L2) cap chars.
