@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
@@ -10,6 +10,7 @@ import { domToPng } from 'modern-screenshot';
 interface Msg {
   role: 'user' | 'assistant';
   text: string;
+  pathname: string; // trang sinh ra tin nhắn
 }
 
 export default function ChatWidget() {
@@ -21,28 +22,20 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [sendingShot, setSendingShot] = useState(false);
   const [greeted, setGreeted] = useState(false);
-  const prevPathname = useRef<string | null>(null);
-
-  // Đổi trang → XÓA context cache (hội thoại cũ của trang trước) để AI không trả lời theo trang cũ.
-  useEffect(() => {
-    if (prevPathname.current !== null && prevPathname.current !== pathname) {
-      setMessages([]);
-      setGreeted(false);
-    }
-    prevPathname.current = pathname;
-  }, [pathname]);
 
   // Chỉ hiển thị cho Manager/Leader/SubLeader
   if (!user || !['Manager', 'Leader', 'SubLeader'].includes(user.role)) return null;
 
+  const visibleMessages = messages.filter((m) => m.pathname === pathname);
+
   const openWidget = async () => {
     setOpen(true);
-    if (greeted) return;
+    if (greeted || visibleMessages.length > 0) return;
     setGreeted(true);
     const res = await chatGreetingAction(pathname || '/');
     const greeting = res.greeting;
     if (greeting) {
-      setMessages((m) => [...m, { role: 'assistant', text: greeting }]);
+      setMessages((m) => [...m, { role: 'assistant', text: greeting, pathname: pathname || '/' }]);
     }
   };
 
@@ -50,19 +43,20 @@ export default function ChatWidget() {
     const q = input.trim();
     if (!q || loading || sendingShot) return;
     setInput('');
-    setMessages((m) => [...m, { role: 'user', text: q }]);
+    const history = visibleMessages.slice(-12);
+    setMessages((m) => [...m, { role: 'user', text: q, pathname: pathname || '/' }]);
     setLoading(true);
-    const res = await chatAskAction({ question: q, pathname: pathname || '/', history: messages.slice(-12) });
+    const res = await chatAskAction({ question: q, pathname: pathname || '/', history });
     const raw = res.reply || res.error || '';
     const needShot = raw.includes('[CẦN_ẢNH]');
     const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
     if (needShot) {
       // hiện dòng trung gian + cảnh báo PII rồi TỰ chụp
-      setMessages((m) => [...m, { role: 'assistant', text: cleanReply + '\n\nEm cần xem ảnh màn hình của chị để phân tích chính xác. Em sẽ tự chụp — ảnh chỉ dùng cho câu trả lời này và không được lưu lại.' }]);
+      setMessages((m) => [...m, { role: 'assistant', text: cleanReply + '\n\nEm cần xem ảnh màn hình của chị để phân tích chính xác. Em sẽ tự chụp — ảnh chỉ dùng cho câu trả lời này và không được lưu lại.', pathname: pathname || '/' }]);
       setLoading(false);
       await autoCaptureAndSend(q);
     } else {
-      setMessages((m) => [...m, { role: 'assistant', text: cleanReply || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.' }]);
+      setMessages((m) => [...m, { role: 'assistant', text: cleanReply || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.', pathname: pathname || '/' }]);
       setLoading(false);
     }
   };
@@ -77,14 +71,15 @@ export default function ChatWidget() {
         b64 = d2.split(',')[1] || '';
       }
       if (b64.length > 921600) {
-        setMessages((m) => [...m, { role: 'assistant', text: 'Ảnh màn hình quá lớn, chị có thể thu nhỏ cửa sổ rồi thử lại ạ.' }]);
+        setMessages((m) => [...m, { role: 'assistant', text: 'Ảnh màn hình quá lớn, chị có thể thu nhỏ cửa sổ rồi thử lại ạ.', pathname: pathname || '/' }]);
         setSendingShot(false);
         return;
       }
-      const res = await chatAskWithScreenshotAction({ question, pathname: pathname || '/', history: messages.slice(-12), imageBase64: b64 });
-      setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em chưa phân tích được lúc này.' }]);
+      const history = visibleMessages.slice(-12);
+      const res = await chatAskWithScreenshotAction({ question, pathname: pathname || '/', history, imageBase64: b64 });
+      setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em chưa phân tích được lúc này.', pathname: pathname || '/' }]);
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa chụp được màn hình, chị thử lại nhé.' }]);
+      setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa chụp được màn hình, chị thử lại nhé.', pathname: pathname || '/' }]);
     }
     setSendingShot(false);
   };
@@ -117,10 +112,10 @@ export default function ChatWidget() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-surface">
-            {messages.length === 0 && (
+            {visibleMessages.length === 0 && (
               <p className="text-sm text-outline italic">Chị có thắc mắc gì về hệ thống, em hỗ trợ được ạ.</p>
             )}
-            {messages.map((m, i) => (
+            {visibleMessages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
                   m.role === 'user'
