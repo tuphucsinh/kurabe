@@ -141,26 +141,10 @@ export default function SupportPage() {
               ))}
             </div>
 
-            {activeGuide.faq && activeGuide.faq.length > 0 && (
-              <div className="mt-6 space-y-3 pt-2">
-                <h3 className="text-sm font-black uppercase tracking-wide text-slate-900 flex items-center gap-2">
-                  <HelpCircle size={18} className="text-slate-600" />
-                  Câu hỏi thường gặp — {roleLabels[viewRole]}
-                </h3>
-                <div className="grid gap-3">
-                  {activeGuide.faq.map((item, idx) => (
-                    <div key={idx} className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
-                      <p className="text-sm font-black text-slate-900">{item.question}</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-600">{item.answer}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
-        <section className="space-y-6 xl:sticky xl:top-6 xl:self-start">
+        <section className="space-y-6">
           <div className="rounded-[24px] border border-slate-200 bg-[#07384d] p-6 text-white shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
@@ -199,6 +183,35 @@ export default function SupportPage() {
                   Nếu cần thay đổi tiêu chuẩn, nhóm hoặc workflow, hãy liên hệ Manager vì chỉ Manager mới có nút sửa trực tiếp trong khu vực hỗ trợ này.
                 </p>
               </div>
+            )}
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                <HelpCircle size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Câu hỏi thường gặp — {roleLabels[viewRole]}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Những tình huống dễ gây nhầm theo vai trò đang chọn.
+                </p>
+              </div>
+            </div>
+
+            {activeGuide.faq && activeGuide.faq.length > 0 ? (
+              <div className="mt-6 space-y-3">
+                {activeGuide.faq.map((item, idx) => (
+                  <div key={idx} className="rounded-[18px] border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-sm font-black text-slate-900">{item.question}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{item.answer}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-6 text-sm text-slate-500">Chưa có câu hỏi cho vai trò này.</p>
             )}
           </div>
         </section>
