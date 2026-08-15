@@ -336,6 +336,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   }
 
   const activeGroup = criteriaGroups.find(g => g.id === activeGroupId) || criteriaGroups[0];
+
+  const handleGroupSelect = (groupId: string) => {
+    setActiveGroupId(groupId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const isReadOnly = accessState.mode === 'readonly';
   const usesLeaderGrading = isLeaderGradingRole(employee.role);
   const maxRound = getMaxEvaluationRound(employee.role);
@@ -684,7 +689,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             <GroupNavTabs
               groups={criteriaGroups}
               activeGroupId={activeGroup?.id ?? activeGroupId}
-              onSelect={setActiveGroupId}
+              onSelect={handleGroupSelect}
               scores={scores}
             />
             
@@ -753,6 +758,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             </div>
           </div>
         </div>
+
+        {/* Dãy nhóm tiêu chuẩn cuối trang — click chuyển nhóm + cuộn lên đầu */}
+        {criteriaGroups.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-outline-variant/40">
+            <p className="text-xs font-bold text-outline uppercase tracking-wide mb-3">Chuyển nhanh đến nhóm tiêu chuẩn</p>
+            <GroupNavTabs
+              groups={criteriaGroups}
+              activeGroupId={activeGroup?.id ?? activeGroupId}
+              onSelect={handleGroupSelect}
+              scores={scores}
+            />
+          </div>
+        )}
       </div>
 
       {returnDialogOpen && (
