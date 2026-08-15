@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Printer } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth';
 import { guideContent, type GuideRole } from '@/lib/guide-content';
 
@@ -15,6 +14,27 @@ const roleLabels: Record<GuideRole, string> = {
   Leader: 'Leader',
   SubLeader: 'SubLeader',
   Employee: 'Nhân viên',
+};
+
+const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> = {
+  Manager: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Kết thúc', evaluator: 'Hoàn tất sau vòng 1' },
+  ],
+  Leader: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Vòng 2', evaluator: 'Manager đánh giá' },
+  ],
+  SubLeader: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
+  Employee: [
+    { round: 'Vòng 1', evaluator: 'SubLeader đánh giá' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
 };
 
 const validRoles: GuideRole[] = ['Manager', 'Leader', 'SubLeader', 'Employee'];
@@ -59,9 +79,6 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .screen-header-bar {
-            display: none !important;
-          }
           .print-a4-page {
             box-shadow: none !important;
             border: none !important;
@@ -89,62 +106,6 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
         }
       `}</style>
 
-      {/* Header bar cho màn hình */}
-      <div className="screen-header-bar sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 bg-[#07384d] px-6 py-3.5 text-white shadow-md print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="text-base font-extrabold tracking-tight">
-            KURABE — Hướng dẫn theo vai trò
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <label htmlFor="role-select" className="text-xs font-bold text-slate-300">
-            Vai trò:
-          </label>
-          <select
-            id="role-select"
-            defaultValue={selectedRole}
-            className="rounded-lg border border-slate-600 bg-[#052b3b] px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
-          >
-            {validRoles.map((r) => (
-              <option key={r} value={r} className="bg-slate-800 text-white">
-                {roleLabels[r]} ({r})
-              </option>
-            ))}
-          </select>
-
-          <button
-            id="print-btn"
-            type="button"
-            className="flex items-center gap-2 rounded-lg bg-[#00a8cc] px-4 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#0088a3] active:scale-95 cursor-pointer"
-          >
-            <Printer className="h-4 w-4" />
-            <span>In hướng dẫn</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Script cho nút in và chuyển role trên client */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              var btn = document.getElementById('print-btn');
-              if (btn) {
-                btn.addEventListener('click', function() {
-                  window.print();
-                });
-              }
-              var sel = document.getElementById('role-select');
-              if (sel) {
-                sel.addEventListener('change', function(e) {
-                  window.location.href = '/support/print?role=' + e.target.value;
-                });
-              }
-            })();
-          `,
-        }}
-      />
 
       {/* Container bản in A4 */}
       <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-none print:p-0">
@@ -222,6 +183,35 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
                         </figcaption>
                       </figure>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Section: Quy trình 3 vòng đánh giá */}
+          <section className="mb-6">
+            <div className="section-header-banner mb-3 flex items-center justify-between rounded-md bg-[#07384d] px-3 py-1.5 text-white">
+              <span className="text-[10pt] font-extrabold uppercase">QUY TRÌNH 3 VÒNG ĐÁNH GIÁ — TẤT CẢ VAI TRÒ</span>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                <div key={role} className="step-item-card rounded-md border border-[#e2e8f0] bg-[#f8fafc] p-2.5">
+                  <h4 className="text-[9pt] font-bold text-[#0f172a] uppercase">
+                    {roleLabels[role]} — {roleWorkflows[role].length} vòng
+                  </h4>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {roleWorkflows[role].map((step, index) => (
+                      <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
+                        <div className="rounded-md border border-[#e2e8f0] bg-white px-3 py-2 shadow-sm">
+                          <p className="text-[7pt] font-black uppercase tracking-wider text-[#64748b]">{step.round}</p>
+                          <p className="mt-0.5 text-[8pt] font-semibold text-[#1e293b]">{step.evaluator}</p>
+                        </div>
+                        {index < roleWorkflows[role].length - 1 && (
+                          <span className="text-[8pt] text-[#94a3b8]">→</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
