@@ -426,3 +426,29 @@
 **Reviewer R1 (15-08)**: CHANGES_REQUIRED — đã sửa 5 góp ý: (1) bổ sung guide **Employee** (4 role thật — `/support` + print không rỗng); (2) **manifest screenshot khóa chặt** (screenshotPath từng bước trong guide-content.ts, T03 iterate, T06 verify thiếu/thừa); (3) Leader flow thêm bước quản lý dữ liệu theo quyền + tách rõ tự đánh giá; (4) bỏ số bước cụ thể (hết lệch "15" vs "~17"); (5) T04 đổi luôn metadata title support/layout.tsx. → re-review vòng 2.
 
 **Kết quả thực thi (15-08)**: 6 tasks DONE (chi tiết `tasks.md`). **guide-content.ts 1 nguồn data 4 role** (Manager 16 bước + 6 FAQ, Leader 9 + 4, SubLeader 7 + 4, Employee 4 + 3) — web + print render CÙNG data. **34/34 screenshot thật** login 4 role (158/663/432/16735) + **annotate khoanh vùng PIL** (box đỏ + số). Sidebar "Hỗ trợ"→"Hướng dẫn" + `/support` render guide theo role đang login + selector (Manager 4 role, khác badge cố định). Print route `/support/print?role=` A4 theo vai trò (mọi role chọn được, mặc định session role). **E2E 4 role ALL PASS** (intro đúng role, print steps/faq/ảnh đúng, interactive selector switch OK, console clean) + lint 0 errors + build PASS. Commits: `373ffac` `a58d653` `ddb8173` `f5224d0` `4984110` — chưa push.
+
+### Phase 72: Tinh gọn trang Hướng dẫn — tích hợp, loại bỏ phần thừa 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (ST-verified 15-08): trang /support hiện có 8 section — 6 section CŨ (usageGuide, roleGuides, roleWorkflows, reportingGuide, aiGuide, managementGuide+permissionMatrix) vẫn còn hardcode TRÙNG với block mới `#huong-dan-vai-tro` (nguồn guide-content 4 role đầy đủ hơn). Yêu cầu: tinh gọn, tích hợp, loại bỏ phần thừa. Reviewer check plan trước khi thực thi.
+
+**Bằng chứng (code thật 15-08)**: `src/app/support/page.tsx` 737 dòng — 7 hằng data cũ (L22-251: usageGuide 11 bước, roleGuides 4 card, roleWorkflows sơ đồ vòng, managementGuide, permissionMatrix, aiGuide, reportingGuide) + 6 section render cũ (L429-689) đều TRÙNG với block mới `#huong-dan-vai-tro` (L336-428, guide-content 4 role: intro + steps + ảnh + FAQ theo role). Cột phải "Nguyên tắc quyền truy cập" (L692-733) — giữ. Ảnh `/screenshots/01-05` CÒN được `public/print-guide.html` tham chiếu (L527/654/706/751/756) — KHÔNG xóa.
+
+**Thiết kế**:
+1. **Trang chỉ còn 3 phần**: header gọn (tiêu đề + nút In) + block `#huong-dan-vai-tro` (nguồn chính — guide-content 4 role) + cột phải "Nguyên tắc quyền truy cập" (giữ nguyên, có callout Manager).
+2. **XÓA 6 section cũ**: `#huong-dan` (usageGuide), `#vai-tro` (roleGuides), `#workflow` (roleWorkflows), `#bao-cao` (reportingGuide), `#ai-ho-tro` (aiGuide), `#quan-ly-du-lieu` (managementGuide + permissionMatrix).
+3. **XÓA 7 hằng data cũ** + **XÓA quickLinks** (mọi anchor trừ #huong-dan-vai-tro đều chết sau khi xóa section; chips chỉ còn 1 mục = vô nghĩa; trang giờ ngắn nên không cần điều hướng nhanh).
+4. **Dọn import icon thừa** (đã đối chiếu code thật — góp ý Reviewer R1): **XÓA 7 icon** = ArrowRight, BookOpen, ClipboardCheck, FilePenLine, LineChart, ShieldCheck, Sparkles (chỉ dùng trong section/hằng cũ sẽ xóa); **GIỮ 5 icon** = HelpCircle, Lock, Printer, **Settings2** (dùng ở cột phải "Nguyên tắc quyền truy cập" L720 — KHÔNG xóa), UsersRound. Khi xóa quickLinks: bỏ luôn khối render chips (khu vực `mt-5 flex flex-wrap gap-2`) — header chỉ còn tiêu đề + nút In.
+5. **GIỮ ảnh** `/screenshots/01-05` — `print-guide.html` (legacy, không còn là nguồn in chính — in thật qua `/support/print?role=`) vẫn tham chiếu; khi bỏ hẳn print-guide.html mới dọn được 01-05.
+
+**WBS (3 tasks)**:
+- T01 [src/app/support/page.tsx] Xóa 6 section cũ + 7 hằng data + quickLinks (cả khối render chips) + dọn 7 import icon — page.tsx còn ~210-260 dòng, chỉ render header + block vai trò + Nguyên tắc.
+- T02 [verify] lint 0 errors + tsc + build + E2E browser 4 role (intro đúng role, print đúng steps/faq/ảnh — không đổi) + visual (trang gọn, không còn section trùng).
+- T03 [docs] MASTER_PLAN + HANDOFF + commit.
+
+**Verify phase**: lint 0 errors + build PASS + E2E 4 role PASS + visual không còn section trùng + ảnh 01-05 còn nguyên (print-guide.html OK).
+
+**FAST route** (UI + nội dung, không chạm auth/DB/backend) — Mika verify đủ; Reviewer vẫn chạy theo yêu cầu anh (15-08).
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — đã sửa 4 góp ý: (1) [CAO] danh sách icon đúng thực tế: XÓA 7 (ArrowRight/BookOpen/ClipboardCheck/FilePenLine/LineChart/ShieldCheck/Sparkles) — thêm FilePenLine, gạch Settings2 (vẫn dùng L720); GIỮ 5 (HelpCircle/Lock/Printer/Settings2/UsersRound); (2) ước lượng page.tsx còn ~250-300 dòng (không 400); (3) ghi rõ print-guide.html là legacy (in thật qua /support/print?role=); (4) xóa luôn khối render chips quickLinks (mt-5 flex flex-wrap gap-2) — header chỉ tiêu đề + nút In. → re-review vòng 2.
+
+**Reviewer R2 (15-08)**: **PASS** ✅ — icon list khớp tuyệt đối code thật (12 icon import, XÓA 7/GIỮ 5 đúng L5-18); hằng↔render khớp 1-1; quickLinks xóa cả render (L321-331); ảnh 01-05 ↔ print-guide.html khớp (L527/654/706/751/756). 1 góp ý minor (đã sửa): page.tsx còn ~210-260 dòng.

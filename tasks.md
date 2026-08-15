@@ -552,3 +552,59 @@
 **Definition of Done**: lint 0 + build PASS + E2E 4 role PASS + manifest verify PASS + git clean (không push — chờ anh).
 
 **Status**: `[x]` — DONE 15-08: Mika verify toàn diện. **E2E browser 4 role ALL PASS** (login 158/663/432/16735 → /support intro đúng role + Manager 4 nút selector / role khác badge cố định → /support/print?role= steps/faq/ảnh đúng: Manager 16/6/15, Leader 9/4/9, SubLeader 7/4/7, Employee 4/3/3). **Interactive**: Manager click "Nhân viên" → intro đổi guide Employee ✓. **Console**: CDP clean (0 errors). **Visual**: /support block vai trò + selector đẹp; print A4 sạch chuyên nghiệp (vision verified). **Manifest**: 34/34 khớp, không thiếu/thừa. Lint 0 errors + build PASS (kill server trước build). Server local chạy port 3000. Commits `373ffac` `a58d653` `ddb8173` `f5224d0` `4984110` — chưa push.
+
+## Phase 72: Tinh gọn trang Hướng dẫn — tích hợp, loại bỏ phần thừa 🟡 (2026-08-15)
+
+> Yêu cầu anh: trang /support còn 6 section cũ TRÙNG với block mới "Hướng dẫn theo vai trò" — tinh gọn, tích hợp, loại phần thừa. Reviewer R1→R2 PASS. Chi tiết: `.ai/MASTER_PLAN.md` Phase 72.
+
+### [#P72T01] [src/app/support/page.tsx] Xóa 6 section cũ + 7 hằng data + quickLinks + dọn import
+
+**Goal**: Trang chỉ còn 3 phần: header gọn (tiêu đề + nút In) + block `#huong-dan-vai-tro` (guide-content) + cột phải "Nguyên tắc quyền truy cập". Xóa mọi phần trùng.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. XÓA 6 section render cũ: `#huong-dan` (L429-473), `#vai-tro` (L475-508), `#workflow` (L510-545), `#bao-cao` (L547-591), `#ai-ho-tro` (L593-611), `#quan-ly-du-lieu` (L613-689).
+2. XÓA 7 hằng data cũ: usageGuide, roleGuides, roleWorkflows, managementGuide, permissionMatrix, aiGuide, reportingGuide + quickLinks.
+3. XÓA khối render chips quickLinks (khu vực `mt-5 flex flex-wrap gap-2`) — header chỉ còn tiêu đề + nút In.
+4. Dọn import icon: XÓA 7 (ArrowRight/BookOpen/ClipboardCheck/FilePenLine/LineChart/ShieldCheck/Sparkles), GIỮ 5 (HelpCircle/Lock/Printer/Settings2/UsersRound) — đúng góp ý Reviewer R1 (Settings2 dùng L720).
+5. GIỮ NGUYÊN: block #huong-dan-vai-tro, cột phải "Nguyên tắc quyền truy cập", header (tiêu đề + nút in), handlePrintGuide, guide-content import.
+
+**Definition of Done**: tsc PASS + lint 0 errors + page.tsx còn ~210-260 dòng.
+
+**Status**: `[ ]`
+
+---
+
+### [#P72T02] [verify] Lint/tsc/build + E2E 4 role + visual không còn section trùng
+
+**Goal**: Verify trang gọn không vỡ: build PASS, E2E 4 role vẫn đúng (intro/print không đổi), visual chỉ còn 3 phần.
+
+**Depends on**: `[#P72T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Kill server đúng PID (ss -tlnp) → npm run build PASS → start → curl /support 200.
+2. E2E browser 4 role (script verify-guide-e2e): intro đúng role + print steps/faq/ảnh đúng (Manager 16/6/15, Leader 8/4/8, SubLeader 6/4/6, Employee 4/3/3).
+3. Visual: chụp /support → không còn section "Hướng dẫn sử dụng chi tiết" / "Hướng dẫn theo vai trò" (cũ) / "Workflow" / "Báo cáo" / "AI hỗ trợ" / "Quản lý dữ liệu" — chỉ header + block vai trò + Nguyên tắc.
+4. Xác nhận ảnh /screenshots/01-05 còn nguyên (print-guide.html không vỡ).
+
+**Definition of Done**: lint 0 + build PASS + E2E 4 role PASS + visual 3 phần + ảnh 01-05 còn.
+
+**Status**: `[ ]`
+
+---
+
+### [#P72T03] [docs] MASTER_PLAN + HANDOFF + commit
+
+**Goal**: Ghi kết quả Phase 72 + commit.
+
+**Depends on**: `[#P72T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. MASTER_PLAN Phase 72 DONE (ghi số dòng thật sau xóa, kết quả verify).
+2. HANDOFF update.
+3. Commit `[#P72T01]` → `[#P72T03]` + tick.
+
+**Definition of Done**: git clean (không push — chờ anh).
+
+**Status**: `[ ]`
