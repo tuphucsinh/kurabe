@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
@@ -21,6 +21,16 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [sendingShot, setSendingShot] = useState(false);
   const [greeted, setGreeted] = useState(false);
+  const prevPathname = useRef<string | null>(null);
+
+  // Đổi trang → XÓA context cache (hội thoại cũ của trang trước) để AI không trả lời theo trang cũ.
+  useEffect(() => {
+    if (prevPathname.current !== null && prevPathname.current !== pathname) {
+      setMessages([]);
+      setGreeted(false);
+    }
+    prevPathname.current = pathname;
+  }, [pathname]);
 
   // Chỉ hiển thị cho Manager/Leader/SubLeader
   if (!user || !['Manager', 'Leader', 'SubLeader'].includes(user.role)) return null;
