@@ -1,10 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/Toast';
+import { upsertUserAction } from '@/actions/users';
+import EmployeeModal from '@/components/modals/EmployeeModal';
 import {
   ArrowLeft,
   FileText,
@@ -14,6 +18,7 @@ import {
   Crown,
   ChevronRight,
   AlertTriangle,
+  UserPlus,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -50,6 +55,15 @@ export default function TeamDetailPage() {
   const teamId = params.id;
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isManager = user?.role === 'Manager';
+  const isLeaderOwnTeam = user?.role === 'Leader' && user.teamId === teamId;
+  const canAddEmployee = isManager || isLeaderOwnTeam;
+
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
@@ -128,6 +142,26 @@ export default function TeamDetailPage() {
   const pendingCount = memberRows.length - completedCount;
   const progress = memberRows.length > 0 ? Math.round((completedCount / memberRows.length) * 100) : 0;
 
+  const handleSaveEmployee = async (employee: Partial<User>) => {
+    setIsSaving(true);
+    try {
+      const payload = { ...employee, teamId };
+      const result = await upsertUserAction(payload);
+      if (result.success) {
+        toast('Thêm nhân viên thành công!', 'success');
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+        queryClient.invalidateQueries({ queryKey: ['teams'] });
+        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+      } else {
+        toast(result.error || 'Lỗi khi thêm nhân viên.', 'error');
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Lỗi khi thêm nhân viên.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="px-6 md:px-10 lg:px-12 py-8 space-y-6 w-full max-w-[1600px] mx-auto">
@@ -192,10 +226,21 @@ export default function TeamDetailPage() {
                 <span className="font-black text-lg text-on-surface">{pendingCount}</span>
                 <span className="text-sm text-slate-500">còn lại</span>
               </div>
-              </div>
-              </div>
-              </div>
             </div>
+
+            {canAddEmployee && (
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#07384d] px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#052b3b] active:scale-95 cursor-pointer"
+              >
+                <UserPlus size={18} />
+                Thêm nhân viên
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Grouped SubLeader Blocks */}
       <div className="space-y-5">
@@ -459,6 +504,16 @@ export default function TeamDetailPage() {
         <ChevronRight size={16} className="text-outline/40" />
         Bấm icon tài liệu để xem chi tiết đánh giá của từng thành viên.
       </div>
+
+      <EmployeeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSave={handleSaveEmployee}
+        restrictToTeamId={teamId}
+        roleOptions={['SubLeader', 'Employee']}
+        allUsers={users}
+        teams={teams}
+      />
     </div>
   );
 }
