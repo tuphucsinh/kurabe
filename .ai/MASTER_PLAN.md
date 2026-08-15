@@ -725,3 +725,46 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - Lưu ý chạy: test-webhook.cjs cũ chỉ dùng cho HMAC; D.2 phải trigger webhook payload THẬT (có report_id/summary) mới verify status='planned'.
 
 **KẾT QUẢ LIVE TEST (15-08, tự chạy hết — KHÔNG dừng): 22/22 PASS** + D webhook trigger PASS. Chi tiết /tmp/kurabe-live-test-report.md. A (UI) 6/6; B (Hỗ trợ AI — đúng/cụ thể/thông minh/tự nhiên) 10/10: B1 tên cụ thể Leader Hòa ✓; B2/B3 số liệu DB thật 22 NV/9% ✓; B4 breakdown role ✓; B6 chức danh NV không có ✓; B7 history nhớ ✓; B8 đổi trang không lẫn ✓; B9 greeting theo trang ✓; B10 không emoji + xưng hô chị ✓. C (báo lỗi) 4/4: nút bug/confirm/gửi/chặn 1-ngày ✓. D: HMAC 401/202 ✓; agent webhook trigger + plan (agent đang chạy — tooling github repo sai aivntps/kurabe 404 → tối ưu sau: thêm skill/sửa prompt dặn dùng repo thật tuphucsinh/kurabe + đọc file local). E build/tsc/lint PASS.
+
+### Phase 77: 3 tính năng AI mới — Biên bản kết thúc kỳ + Chat Employee + Tìm kiếm ngữ nghĩa Manager 🟡 (2026-08-15, plan)
+
+> **Yêu cầu anh** (15-08): dùng Sequential Thinking lên plan (reviewer check kỹ) cho: (1) AI soạn biên bản kết thúc kỳ; (2) Soạn thông báo kết quả cho nhân viên (giải thích điểm/xếp loại/vì sao B/cải thiện gì + động viên — giảm tải Manager); (3) Tìm kiếm ngữ nghĩa Manager qua chat.
+
+**Bằng chứng code thật (15-08)**:
+- `src/actions/ai.ts` draftResultMessageAction (L102-155): ĐÃ CÓ + rất chi tiết (xác nhận xếp loại + điểm mạnh theo tên tiêu chuẩn + cải thiện/gợi ý + khuyến khích, ẩn danh) → **KHÔNG làm lại**; phần mới của yêu cầu #2 = **MỞ CHAT CHO EMPLOYEE** (tự hỏi kết quả → giảm tải Manager).
+- suggestCommentAction (L47-96): gợi ý nhận xét chấm điểm — đã có.
+- explainAnomalyAction (L17-40): giải thích chênh lệch — đã có.
+- `src/actions/ai-summary.ts` getPeriodSummary: tóm tắt kỳ (ai_summaries) — TÁI SỬ DỤNG cho biên bản.
+- `src/actions/chat.ts` buildPageContext: data context theo trang — T3 mở rộng đây.
+- `src/lib/db/evaluations.ts` getEvaluationsByPeriod (scope viewer) + evaluation_rounds — nguồn cho T3 query.
+- ChatWidget hiện requireRole(['Manager','Leader','SubLeader']) — Employee bị chặn (T2 mở).
+
+**Thiết kế (3 task, chạm backend AI + quyền Employee → CONTROLLED, Reviewer KỸ)**:
+
+1. **T1 [Biên bản kết thúc kỳ — Manager]**: action mới `generatePeriodMinutesAction(periodId)` (src/actions/ai.ts):
+   - Input: stats/gradeDistribution/teamStatus (getDashboardData), anomalies (lib/anomaly.ts), getPeriodSummary (ai_summaries — NGUỒN "điểm nổi bật" vì getDashboardData KHÔNG có top-performers — Reviewer L3), period name.
+   - **GATE (Reviewer L3)**: chỉ cho phép khi kỳ KHÔNG còn Active (đã đóng) — hoặc cảnh báo xác nhận nếu kỳ còn mở; nút disabled + tooltip khi kỳ active.
+   - **ẨN DANH (Reviewer R1 #4)**: strip tên khỏi recentActivities + anomaly.name — CHỈ mã NV/code (VD "mã 8707 có chênh lệch 23 điểm" — không tên).
+   - AI prompt: viết BIÊN BẢN KẾT THÚC KỲ (tiếng Việt, chính thức ~250-350 từ): mục đích/thời gian, tổng quan kết quả (xếp loại, tiến độ), điểm nổi bật, vấn đề bất thường, khuyến nghị kỳ sau.
+   - UI: nút "Soạn biên bản" trên Dashboard/Reports (Manager) → khung soạn sẵn (textarea) → Copy + In → KHÔNG lưu DB (chỉ soạn).
+
+2. **T2 [Mở chat Employee — kết quả bản thân]**: 
+   - `requireRole(['Manager','Leader','SubLeader','Employee'])` CHỈ trong chatGreetingAction + chatAskAction; **KHÔNG** thêm Employee vào chatAskWithScreenshotAction + chatReportErrorAction (Reviewer R1 #5 — Employee không screenshot/không báo lỗi).
+   - **buildSystem Employee branch RIÊNG** (Reviewer R1 #2 — KHÔNG fallthrough SubLeader): "Chỉ trả lời về KẾT QUẢ ĐÁNH GIÁ CỦA BẢN THÂN (điểm/xếp loại/vì sao/cải thiện) — không trả lời người khác, không báo cáo, không thao tác hệ thống"; **KHÔNG chứa marker [CẦN_ẢNH]/[CẦN_DEV]** (Reviewer R1 #5).
+   - **chatGreetingAction Employee branch riêng**: "Chào chị/anh X. Em hỗ trợ xem kết quả đánh giá của chị/anh — ví dụ: 'kết quả của em thế nào?'" (Reviewer R1 #2).
+   - **buildPageContext self-case (Reviewer R1 #3)**: Employee ở /evaluations/{id} VÀ evaluation.employeeId === auth.user.id → context gồm ĐIỂM/XẾP LOẠI/FINAL của BẢN THÂN (loại notes/comment người khác) — nếu evaluation của NGƯỜI KHÁC → context rỗng + buildSystem từ chối (getEvaluationByEmployee đã scope theo user — xác nhận khi code).
+   - **Client guard (Reviewer R1 #5)**: với Employee — ẩn nút Báo lỗi; không gọi autoCaptureAndSend/needDev.
+   - rate-limit 15/2h áp Employee (như Leader/SubLeader).
+
+3. **T3 [Tìm kiếm ngữ nghĩa Manager — WITHIN-PERIOD]**: mở rộng buildPageContext (chat.ts):
+   - **RESCOPE (Reviewer R1 #1)**: phân tích TRONG KỲ hiện tại — "giảm 2 kỳ liên tiếp" CHƯA trả lời được (chưa có lịch sử đa kỳ) → buildSystem Manager ghi rõ giới hạn: "Nếu được hỏi so sánh nhiều kỳ, nói rõ em chỉ phân tích trong kỳ hiện tại".
+   - **TÓM TẮT DETERMINISTIC bằng CODE (Reviewer R1 #6) — KHÔNG dùng LLM tính**: fetch `getEvaluationsByPeriod(periodId, user)` + rounds → code tính: top N tăng/giảm điểm giữa các vòng, theo nhóm, theo role, xếp loại — đưa kết quả tóm tắt (top 10 + tổng hợp) vào prompt.
+   - **Manager LUÔN nhận bounded context (Reviewer R1 #6)**: ở /dashboard + /reports Manager luôn nhận tóm tắt có cấu trúc này (bỏ keyword gating) — AI trả lời query từ context; payload giới hạn ~1500 chars (top 10 + tổng); fail-soft.
+   - **Tên (Reviewer L4)**: giữ tên trong context T3 (Manager thấy mọi tên sẵn) — QUYẾT ĐỊNH tài liệu; ĐẢM BẢO không lọt ra non-Manager (chỉ chạy nhánh role==='Manager').
+
+**Ràng buộc**: T2 quyền Employee phải server-side chặt (không lộ kết quả người khác — getEvaluationByEmployee đã scope theo user); Employee không báo lỗi/không screenshot; T3 chỉ Manager + tóm tắt giới hạn; không đụng data production (test user 16735 Employee + 158 Manager); không push.
+
+**WBS (3 task)**: T1 biên bản / T2 chat Employee / T3 tìm kiếm ngữ nghĩa. Reviewer check KỸ từng task trước khi code.
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — T3 rescope within-period (chưa có lịch sử đa kỳ — ghi rõ giới hạn) + summary deterministic code; T2 Employee branch riêng buildSystem/greeting + self-case điểm bản thân + không vào screenshot/report + client guard; T1 gating kỳ + strip tên + nguồn nổi bật getPeriodSummary. Đã sửa hết.
+**Reviewer R2 (15-08)**: **PASS** ✅ — xác nhận evidence khớp code thật (dashboard.ts không top-performers; ai_summaries đã ẩn danh; draftResult đã có). Ghi chú code-time: (a) T1 gate chọn hard-disable hoặc soft-confirm; (b) T1 fallback nếu chưa có ai_summaries → nhắc Manager tạo summary trước; (c) T2 client gate ChatWidget mở 4 roles + vài chỗ hardcode "chị" cosmetic (ngoài scope).
