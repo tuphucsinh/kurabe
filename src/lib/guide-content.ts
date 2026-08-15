@@ -152,22 +152,192 @@ export const guideContent: Record<GuideRole, GuideSection> = {
   Leader: {
     role: 'Leader',
     intro:
-      'Bạn là Leader phụ trách quản lý nhóm, phân công và thực hiện đánh giá vòng 2 cho các thành viên trong nhóm.',
-    steps: [],
-    faq: [],
+      'Bạn là Leader quản lý một nhóm: theo dõi tiến độ đánh giá của nhóm, tự đánh giá bản thân, đánh giá vòng 2 cho nhân viên và hỗ trợ dữ liệu nhóm. Làm theo thứ tự các bước dưới đây.',
+    steps: [
+      {
+        title: 'Đăng nhập vào hệ thống',
+        body: 'Mở trình duyệt, vào địa chỉ app (ví dụ lykiv.vercel.app hoặc địa chỉ công ty cung cấp). Nhập mã nhân viên và mật khẩu, bấm Đăng nhập. Nếu chưa có mật khẩu, xem bước 2.',
+        screenshotPath: '/screenshots/guide/leader-01-login.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Đặt mật khẩu lần đầu (nếu chưa có)',
+        body: 'Vào Cài đặt ở sidebar, tab Tài khoản. Nếu hiện nút Đặt mật khẩu thì bấm vào, nhập mật khẩu mới (tối thiểu 6 ký tự) và xác nhận. Đã có mật khẩu thì nhập mật khẩu cũ rồi bấm Đổi mật khẩu.',
+        screenshotPath: '/screenshots/guide/leader-02-account.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Xem dashboard và tiến độ của nhóm',
+        body: 'Trang chủ Dashboard cho thấy KPI, tiến độ từng nhóm và trạng thái đánh giá. Vào Nhân viên để xem từng người trong nhóm của bạn: badge Chưa bắt đầu / Đã nộp vòng X cho biết ai còn giữ lượt, ai đã nộp xong.',
+        screenshotPath: '/screenshots/guide/leader-03-dashboard.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Quản lý nhân viên trong nhóm (theo quyền)',
+        body: 'Bạn được thêm và sửa Nhân viên hoặc SubLeader TRONG nhóm của mình: vào Nhân viên, bấm Thêm nhân viên mới hoặc bút chì ở cuối dòng để sửa. Bạn KHÔNG được xóa nhân viên và không được đổi Leader (việc đó chỉ Manager làm).',
+        screenshotPath: '/screenshots/guide/leader-04-team-members.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Tự đánh giá bản thân (vòng riêng của Leader)',
+        body: 'Bạn cũng là người được đánh giá. Vào Nhân viên, tìm tên bạn, bấm biểu tượng tài liệu ở cuối dòng. Chấm từng tiêu chí, bấm Lưu bản nháp thường xuyên, kiểm tra lại rồi bấm Gửi Đánh giá. Sau đó Manager sẽ chấm vòng cuối cho bạn.',
+        screenshotPath: '/screenshots/guide/leader-05-self-eval.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Đánh giá nhân viên vòng 2 (khi SubLeader đã nộp vòng 1)',
+        body: 'Chờ SubLeader nộp vòng 1 xong, phiếu nhân viên mới mở cho bạn chấm vòng 2. Mở phiếu từ danh sách Nhân viên, xem điểm vòng 1, chấm điểm theo tiêu chuẩn, ghi nhận xét (có thể dùng Gợi ý nhận xét AI), kiểm tra rồi bấm Gửi Đánh giá.',
+        screenshotPath: '/screenshots/guide/leader-06-round2.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Trả lại vòng 1 cho SubLeader khi cần chỉnh',
+        body: 'Nếu thấy vòng 1 của SubLeader chưa hợp lý, mở phiếu nhân viên và bấm Trả lại đánh giá, nhập lý do bắt buộc rồi xác nhận. SubLeader sẽ thấy banner vàng ghi lý do, sửa lại và nộp lại. Sau đó bạn chấm vòng 2 bình thường.',
+        screenshotPath: '/screenshots/guide/leader-07-return.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Dùng tính năng AI khi chấm điểm',
+        body: 'Khi chấm điểm, bấm Gợi ý nhận xét AI để hệ thống tự viết nhận xét dựa trên điểm và ghi chú (chạy 10–60 giây, chỉ bấm 1 lần). Nội dung AI chỉ là gợi ý — rà soát và chỉnh sửa cho khớp thực tế trước khi gửi.',
+        screenshotPath: '/screenshots/guide/leader-08-ai.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Xem báo cáo phạm vi nhóm',
+        body: 'Trang Báo cáo cho thấy phân bổ xếp loại, biểu đồ năng lực và so sánh giữa các nhóm. Bạn chỉ xem được dữ liệu trong phạm vi quyền của mình; nếu cần dữ liệu toàn hệ thống hãy liên hệ Manager.',
+        screenshotPath: '/screenshots/guide/leader-09-reports.jpg',
+        annotate: null,
+      },
+    ],
+    faq: [
+      {
+        question: 'Vì sao tôi không mở được đánh giá của nhân viên?',
+        answer: 'Vòng 1 (SubLeader) chưa nộp thì vòng 2 chưa mở. Hãy nhắc SubLeader nộp vòng 1 trước.',
+      },
+      {
+        question: 'Tôi có thể xóa nhân viên trong nhóm không?',
+        answer: 'Không. Leader chỉ được thêm/sửa Nhân viên hoặc SubLeader trong nhóm mình; xóa và đổi Leader chỉ Manager làm được.',
+      },
+      {
+        question: 'Nhân viên bị trả lại đánh giá thì sao?',
+        answer: 'Họ thấy banner vàng ghi lý do, sửa lại và nộp lại. Sau khi nộp lại, bạn tiếp tục chấm vòng 2.',
+      },
+      {
+        question: 'Điểm vòng 1 để làm gì?',
+        answer: 'Là điểm SubLeader chấm. Bạn nên tham khảo khi chấm vòng 2 để đối chiếu, tránh chênh lệch quá lớn không có giải thích.',
+      },
+    ],
   },
   SubLeader: {
     role: 'SubLeader',
     intro:
-      'Bạn là SubLeader thực hiện đánh giá vòng 1 cho các thành viên thuộc nhóm được phân công.',
-    steps: [],
-    faq: [],
+      'Bạn là SubLeader phụ trách một nhóm nhỏ: tự đánh giá bản thân và đánh giá vòng 1 cho nhân viên thuộc nhóm phụ trách. Làm theo thứ tự các bước dưới đây.',
+    steps: [
+      {
+        title: 'Đăng nhập vào hệ thống',
+        body: 'Mở trình duyệt, vào địa chỉ app (ví dụ lykiv.vercel.app hoặc địa chỉ công ty cung cấp). Nhập mã nhân viên và mật khẩu, bấm Đăng nhập. Nếu chưa có mật khẩu, xem bước 2.',
+        screenshotPath: '/screenshots/guide/subleader-01-login.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Đặt mật khẩu lần đầu (nếu chưa có)',
+        body: 'Vào Cài đặt ở sidebar, tab Tài khoản. Nếu hiện nút Đặt mật khẩu thì bấm vào, nhập mật khẩu mới (tối thiểu 6 ký tự) và xác nhận. Đã có mật khẩu thì nhập mật khẩu cũ rồi bấm Đổi mật khẩu.',
+        screenshotPath: '/screenshots/guide/subleader-02-account.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Xem dashboard và danh sách nhân viên phụ trách',
+        body: 'Trang chủ Dashboard cho thấy tiến độ chung. Vào Nhân viên để xem những người thuộc nhóm bạn phụ trách; badge trạng thái cho biết ai chưa được đánh giá vòng 1.',
+        screenshotPath: '/screenshots/guide/subleader-03-dashboard.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Đánh giá vòng 1 cho nhân viên trong nhóm phụ trách',
+        body: 'Mở phiếu từng nhân viên (biểu tượng tài liệu ở cuối dòng), chấm từng tiêu chí theo các nhóm A, B, C..., bấm Lưu bản nháp thường xuyên, kiểm tra lại rồi bấm Gửi Đánh giá. Sau khi nộp, Leader mới mở được vòng 2.',
+        screenshotPath: '/screenshots/guide/subleader-04-round1.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Tự đánh giá bản thân',
+        body: 'Bạn cũng là người được đánh giá: vào Nhân viên, tìm tên bạn, mở phiếu và tự chấm vòng 1 của mình, rồi bấm Gửi Đánh giá. Leader sẽ chấm vòng 2 và Manager chấm vòng 3 cho bạn.',
+        screenshotPath: '/screenshots/guide/subleader-05-self-eval.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Sửa lại đánh giá khi bị trả về',
+        body: 'Nếu Leader/Manager trả lại đánh giá, bạn sẽ thấy banner vàng ghi rõ lý do. Mở phiếu, xem lý do, chỉnh sửa điểm/ghi chú rồi bấm Gửi Đánh giá lần nữa để gửi lại.',
+        screenshotPath: '/screenshots/guide/subleader-06-return.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Dùng tính năng AI khi chấm điểm',
+        body: 'Khi chấm điểm, bấm Gợi ý nhận xét AI để hệ thống tự viết nhận xét dựa trên điểm và ghi chú (chạy 10–60 giây, chỉ bấm 1 lần). Nội dung AI chỉ là gợi ý — rà soát và chỉnh sửa cho khớp thực tế trước khi gửi.',
+        screenshotPath: '/screenshots/guide/subleader-07-ai.jpg',
+        annotate: null,
+      },
+    ],
+    faq: [
+      {
+        question: 'Tôi đánh giá những ai?',
+        answer: 'Nhân viên thuộc nhóm bạn phụ trách và tự đánh giá bản thân. Không đánh giá cấp trên hoặc người ngoài nhóm — hệ thống sẽ chặn.',
+      },
+      {
+        question: 'Vì sao tôi không sửa được đánh giá đã gửi?',
+        answer: 'Vòng đã nộp bị khóa. Nếu cần sửa, phải được Leader/Manager trả lại (họ nhập lý do), sau đó bạn sửa và nộp lại.',
+      },
+      {
+        question: 'Tôi có thêm/sửa nhân viên được không?',
+        answer: 'Không. SubLeader chỉ đánh giá; thêm/sửa/xóa nhân viên do Leader hoặc Manager làm.',
+      },
+      {
+        question: 'Nộp vòng 1 rồi thì sao?',
+        answer: 'Leader sẽ thấy và chấm vòng 2. Bạn theo dõi badge trạng thái trên danh sách nhân viên.',
+      },
+    ],
   },
   Employee: {
     role: 'Employee',
     intro:
-      'Bạn là nhân viên thực hiện tự đánh giá năng lực bản thân và theo dõi kết quả đánh giá theo kỳ.',
-    steps: [],
-    faq: [],
+      'Bạn là nhân viên: tự theo dõi quá trình đánh giá của mình và xem kết quả cuối kỳ. Làm theo thứ tự các bước dưới đây.',
+    steps: [
+      {
+        title: 'Đăng nhập vào hệ thống',
+        body: 'Mở trình duyệt, vào địa chỉ app (ví dụ lykiv.vercel.app hoặc địa chỉ công ty cung cấp). Nhập mã nhân viên và mật khẩu, bấm Đăng nhập. Nếu chưa có mật khẩu, xem bước 2.',
+        screenshotPath: '/screenshots/guide/employee-01-login.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Đặt mật khẩu lần đầu (nếu chưa có)',
+        body: 'Vào Cài đặt ở sidebar, tab Tài khoản. Nếu hiện nút Đặt mật khẩu thì bấm vào, nhập mật khẩu mới (tối thiểu 6 ký tự) và xác nhận. Đã có mật khẩu thì nhập mật khẩu cũ rồi bấm Đổi mật khẩu.',
+        screenshotPath: '/screenshots/guide/employee-02-account.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Xem kết quả đánh giá của mình',
+        body: 'Vào Nhân viên, tìm tên bạn và mở phiếu (biểu tượng tài liệu ở cuối dòng). Bạn xem được điểm và nhận xét của mình theo từng vòng; khi Manager chốt xong, bạn thấy xếp loại và tổng điểm cuối kỳ.',
+        screenshotPath: '/screenshots/guide/employee-03-result.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Hiểu quy trình 3 vòng đánh giá',
+        body: 'Bạn được đánh giá qua 3 vòng tuần tự: Vòng 1 SubLeader chấm, Vòng 2 Leader chấm, Vòng 3 Manager chốt. Vòng sau chỉ mở khi vòng trước đã nộp. Bạn không tự chấm điểm cho mình (trừ khi bạn là SubLeader/Leader/Manager).',
+        screenshotPath: null,
+        annotate: null,
+      },
+    ],
+    faq: [
+      {
+        question: 'Khi nào tôi xem được kết quả?',
+        answer: 'Sau khi Manager chốt vòng cuối, bạn vào phiếu của mình để xem xếp loại và tổng điểm.',
+      },
+      {
+        question: 'Tôi có thể sửa đánh giá của mình không?',
+        answer: 'Bạn không tự chấm; đánh giá do SubLeader/Leader/Manager thực hiện. Bạn chỉ xem kết quả.',
+      },
+      {
+        question: 'Vì sao tôi không mở được hồ sơ của người khác?',
+        answer: 'Mỗi người chỉ xem được dữ liệu trong phạm vi của mình. Mở hồ sơ cấp trên hoặc người ngoài phạm vi sẽ bị chặn.',
+      },
+    ],
   },
 };

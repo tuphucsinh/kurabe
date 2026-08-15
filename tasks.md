@@ -461,7 +461,7 @@
 
 **Definition of Done**: file tạo + type-check PASS; manifest Manager đủ luồng; không ảnh hưởng UI cũ (chưa wire).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. `src/lib/guide-content.ts` tạo — types (GuideStep/GuideRole/GuideSection) + guideContent map 4 role; guide Manager 16 bước đúng luồng (login → pass → nhóm/leader → NV → tiêu chuẩn/default → thang điểm → kỳ → workflow → tự đánh giá → chờ leader → vòng cuối → trả lại → AI → báo cáo → đóng kỳ) + 6 FAQ; screenshotPath khai báo đủ 15 ảnh (bước workflow text-only null); annotate null chờ T03; Leader/SubLeader/Employee placeholder (steps/faq rỗng). tsc --noEmit PASS, 0 emoji, 0 script. Commit `373ffac`.
 
 ---
 
@@ -479,7 +479,7 @@
 
 **Definition of Done**: 3 role đủ guide + type-check PASS; manifest đủ 4 role.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. `guide-content.ts` bổ sung đủ 3 role: **Leader 9 bước** (login → pass → dashboard → CRUD NV trong nhóm theo quyền → tự đánh giá → vòng 2 → trả lại vòng 1 → AI → báo cáo nhóm) + 4 FAQ; **SubLeader 7 bước** (login → pass → dashboard → vòng 1 NV phụ trách → tự đánh giá → sửa khi bị trả về → AI) + 4 FAQ; **Employee 4 bước** (login → pass → xem kết quả → workflow 3 vòng text-only) + 3 FAQ. Manifest đủ 4 role: Manager 15 ảnh / Leader 9 / SubLeader 7 / Employee 3 (bước workflow text-only null). tsc PASS, 0 emoji. Commit `d7368a8` (kèm tick T01 tasks.md).
 
 ---
 
