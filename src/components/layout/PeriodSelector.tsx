@@ -58,8 +58,8 @@ export default function PeriodSelector() {
   if (!currentPeriod || allPeriods.length <= 1) {
     if (!currentPeriod) return null;
     return (
-      <div className="px-4 py-2 flex items-center gap-2 text-white/50 text-xs font-medium border-t border-white/5">
-        <Calendar size={14} />
+      <div className="px-4 py-2 flex items-center gap-2 text-white/70 text-base font-bold border-t border-white/5">
+        <Calendar size={20} />
         <span>Kỳ {currentPeriod.year}</span>
       </div>
     );
@@ -72,10 +72,10 @@ export default function PeriodSelector() {
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all duration-200 group"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Calendar size={16} className="text-white/60 group-hover:text-white shrink-0" />
+          <Calendar size={20} className="text-white/60 group-hover:text-white shrink-0" />
           <div className="text-left min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold leading-none mb-1">Kỳ đánh giá</p>
-            <p className="text-sm font-medium truncate">Kỳ {currentPeriod.year}</p>
+            <p className="text-[11px] uppercase tracking-wider text-white/40 font-bold leading-none mb-1">Kỳ đánh giá</p>
+            <p className="text-lg font-bold truncate">Kỳ {currentPeriod.year}</p>
           </div>
         </div>
         <ChevronDown 
