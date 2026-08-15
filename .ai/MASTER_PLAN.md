@@ -543,7 +543,10 @@
 2. **T02a [src/actions/chat.ts — tạo]**: `chatGreetingAction(pathname)` + `chatAskAction(question, pathname)`:
    - `requireRole(['Manager','Leader','SubLeader'])` (Employee KHÔNG dùng — theo yêu cầu).
    - Rate limit (T02b): đếm lượt user trong cửa sổ 2h; ≥ 15 → trả "Chị đã dùng hết 15 lượt hỏi trong 2 giờ, vui lòng quay lại sau." — KHÔNG gọi LLM.
-   - System prompt: đọc chat-knowledge.md + role của user + luật: "gọi khách là chị, xưng em; ngôn ngữ tự nhiên tinh tế khéo léo; KHÔNG dùng emoji; CHỈ trả lời về hệ thống KURABE, không trả lời ngoài lề; ngắn gọn". maxTokens ~400.
+   - **System prompt PHÂN THEO ROLE (bổ sung anh 15-08, sau R2)**:
+     - **Leader/SubLeader**: chỉ trả lời về HƯỚNG DẪN sử dụng, cách làm các thao tác, các lỗi/trục trặc thường gặp và cách xử lý trong phạm vi quyền của mình. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, xu hướng, bất thường đánh giá, tư vấn xếp loại...) — nếu hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.
+     - **Manager**: ngoài hướng dẫn/lỗi như trên, ĐƯỢC trả lời thêm các câu hỏi NÂNG CAO: báo cáo, thống kê, cách dùng trang Báo cáo/Dashboard, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ...
+   - Cả 2 nhánh đều có: knowledge.md (cache), luật "gọi khách là chị, xưng em; ngôn ngữ tự nhiên tinh tế khéo léo; KHÔNG dùng emoji; CHỈ trả lời về hệ thống KURABE, không trả lời ngoài lề; ngắn gọn". maxTokens ~400.
    - Greeting: dựa pathname → "Chào chị" + gợi ý theo trang (dashboard: tiến độ; teams: nhóm; employees: nhân viên; reports: báo cáo; criteria/settings: cấu hình; evaluations: chấm điểm; support: hướng dẫn; mặc định: chung).
    - Gọi `callAI`; lưu lượt chat vào bảng chat_usage SAU khi thành công.
 
