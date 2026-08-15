@@ -24,7 +24,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Evaluation, User } from '@/types';
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  Approved: { label: 'Đã có KẾT QUẢ đánh giá', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
+  Approved: { label: 'Đã có KQĐG', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
   NotStarted: { label: 'Chưa bắt đầu', className: 'bg-slate-100 text-slate-500' },
   InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
