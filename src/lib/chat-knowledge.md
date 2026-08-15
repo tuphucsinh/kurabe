@@ -85,6 +85,8 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 - **Bảng điều khiển (Dashboard)**: KPI, tiến độ từng nhóm, phân bổ xếp loại, cảnh báo bất thường, hoạt động gần đây.
 - **Nhóm**: danh sách nhóm; chi tiết nhóm hiển thị thẻ Leader (đầu danh sách) + các SubLeader + nhân viên trực thuộc, kèm kết quả đánh giá từng người + nút Thêm nhân viên (Manager/Leader) + nút Xem đánh giá.
 - **Nhân viên**: bảng toàn bộ nhân sự, tìm kiếm theo tên/mã, lọc theo Nhóm/Chức vụ, cột Xếp loại gần nhất, nút Thêm nhân viên / Nhập từ Excel / File mẫu, thao tác xem/sửa/đặt lại mật khẩu/xóa.
+- **Chức danh**: chỉ Manager/Leader/SubLeader mới có chức danh (vd Kakarichou, Shunin, Sub Leader); Nhân viên không hiển thị chức danh.
+- **Giới tính**: mỗi nhân viên có giới tính Nam/Nữ (khi thêm/sửa nhân viên chọn giới tính; mặc định Nữ).
 - **Báo cáo**: radar năng lực, khoảng cách so mục tiêu, biến động điểm qua vòng, Top Performers, tóm tắt AI (Manager).
 - **Tiêu chuẩn**: nhóm tiêu chí A-F, thêm/sửa/xóa tiêu chí, mức điểm, mức mặc định.
 - **Cài đặt**: tab Tài khoản (đổi/đặt mật khẩu), Kỳ đánh giá (tạo/đóng), Thang điểm, Nhóm & Quyền, Nhật ký, Mục tiêu.
@@ -101,12 +103,4 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 - **Chưa có kỳ đánh giá**: tạo ở Cài đặt → Kỳ đánh giá; nhân viên chỉ đánh giá trong kỳ đang hoạt động.
 - **Mỗi nhóm mấy Leader**: đúng 1; đổi Leader ở Nhóm → Chỉnh sửa nhóm.
 
-## 9. Quy tắc ứng xử của trợ lý chat
-
-1. Gọi khách là "chị", tự xưng "em".
-2. Ngôn ngữ tự nhiên, tinh tế, khéo léo; TUYỆT ĐỐI không dùng emoji.
-3. Chỉ trả lời về hệ thống KURABE; không trả lời ngoài lề (chính trị, tài chính, pháp luật, kiến thức ngoài hệ thống...).
-4. Leader/SubLeader: chỉ hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc trong phạm vi quyền; hỏi phân tích nâng cao (báo cáo, thống kê, bất thường, xếp loại) → khéo léo từ chối + gợi ý liên hệ Manager.
-5. Manager: thêm được các câu hỏi nâng cao — báo cáo, thống kê, tìm kiếm, giải thích bất thường đánh giá, xếp loại, chốt kỳ.
-6. Trả lời ngắn gọn, đúng trọng tâm, nếu chưa chắc chắn thì nói thẳng "em chưa rõ, chị có thể xem trang Hướng dẫn hoặc hỏi Manager".
-7. Không bịa dữ liệu, không đưa số liệu không có trong tài liệu này.
+> Lưu ý: quy tắc ứng xử của trợ lý (xưng hô theo giới tính, không emoji, phạm vi trả lời theo vai trò...) do hệ thống cấu hình riêng — không liệt kê trong tài liệu này.
