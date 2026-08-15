@@ -626,7 +626,7 @@
 
 **Definition of Done**: tsc PASS + lint 0 + employees/page.tsx vẫn hoạt động như cũ.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. Modal inline (L37-339) → shared `components/modals/EmployeeModal.tsx` (đầy đủ subleaderId + description + allUsers/teams props caller truyền, không tự fetch). employees/page.tsx dùng shared (1012→709 dòng). tsc PASS + lint 0 + E2E Manager/Leader thêm NV OK (qua T02).
 
 ---
 
@@ -645,7 +645,7 @@
 
 **Definition of Done**: tsc PASS + lint 0.
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: agy implement + Mika verify. Nút "Thêm nhân viên" (UserPlus, `canAddEmployee = isManager || (Leader && teamId===user.teamId)`) cạnh KPI + EmployeeModal shared (restrictToTeamId=teamId, roleOptions SubLeader/Employee) + onSave upsertUserAction + invalidate object v5. tsc PASS + lint 0.
 
 ---
 
@@ -664,7 +664,7 @@
 
 **Definition of Done**: build PASS + E2E PASS (Manager thêm thành công + Leader không thấy nút).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: Mika verify. Build PASS + E2E thật (CDP browser): **Manager 158** mở team "QC Gia dụng" → nút hiện ✓ → modal "Thêm nhân viên mới" ✓ → field Nhóm = "QC Gia dụng" + **disabled** ✓ → thêm NV TMP73 → toast "Thêm nhân viên thành công!" ✓ → TMP73 xuất hiện trong trang ✓. **Leader 663** (team "QI Xe hơi" — chỉ thấy 1 team của mình) → nút hiện ✓ → thêm NV TMP73L thành công ✓. **SubLeader 432** → KHÔNG thấy nút ✓. NV tạm TMP73/TMP73L đã xóa mềm (is_active=false — getUsers filter is_active=true nên sạch UI). ⚠️ PHÁT HIỆN môi trường: shell env ô nhiễm NEXT_PUBLIC_SUPABASE_URL=sangwebsite → build/start phải `unset` trước khi chạy (đã fix, E2E ALL PASS).
 
 ---
 
@@ -681,4 +681,4 @@
 
 **Definition of Done**: git clean (chưa push).
 
-**Status**: `[ ]`
+**Status**: `[x]` — DONE 15-08: MASTER_PLAN Phase 73 DONE + HANDOFF update + commits `3714a7c` (T01a) + `7856725` (T01c) + `f94f1a1` (T01b) + docs (T03).
