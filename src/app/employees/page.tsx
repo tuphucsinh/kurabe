@@ -370,9 +370,6 @@ export default function EmployeesPage() {
       sortable: true,
       render: (item) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-            {item.name.charAt(0)}
-          </div>
           <div>
             <Link
               href={`/evaluations/${item.id}`}
