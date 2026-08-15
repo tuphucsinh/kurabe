@@ -89,11 +89,11 @@ export default function ChatWidget() {
       {!open && (
         <button
           onClick={openWidget}
-          className="fixed right-4 bottom-24 md:bottom-6 z-[9998] w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
+          className="fixed right-4 bottom-24 md:bottom-6 z-[9998] w-16 h-16 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
           aria-label="Hỗ trợ"
           title="Hỗ trợ"
         >
-          <MessageCircle size={24} />
+          <MessageCircle size={28} />
         </button>
       )}
 
