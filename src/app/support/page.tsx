@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowRight,
   ClipboardCheck,
   HelpCircle,
   Lock,
   Printer,
-  Settings2,
   UsersRound,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -222,29 +220,6 @@ export default function SupportPage() {
               <p>Mỗi vòng chỉ mở chỉnh sửa cho đúng người và đúng thời điểm. Sau khi gửi, vòng đó bị khóa và hệ thống chuyển sang vòng tiếp theo nếu workflow còn bước tiếp.</p>
               <p>Manager có phạm vi kiểm soát rộng nhất, nhưng vẫn bị khóa chỉnh sửa ở các vòng đã nộp để đảm bảo lịch sử đánh giá không bị ghi đè ngoài quy trình.</p>
             </div>
-
-            {isManager ? (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4">
-                <p className="text-sm font-bold text-white">Manager có thể điều chỉnh cấu hình ngay trong hệ thống.</p>
-                <p className="mt-2 text-sm leading-7 text-white/75">
-                  Dùng nút bên dưới để vào màn hình tiêu chuẩn, sửa nhóm tiêu chí, mức điểm và mức mặc định áp dụng cho kỳ đánh giá mới.
-                </p>
-                <Link
-                  href="/criteria"
-                  className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-[#07384d] transition-colors hover:bg-slate-100"
-                >
-                  <Settings2 size={18} />
-                  Sửa trực tiếp
-                </Link>
-              </div>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4">
-                <p className="text-sm font-bold text-white">Bạn đang ở chế độ xem hướng dẫn.</p>
-                <p className="mt-2 text-sm leading-7 text-white/75">
-                  Nếu cần thay đổi tiêu chuẩn, nhóm hoặc workflow, hãy liên hệ Manager vì chỉ Manager mới có nút sửa trực tiếp trong khu vực hỗ trợ này.
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
