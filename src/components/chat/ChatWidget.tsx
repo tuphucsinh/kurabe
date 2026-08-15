@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction } from '@/actions/chat';
+import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction, chatReportErrorAction } from '@/actions/chat';
 import { domToPng } from 'modern-screenshot';
 
 interface Msg {
@@ -48,6 +48,13 @@ export default function ChatWidget() {
     setLoading(true);
     const res = await chatAskAction({ question: q, pathname: pathname || '/', history });
     const raw = res.reply || res.error || '';
+    const needDev = raw.includes('[CẦN_DEV]');
+    if (needDev) {
+      const res2 = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages.slice(-6) });
+      setMessages((m) => [...m, { role: 'assistant', text: res2.reply || res2.error || 'Em đã ghi nhận lỗi.', pathname: pathname || '/' }]);
+      setLoading(false);
+      return;
+    }
     const needShot = raw.includes('[CẦN_ẢNH]');
     const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
     if (needShot) {

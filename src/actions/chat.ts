@@ -57,7 +57,8 @@ function buildBaseRules(addr: string): string {
 3. Chỉ trả lời về hệ thống KURABE; không trả lời ngoài lề.
 4. Trả lời ngắn gọn, đúng trọng tâm, tối đa ~120 từ.
 5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, ${addr} có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.
-6. Nếu cần xem ảnh màn hình để trả lời chính xác, CHỈ trả về đúng dòng: [CẦN_ẢNH] — không viết thêm bất kỳ chữ nào khác (hệ thống sẽ tự chụp màn hình và phân tích lại).`;
+6. Nếu cần xem ảnh màn hình để trả lời chính xác, CHỈ trả về đúng dòng: [CẦN_ẢNH] — không viết thêm bất kỳ chữ nào khác (hệ thống sẽ tự chụp màn hình và phân tích lại).
+7. Nếu ${addr} báo LỖI HỆ THỐNG mà em không hướng dẫn xử lý được (vd trang lỗi, không lưu được, hiển thị sai), CHỈ trả về đúng dòng: [CẦN_DEV] — không viết thêm gì khác.`;
 }
 
 function buildSystem(role: string, gender?: string | null): string {
@@ -69,12 +70,12 @@ function buildSystem(role: string, gender?: string | null): string {
     return `${knowledge}
 
 ${baseRules}
-7. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu.`;
+8. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu.`;
   }
   return `${knowledge}
 
 ${baseRules}
-7. ${Addr} là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
+8. ${Addr} là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
 }
 
 async function countRecent(userId: string): Promise<number> {
@@ -284,5 +285,44 @@ export async function chatAskWithScreenshotAction(input: {
   if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
   if (role !== 'Manager') await recordUsage(userId);
   return { reply };
+}
+
+export async function chatReportErrorAction(input: {
+  question: string;
+  pathname: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<{ reply?: string; error?: string }> {
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null) return { error: auth.error };
+  const addr = address(auth.user?.gender);
+  const Addr = capitalize(addr);
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_HOME_CHANNEL;
+  if (!token || !chatId) {
+    return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
+  }
+  try {
+    const page = pageName(input.pathname || '');
+    const historyText = (input.history || []).slice(-6)
+      .map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`)
+      .join('\n');
+    const name = auth.user?.name || '?';
+    const role = auth.user?.role || '?';
+    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${input.question}\nHội thoại gần nhất:\n${historyText || '(không có)'}\nThời gian: ${new Date().toLocaleString('vi-VN')}`;
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: summary, parse_mode: 'Markdown' }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) {
+      console.error('Telegram send error:', res.status);
+      return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
+    }
+    return { reply: `${Addr} hãy thông báo lỗi này cho Manager nhé. Lỗi này cũng đã được gửi về cho Developer để xử lý.` };
+  } catch (err) {
+    console.error('Telegram send error:', err);
+    return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
+  }
 }
 
