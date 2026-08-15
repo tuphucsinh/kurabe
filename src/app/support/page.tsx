@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
+  ArrowRight,
+  ClipboardCheck,
   HelpCircle,
   Lock,
   Printer,
@@ -17,6 +19,27 @@ const roleLabels: Record<GuideRole, string> = {
   Leader: 'Leader',
   SubLeader: 'SubLeader',
   Employee: 'Nhân viên',
+};
+
+const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> = {
+  Manager: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Kết thúc', evaluator: 'Hoàn tất sau vòng 1' },
+  ],
+  Leader: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Vòng 2', evaluator: 'Manager đánh giá' },
+  ],
+  SubLeader: [
+    { round: 'Vòng 1', evaluator: 'Tự đánh giá (SELF)' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
+  Employee: [
+    { round: 'Vòng 1', evaluator: 'SubLeader đánh giá' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
 };
 
 export default function SupportPage() {
@@ -140,7 +163,41 @@ export default function SupportPage() {
                 </div>
               ))}
             </div>
+          </div>
 
+          <div id="workflow" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
+                <ClipboardCheck size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Quy trình 3 vòng đánh giá</h2>
+                <p className="text-sm text-slate-500">
+                  Luồng đánh giá tuần tự: vòng sau chỉ mở khi vòng trước đã nộp.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
+              <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
+                {roleLabels[viewRole]} — {roleWorkflows[viewRole].length} vòng
+              </h3>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {roleWorkflows[viewRole].map((step, index) => (
+                  <div key={`${viewRole}-wf-${index}`} className="flex items-center gap-2">
+                    <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
+                    </div>
+                    {index < roleWorkflows[viewRole].length - 1 && (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200/70 text-slate-500">
+                        <ArrowRight size={14} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
