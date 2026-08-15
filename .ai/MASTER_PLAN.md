@@ -454,3 +454,35 @@
 **Reviewer R2 (15-08)**: **PASS** ✅ — icon list khớp tuyệt đối code thật (12 icon import, XÓA 7/GIỮ 5 đúng L5-18); hằng↔render khớp 1-1; quickLinks xóa cả render (L321-331); ảnh 01-05 ↔ print-guide.html khớp (L527/654/706/751/756). 1 góp ý minor (đã sửa): page.tsx còn ~210-260 dòng.
 
 **Kết quả thực thi (15-08)**: 3 tasks DONE (chi tiết `tasks.md`). **page.tsx 738 → 208 dòng** (−529): xóa 6 section cũ (#huong-dan/#vai-tro/#workflow/#bao-cao/#ai-ho-tro/#quan-ly-du-lieu) + 7 hằng data (usageGuide/roleGuides/roleWorkflows/managementGuide/permissionMatrix/aiGuide/quickLinks/reportingGuide) + chips quickLinks + dọn 7 import icon (giữ 5: HelpCircle/Lock/Printer/Settings2/UsersRound). Trang chỉ còn: header gọn + block #huong-dan-vai-tro (guide-content 4 role) + cột phải Nguyên tắc quyền truy cập. Build PASS + lint 0 errors + tsc PASS + E2E 4 role ALL PASS (steps/faq/ảnh không đổi) + visual verified không còn section trùng + ảnh /screenshots/01-05 còn nguyên (print-guide.html legacy OK). Commits: `879308c` + docs — chưa push.
+
+### Phase 73: Nút "THÊM NHÂN VIÊN" ở trang chi tiết nhóm 🟡 (2026-08-15)
+
+> **Yêu cầu anh** (15-08): bổ sung nút "THÊM NHÂN VIÊN" vào trang chi tiết nhóm (`/teams/[id]`) để thêm nhân viên — **nhóm mặc định là nhóm đang thao tác**. Task chạm DB (tạo user) → Reviewer duyệt plan trước khi thực thi (rule 14-08).
+
+**Bằng chứng (code thật 15-08)**:
+- `src/app/teams/[id]/page.tsx` — trang chi tiết nhóm: header có link "Quay lại" + h1 team.name + Leader + cụm KPI compact (thành viên/đã đánh giá/còn lại) tại L168-198; KHÔNG có nút thêm nhân viên. `teamId = params.id`.
+- `src/components/modals/EmployeeModal.tsx` — modal thêm/sửa nhân viên ĐÃ hỗ trợ sẵn `restrictToTeamId` (L14): `initialTeamId = employee?.teamId || restrictToTeamId || firstTeamId` (L60) → nếu truyền teamId, nhóm mặc định đúng nhóm đó; select Nhóm `disabled={!!restrictToTeamId}` (L167) → không đổi nhóm được. Đúng yêu cầu "nhóm mặc định là nhóm đang thao tác".
+- `src/actions/users.ts` `upsertUserAction` (L146) — `requireManager()` (L149): CHỈ Manager được tạo/sửa nhân viên (Leader/SubLeader KHÔNG có quyền theo action hiện tại, dù guide nói Leader "được thêm" — action thực tế chặn; ghi chú mở rộng sau nếu cần).
+- `src/app/employees/page.tsx` L598-604 — pattern mở modal + save: gọi `upsertUserAction(payload)` → toast → `queryClient.invalidateQueries(['users'], ['teams'], ['evaluations'])`.
+
+**Thiết kế** (đã sửa theo Reviewer R1 — CHANGES_REQUIRED):
+1. **KHÔNG dùng `components/modals/EmployeeModal.tsx` hiện tại** — Reviewer xác nhận: DEAD CODE (0 import), thiếu 2 trường Phase 61 `subleaderId` + `description`. Modal ĐANG SỐNG là bản inline trong `src/app/employees/page.tsx` (L37-~155, có allUsers/subleaderOptions/subleaderId/description). → **T01a: EXTRACT bản inline từ employees/page.tsx ra `components/modals/EmployeeModal.tsx`** (đầy đủ field, props giữ nguyên behavior) rồi **dùng chung 2 nơi** (employees/page.tsx + teams/[id]/page.tsx) — hết trùng, đúng AC3. Sau extract, xóa bản inline khỏi employees/page.tsx (dùng shared).
+2. **Trang `/teams/[id]`**: thêm nút "THÊM NHÂN VIÊN" (icon UserPlus) trong header, cạnh cụm KPI compact (L177-198) — **chỉ hiển thị khi `isManager`** (khớp quyền upsertUserAction requireManager).
+3. **Mở EmployeeModal** với `restrictToTeamId={teamId}` — nhóm mặc định = nhóm đang mở + select bị khóa (không đổi nhóm). Role options: `['Employee', 'SubLeader']` (không tạo Manager/Leader từ trang nhóm — 1 team 1 Leader rule).
+4. **onSave**: gọi `upsertUserAction(payload)` → toast → **invalidate đúng dạng object v5**: `queryClient.invalidateQueries({ queryKey: ['users'] })`, `{ queryKey: ['teams'] }`, `{ queryKey: ['evaluations'] }` (copy đúng từ employees/page.tsx L602-604).
+5. State: `useState` `isAddModalOpen` + `isSaving` trong TeamDetailPage.
+6. **[THẤP — follow-up, ngoài scope]**: `employees/page.tsx` L357 `canManageEmployees = Manager || Leader` (Leader thấy nút) nhưng `upsertUserAction` L149 `requireManager()` chặn Leader → ghi KNOWN_BUGS/follow-up: hoặc hạ canManageEmployees về Manager-only, hoặc nới action cho Leader (requireRole + scope team). Trang nhóm né đúng bằng gate isManager.
+
+**WBS (4 tasks)**:
+- T01a [src/components/modals/EmployeeModal.tsx] EXTRACT modal inline từ employees/page.tsx (L37-339: EmployeeModalContent L84-339) ra shared component (đầy đủ subleaderId + description + allUsers/subleaderOptions — giữ props caller truyền vào: allUsers + teams, KHÔNG tự fetch useTeams/useAuth nội bộ như bản dead-code cũ, tránh double-fetch) + đổi employees/page.tsx dùng shared (bỏ bản inline).
+- T01b [src/app/teams/[id]/page.tsx] Thêm nút "THÊM NHÂN VIÊN" (isManager) + mở EmployeeModal (restrictToTeamId=teamId, roleOptions Employee/SubLeader) + onSave upsertUserAction + invalidate object v5. Import/hook cần thêm: `useState`, `useQueryClient`, `useToast`, `upsertUserAction`, `isManager` (từ useAuth — hiện chỉ destructure `user`), `EmployeeModal` shared, `UserPlus` icon.
+- T02 [verify] lint 0 + tsc + build + browser E2E: login Manager → /teams/{id} → nút hiện → mở modal → field Nhóm = tên nhóm đang mở + disabled → thêm NV mới (mã/họ tên/chức vụ/ngày) → save → assert: KPI "thành viên" +1 + block "Chưa gán SubLeader" +1 (NV mới không gán SubLeader) + status "Chưa bắt đầu". Verify Leader KHÔNG thấy nút.
+- T03 [docs] MASTER_PLAN + HANDOFF + commit.
+
+**Verify phase**: lint 0 errors + build PASS + E2E Manager thêm NV thành công từ trang nhóm (nhóm đúng, memberRows +1) + Leader không thấy nút + audit CREATE_USER ghi.
+
+**CONTROLLED route** (chạm DB — tạo user) — Reviewer check plan trước (yêu cầu anh 14-08); thực thi qua runner agy (T01a/b) + Mika verify (T02).
+
+**Reviewer R1 (15-08)**: CHANGES_REQUIRED — (1) [CAO] EmployeeModal.tsx cũ là DEAD CODE (0 import) + thiếu subleaderId/description → chọn extract modal inline sống (employees L37-339) ra shared, dùng chung 2 nơi; (2) [TB] invalidate dạng object v5; (3) [TB] T02 assert unassigned block; (4) [THẤP] follow-up canManageEmployees vs requireManager → KNOWN_BUGS. → re-review vòng 2.
+
+**Reviewer R2 (15-08)**: **PASS** ✅ — logic khớp code thật (NV mới subleaderId null → block "Chưa gán SubLeader" L120-122; KPI +1; ensureEvaluationsForUsers tạo NotStarted; gate isManager đúng; assertLeadershipSlot chỉ chặn Leader → SubLeader không mâu thuẫn). 3 góp ý thấp (đã sửa): T01a phạm vi L37-339 + shared modal giữ props caller truyền (không tự fetch useTeams/useAuth cũ); T01b liệt kê import cần thêm (useState/useQueryClient/useToast/upsertUserAction/isManager/EmployeeModal/UserPlus).

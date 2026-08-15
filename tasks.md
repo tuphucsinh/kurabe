@@ -608,3 +608,77 @@
 **Definition of Done**: git clean (không push — chờ anh).
 
 **Status**: `[x]` — DONE 15-08: MASTER_PLAN Phase 72 DONE + HANDOFF update + commits `879308c` (T01) + docs (T03).
+
+## Phase 73: Nút "THÊM NHÂN VIÊN" ở trang chi tiết nhóm 🟡 (2026-08-15)
+
+> Yêu cầu anh: thêm nút "THÊM NHÂN VIÊN" ở trang chi tiết nhóm — nhóm mặc định = nhóm đang thao tác. Task chạm DB (tạo user) → Reviewer R1→R2 PASS. Chi tiết: `.ai/MASTER_PLAN.md` Phase 73.
+
+### [#P73T01a] [src/components/modals/EmployeeModal.tsx] Extract modal inline từ employees/page.tsx ra shared
+
+**Goal**: Modal thêm/sửa nhân viên thành shared component — dùng chung 2 nơi (employees + teams/[id]).
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. EXTRACT modal inline từ `src/app/employees/page.tsx` (L37-339: EmployeeModalContent L84-339) ra `src/components/modals/EmployeeModal.tsx` — ĐẦY ĐỦ field: mã NV, họ tên, chức vụ, nhóm, ngày vào, `subleaderId` (dropdown gán SubLeader), `description` (chức danh).
+2. Props do caller truyền vào (allUsers + teams + restrictToTeamId + roleOptions...) — KHÔNG tự fetch useTeams/useAuth nội bộ (tránh double-fetch, khác bản dead-code cũ).
+3. Đổi employees/page.tsx dùng shared (bỏ bản inline).
+
+**Definition of Done**: tsc PASS + lint 0 + employees/page.tsx vẫn hoạt động như cũ.
+
+**Status**: `[ ]`
+
+---
+
+### [#P73T01b] [src/app/teams/[id]/page.tsx] Thêm nút "THÊM NHÂN VIÊN"
+
+**Goal**: Trang chi tiết nhóm có nút thêm nhân viên — nhóm mặc định = nhóm đang mở.
+
+**Depends on**: `[#P73T01a]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Import/hook thêm: `useState`, `useQueryClient`, `useToast`, `upsertUserAction`, `isManager` (từ useAuth — hiện chỉ destructure `user`), `EmployeeModal` shared, `UserPlus` icon.
+2. Nút "THÊM NHÂN VIÊN" (icon UserPlus) trong header cạnh KPI compact (L177-198) — **chỉ hiện khi `isManager`**.
+3. Mở `EmployeeModal` với `restrictToTeamId={teamId}` (nhóm mặc định = nhóm đang mở + select disabled) + `roleOptions={['Employee', 'SubLeader']}`.
+4. onSave: `upsertUserAction(payload)` → toast → invalidate object v5: `queryClient.invalidateQueries({ queryKey: ['users'] })` + `{ queryKey: ['teams'] }` + `{ queryKey: ['evaluations'] }`.
+5. State: `isAddModalOpen` + `isSaving`.
+
+**Definition of Done**: tsc PASS + lint 0.
+
+**Status**: `[ ]`
+
+---
+
+### [#P73T02] [verify] Lint/tsc/build + browser E2E thêm NV từ trang nhóm
+
+**Goal**: Verify chức năng hoạt động đúng + quyền đúng.
+
+**Depends on**: `[#P73T01b]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Kill server đúng PID → npm run build PASS → start → curl /teams/{id} 200.
+2. Browser E2E (Manager 158): /teams/{id} → nút "THÊM NHÂN VIÊN" hiện → mở modal → field Nhóm = tên nhóm đang mở + disabled → thêm NV mới (mã/họ tên/chức vụ Employee/ngày) → save.
+3. Assert: KPI "thành viên" +1 + block "Chưa gán SubLeader" +1 (NV mới subleaderId null) + member mới status "Chưa bắt đầu" (ensureEvaluationsForUsers tạo NotStarted).
+4. Verify Leader (663) KHÔNG thấy nút (gate isManager).
+5. Audit CREATE_USER ghi.
+
+**Definition of Done**: build PASS + E2E PASS (Manager thêm thành công + Leader không thấy nút).
+
+**Status**: `[ ]`
+
+---
+
+### [#P73T03] [docs] MASTER_PLAN + HANDOFF + commit
+
+**Goal**: Ghi kết quả + commit.
+
+**Depends on**: `[#P73T02]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. MASTER_PLAN Phase 73 DONE.
+2. HANDOFF update + ghi follow-up canManageEmployees vs requireManager vào KNOWN_BUGS.
+3. Commit + tick (không push — chờ anh).
+
+**Definition of Done**: git clean (chưa push).
+
+**Status**: `[ ]`
