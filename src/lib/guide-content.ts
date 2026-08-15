@@ -197,12 +197,6 @@ export const guideContent: Record<GuideRole, GuideSection> = {
         annotate: null,
       },
       {
-        title: 'Dùng tính năng AI khi chấm điểm',
-        body: 'Khi chấm điểm, bấm Gợi ý nhận xét AI để hệ thống tự viết nhận xét dựa trên điểm và ghi chú (chạy 10–60 giây, chỉ bấm 1 lần). Nội dung AI chỉ là gợi ý — rà soát và chỉnh sửa cho khớp thực tế trước khi gửi.',
-        screenshotPath: '/screenshots/guide/leader-08-ai.jpg',
-        annotate: null,
-      },
-      {
         title: 'Xem báo cáo phạm vi nhóm',
         body: 'Trang Báo cáo cho thấy phân bổ xếp loại, biểu đồ năng lực và so sánh giữa các nhóm. Bạn chỉ xem được dữ liệu trong phạm vi quyền của mình; nếu cần dữ liệu toàn hệ thống hãy liên hệ Manager.',
         screenshotPath: '/screenshots/guide/leader-09-reports.jpg',
@@ -267,12 +261,6 @@ export const guideContent: Record<GuideRole, GuideSection> = {
         title: 'Sửa lại đánh giá khi bị trả về',
         body: 'Nếu Leader/Manager trả lại đánh giá, bạn sẽ thấy banner vàng ghi rõ lý do. Mở phiếu, xem lý do, chỉnh sửa điểm/ghi chú rồi bấm Gửi Đánh giá lần nữa để gửi lại.',
         screenshotPath: '/screenshots/guide/subleader-06-return.jpg',
-        annotate: null,
-      },
-      {
-        title: 'Dùng tính năng AI khi chấm điểm',
-        body: 'Khi chấm điểm, bấm Gợi ý nhận xét AI để hệ thống tự viết nhận xét dựa trên điểm và ghi chú (chạy 10–60 giây, chỉ bấm 1 lần). Nội dung AI chỉ là gợi ý — rà soát và chỉnh sửa cho khớp thực tế trước khi gửi.',
-        screenshotPath: '/screenshots/guide/subleader-07-ai.jpg',
         annotate: null,
       },
     ],

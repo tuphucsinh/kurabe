@@ -386,30 +386,30 @@ export default function SupportPage() {
 
       <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-6">
-          <div id="huong-dan-vai-tro" className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+          <div id="huong-dan-vai-tro" className="rounded-[24px] border-2 border-cyan-200 bg-gradient-to-br from-white via-cyan-50/40 to-cyan-100/60 p-6 md:p-8 shadow-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-800">
-                  <UsersRound size={22} />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-800 shadow-md">
+                  <UsersRound size={30} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">Hướng dẫn theo vai trò của bạn</h2>
-                  <p className="text-sm text-slate-500">
+                  <h2 className="text-2xl md:text-3xl font-black text-slate-950">Hướng dẫn theo vai trò của bạn</h2>
+                  <p className="text-sm md:text-base text-slate-500">
                     Các bước thực hiện chuẩn theo quy trình cho vai trò đang chọn.
                   </p>
                 </div>
               </div>
               {isManager ? (
-                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl border border-slate-200/60">
+                <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white rounded-2xl border-2 border-cyan-200 shadow-sm">
                   {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
                     <button
                       key={role}
                       type="button"
                       onClick={() => setViewRole(role)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-5 py-2.5 rounded-xl text-sm md:text-base font-black transition-all cursor-pointer ${
                         viewRole === role
-                          ? 'bg-[#07384d] text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                          ? 'bg-[#07384d] text-white shadow-md scale-[1.02]'
+                          : 'text-slate-600 hover:text-[#07384d] hover:bg-cyan-50'
                       }`}
                     >
                       {roleLabels[role]}
@@ -417,14 +417,14 @@ export default function SupportPage() {
                   ))}
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 border border-slate-200/60 px-3.5 py-1.5 text-xs font-bold text-slate-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <div className="inline-flex items-center gap-2 rounded-2xl bg-white border-2 border-cyan-200 px-4 py-2 text-sm font-black text-slate-700 shadow-sm">
+                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
                   Vai trò: {roleLabels[currentRole]}
                 </div>
               )}
             </div>
 
-            <div className="mt-6 rounded-[20px] border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-medium leading-7 text-cyan-950">
+            <div className="mt-6 rounded-[20px] border border-cyan-200 bg-cyan-50/80 p-5 text-base font-medium leading-7 text-cyan-950">
               {activeGuide.intro}
             </div>
 
