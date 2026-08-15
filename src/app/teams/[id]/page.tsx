@@ -264,6 +264,10 @@ export default function TeamDetailPage() {
                 const leaderGrade = leaderEvaluation?.finalGrade || (leaderSubmitted.length ? leaderSubmitted[0].grade : null);
                 const leaderGradeRound = leaderSubmitted[0]?.round ?? null;
                 const leaderScore = leaderSubmitted[0]?.totalScore ?? null;
+                const leaderPreviousRounds = leaderSubmitted
+                  .filter(r => leaderGradeRound != null ? r.round !== leaderGradeRound : true)
+                  .sort((a, b) => b.round - a.round)
+                  .map(r => ({ round: r.round, score: r.totalScore }));
                 return (
                   <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                     <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
@@ -297,6 +301,12 @@ export default function TeamDetailPage() {
                                 <span className="text-base text-slate-800 font-bold mt-1">{leaderScore}</span>
                               </div>
                             )}
+                            {leaderPreviousRounds.map((roundData) => (
+                              <div key={`leader-prev-${roundData.round}`} className="w-12 flex flex-col items-center leading-none opacity-55">
+                                <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                              </div>
+                            ))}
                           </div>
                         )}
                         <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${leaderBadge.className}`}>
@@ -329,6 +339,10 @@ export default function TeamDetailPage() {
               const slGrade = slEvaluation?.finalGrade || (slSubmitted.length ? slSubmitted[0].grade : null);
               const slGradeRound = slSubmitted[0]?.round ?? null;
               const slScore = slSubmitted[0]?.totalScore ?? null;
+              const slPreviousRounds = slSubmitted
+                .filter(r => slGradeRound != null ? r.round !== slGradeRound : true)
+                .sort((a, b) => b.round - a.round)
+                .map(r => ({ round: r.round, score: r.totalScore }));
               return (
               <div
                 key={sl.id}
@@ -366,6 +380,12 @@ export default function TeamDetailPage() {
                               <span className="text-base text-slate-800 font-bold mt-1">{slScore}</span>
                             </div>
                           )}
+                          {slPreviousRounds.map((roundData) => (
+                            <div key={`sl-prev-${roundData.round}`} className="w-12 flex flex-col items-center leading-none opacity-55">
+                              <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                              <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
                       <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
