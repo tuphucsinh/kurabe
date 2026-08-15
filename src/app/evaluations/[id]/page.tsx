@@ -683,7 +683,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <div className="flex-1 space-y-6">
             <GroupNavTabs
               groups={criteriaGroups}
-              activeGroupId={activeGroupId}
+              activeGroupId={activeGroup?.id ?? activeGroupId}
               onSelect={setActiveGroupId}
               scores={scores}
             />
