@@ -77,3 +77,42 @@ export async function callAI(
   const second = await attempt(Math.max(2500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 8 CÂU, KHÔNG PHÂN TÍCH.');
   return second;
 }
+
+// Vision: gửi ảnh (base64 dataURL) + text — model vision riêng (gpt-5.6-luna KHÔNG nhận ảnh — đã test 400; qwen3.7-plus hoạt động).
+const DEFAULT_VISION_MODEL = 'qwen3.7-plus';
+
+export async function callAIVision(
+  prompt: string,
+  imageBase64: string, // data URL hoặc base64 thuần của ảnh (jpg/png)
+  opts: { maxTokens?: number } = {}
+): Promise<string | null> {
+  const apiKey = process.env.AI_API_KEY;
+  if (!apiKey) return null;
+  const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const model = process.env.AI_VISION_MODEL || DEFAULT_VISION_MODEL;
+  const dataUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: dataUrl } },
+        ] }],
+        max_tokens: opts.maxTokens ?? 500,
+        temperature: 0.3,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) { console.error('callAIVision HTTP error:', res.status); return null; }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    return typeof text === 'string' && text.trim() ? text.trim() : null;
+  } catch (err) { console.error('callAIVision error:', err); return null; }
+}
+

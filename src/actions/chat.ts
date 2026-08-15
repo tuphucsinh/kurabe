@@ -1,13 +1,26 @@
 'use server';
 
 import { requireRole } from '@/lib/auth';
-import { callAI, isAIConfigured } from '@/lib/ai';
+import { callAI, callAIVision, isAIConfigured } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getActivePeriod, getEvaluationByEmployee } from '@/lib/db/evaluations';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const CHAT_LIMIT = 15;
 const CHAT_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 giờ
+
+function pageName(pathname: string): string {
+  if (pathname.includes('/dashboard')) return 'bảng điều khiển';
+  if (pathname.includes('/teams')) return 'danh sách nhóm / chi tiết nhóm';
+  if (pathname.includes('/employees')) return 'danh sách nhân viên';
+  if (pathname.includes('/reports')) return 'báo cáo';
+  if (pathname.includes('/criteria')) return 'tiêu chuẩn đánh giá';
+  if (pathname.includes('/settings')) return 'cài đặt';
+  if (pathname.includes('/evaluations')) return 'phiếu đánh giá';
+  if (pathname.includes('/support')) return 'trang hướng dẫn';
+  return 'hệ thống';
+}
 
 // Đọc knowledge MỘT LẦN ở module load (cache) — PII-sanitized
 let knowledgeCache: string | null = null;
@@ -63,14 +76,7 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { error: auth.error };
   const role = auth.user?.role ?? 'Employee';
-  const page = pathname.includes('/dashboard') ? 'bảng điều khiển' :
-    pathname.includes('/teams') ? 'danh sách nhóm / chi tiết nhóm' :
-    pathname.includes('/employees') ? 'danh sách nhân viên' :
-    pathname.includes('/reports') ? 'báo cáo' :
-    pathname.includes('/criteria') ? 'tiêu chuẩn đánh giá' :
-    pathname.includes('/settings') ? 'cài đặt' :
-    pathname.includes('/evaluations') ? 'phiếu đánh giá' :
-    pathname.includes('/support') ? 'trang hướng dẫn' : 'hệ thống';
+  const page = pageName(pathname || '');
   const hint = role === 'Manager'
     ? 'Chị cần xem tiến độ, báo cáo hay giải đáp thắc mắc về đánh giá, em hỗ trợ được ạ.'
     : 'Chị gặp thắc mắc về thao tác hay gặp lỗi gì, em hướng dẫn giúp chị ạ.';
@@ -102,13 +108,28 @@ export async function chatAskAction(input: {
     return { error: 'Tính năng trợ lý chưa sẵn sàng, chị vui lòng thử lại sau ạ.' };
   }
 
+  const page = pageName(input.pathname || '');
+
+  let evalContext = '';
+  const m = (input.pathname || '').match(/^\/evaluations\/([0-9a-f-]{36})$/);
+  if (m) {
+    try {
+      const period = await getActivePeriod();
+      const ev = await getEvaluationByEmployee(m[1], period?.id, auth.user);
+      if (ev) {
+        const submitted = (ev.rounds || []).filter((r) => r.status === 'Submitted' || r.submittedAt);
+        evalContext = `\nNgữ cảnh phiếu đánh giá đang mở (ẨN DANH — không có tên): vai trò nhân viên = ${ev.employeeRole || '?'}; trạng thái phiếu = ${ev.status || '?'}; vòng hiện tại = ${ev.currentRound ?? '?'}; số vòng đã nộp = ${submitted.length}; các vòng đã nộp = [${submitted.map((r) => 'V' + r.round).join(', ')}].`;
+      }
+    } catch { /* fail-soft: bỏ qua context */ }
+  }
+
   const history = (input.history || []).slice(-12);
-  let prompt = question;
+  let prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.${evalContext ? `\n${evalContext}` : ''}\n\nCâu hỏi mới của chị:\n${question}`;
   if (history.length > 0) {
     const historyText = history
       .map((m) => `${m.role === 'user' ? 'Chị' : 'Em'}: ${m.text}`)
       .join('\n');
-    prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\nCâu hỏi mới của chị:\n${question}`;
+    prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.\n\nLịch sử hội thoại (12 lượt gần nhất):\n${historyText}${evalContext ? `\n${evalContext}` : ''}\n\nCâu hỏi mới của chị:\n${question}`;
   }
 
   const reply = await callAI(prompt, {
@@ -124,3 +145,42 @@ export async function chatAskAction(input: {
   }
   return { reply };
 }
+
+export async function chatAskWithScreenshotAction(input: {
+  question: string;
+  pathname: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+  imageBase64: string;
+}): Promise<{ reply?: string; error?: string }> {
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null) return { error: auth.error };
+  const userId = auth.user?.id;
+  const role = auth.user?.role ?? 'Employee';
+  if (!userId) return { error: 'Không xác định được tài khoản.' };
+  const question = (input.question || '').trim();
+  if (!question) return { error: 'Chị chưa nhập câu hỏi.' };
+  // server-side size cap: độ dài chuỗi base64 ≤ 900KB (Reviewer R2+R3)
+  if (!input.imageBase64 || input.imageBase64.length > 921600) {
+    return { error: 'Ảnh quá lớn hoặc không hợp lệ. Chị thử lại với ảnh nhỏ hơn ạ.' };
+  }
+  if (role !== 'Manager') {
+    const recent = await countRecent(userId);
+    if (recent >= CHAT_LIMIT) return { error: 'Chị đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.' };
+  }
+  if (!isAIConfigured()) return { error: 'Tính năng trợ lý chưa sẵn sàng, chị vui lòng thử lại sau ạ.' };
+  const page = pageName(input.pathname || '');
+  const history = (input.history || []).slice(-12);
+  let prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.\n\nCâu hỏi mới của chị:\n${question}`;
+  if (history.length > 0) {
+    const historyText = history
+      .map((m) => `${m.role === 'user' ? 'Chị' : 'Em'}: ${m.text}`)
+      .join('\n');
+    prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.\n\nLịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\nCâu hỏi mới của chị:\n${question}`;
+  }
+  const system = buildSystem(role) + '\nChị vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.';
+  const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500 });
+  if (!reply) return { error: 'Em chưa phân tích được ảnh lúc này, chị thử lại sau nhé.' };
+  if (role !== 'Manager') await recordUsage(userId);
+  return { reply };
+}
+

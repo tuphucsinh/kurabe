@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
-import { chatAskAction, chatGreetingAction } from '@/actions/chat';
+import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction } from '@/actions/chat';
+import { domToPng } from 'modern-screenshot';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -18,6 +19,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sendingShot, setSendingShot] = useState(false);
   const [greeted, setGreeted] = useState(false);
 
   // Chỉ hiển thị cho Manager/Leader/SubLeader
@@ -36,7 +38,7 @@ export default function ChatWidget() {
 
   const send = async () => {
     const q = input.trim();
-    if (!q || loading) return;
+    if (!q || loading || sendingShot) return;
     setInput('');
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setLoading(true);
@@ -44,6 +46,33 @@ export default function ChatWidget() {
     const reply = res.reply || res.error || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.';
     setMessages((m) => [...m, { role: 'assistant', text: reply }]);
     setLoading(false);
+  };
+
+  const captureAndSend = async () => {
+    if (loading || sendingShot) return;
+    const q = input.trim() || 'Chị gửi ảnh màn hình này để em xem giúp.';
+    setInput('');
+    setMessages((m) => [...m, { role: 'user', text: q + ' (kèm ảnh màn hình)' }]);
+    setSendingShot(true);
+    try {
+      const dataUrl = await domToPng(document.body, { scale: 0.5, backgroundColor: '#f8fafc', quality: 0.8 });
+      let b64 = dataUrl.split(',')[1] || '';
+      if (b64.length > 921600) {
+        // giảm scale tiếp nếu quá 900KB base64
+        const dataUrl2 = await domToPng(document.body, { scale: 0.3, backgroundColor: '#f8fafc', quality: 0.7 });
+        b64 = dataUrl2.split(',')[1] || '';
+      }
+      if (b64.length > 921600) {
+        setMessages((m) => [...m, { role: 'assistant', text: 'Ảnh quá lớn, chị có thể thu nhỏ cửa sổ rồi thử lại ạ.' }]);
+        setSendingShot(false);
+        return;
+      }
+      const res = await chatAskWithScreenshotAction({ question: q, pathname: pathname || '/', history: messages.slice(-12), imageBase64: b64 });
+      setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em chưa phân tích được lúc này.' }]);
+    } catch {
+      setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa chụp được màn hình, chị thử lại nhé.' }]);
+    }
+    setSendingShot(false);
   };
 
   return (
@@ -88,7 +117,7 @@ export default function ChatWidget() {
                 </div>
               </div>
             ))}
-            {loading && (
+            {(loading || sendingShot) && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-2xl text-sm bg-white border border-outline-variant flex items-center gap-2">
                   <Loader2 size={14} className="animate-spin text-outline" /> Em đang xem giúp chị...
@@ -104,12 +133,23 @@ export default function ChatWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
                 placeholder="Nhập câu hỏi..."
-                disabled={loading}
+                disabled={loading || sendingShot}
                 className="flex-1 px-3 py-2 rounded-xl border border-outline-variant text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               />
               <button
+                type="button"
+                onClick={captureAndSend}
+                disabled={loading || sendingShot}
+                className="p-2.5 rounded-xl border border-outline-variant text-outline hover:text-primary hover:border-primary/50 disabled:opacity-40 transition-all"
+                aria-label="Gửi ảnh màn hình"
+                title="Gửi ảnh màn hình"
+              >
+                <Camera size={18} />
+              </button>
+              <button
+                type="button"
                 onClick={send}
-                disabled={loading || !input.trim()}
+                disabled={loading || sendingShot || !input.trim()}
                 className="p-2.5 rounded-xl bg-primary text-white disabled:opacity-40 hover:bg-primary/90 transition-all"
                 aria-label="Gửi"
               >
