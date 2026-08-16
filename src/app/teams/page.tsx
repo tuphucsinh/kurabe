@@ -159,21 +159,21 @@ export default function TeamsPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Cụm KPI Compact */}
-          <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm divide-x divide-slate-200">
-            <div className="px-4 py-2.5 flex items-center gap-2">
-              <Users size={18} className="text-slate-400 shrink-0" />
+          <div className="grid grid-cols-3 gap-1 bg-white rounded-xl border border-outline-variant/80 p-1 shadow-sm md:flex md:items-center md:px-1 md:py-0.5 md:gap-0 md:divide-x md:divide-slate-200">
+            <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+              <Users size={18} className="text-slate-400 shrink-0 hidden md:block" />
               <span className="font-black text-lg text-on-surface">{teamsData.length}</span>
-              <span className="text-sm text-slate-500">tổng nhóm</span>
+              <span className="text-[11px] md:text-sm text-slate-500">tổng nhóm</span>
             </div>
-            <div className="px-4 py-2.5 flex items-center gap-2">
-              <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+            <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+              <CheckCircle2 size={18} className="text-green-500 shrink-0 hidden md:block" />
               <span className="font-black text-lg text-on-surface">{totalCompleted}/{totalMembers}</span>
-              <span className="text-sm text-slate-500">đã đánh giá</span>
+              <span className="text-[11px] md:text-sm text-slate-500">đã đánh giá</span>
             </div>
-            <div className="px-4 py-2.5 flex items-center gap-2">
-              <TrendingUp size={18} className="text-amber-500 shrink-0" />
+            <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+              <TrendingUp size={18} className="text-amber-500 shrink-0 hidden md:block" />
               <span className="font-black text-lg text-on-surface">{overallProgress}%</span>
-              <span className="text-sm text-slate-500">tiến độ</span>
+              <span className="text-[11px] md:text-sm text-slate-500">tiến độ</span>
             </div>
           </div>
 
@@ -224,7 +224,7 @@ export default function TeamsPage() {
                               e.stopPropagation();
                               handleEditTeam(team as unknown as Team);
                             }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
                             title="Chỉnh sửa nhóm"
                           >
                             <Edit2 size={16} />
@@ -235,7 +235,7 @@ export default function TeamsPage() {
                               e.stopPropagation();
                               handleDeleteTeam(team.id, team.name);
                             }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                             title="Xóa nhóm"
                           >
                             <Trash2 size={16} />

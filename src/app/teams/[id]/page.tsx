@@ -215,21 +215,21 @@ export default function TeamDetailPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Cụm KPI Compact */}
-            <div className="flex items-center bg-white rounded-xl border border-outline-variant/80 px-1 py-0.5 shadow-sm divide-x divide-slate-200">
-              <div className="px-4 py-2.5 flex items-center gap-2">
-                <Users size={18} className="text-slate-400 shrink-0" />
+            <div className="grid grid-cols-3 gap-1 bg-white rounded-xl border border-outline-variant/80 p-1 shadow-sm md:flex md:items-center md:px-1 md:py-0.5 md:gap-0 md:divide-x md:divide-slate-200">
+              <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+                <Users size={18} className="text-slate-400 shrink-0 hidden md:block" />
                 <span className="font-black text-lg text-on-surface">{memberRows.length}</span>
-                <span className="text-sm text-slate-500">thành viên</span>
+                <span className="text-[11px] md:text-sm text-slate-500">thành viên</span>
               </div>
-              <div className="px-4 py-2.5 flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+              <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+                <CheckCircle2 size={18} className="text-green-500 shrink-0 hidden md:block" />
                 <span className="font-black text-lg text-on-surface">{completedCount}/{memberRows.length}</span>
-                <span className="text-sm text-slate-500">đã đánh giá</span>
+                <span className="text-[11px] md:text-sm text-slate-500">đã đánh giá</span>
               </div>
-              <div className="px-4 py-2.5 flex items-center gap-2">
-                <Clock size={18} className="text-amber-500 shrink-0" />
+              <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2">
+                <Clock size={18} className="text-amber-500 shrink-0 hidden md:block" />
                 <span className="font-black text-lg text-on-surface">{pendingCount}</span>
-                <span className="text-sm text-slate-500">còn lại</span>
+                <span className="text-[11px] md:text-sm text-slate-500">còn lại</span>
               </div>
             </div>
 
@@ -281,7 +281,7 @@ export default function TeamDetailPage() {
                 return (
                   <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                     <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                      <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                      <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] sm:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
@@ -323,14 +323,14 @@ export default function TeamDetailPage() {
                         ) : (
                           <span className="w-[104px]" />
                         )}
-                        <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${leaderBadge.className}`}>
+                        <span className={`col-span-3 sm:col-span-1 w-full sm:w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${leaderBadge.className}`}>
                           {leaderBadge.label}
                         </span>
                       </div>
                       {leaderEvaluation && (
                         <Link
                           href={`/evaluations/${leader.id}`}
-                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                           title="Xem đánh giá"
                         >
                           <FileText size={18} />
@@ -364,7 +364,7 @@ export default function TeamDetailPage() {
               >
                 {/* Block Header */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] sm:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
@@ -406,14 +406,14 @@ export default function TeamDetailPage() {
                     ) : (
                       <span className="w-[104px]" />
                     )}
-                    <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
+                    <span className={`col-span-3 sm:col-span-1 w-full sm:w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
                       {slBadge.label}
                     </span>
                   </div>
                   {slEvaluation && (
                     <Link
                       href={`/evaluations/${sl.id}`}
-                      className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                      className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                       title="Xem đánh giá"
                     >
                       <FileText size={18} />
@@ -435,7 +435,7 @@ export default function TeamDetailPage() {
                           key={member.id}
                           className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
-                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] sm:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
@@ -481,13 +481,13 @@ export default function TeamDetailPage() {
                             ) : (
                               <span className="w-[104px]" />
                             )}
-                            <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                            <span className={`col-span-3 sm:col-span-1 w-full sm:w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
                               {badge.label}
                             </span>
                           </div>
                           <Link
                             href={`/evaluations/${member.id}`}
-                            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                             title="Xem đánh giá"
                           >
                             <FileText size={18} />
@@ -529,7 +529,7 @@ export default function TeamDetailPage() {
                         key={member.id}
                         className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
-                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] sm:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
@@ -568,13 +568,13 @@ export default function TeamDetailPage() {
                           ) : (
                             <span className="w-[104px]" />
                           )}
-                          <span className={`w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                          <span className={`col-span-3 sm:col-span-1 w-full sm:w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
                             {badge.label}
                           </span>
                         </div>
                         <Link
                           href={`/evaluations/${member.id}`}
-                          className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                           title="Xem đánh giá"
                         >
                           <FileText size={18} />
