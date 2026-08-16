@@ -116,6 +116,9 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
       return { success: false, error: toClientError(error, 'Lỗi đặt lại mật khẩu. Vui lòng thử lại.') };
     }
 
+    // Xóa toàn bộ session đang active của user khi reset mật khẩu
+    await supabaseAdmin.from('sessions').delete().eq('user_id', userId);
+
     await logAudit(auth.user, 'RESET_PASSWORD', 'user', userId);
     return { success: true };
   } catch (err: unknown) {

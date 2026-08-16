@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Khung gọi LLM (OpenAI-compatible) — sẵn sàng khi Manager cấp API key.
  * Env server-side: AI_API_KEY (bắt buộc), AI_BASE_URL (mặc định OpenAI), AI_MODEL (mặc định gpt-4o-mini).

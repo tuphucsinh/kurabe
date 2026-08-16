@@ -79,18 +79,22 @@ ${baseRules}
 }
 
 async function countRecent(userId: string): Promise<number> {
-  const since = new Date(Date.now() - CHAT_WINDOW_MS).toISOString();
-  const { count, error } = await supabaseAdmin
-    .from('chat_usage')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', since);
-  if (error) return 0;
-  return count ?? 0;
-}
-
-async function recordUsage(userId: string): Promise<void> {
-  await supabaseAdmin.from('chat_usage').insert({ user_id: userId });
+  try {
+    const since = new Date(Date.now() - CHAT_WINDOW_MS).toISOString();
+    const { count, error } = await supabaseAdmin
+      .from('chat_usage')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', since);
+    if (error) {
+      console.error('countRecent DB error:', error.message);
+      return CHAT_LIMIT; // fail-close: nếu lỗi DB, chặn thay vì cho qua
+    }
+    return count ?? 0;
+  } catch (err) {
+    console.error('countRecent exception:', err);
+    return CHAT_LIMIT; // fail-close
+  }
 }
 
 /**
@@ -377,14 +381,20 @@ async function prepareChatContext(
   const question = (input.question || '').trim();
   if (!question) return { ok: false, error: `${Addr} chưa nhập câu hỏi.` };
 
-  if (role !== 'Manager') {
-    const recent = await countRecent(userId);
-    if (recent >= CHAT_LIMIT) {
-      return { ok: false, error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
-    }
+  const recent = await countRecent(userId);
+  if (recent >= CHAT_LIMIT) {
+    return { ok: false, error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
   }
+
   if (!isAIConfigured()) {
     return { ok: false, error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
+  }
+
+  // Reserve slot: ghi nhận usage TRƯỚC khi gọi AI (tránh race condition / burn quota)
+  const { error: reserveErr } = await supabaseAdmin.from('chat_usage').insert({ user_id: userId });
+  if (reserveErr) {
+    console.error('chat_usage reserve error:', reserveErr.message);
+    return { ok: false, error: `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.` };
   }
 
   const page = pageName(input.pathname || '');
@@ -410,7 +420,7 @@ export async function chatAskAction(input: {
 }): Promise<{ reply?: string; error?: string }> {
   const prepared = await prepareChatContext(input);
   if (!prepared.ok) return { error: prepared.error };
-  const { userId, role, addr, user, prompt } = prepared.data;
+  const { role, addr, user, prompt } = prepared.data;
 
   if (input.question.length > 500) {
     return { error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
@@ -423,9 +433,6 @@ export async function chatAskAction(input: {
   });
   if (!reply) {
     return { error: `Em chưa trả lời được lúc này, ${addr} thử lại sau nhé.` };
-  }
-  if (role !== 'Manager') {
-    await recordUsage(userId);
   }
   return { reply };
 }
@@ -444,12 +451,11 @@ export async function chatAskWithScreenshotAction(input: {
 
   const prepared = await prepareChatContext(input);
   if (!prepared.ok) return { error: prepared.error };
-  const { userId, role, addr, Addr, user, prompt } = prepared.data;
+  const { role, addr, Addr, user, prompt } = prepared.data;
 
   const system = buildSystem(role, user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
   const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500, system });
   if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
-  if (role !== 'Manager') await recordUsage(userId);
   return { reply };
 }
 

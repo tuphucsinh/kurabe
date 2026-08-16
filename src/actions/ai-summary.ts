@@ -7,6 +7,7 @@ import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
+import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
 export async function getPeriodSummary(periodId: string): Promise<{ summary?: string; created_at?: string }> {
@@ -36,6 +37,9 @@ export async function generatePeriodSummary(
   if (auth.error !== null) return { error: auth.error };
   if (!periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
   if (!isAIConfigured()) return { error: 'AI chưa được cấu hình (thiếu API key).' };
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodSummary');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   try {
     const [evaluations, users] = await Promise.all([

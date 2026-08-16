@@ -2,7 +2,7 @@
 
 import { requireManager } from '@/lib/auth';
 import { callAI, isAIConfigured } from '@/lib/ai';
-import { buildResultPrompt, type ResultPromptInput } from '@/lib/ai-prompts';
+import { buildResultPrompt } from '@/lib/ai-prompts';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/audit';
@@ -13,6 +13,7 @@ import { getDashboardData } from '@/actions/dashboard';
 import { detectAnomalies } from '@/lib/anomaly';
 import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
+import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -38,6 +39,9 @@ export async function explainAnomalyAction(input: {
   if (!isAIConfigured()) {
     return { error: 'AI chưa được cấu hình — chờ cung cấp API key.' };
   }
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'explainAnomaly');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   const prompt = `Dữ liệu đánh giá QAQC:
 - Nhân viên (mã số ${input.evaluationId.slice(0, 8)}): vòng ${input.round - 1} đạt ${input.prevScore} điểm, vòng ${input.round} đạt ${input.score} điểm (chênh lệch ${Math.abs(input.score - input.prevScore)} điểm).
@@ -67,6 +71,9 @@ export async function suggestCommentAction(input: {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'suggestComment');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   const detailText = input.criteriaDetail.length
     ? input.criteriaDetail
@@ -121,6 +128,9 @@ export async function draftResultMessageAction(input: {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'draftResultMessage');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   const prompt = buildResultPrompt(input);
   const message = await callAI(prompt, { maxTokens: 800, temperature: 0.7 });
@@ -189,6 +199,9 @@ export async function generateResultMessagesChunkAction(input: {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generateResultMessagesChunk');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   const limit = input.limit ?? 5;
   const offset = Math.max(0, input.offset || 0);
@@ -318,6 +331,9 @@ export async function generatePeriodMinutesAction(input: {
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
   if (!input.periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodMinutes');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   try {
     const [d, periodSummaryRes, users, periodRes] = await Promise.all([
