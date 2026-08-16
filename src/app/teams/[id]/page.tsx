@@ -11,6 +11,7 @@ import { upsertUserAction } from '@/actions/users';
 import EmployeeModal from '@/components/modals/EmployeeModal';
 import {
   ArrowLeft,
+  FileText,
   Users,
   CheckCircle2,
   Clock,
@@ -21,6 +22,26 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Evaluation, User } from '@/types';
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  Approved: { label: 'Đã có KQĐG', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
+  NotStarted: { label: 'Chưa bắt đầu', className: 'bg-slate-100 text-slate-500' },
+  InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
+  Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
+  Submitted: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
+  Reviewed: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
+};
+
+function getStatusBadge(status: string, latestRound?: number | null): { label: string; className: string } {
+  if (status === 'Submitted' || status === 'Reviewed') {
+    const roundText = latestRound ? ` vòng ${latestRound}` : '';
+    return {
+      label: `Đã nộp${roundText}`,
+      className: 'bg-blue-100 text-blue-700',
+    };
+  }
+  return STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
+}
 
 const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   Leader: { label: 'Leader', className: 'bg-indigo-100 text-indigo-700' },
@@ -82,10 +103,18 @@ export default function TeamDetailPage() {
       const submittedRounds = ev?.rounds
         ? [...ev.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
         : [];
+      const latestSubmittedRound = submittedRounds[0]?.round ?? ev?.currentRound ?? null;
       const grade = ev?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
       const gradeRound = submittedRounds[0]?.round ?? null;
       const score = submittedRounds[0]?.totalScore ?? null;
-      return { member: m, evaluation: ev || null, status, grade, gradeRound, score };
+      const previousRounds = submittedRounds
+        .slice(1)
+        .sort((a, b) => a.round - b.round)
+        .map((r) => ({
+          round: r.round,
+          score: r.totalScore,
+        }));
+      return { member: m, evaluation: ev || null, status, grade, gradeRound, latestSubmittedRound, score, previousRounds };
     });
   }, [members, evaluations]);
 
@@ -240,16 +269,22 @@ export default function TeamDetailPage() {
                 const leaderSubmitted = leaderEvaluation?.rounds
                   ? [...leaderEvaluation.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
                   : [];
+                const leaderStatus = leaderEvaluation?.status || 'NotStarted';
+                const leaderBadge = getStatusBadge(leaderStatus, leaderSubmitted[0]?.round ?? leaderEvaluation?.currentRound ?? null);
                 const leaderGrade = leaderEvaluation?.finalGrade || (leaderSubmitted.length ? leaderSubmitted[0].grade : null);
                 const leaderGradeRound = leaderSubmitted[0]?.round ?? null;
                 const leaderScore = leaderSubmitted[0]?.totalScore ?? null;
+                const leaderPreviousRounds = leaderSubmitted
+                  .filter(r => leaderGradeRound != null ? r.round !== leaderGradeRound : true)
+                  .sort((a, b) => a.round - b.round)
+                  .map(r => ({ round: r.round, score: r.totalScore }));
                 return (
                   <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                     <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                      <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] items-center gap-3">
+                      <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate" title="Đánh giá">{leader.name}</Link>
+                            <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{leader.name}</Link>
                             <span className="text-xs text-slate-500 font-medium">Mã: {leader.employeeCode}</span>
                             <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/70">
                               Leader
@@ -272,8 +307,14 @@ export default function TeamDetailPage() {
                         )}
                         {leaderGrade && leaderGrade !== 'Pending' ? (
                           <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                            {leaderPreviousRounds.map((roundData) => (
+                              <div key={`leader-prev-${roundData.round}`} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                                <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                              </div>
+                            ))}
                             {leaderGradeRound != null && (
-                              <div className="flex flex-col items-center leading-none">
+                              <div className="w-12 flex flex-col items-center leading-none">
                                 <span className="text-xs text-slate-700 font-bold">L{leaderGradeRound}</span>
                                 <span className="text-base text-slate-800 font-bold mt-1">{leaderScore}</span>
                               </div>
@@ -282,7 +323,19 @@ export default function TeamDetailPage() {
                         ) : (
                           <span className="w-[104px]" />
                         )}
+                        <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${leaderBadge.className}`}>
+                          {leaderBadge.label}
+                        </span>
                       </div>
+                      {leaderEvaluation && (
+                        <Link
+                          href={`/evaluations/${leader.id}`}
+                          className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          title="Xem đánh giá"
+                        >
+                          <FileText size={18} />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
@@ -295,9 +348,15 @@ export default function TeamDetailPage() {
               const slSubmitted = slEvaluation?.rounds
                 ? [...slEvaluation.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
                 : [];
+              const slStatus = slEvaluation?.status || 'NotStarted';
+              const slBadge = getStatusBadge(slStatus, slSubmitted[0]?.round ?? slEvaluation?.currentRound ?? null);
               const slGrade = slEvaluation?.finalGrade || (slSubmitted.length ? slSubmitted[0].grade : null);
               const slGradeRound = slSubmitted[0]?.round ?? null;
               const slScore = slSubmitted[0]?.totalScore ?? null;
+              const slPreviousRounds = slSubmitted
+                .filter(r => slGradeRound != null ? r.round !== slGradeRound : true)
+                .sort((a, b) => a.round - b.round)
+                .map(r => ({ round: r.round, score: r.totalScore }));
               return (
               <div
                 key={sl.id}
@@ -305,10 +364,10 @@ export default function TeamDetailPage() {
               >
                 {/* Block Header */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] items-center gap-3">
+                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate" title="Đánh giá">{sl.name}</Link>
+                        <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{sl.name}</Link>
                         <span className="text-xs text-slate-500 font-medium">Mã: {sl.employeeCode}</span>
                         <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200/70">
                           {sl.description && sl.description.trim() !== '' ? sl.description : 'Chưa có chức danh'}
@@ -331,8 +390,14 @@ export default function TeamDetailPage() {
                     )}
                     {slGrade && slGrade !== 'Pending' ? (
                       <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                        {slPreviousRounds.map((roundData) => (
+                          <div key={`sl-prev-${roundData.round}`} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                            <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                            <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                          </div>
+                        ))}
                         {slGradeRound != null && (
-                          <div className="flex flex-col items-center leading-none">
+                          <div className="w-12 flex flex-col items-center leading-none">
                             <span className="text-xs text-slate-700 font-bold">L{slGradeRound}</span>
                             <span className="text-base text-slate-800 font-bold mt-1">{slScore}</span>
                           </div>
@@ -341,7 +406,19 @@ export default function TeamDetailPage() {
                     ) : (
                       <span className="w-[104px]" />
                     )}
+                    <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${slBadge.className}`}>
+                      {slBadge.label}
+                    </span>
                   </div>
+                  {slEvaluation && (
+                    <Link
+                      href={`/evaluations/${sl.id}`}
+                      className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                      title="Xem đánh giá"
+                    >
+                      <FileText size={18} />
+                    </Link>
+                  )}
                 </div>
 
                 {/* Direct Employees List */}
@@ -351,16 +428,17 @@ export default function TeamDetailPage() {
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {rows.map(({ member, evaluation, grade, gradeRound, score }) => {
+                    {rows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                      const badge = getStatusBadge(status, latestSubmittedRound);
                       return (
                         <div
                           key={member.id}
                           className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
-                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] items-center gap-3">
+                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                                <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
                                 {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
                                   <span
                                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
@@ -387,8 +465,14 @@ export default function TeamDetailPage() {
                             )}
                             {grade && grade !== 'Pending' ? (
                               <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                                {previousRounds.map((roundData) => (
+                                  <div key={roundData.round} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                                    <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                    <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                  </div>
+                                ))}
                                 {gradeRound != null && (
-                                  <div className="flex flex-col items-center leading-none">
+                                  <div className="w-12 flex flex-col items-center leading-none">
                                     <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
                                     <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
                                   </div>
@@ -397,7 +481,17 @@ export default function TeamDetailPage() {
                             ) : (
                               <span className="w-[104px]" />
                             )}
+                            <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                              {badge.label}
+                            </span>
                           </div>
+                          <Link
+                            href={`/evaluations/${member.id}`}
+                            className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                            title="Xem đánh giá"
+                          >
+                            <FileText size={18} />
+                          </Link>
                         </div>
                       );
                     })}
@@ -428,16 +522,17 @@ export default function TeamDetailPage() {
 
                 {/* Unassigned Employees List */}
                 <div className="divide-y divide-slate-100">
-                  {subLeaderBlocks.unassignedRows.map(({ member, grade, gradeRound, score }) => {
+                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                    const badge = getStatusBadge(status, latestSubmittedRound);
                     return (
                       <div
                         key={member.id}
                         className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
-                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] items-center gap-3">
+                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                              <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
                             </div>
                             <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                           </div>
@@ -457,8 +552,14 @@ export default function TeamDetailPage() {
                           )}
                           {grade && grade !== 'Pending' ? (
                             <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                              {previousRounds.map((roundData) => (
+                                <div key={roundData.round} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                                </div>
+                              ))}
                               {gradeRound != null && (
-                                <div className="flex flex-col items-center leading-none">
+                                <div className="w-12 flex flex-col items-center leading-none">
                                   <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
                                   <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
                                 </div>
@@ -467,7 +568,17 @@ export default function TeamDetailPage() {
                           ) : (
                             <span className="w-[104px]" />
                           )}
+                          <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                            {badge.label}
+                          </span>
                         </div>
+                        <Link
+                          href={`/evaluations/${member.id}`}
+                          className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                          title="Xem đánh giá"
+                        >
+                          <FileText size={18} />
+                        </Link>
                       </div>
                     );
                   })}
