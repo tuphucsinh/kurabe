@@ -1,6 +1,6 @@
 'use server';
 
-import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
+import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
@@ -36,7 +36,7 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
 
   try {
     const [evaluations, users, teams, criteriaGroups] = await Promise.all([
-      getEvaluationsByPeriod(periodId, viewer),
+      getEvaluationsByPeriodAdmin(periodId, viewer),
       getUsers(),
       getTeams(),
       getAllCriteriaGroups()

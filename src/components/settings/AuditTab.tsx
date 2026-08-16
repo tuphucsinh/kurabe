@@ -2,18 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { ScrollText, Clock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getAuditLogsAction, AuditRow } from '@/actions/read';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-
-type AuditRow = {
-  id: string;
-  actor_name: string | null;
-  action: string;
-  entity: string;
-  entity_id: string | null;
-  created_at: string | null;
-};
 
 const ACTION_LABELS: Record<string, string> = {
   CREATE_PERIOD: 'Tạo kỳ đánh giá',
@@ -44,14 +35,9 @@ export default function AuditTab() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('id, actor_name, action, entity, entity_id, created_at')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
+      const res = await getAuditLogsAction({ limit: 50 });
       if (!cancelled) {
-        if (!error && data) setRows(data as AuditRow[]);
+        if (!res.error && res.logs) setRows(res.logs);
         setIsLoading(false);
       }
     })();

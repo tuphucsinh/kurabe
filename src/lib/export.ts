@@ -1,6 +1,7 @@
 'use client';
 
-import { getEvaluationsByPeriod, mapPeriodFromDb } from './db/evaluations';
+import { mapPeriodFromDb } from './db/evaluations';
+import { getEvaluationsAction } from '@/actions/read';
 import { getUsers } from './db/users';
 import { getTeams } from './db/teams';
 import { getAllCriteriaGroups } from './db/criteria';
@@ -9,13 +10,12 @@ import { supabase } from './supabase';
 
 /**
  * Xuất dữ liệu đánh giá của một kỳ ra file Excel.
- * viewer: user đang đăng nhập (client AuthContext) — bắt buộc để getEvaluationsByPeriod
- * không bị filterEvaluationsForViewer trả [] (bug viewer — file rỗng).
+ * Dùng getEvaluationsAction (server action, supabaseAdmin) để đọc evaluations an toàn.
  */
 export async function exportEvaluationsToExcel(
   periodId: string,
   options: { includeRoundDetails?: boolean } = {},
-  viewer?: User | null
+  _viewer?: User | null
 ): Promise<void> {
   try {
     // xlsx nặng (~140KB gzip) — chỉ load khi user thật sự bấm export (C1)
@@ -23,7 +23,7 @@ export async function exportEvaluationsToExcel(
 
     // 1. Fetch data
     const [evaluations, users, teams, criteriaGroups, periodData] = await Promise.all([
-      getEvaluationsByPeriod(periodId, viewer),
+      getEvaluationsAction(periodId),
       getUsers(),
       getTeams(),
       getAllCriteriaGroups(),

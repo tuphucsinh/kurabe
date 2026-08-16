@@ -3,7 +3,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireManager } from '@/lib/auth';
 import { callAI, isAIConfigured } from '@/lib/ai';
-import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
+import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsers } from '@/lib/db/users';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
@@ -43,7 +43,7 @@ export async function generatePeriodSummary(
 
   try {
     const [evaluations, users] = await Promise.all([
-      getEvaluationsByPeriod(periodId, auth.user),
+      getEvaluationsByPeriodAdmin(periodId, auth.user),
       getUsers(),
     ]);
 

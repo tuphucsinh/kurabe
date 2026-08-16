@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useUser, useUsers, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
-import { getGradeBandsSync, loadGradeBandsFromDb } from '@/lib/grade-bands';
+import { getGradeBandsSync } from '@/lib/grade-bands';
+import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
 import { getEvaluationAccessState } from '@/data/workflow';
@@ -40,7 +41,7 @@ export default function ComparePage({ params }: ComparePageProps) {
   const [gradeBands, setGradeBands] = useState(() => getGradeBandsSync());
   useEffect(() => {
     let cancelled = false;
-    loadGradeBandsFromDb().then((bands) => { if (!cancelled) setGradeBands(bands); });
+    getGradeBandsAction().then((bands) => { if (!cancelled) setGradeBands(bands); });
     return () => { cancelled = true; };
   }, []);
 

@@ -3,7 +3,8 @@
 import { requireRole } from '@/lib/auth';
 import { callAI, callAIVision, isAIConfigured } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getActivePeriod, getEvaluationByEmployee, getEvaluationsByPeriod } from '@/lib/db/evaluations';
+import { getActivePeriod } from '@/lib/db/evaluations';
+import { getEvaluationByEmployeeAdmin, getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getDashboardData } from '@/actions/dashboard';
 import { getUsers, getUserById } from '@/lib/db/users';
 import { getTeamById, getTeams } from '@/lib/db/teams';
@@ -103,7 +104,7 @@ async function countRecent(userId: string): Promise<number> {
 async function buildManagerSemanticContext(periodId: string, periodName: string, user: User): Promise<string> {
   try {
     const [evaluations, users, teams] = await Promise.all([
-      getEvaluationsByPeriod(periodId, user),
+      getEvaluationsByPeriodAdmin(periodId, user),
       getUsers(user),
       getTeams(user),
     ]);
@@ -249,7 +250,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     const evMatch = (pathname || '').match(/^\/evaluations\/([0-9a-f-]{36})$/);
     if (evMatch) {
       const period = await getActivePeriod();
-      const ev = await getEvaluationByEmployee(evMatch[1], period?.id, user);
+      const ev = await getEvaluationByEmployeeAdmin(evMatch[1], period?.id, user);
       if (ev) {
         const submitted = (ev.rounds || []).filter((r) => r.status === 'Submitted' || r.submittedAt);
         // Tên cụ thể (tên cuối — gọi thân mật, data nội bộ không nhạy cảm)

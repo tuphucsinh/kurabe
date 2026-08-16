@@ -6,7 +6,7 @@ import { buildResultPrompt } from '@/lib/ai-prompts';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/audit';
-import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
+import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsers } from '@/lib/db/users';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getDashboardData } from '@/actions/dashboard';
@@ -208,7 +208,7 @@ export async function generateResultMessagesChunkAction(input: {
 
   try {
     const [evaluations, users, criteriaGroups] = await Promise.all([
-      getEvaluationsByPeriod(input.periodId, auth.user),
+      getEvaluationsByPeriodAdmin(input.periodId, auth.user),
       getUsers(),
       getAllCriteriaGroups(),
     ]);

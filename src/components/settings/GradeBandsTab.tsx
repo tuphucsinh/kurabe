@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { getGradeColor } from '@/lib/scoring';
-import { loadGradeBandsFromDb, GradeBands } from '@/lib/grade-bands';
+import { getGradeBandsAction } from '@/actions/read';
+import { GradeBands } from '@/lib/grade-bands';
 import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate';
 import { saveGradeBands } from '@/actions/grade-bands';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -41,7 +42,7 @@ export default function GradeBandsTab() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const bands = await loadGradeBandsFromDb();
+      const bands = await getGradeBandsAction();
       if (!cancelled) {
         setRows(buildRows(bands));
         setIsLoading(false);

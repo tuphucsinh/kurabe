@@ -11,7 +11,8 @@ import {
   useDeleteCriterion
 } from '@/hooks/use-db';
 import { Criterion, CriteriaGroup } from '@/types';
-import { getGradeBandsSync, loadGradeBandsFromDb } from '@/lib/grade-bands';
+import { getGradeBandsSync } from '@/lib/grade-bands';
+import { getGradeBandsAction } from '@/actions/read';
 import { 
   Award, 
   Info, 
@@ -47,7 +48,7 @@ export default function CriteriaPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await loadGradeBandsFromDb();
+      await getGradeBandsAction();
       if (!cancelled) setGradeTick((t) => t + 1);
     })();
     return () => {

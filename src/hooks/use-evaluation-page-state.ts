@@ -2,10 +2,13 @@
 
 import { useEffect, useReducer, useState } from 'react';
 import { User, Evaluation, EvaluationRound, CriteriaGroup, EvaluationAccessState } from '@/types';
-import { getCriteriaForRole } from '@/lib/db/criteria';
-import { getEvaluationHistoryByEmployee } from '@/lib/db/evaluations';
+import { 
+  getCriteriaForRoleAction, 
+  getEvaluationHistoryAction, 
+  getGradeBandsAction 
+} from '@/actions/read';
 import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
-import { getGradeBandsSync, loadGradeBandsFromDb, GradeBands } from '@/lib/grade-bands';
+import { getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 
 export interface EvaluationState {
   employee: User | null;
@@ -86,7 +89,7 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
 
         // Fetch criteria from DB
         const roleForCriteria = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
-        const dbCriteria = await getCriteriaForRole(roleForCriteria);
+        const dbCriteria = await getCriteriaForRoleAction(roleForCriteria);
         setCriteriaGroups(dbCriteria);
 
         // Identify which round to show/edit
@@ -154,7 +157,7 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     if (isEmployeeOwner && user?.id) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoadingHistory(true);
-      getEvaluationHistoryByEmployee(user.id, user)
+      getEvaluationHistoryAction(user.id)
         .then((data) => { setHistory(data); setIsLoadingHistory(false); })
         .catch((err) => { console.error('Error loading eval history:', err); setIsLoadingHistory(false); });
     }
@@ -163,7 +166,7 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
   // Nạp thang điểm từ DB cho hiển thị client (load trang trực tiếp sẽ còn fallback hardcode nếu thiếu)
   useEffect(() => {
     let cancelled = false;
-    loadGradeBandsFromDb().then((bands) => { if (!cancelled) setGradeBands(bands); });
+    getGradeBandsAction().then((bands) => { if (!cancelled) setGradeBands(bands); });
     return () => { cancelled = true; };
   }, []);
 

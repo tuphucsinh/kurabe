@@ -3,12 +3,13 @@ import { getUsers, getUserById, getUsersByTeam } from '@/lib/db/users';
 import { getTeams, getTeamById } from '@/lib/db/teams';
 import { 
   getPeriods, 
-  getActivePeriod, 
-  getEvaluations, 
-  getEvaluationsByPeriod,
-  getEvaluationById, 
-  getEvaluationByEmployee
+  getActivePeriod
 } from '@/lib/db/evaluations';
+import { 
+  getEvaluationsAction, 
+  getEvaluationByIdAction, 
+  getEvaluationByEmployeeAction 
+} from '@/actions/read';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
@@ -124,21 +125,21 @@ export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], que
 
 export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
   queryKey: ['evaluations', periodId, user?.id],
-  queryFn: () => periodId ? getEvaluationsByPeriod(periodId, user) : getEvaluations(user),
+  queryFn: () => getEvaluationsAction(periodId),
   staleTime: 2 * 60 * 1000,
   enabled: !!user
 });
 
 export const useEvaluation = (id: string, user?: User | null) => useQuery({ 
   queryKey: ['evaluation', id, user?.id], 
-  queryFn: () => getEvaluationById(id, user), 
-  enabled: !!id 
+  queryFn: () => getEvaluationByIdAction(id), 
+  enabled: !!id && !!user 
 });
 
 export const useEvaluationByEmployee = (employeeId: string, periodId?: string, user?: User | null) => useQuery({ 
   queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id], 
-  queryFn: () => getEvaluationByEmployee(employeeId, periodId, user), 
-  enabled: !!employeeId 
+  queryFn: () => getEvaluationByEmployeeAction(employeeId, periodId), 
+  enabled: !!employeeId && !!user 
 });
 
 // Criteria
