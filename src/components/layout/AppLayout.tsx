@@ -107,16 +107,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <nav className="md:hidden fixed bottom-6 left-6 right-6 h-14 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
         {user?.role === 'Employee' ? (
           <>
-            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={24} />} active={pathname.startsWith('/evaluations')} />
-            <BottomNavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} />
-            <BottomNavItem href="/support" icon={<HelpCircle size={24} />} active={pathname === '/support'} />
+            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={24} />} ariaLabel="Phiếu đánh giá" active={pathname.startsWith('/evaluations')} />
+            <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
+            <BottomNavItem href="/support" icon={<HelpCircle size={24} />} ariaLabel="Hướng dẫn" active={pathname === '/support'} />
           </>
         ) : (
           <>
-            <BottomNavItem href="/dashboard" icon={<Home size={24} />} active={pathname === '/dashboard'} />
-            <BottomNavItem href="/teams" icon={<Layout size={24} />} active={pathname === '/teams'} />
-            <BottomNavItem href="/employees" icon={<Users size={24} />} active={pathname === '/employees'} />
-            <BottomNavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} />
+            <BottomNavItem href="/dashboard" icon={<Home size={24} />} ariaLabel="Trang chủ" active={pathname === '/dashboard'} />
+            <BottomNavItem href="/teams" icon={<Layout size={24} />} ariaLabel="Nhóm" active={pathname === '/teams'} />
+            <BottomNavItem href="/employees" icon={<Users size={24} />} ariaLabel="Nhân sự" active={pathname === '/employees'} />
+            <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
           </>
         )}
       </nav>
@@ -124,10 +124,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BottomNavItem({ href, icon, active }: { href: string; icon: React.ReactNode; active: boolean }) {
+function BottomNavItem({ href, icon, ariaLabel, active }: { href: string; icon: React.ReactNode; ariaLabel: string; active: boolean }) {
   return (
     <Link 
       href={href}
+      aria-label={ariaLabel}
       className={`relative flex flex-col items-center justify-center w-14 h-12 transition-all duration-300 ${active ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
     >
       <div className={`transition-transform duration-300 ${active ? '-translate-y-1 scale-110' : ''}`}>

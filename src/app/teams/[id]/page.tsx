@@ -82,18 +82,10 @@ export default function TeamDetailPage() {
       const submittedRounds = ev?.rounds
         ? [...ev.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
         : [];
-      const latestSubmittedRound = submittedRounds[0]?.round ?? ev?.currentRound ?? null;
       const grade = ev?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
       const gradeRound = submittedRounds[0]?.round ?? null;
       const score = submittedRounds[0]?.totalScore ?? null;
-      const previousRounds = submittedRounds
-        .slice(1)
-        .sort((a, b) => a.round - b.round)
-        .map((r) => ({
-          round: r.round,
-          score: r.totalScore,
-        }));
-      return { member: m, evaluation: ev || null, status, grade, gradeRound, latestSubmittedRound, score, previousRounds };
+      return { member: m, evaluation: ev || null, status, grade, gradeRound, score };
     });
   }, [members, evaluations]);
 

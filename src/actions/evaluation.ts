@@ -148,6 +148,20 @@ export async function saveEvaluationRound(
       }
       
       if (isSubmit && checkRound.status === 'Submitted') {
+        // Self-heal: nếu evaluation bị kẹt status (data cũ), tự sửa khi bấm nộp lại (Phase 79)
+        if (nextStep) {
+          const { data: stuckStatus } = await supabaseAdmin
+            .from('evaluations')
+            .select('status')
+            .eq('id', evaluationId)
+            .maybeSingle();
+          if (stuckStatus && stuckStatus.status !== nextStep.status) {
+            await supabaseAdmin
+              .from('evaluations')
+              .update({ status: nextStep.status, updated_at: now })
+              .eq('id', evaluationId);
+          }
+        }
         return { success: true }; // Idempotent: đã submit trước đó
       }
       
@@ -224,22 +238,37 @@ export async function saveEvaluationRound(
           submitFlowError = 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message;
         } else {
           // Guard chống data kẹt: verify status sau update, retry 1 lần nếu lệch (Phase 79)
-          const { data: statusCheck } = await supabaseAdmin
+          const { data: statusCheck, error: statusCheckError } = await supabaseAdmin
             .from('evaluations')
             .select('status')
             .eq('id', evaluationId)
             .maybeSingle();
-          if (statusCheck && statusCheck.status !== evalUpdate.status) {
+          if (statusCheckError) {
+            console.error('[saveEvaluationRound] verify status fail', { id: evaluationId, error: statusCheckError.message });
+          } else if (statusCheck && statusCheck.status !== evalUpdate.status) {
             const { error: retryError } = await supabaseAdmin
               .from('evaluations')
               .update({ status: evalUpdate.status, updated_at: now })
               .eq('id', evaluationId);
             if (retryError) {
-              console.error('[saveEvaluationRound] status khong khop sau update', {
+              console.error('[saveEvaluationRound] status khong khop sau update (retry fail)', {
                 id: evaluationId,
                 expected: evalUpdate.status,
                 actual: statusCheck.status,
               });
+            } else {
+              const { data: recheck } = await supabaseAdmin
+                .from('evaluations')
+                .select('status')
+                .eq('id', evaluationId)
+                .maybeSingle();
+              if (recheck && recheck.status !== evalUpdate.status) {
+                console.error('[saveEvaluationRound] status van lech sau retry', {
+                  id: evaluationId,
+                  expected: evalUpdate.status,
+                  actual: recheck.status,
+                });
+              }
             }
           }
         }
