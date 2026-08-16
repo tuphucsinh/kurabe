@@ -5,7 +5,6 @@ import { getUsersAdmin } from '@/lib/db/users-admin';
 import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { requireRole } from '@/lib/auth';
-import { unstable_cache } from 'next/cache';
 import { Grade, User } from '@/types';
 
 export interface ReportAggregationData {
@@ -224,12 +223,6 @@ export async function getReportAggregation(
   if (!periodId) return null;
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return null;
-  const viewer = auth.user;
-  // unstable_cache: keyParts PHẢI gồm periodId + selectedTeam + viewer.id — chống cache cross-user
-  const getCached = unstable_cache(
-    async (p: string, t: string) => getReportAggregationInner(p, t, viewer),
-    ['report-aggregation', periodId, selectedTeam, viewer.id],
-    { tags: ['report-aggregation'], revalidate: 300 }
-  );
-  return getCached(periodId, selectedTeam);
+  // KHÔNG unstable_cache — bỏ cache trong hàm (gây lag Vercel + trang trắng, Fix A 2026-08-16)
+  return getReportAggregationInner(periodId, selectedTeam, auth.user);
 }

@@ -5,7 +5,6 @@ import { getUsersAdmin } from '@/lib/db/users-admin';
 import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { requireRole } from '@/lib/auth';
-import { unstable_cache } from 'next/cache';
 import { EvaluationRound } from '@/types';
 import { User, Evaluation, CriteriaGroup } from '@/types';
 
@@ -152,12 +151,5 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
 export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return null;
-  const viewer = auth.user;
-  // unstable_cache: keyParts PHẢI gồm periodId + viewer.id — chống cache cross-user (reviewer lần 2 bắt)
-  const getCached = unstable_cache(
-    async (p: string) => getDashboardDataInner(p, viewer),
-    ['dashboard-data', periodId, viewer.id],
-    { tags: ['dashboard-data'], revalidate: 300 }
-  );
-  return getCached(periodId);
+  return getDashboardDataInner(periodId, auth.user);
 }
