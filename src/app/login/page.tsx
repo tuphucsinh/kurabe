@@ -26,15 +26,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg border border-outline-variant overflow-hidden">
-        <div className="bg-primary p-6 text-center">
+        <div className="bg-primary p-5 md:p-6 text-center">
           <h1 className="text-2xl font-bold text-white tracking-wide">KURABE</h1>
           <p className="text-primary-light text-sm mt-1">QAQC Evaluation System</p>
         </div>
         
-        <div className="p-8">
-          <h2 className="text-xl font-semibold text-on-surface mb-6 text-center">Đăng nhập hệ thống</h2>
+        <div className="p-6 md:p-8">
+          <h2 className="text-xl font-semibold text-on-surface mb-5 md:mb-6 text-center">Đăng nhập hệ thống</h2>
           
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4 md:space-y-5">
             <div>
               <label htmlFor="employeeCode" className="block text-sm font-medium text-on-surface mb-1">
                 Mã nhân viên (Employee Code)
