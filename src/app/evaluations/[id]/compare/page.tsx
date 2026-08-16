@@ -152,7 +152,7 @@ export default function ComparePage({ params }: ComparePageProps) {
           </div>
           <div className="hidden md:flex items-center gap-3">
             <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Trạng thái hiện tại</span>
+              <span className="text-[11px] font-bold text-outline uppercase tracking-widest">Trạng thái hiện tại</span>
               <span className="text-sm font-black text-on-surface">Lần {activeVisibleRound ?? '-'}</span>
             </div>
             <div className="p-3 bg-primary/10 rounded-2xl text-primary">
@@ -204,7 +204,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                         ? 'bg-white border-primary ring-1 ring-primary/20' 
                         : 'bg-white border-outline-variant'}
                     `}>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${
+                      <span className={`text-[11px] font-bold uppercase tracking-widest mb-3 ${
                         r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
                       }`}>
                         Lần {r.round} {r.round === evaluation.currentRound ? '(Hiện tại)' : ''}
@@ -222,7 +222,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                       </div>
                       <button 
                         onClick={() => router.push(`/evaluations/${id}?round=${r.round}`)}
-                        className="mt-4 flex items-center gap-1.5 text-[10px] font-black text-primary hover:underline uppercase tracking-tighter"
+                        className="mt-4 flex items-center gap-1.5 text-[11px] font-black text-primary hover:underline uppercase tracking-tighter"
                       >
                         Xem chi tiết <ArrowRight size={12} />
                       </button>
@@ -240,7 +240,7 @@ export default function ComparePage({ params }: ComparePageProps) {
               <h2 className="text-xs font-black text-outline uppercase tracking-[0.2em] flex items-center gap-2">
                 Chi tiết tiêu chí thay đổi ({changedCriteriaIds.size})
               </h2>
-              <span className="text-[10px] font-bold text-outline-variant bg-surface px-2 py-1 rounded-lg border border-outline-variant">
+              <span className="text-[11px] font-bold text-outline-variant bg-surface px-2 py-1 rounded-lg border border-outline-variant">
                 Chỉ hiển thị các mục có biến động điểm
               </span>
             </div>
@@ -251,17 +251,17 @@ export default function ComparePage({ params }: ComparePageProps) {
                   <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                       <tr className="bg-surface/50 border-b border-outline-variant">
-                        <th className="px-8 py-5 text-[10px] font-black text-outline uppercase tracking-wider">
+                        <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider">
                           Tiêu chí đánh giá
                         </th>
                         {allRounds.map(r => (
-                          <th key={r.round} className={`px-4 py-5 text-[10px] font-black uppercase tracking-wider text-center min-w-[100px] ${
+                          <th key={r.round} className={`px-4 py-5 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
                             r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
                           }`}>
                             L{r.round}
                           </th>
                         ))}
-                        <th className="px-8 py-5 text-[10px] font-black text-outline uppercase tracking-wider text-right">
+                        <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider text-right">
                           Biến động (Δ)
                         </th>
                       </tr>
@@ -277,7 +277,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                           <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
                             <td className="px-8 py-4">
                               <div className="flex flex-col gap-0.5">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-tighter opacity-70">{criterion.id}</span>
+                                <span className="text-[11px] font-black text-primary uppercase tracking-tighter opacity-70">{criterion.id}</span>
                                 <span className="text-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">{criterion.name}</span>
                               </div>
                             </td>
@@ -297,7 +297,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                                       {score}
                                     </div>
                                     {delta !== 0 && (
-                                      <span className={`text-[10px] font-bold mt-1 flex items-center gap-0.5 ${
+                                      <span className={`text-[11px] font-bold mt-1 flex items-center gap-0.5 ${
                                         delta > 0 ? 'text-green-600' : 'text-red-600'
                                       }`}>
                                         {delta > 0 ? '+' : ''}{delta}
@@ -351,12 +351,12 @@ export default function ComparePage({ params }: ComparePageProps) {
                     : 'bg-white border-outline-variant'
                 }`}>
                   <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${
+                    <span className={`text-[11px] font-black uppercase tracking-widest ${
                       r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
                     }`}>
                       Lần {r.round} {r.round === evaluation.currentRound ? '(Hiện tại)' : ''}
                     </span>
-                    <span className="text-[10px] font-bold text-outline/40">
+                    <span className="text-[11px] font-bold text-outline/40">
                       {r.submittedAt ? 'Đã gửi' : 'Bản nháp'}
                     </span>
                   </div>
@@ -389,7 +389,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                   <h3 className="text-xs font-black text-outline uppercase tracking-widest">
                     Tiêu chí giữ nguyên ({unchangedCriteria.length})
                   </h3>
-                  <span className="text-[10px] font-bold text-outline/50 uppercase">
+                  <span className="text-[11px] font-bold text-outline/50 uppercase">
                     {allRounds.length > 1 ? `Không đổi qua ${allRounds.length} vòng` : 'Chưa có vòng để so sánh'}
                   </span>
                 </div>

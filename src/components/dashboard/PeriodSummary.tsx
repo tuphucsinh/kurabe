@@ -103,7 +103,7 @@ export function PeriodSummary({ stats, gradeDistribution, totalEvaluationsCount 
                       <span className="text-xs font-bold text-white drop-shadow-sm">
                         {item.count > 0 ? item.count : ''}
                       </span>
-                      <span className="text-[10px] text-slate-400 group-hover:text-slate-600 transition-colors">
+                      <span className="text-[11px] text-slate-400 group-hover:text-slate-600 transition-colors">
                         {item.count > 0 ? `${percent}%` : ''}
                       </span>
                     </div>

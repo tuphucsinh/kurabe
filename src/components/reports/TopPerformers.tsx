@@ -63,7 +63,7 @@ export default function TopPerformers({ employees }: TopPerformersProps) {
       render: (item) => {
         const color = getGradeColor(item.grade as 'A' | 'B' | 'C' | 'D');
         return (
-          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${color.replace('bg-', 'text-').replace('600', '700')} bg-opacity-10 ${color.replace('bg-', 'bg-')}/10`}>
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${color.replace('bg-', 'text-').replace('600', '700')} bg-opacity-10 ${color.replace('bg-', 'bg-')}/10`}>
             {item.grade}
           </span>
         );

@@ -91,7 +91,7 @@ export default function PeriodSelector() {
           className="bg-[#0E4B66] backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
         >
           <div className="px-4 py-3 border-b border-white/10 bg-black/30">
-            <h4 className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Chọn kỳ đánh giá</h4>
+            <h4 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Chọn kỳ đánh giá</h4>
           </div>
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar bg-[#0E4B66]/50">
             {allPeriods.map((period) => {
@@ -118,7 +118,7 @@ export default function PeriodSelector() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-white/30 mt-0.5">
+                    <p className="text-[11px] text-white/30 mt-0.5">
                       {new Date(period.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                   </div>

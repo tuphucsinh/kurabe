@@ -152,7 +152,7 @@ export default function CriteriaGroupModal({
               value={shortName}
               onChange={(e) => setShortName(e.target.value)}
             />
-            <p className="text-[10px] text-slate-400">Dùng để hiển thị trên thanh tab (nên ngắn gọn).</p>
+            <p className="text-[11px] text-slate-400">Dùng để hiển thị trên thanh tab (nên ngắn gọn).</p>
           </div>
 
           <div className="pt-4 flex gap-3">

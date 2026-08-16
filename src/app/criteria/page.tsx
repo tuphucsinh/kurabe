@@ -375,7 +375,7 @@ export default function CriteriaPage() {
                         {level.description && (
                           <div className="mt-2 flex items-start gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity pr-6">
                             <Info size={12} className="shrink-0 mt-0.5" />
-                            <p className="text-[10px] italic">{level.description}</p>
+                            <p className="text-[11px] italic">{level.description}</p>
                           </div>
                         )}
                       </div>

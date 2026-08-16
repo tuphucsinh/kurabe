@@ -761,7 +761,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 {/* Big Grade Badge & Score */}
                 <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-indigo-100 shadow-sm shrink-0">
                   <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Điểm tổng kết</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Điểm tổng kết</p>
                     <p className="text-2xl font-black text-slate-900 leading-none mt-0.5">
                       {evaluation.finalScore ?? totalScore} <span className="text-sm font-semibold text-slate-500">điểm</span>
                     </p>

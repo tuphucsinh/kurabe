@@ -35,7 +35,7 @@ export default function EvaluationHeader({
         <div className="flex-1 p-6 md:p-8 space-y-4">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{employee.name}</h1>
-            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+            <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
               {employee.role}
             </span>
           </div>
@@ -60,16 +60,16 @@ export default function EvaluationHeader({
           <table className="border-collapse text-center">
             <thead>
               <tr>
-                <th className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-black/40 w-[30px]"></th>
-                <th className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-black/40">Xếp loại</th>
-                <th className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-black/40">Tổng điểm</th>
-                <th className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-black/40">Tiêu chí</th>
+                <th className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40 w-[30px]"></th>
+                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Xếp loại</th>
+                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Tổng điểm</th>
+                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Tiêu chí</th>
               </tr>
             </thead>
             <tbody>
               {/* Current Round */}
               <tr>
-                <td className="px-2 py-1 text-[10px] font-bold text-black/45 uppercase">L{currentRound}</td>
+                <td className="px-2 py-1 text-[11px] font-bold text-black/45 uppercase">L{currentRound}</td>
                 <td className="px-3 py-1">
                   <span className={`${gradeColorClass} text-2xl font-black`}>{grade}</span>
                 </td>
@@ -93,7 +93,7 @@ export default function EvaluationHeader({
                 
                 return (
                   <tr key={r.round} className="opacity-50">
-                    <td className="px-2 py-0.5 text-[10px] font-bold text-[#999] uppercase">L{r.round}</td>
+                    <td className="px-2 py-0.5 text-[11px] font-bold text-[#999] uppercase">L{r.round}</td>
                     <td className="px-3 py-0.5">
                       <span className={`${rGradeColorClass} text-sm font-black`}>{rGrade}</span>
                     </td>
@@ -103,7 +103,7 @@ export default function EvaluationHeader({
                     <td className="px-3 py-0.5">
                       <span className={`${rGradeColorClass} text-sm font-black`}>
                         {rScoredCount}
-                        <span className="text-[10px] font-normal text-black/30">/{totalCriteria}</span>
+                        <span className="text-[11px] font-normal text-black/30">/{totalCriteria}</span>
                       </span>
                     </td>
                   </tr>
