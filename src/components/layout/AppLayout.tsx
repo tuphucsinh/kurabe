@@ -70,20 +70,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-[#F8FAFC]">
       {/* Mobile Header */}
-      <header className="md:hidden sticky top-0 bg-white/70 backdrop-blur-xl text-on-surface px-6 h-16 flex items-center justify-between z-40 border-b border-outline-variant/50 print:hidden">
+      <header className="md:hidden sticky top-0 bg-white/70 backdrop-blur-xl text-on-surface px-4 h-14 flex items-center justify-between z-40 border-b border-outline-variant/50 print:hidden">
         <button 
           onClick={() => setIsSidebarOpen(true)}
           className="p-2 hover:bg-surface rounded-xl transition-all active:scale-90"
         >
           <Menu size={24} />
         </button>
-        <span className="font-black tracking-tighter text-xl italic text-primary">KURABE</span>
-        <div className="flex items-center gap-3">
-          <button className="p-2 hover:bg-surface rounded-xl transition-colors relative">
+        <span className="font-black tracking-tighter text-lg italic text-primary">KURABE</span>
+        <div className="flex items-center gap-2.5">
+          <button className="p-3 hover:bg-surface rounded-xl transition-colors relative">
             <Bell size={20} className="text-on-surface-variant" />
             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
           </button>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-primary/20">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-primary/20">
             {user?.name?.charAt(0) || 'U'}
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onClose={() => setIsSidebarOpen(false)} 
         />
         
-        <main className="flex-1 min-w-0 md:pl-[240px] pb-32 md:pb-0 overflow-y-auto overflow-x-hidden print:pl-0 print:pb-0 print:overflow-visible">
+        <main className="flex-1 min-w-0 md:pl-[240px] pb-44 md:pb-0 overflow-y-auto overflow-x-hidden print:pl-0 print:pb-0 print:overflow-visible">
           <PageTransition>
             {children}
           </PageTransition>
@@ -113,10 +113,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </>
         ) : (
           <>
-            <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Home" active={pathname === '/dashboard'} />
-            <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Teams" active={pathname === '/teams'} />
-            <BottomNavItem href="/employees" icon={<Users size={22} />} label="Users" active={pathname === '/employees'} />
-            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Settings" active={pathname === '/settings'} />
+            <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Trang chủ" active={pathname === '/dashboard'} />
+            <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Nhóm" active={pathname === '/teams'} />
+            <BottomNavItem href="/employees" icon={<Users size={22} />} label="Nhân sự" active={pathname === '/employees'} />
+            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Cài đặt" active={pathname === '/settings'} />
           </>
         )}
       </nav>
@@ -133,7 +133,7 @@ function BottomNavItem({ href, icon, label, active }: { href: string; icon: Reac
       <div className={`transition-transform duration-300 ${active ? '-translate-y-1 scale-110' : ''}`}>
         {icon}
       </div>
-      <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 transition-all duration-300 ${active ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+      <span className={`text-[11px] font-bold tracking-wide mt-0.5 transition-all duration-300 ${active ? 'opacity-100' : 'opacity-70'}`}>
         {label}
       </span>
       {active && (
