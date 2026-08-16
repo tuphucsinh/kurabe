@@ -130,6 +130,7 @@ function BottomNavItem({ href, icon, ariaLabel, active }: { href: string; icon: 
   return (
     <Link 
       href={href}
+      prefetch={false}
       aria-label={ariaLabel}
       className={`relative flex flex-col items-center justify-center w-14 h-12 transition-all duration-300 ${active ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
     >

@@ -7,6 +7,14 @@ export function middleware(request: NextRequest) {
   }
 
   const authSession = request.cookies.get('auth_session');
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname === '/') {
+    if (!authSession) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
   
   const protectedRoutes = ['/dashboard', '/reports', '/teams', '/employees', '/criteria', '/evaluations', '/settings'];
   
