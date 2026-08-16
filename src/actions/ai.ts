@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/audit';
 import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
-import { getUsers } from '@/lib/db/users';
+import { getUsersAdmin } from '@/lib/db/users-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getDashboardData } from '@/actions/dashboard';
 import { detectAnomalies } from '@/lib/anomaly';
@@ -209,7 +209,7 @@ export async function generateResultMessagesChunkAction(input: {
   try {
     const [evaluations, users, criteriaGroups] = await Promise.all([
       getEvaluationsByPeriodAdmin(input.periodId, auth.user),
-      getUsers(),
+      getUsersAdmin(),
       getAllCriteriaGroups(),
     ]);
 
@@ -339,7 +339,7 @@ export async function generatePeriodMinutesAction(input: {
     const [d, periodSummaryRes, users, periodRes] = await Promise.all([
       getDashboardData(input.periodId),
       getPeriodSummary(input.periodId),
-      getUsers(),
+      getUsersAdmin(),
       supabaseAdmin
         .from('evaluation_periods')
         .select('id, name, year, status')

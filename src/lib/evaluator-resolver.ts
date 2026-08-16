@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 import { Role } from '@/types';
 import { Database } from '@/types/database';
 import { EvaluatorSelector } from './evaluation-workflow';
@@ -7,10 +7,10 @@ import { parseRole } from '@/lib/parsers';
 
 /**
  * Build map teamId → teams.leader_id cho resolveEvaluatorFromList (batch flows).
- * Server callers truyền supabaseAdmin; mặc định anon client (mô hình anon-read).
+ * Mặc định sử dụng supabaseAdmin (service_role).
  */
 export async function loadTeamLeaderIds(
-  db: SupabaseClient<Database> = supabase
+  db: SupabaseClient<Database> = supabaseAdmin
 ): Promise<Record<string, string | null>> {
   const { data } = await db.from('teams').select('id, leader_id');
   const map: Record<string, string | null> = {};
@@ -33,7 +33,7 @@ export interface EvaluationSubject {
 }
 
 /**
- * Tìm evaluator tương ứng với selector từ Database (Runtime).
+ * Tìm evaluator tương ứng với selector từ Database (Runtime, service_role).
  */
 export async function resolveEvaluatorFromDb(
   selector: EvaluatorSelector,
@@ -46,7 +46,7 @@ export async function resolveEvaluatorFromDb(
   if (selector === 'SubLeader') {
     let subleaderId = subject.subleaderId;
     if (subleaderId === undefined) {
-      const { data: user } = await supabase
+      const { data: user } = await supabaseAdmin
         .from('users')
         .select('subleader_id')
         .eq('id', subject.id)
@@ -55,7 +55,7 @@ export async function resolveEvaluatorFromDb(
     }
 
     if (subleaderId) {
-      const { data: subLeader } = await supabase
+      const { data: subLeader } = await supabaseAdmin
         .from('users')
         .select('id, role')
         .eq('id', subleaderId)
@@ -72,14 +72,14 @@ export async function resolveEvaluatorFromDb(
 
   if (selector === 'Leader' && subject.teamId) {
     // 1. Tìm theo teams.leader_id trước
-    const { data: team } = await supabase
+    const { data: team } = await supabaseAdmin
       .from('teams')
       .select('leader_id')
       .eq('id', subject.teamId)
       .single();
 
     if (team?.leader_id) {
-      const { data: teamLeader } = await supabase
+      const { data: teamLeader } = await supabaseAdmin
         .from('users')
         .select('id, role')
         .eq('id', team.leader_id)
@@ -93,7 +93,7 @@ export async function resolveEvaluatorFromDb(
     }
 
     // 2. Fallback tìm user bất kỳ có role Leader trong team
-    const { data: fallbackLeader } = await supabase
+    const { data: fallbackLeader } = await supabaseAdmin
       .from('users')
       .select('id, role')
       .eq('team_id', subject.teamId)
@@ -108,7 +108,7 @@ export async function resolveEvaluatorFromDb(
   }
 
   if (selector === 'Manager') {
-    const { data: manager } = await supabase
+    const { data: manager } = await supabaseAdmin
       .from('users')
       .select('id, role')
       .eq('role', 'Manager')

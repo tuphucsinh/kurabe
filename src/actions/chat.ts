@@ -6,8 +6,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getActivePeriod } from '@/lib/db/evaluations';
 import { getEvaluationByEmployeeAdmin, getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getDashboardData } from '@/actions/dashboard';
-import { getUsers, getUserById } from '@/lib/db/users';
-import { getTeamById, getTeams } from '@/lib/db/teams';
+import { getUsersAdmin, getUserByIdAdmin } from '@/lib/db/users-admin';
+import { getTeamByIdAdmin, getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { User } from '@/types';
 import fs from 'node:fs';
@@ -105,8 +105,8 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
   try {
     const [evaluations, users, teams] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, user),
-      getUsers(user),
-      getTeams(user),
+      getUsersAdmin(user),
+      getTeamsAdmin(user),
     ]);
 
     if (!evaluations.length) return '';
@@ -254,12 +254,12 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
       if (ev) {
         const submitted = (ev.rounds || []).filter((r) => r.status === 'Submitted' || r.submittedAt);
         // Tên cụ thể (tên cuối — gọi thân mật, data nội bộ không nhạy cảm)
-        const employee = await getUserById(ev.employeeId).catch(() => null);
+        const employee = await getUserByIdAdmin(ev.employeeId, user).catch(() => null);
         const empName = employee ? (employee.name || '').split(/\s+/).pop() : null;
-        const subName = employee?.subleaderId ? (await getUserById(employee.subleaderId).catch(() => null))?.name : null;
+        const subName = employee?.subleaderId ? (await getUserByIdAdmin(employee.subleaderId, user).catch(() => null))?.name : null;
         const subFirst = subName ? subName.split(/\s+/).pop() : null;
-        const team = employee?.teamId ? await getTeamById(employee.teamId).catch(() => null) : null;
-        const leaderName = team?.leaderId ? (await getUserById(team.leaderId).catch(() => null))?.name : null;
+        const team = employee?.teamId ? await getTeamByIdAdmin(employee.teamId, user).catch(() => null) : null;
+        const leaderName = team?.leaderId ? (await getUserByIdAdmin(team.leaderId, user).catch(() => null))?.name : null;
         const leaderFirst = leaderName ? leaderName.split(/\s+/).pop() : null;
         const who = empName ? `Nhân viên ${empName}` : `nhân viên`;
         const subWho = subFirst ? `SubLeader ${subFirst}` : 'SubLeader phụ trách';
@@ -297,7 +297,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     }
     // /employees — getUsers(requester) scope
     if (pathname.startsWith('/employees')) {
-      const users = await getUsers(user);
+      const users = await getUsersAdmin(user);
       const byRole: Record<string, number> = {};
       for (const u of users) byRole[u.role] = (byRole[u.role] || 0) + 1;
       const roleStr = Object.entries(byRole).map(([r, c]) => `${r}: ${c}`).join(', ');
@@ -305,7 +305,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     }
     // /teams — getUsers(requester) scope nhóm theo team
     if (pathname.startsWith('/teams') && !pathname.startsWith('/teams/')) {
-      const users = await getUsers(user);
+      const users = await getUsersAdmin(user);
       const byTeam = new Map<string, number>();
       for (const u of users) byTeam.set(u.teamId || 'Chưa có nhóm', (byTeam.get(u.teamId || 'Chưa có nhóm') || 0) + 1);
       return `\nNgữ cảnh trang Nhóm: ${users.length} nhân viên; ${[...byTeam.entries()].map(([t, c]) => `${t}: ${c}`).join('; ')}.`;

@@ -2,7 +2,7 @@
 
 import { requireAuth, requireRole } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { Evaluation, Role, CriteriaGroup } from '@/types';
+import { Evaluation, Role, CriteriaGroup, User, Team } from '@/types';
 import { 
   getEvaluationsAdmin, 
   getEvaluationsByPeriodAdmin, 
@@ -10,6 +10,15 @@ import {
   getEvaluationByEmployeeAdmin, 
   getEvaluationHistoryByEmployeeAdmin 
 } from '@/lib/db/evaluations-admin';
+import { 
+  getUsersAdmin, 
+  getUserByIdAdmin, 
+  getUsersByTeamAdmin 
+} from '@/lib/db/users-admin';
+import { 
+  getTeamsAdmin, 
+  getTeamByIdAdmin 
+} from '@/lib/db/teams-admin';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 
@@ -21,6 +30,82 @@ export type AuditRow = {
   entity_id: string | null;
   created_at: string | null;
 };
+
+/**
+ * Đọc thông tin User đang đăng nhập (session hiện tại).
+ * Bắt buộc requireAuth(). Trả null nếu chưa đăng nhập.
+ */
+export async function getCurrentUserAction(): Promise<User | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return null;
+  }
+  return auth.user;
+}
+
+/**
+ * Đọc danh sách users (phân quyền theo viewer: Manager xem tất cả, Employee/Leader/SubLeader theo team).
+ * Bắt buộc requireAuth().
+ */
+export async function getUsersAction(options?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}): Promise<User[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return [];
+  }
+  return getUsersAdmin(auth.user, options);
+}
+
+/**
+ * Đọc thông tin user theo ID.
+ * Bắt buộc requireAuth().
+ */
+export async function getUserByIdAction(id: string): Promise<User | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return null;
+  }
+  return getUserByIdAdmin(id, auth.user);
+}
+
+/**
+ * Đọc danh sách users thuộc một Team.
+ * Bắt buộc requireAuth() + phân quyền: Manager mọi team; khác chỉ team mình.
+ */
+export async function getUsersByTeamAction(teamId: string): Promise<User[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return [];
+  }
+  return getUsersByTeamAdmin(teamId, auth.user);
+}
+
+/**
+ * Đọc danh sách teams (phân quyền theo viewer).
+ * Bắt buộc requireAuth().
+ */
+export async function getTeamsAction(): Promise<Team[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return [];
+  }
+  return getTeamsAdmin(auth.user);
+}
+
+/**
+ * Đọc thông tin team theo ID.
+ * Bắt buộc requireAuth().
+ */
+export async function getTeamByIdAction(id: string): Promise<Team | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return null;
+  }
+  return getTeamByIdAdmin(id, auth.user);
+}
 
 /**
  * Đọc danh sách evaluations theo kỳ hoặc toàn bộ (phân quyền theo viewer).

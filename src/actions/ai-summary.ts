@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireManager } from '@/lib/auth';
 import { callAI, isAIConfigured } from '@/lib/ai';
 import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
-import { getUsers } from '@/lib/db/users';
+import { getUsersAdmin } from '@/lib/db/users-admin';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
@@ -44,7 +44,7 @@ export async function generatePeriodSummary(
   try {
     const [evaluations, users] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, auth.user),
-      getUsers(),
+      getUsersAdmin(),
     ]);
 
     const userMap = new Map(users.map((u) => [u.id, u]));

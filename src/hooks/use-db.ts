@@ -1,6 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUsers, getUserById, getUsersByTeam } from '@/lib/db/users';
-import { getTeams, getTeamById } from '@/lib/db/teams';
 import { 
   getPeriods, 
   getActivePeriod
@@ -8,7 +6,12 @@ import {
 import { 
   getEvaluationsAction, 
   getEvaluationByIdAction, 
-  getEvaluationByEmployeeAction 
+  getEvaluationByEmployeeAction,
+  getUsersAction,
+  getUserByIdAction,
+  getUsersByTeamAction,
+  getTeamsAction,
+  getTeamByIdAction
 } from '@/actions/read';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
@@ -26,13 +29,13 @@ import { CriteriaGroup, Criterion, Team, User } from '@/types';
 // Users
 export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({
   queryKey: ['users', requester?.id, options?.limit, options?.offset],
-  queryFn: () => getUsers(requester, options),
+  queryFn: () => getUsersAction(options),
   staleTime: 5 * 60 * 1000,
   // Chưa load xong user (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
   enabled: requester != null
 });
-export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserById(id), enabled: !!id });
-export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeam(teamId), enabled: !!teamId });
+export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserByIdAction(id), enabled: !!id });
+export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId });
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
@@ -82,11 +85,11 @@ export const useDeleteUser = () => {
 // Teams
 export const useTeams = (requester?: User | null) => useQuery({
   queryKey: ['teams', requester?.id],
-  queryFn: () => getTeams(requester),
+  queryFn: () => getTeamsAction(),
   staleTime: 5 * 60 * 1000,
   enabled: requester != null
 });
-export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamById(id), enabled: !!id });
+export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamByIdAction(id), enabled: !!id });
 
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();

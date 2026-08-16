@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getReportAggregation } from '@/actions/reports';
 import { getPeriodSummary } from '@/actions/ai-summary';
-import { getTeams } from '@/lib/db/teams';
+import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getSessionUser } from '@/lib/auth';
 import { resolveCurrentPeriod } from '@/lib/db/evaluations';
 import PageHeader from '@/components/layout/PageHeader';
@@ -35,7 +35,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
   const team = searchParams.team || 'all';
   // 3 nguồn độc lập — chạy song song (C5)
   const [teams, reportData, aiSummary] = await Promise.all([
-    getTeams(),
+    getTeamsAdmin(viewer),
     periodId ? getReportAggregation(periodId, team) : Promise.resolve(null),
     periodId ? getPeriodSummary(periodId) : Promise.resolve({} as Awaited<ReturnType<typeof getPeriodSummary>>),
   ]);

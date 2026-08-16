@@ -1,8 +1,8 @@
 'use server';
 
 import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
-import { getUsers } from '@/lib/db/users';
-import { getTeams } from '@/lib/db/teams';
+import { getUsersAdmin } from '@/lib/db/users-admin';
+import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { requireRole } from '@/lib/auth';
 import { unstable_cache } from 'next/cache';
@@ -31,8 +31,8 @@ async function getReportAggregationInner(
   try {
     const [evaluations, users, teams, allCriteriaData] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, viewer),
-      getUsers(),
-      getTeams(),
+      getUsersAdmin(viewer),
+      getTeamsAdmin(viewer),
       getAllCriteriaGroups()
     ]);
 
@@ -225,12 +225,11 @@ export async function getReportAggregation(
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return null;
   const viewer = auth.user;
-  return getReportAggregationCached(periodId, selectedTeam, viewer);
+  // unstable_cache: keyParts PHẢI gồm periodId + selectedTeam + viewer.id — chống cache cross-user
+  const getCached = unstable_cache(
+    async (p: string, t: string) => getReportAggregationInner(p, t, viewer),
+    ['report-aggregation', periodId, selectedTeam, viewer.id],
+    { tags: ['report-aggregation'], revalidate: 300 }
+  );
+  return getCached(periodId, selectedTeam);
 }
-
-const getReportAggregationCached = unstable_cache(
-  async (periodId: string, selectedTeam: string, viewer: import('@/types').User | null) =>
-    getReportAggregationInner(periodId, selectedTeam, viewer),
-  [],
-  { tags: ['report-aggregation'], revalidate: 300 }
-);

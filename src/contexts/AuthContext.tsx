@@ -3,9 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, EvaluationPeriod } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
 import { mapPeriodFromDb } from '@/lib/db/evaluations';
 import { loginAction, logoutAction } from '@/actions/auth';
+import { getCurrentUserAction } from '@/actions/read';
 
 interface AuthContextType {
   user: User | null;
@@ -32,10 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadAuth() {
       try {
-        const savedUserId = localStorage.getItem('auth_user_id');
         const savedPeriodId = localStorage.getItem('selected_period_id');
         
-        // 1. Load all periods
+        // 1. Load all periods (evaluation_periods giữ anon-read)
         const { data: periodsData } = await supabase
           .from('evaluation_periods')
           .select('*')
@@ -57,19 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // 3. Load user
-        let loadedUser = null;
-        if (savedUserId) {
-          const { data: userData } = await supabase
-            .from('users')
-            .select(USER_SELECT)
-            .eq('id', savedUserId)
-            .single();
-            
-          if (userData) {
-            loadedUser = mapUserFromDb(userData);
-          }
-        }
+        // 3. Load authenticated user via server action (supabaseAdmin)
+        const loadedUser = await getCurrentUserAction();
         
         // Batch state updates and check isInitialized to prevent Strict Mode double-render
         if (!isInitialized) {
@@ -79,6 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (loadedUser) {
             setUser(loadedUser);
+            localStorage.setItem('auth_user_id', loadedUser.id);
+          } else {
+            localStorage.removeItem('auth_user_id');
           }
         }
       } catch (error) {

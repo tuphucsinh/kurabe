@@ -1,16 +1,14 @@
 'use client';
 
 import { mapPeriodFromDb } from './db/evaluations';
-import { getEvaluationsAction } from '@/actions/read';
-import { getUsers } from './db/users';
-import { getTeams } from './db/teams';
+import { getEvaluationsAction, getUsersAction, getTeamsAction } from '@/actions/read';
 import { getAllCriteriaGroups } from './db/criteria';
 import { User, Team } from '@/types';
 import { supabase } from './supabase';
 
 /**
  * Xuất dữ liệu đánh giá của một kỳ ra file Excel.
- * Dùng getEvaluationsAction (server action, supabaseAdmin) để đọc evaluations an toàn.
+ * Dùng getEvaluationsAction, getUsersAction, getTeamsAction (server actions, supabaseAdmin) để đọc an toàn.
  */
 export async function exportEvaluationsToExcel(
   periodId: string,
@@ -24,8 +22,8 @@ export async function exportEvaluationsToExcel(
     // 1. Fetch data
     const [evaluations, users, teams, criteriaGroups, periodData] = await Promise.all([
       getEvaluationsAction(periodId),
-      getUsers(),
-      getTeams(),
+      getUsersAction(),
+      getTeamsAction(),
       getAllCriteriaGroups(),
       supabase.from('evaluation_periods').select('*').eq('id', periodId).single()
     ]);
