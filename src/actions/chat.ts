@@ -3,10 +3,10 @@
 import { requireRole } from '@/lib/auth';
 import { callAI, callAIVision, isAIConfigured } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getActivePeriod, getEvaluationByEmployee } from '@/lib/db/evaluations';
+import { getActivePeriod, getEvaluationByEmployee, getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getDashboardData } from '@/actions/dashboard';
 import { getUsers, getUserById } from '@/lib/db/users';
-import { getTeamById } from '@/lib/db/teams';
+import { getTeamById, getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { User } from '@/types';
 import fs from 'node:fs';
@@ -70,7 +70,7 @@ function buildSystem(role: string, gender?: string | null): string {
     return `${knowledge}
 
 ${baseRules}
-8. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu.`;
+8. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu. Nếu được hỏi so sánh nhiều kỳ: nói rõ em chỉ phân tích trong kỳ hiện tại (lịch sử đa kỳ chưa có).`;
   }
   return `${knowledge}
 
@@ -91,6 +91,152 @@ async function countRecent(userId: string): Promise<number> {
 
 async function recordUsage(userId: string): Promise<void> {
   await supabaseAdmin.from('chat_usage').insert({ user_id: userId });
+}
+
+/**
+ * Tính toán ngữ cảnh so sánh / tìm kiếm ngữ nghĩa nội bộ trong kỳ (Manager-only, deterministic).
+ */
+async function buildManagerSemanticContext(periodId: string, periodName: string, user: User): Promise<string> {
+  try {
+    const [evaluations, users, teams] = await Promise.all([
+      getEvaluationsByPeriod(periodId, user),
+      getUsers(user),
+      getTeams(user),
+    ]);
+
+    if (!evaluations.length) return '';
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const teamMap = new Map(teams.map((t) => [t.id, t.name]));
+
+    interface EmpDelta {
+      name: string;
+      shortName: string;
+      role: string;
+      teamName: string;
+      roundsStr: string;
+      lastScore: number;
+      delta: number | null;
+      grade: string;
+    }
+
+    const empList: EmpDelta[] = [];
+    const gradeCounts: Record<string, number> = {};
+
+    for (const ev of evaluations) {
+      const emp = userMap.get(ev.employeeId);
+      const fullName = emp?.name || 'Không xác định';
+      const shortName = fullName.split(/\s+/).pop() || fullName;
+      const teamName = (emp?.teamId && teamMap.get(emp.teamId)) || 'Chung';
+      const role = ev.employeeRole || emp?.role || 'Employee';
+
+      const scoredRounds = (ev.rounds || [])
+        .filter((r) => (r.totalScore || 0) > 0)
+        .sort((a, b) => a.round - b.round);
+
+      let delta: number | null = null;
+      let lastScore = 0;
+      const roundsStr = scoredRounds.map((r) => `V${r.round}:${r.totalScore}`).join(' ');
+
+      if (scoredRounds.length > 0) {
+        lastScore = scoredRounds[scoredRounds.length - 1].totalScore || 0;
+      }
+
+      if (scoredRounds.length >= 2) {
+        const prev = scoredRounds[scoredRounds.length - 2].totalScore || 0;
+        const curr = scoredRounds[scoredRounds.length - 1].totalScore || 0;
+        delta = curr - prev;
+      }
+
+      const lastRound = scoredRounds[scoredRounds.length - 1];
+      const grade = ev.finalGrade || lastRound?.grade || '';
+      if (grade) {
+        gradeCounts[grade] = (gradeCounts[grade] || 0) + 1;
+      }
+
+      empList.push({
+        name: fullName,
+        shortName,
+        role,
+        teamName,
+        roundsStr,
+        lastScore,
+        delta,
+        grade,
+      });
+    }
+
+    // Top 5 tăng nhiều nhất (delta > 0)
+    const increases = empList
+      .filter((e): e is EmpDelta & { delta: number } => e.delta !== null && e.delta > 0)
+      .sort((a, b) => b.delta - a.delta)
+      .slice(0, 5);
+
+    // Top 5 giảm nhiều nhất (delta < 0)
+    const decreases = empList
+      .filter((e): e is EmpDelta & { delta: number } => e.delta !== null && e.delta < 0)
+      .sort((a, b) => a.delta - b.delta)
+      .slice(0, 5);
+
+    const incText = increases.length
+      ? increases.map((x) => `${x.shortName} (+${x.delta})`).join(', ')
+      : 'không có';
+
+    const decText = decreases.length
+      ? decreases.map((x) => `${x.shortName} (${x.delta})`).join(', ')
+      : 'không có';
+
+    // Nhóm tổng hợp (membersCount & approved count)
+    const teamGroups = new Map<string, { total: number; approved: number }>();
+    for (const ev of evaluations) {
+      const emp = userMap.get(ev.employeeId);
+      const tName = (emp?.teamId && teamMap.get(emp.teamId)) || 'Chung';
+      if (!teamGroups.has(tName)) {
+        teamGroups.set(tName, { total: 0, approved: 0 });
+      }
+      const tg = teamGroups.get(tName)!;
+      tg.total++;
+      if (ev.status === 'Approved') tg.approved++;
+    }
+
+    const teamStr = [...teamGroups.entries()]
+      .map(([tName, tg]) => {
+        const pct = tg.total > 0 ? Math.round((tg.approved / tg.total) * 100) : 0;
+        return `${tName} ${tg.approved}/${tg.total} xong (${pct}%)`;
+      })
+      .join('; ');
+
+    // Xếp loại
+    const gradeStr = Object.entries(gradeCounts)
+      .map(([g, c]) => `${g} ${c}`)
+      .join(', ');
+
+    // Role count
+    const roleCounts: Record<string, number> = {};
+    for (const e of empList) {
+      roleCounts[e.role] = (roleCounts[e.role] || 0) + 1;
+    }
+    const roleStr = Object.entries(roleCounts)
+      .map(([r, c]) => `${r}: ${c}`)
+      .join(', ');
+
+    // Điểm nhân viên tóm tắt
+    const empScoreList = empList
+      .filter((e) => e.roundsStr)
+      .map((e) => `${e.shortName}(${e.roundsStr}${e.grade ? ` ${e.grade}` : ''})`)
+      .join(', ');
+
+    let summary = `Dữ liệu chi tiết cho câu hỏi so sánh/tìm kiếm (Kỳ ${periodName}): ${empList.length} NV (${roleStr}). TĂNG: ${incText}. GIẢM: ${decText}. Nhóm: ${teamStr}. Xếp loại: ${gradeStr || 'chưa có'}. Điểm NV: ${empScoreList}.`;
+
+    if (summary.length > 1200) {
+      summary = summary.slice(0, 1200) + '...';
+    }
+
+    return `\n${summary}`;
+  } catch (err) {
+    console.error('Error building Manager semantic context:', err);
+    return '';
+  }
 }
 
 async function buildPageContext(pathname: string, role: string, user: User): Promise<string> {
@@ -122,7 +268,10 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
       if (period) {
         const d = await getDashboardData(period.id);
         if (d) {
-          return `\nNgữ cảnh Bảng điều khiển (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}% (${t.membersCount} thành viên)`).join('; ')}. Phân bổ xếp loại: ${(d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ')}.`;
+          let base = `\nNgữ cảnh Bảng điều khiển (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}% (${t.membersCount} thành viên)`).join('; ')}. Phân bổ xếp loại: ${(d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ')}.`;
+          const detail = await buildManagerSemanticContext(period.id, period.name, user);
+          if (detail) base += detail;
+          return base;
         }
       }
     }
@@ -134,7 +283,10 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
         if (d) {
           const dist = (d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ');
           const recent = (d.recentActivities || []).slice(0, 3).map((a) => `${a.employeeName} ${a.status || ''}`).join('; ');
-          return `\nNgữ cảnh trang Báo cáo (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}%`).join('; ')}. Phân bổ xếp loại: ${dist || 'chưa có'}. Hoạt động gần đây: ${recent || 'chưa có'}.`;
+          let base = `\nNgữ cảnh trang Báo cáo (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}%`).join('; ')}. Phân bổ xếp loại: ${dist || 'chưa có'}. Hoạt động gần đây: ${recent || 'chưa có'}.`;
+          const detail = await buildManagerSemanticContext(period.id, period.name, user);
+          if (detail) base += detail;
+          return base;
         }
       }
     }

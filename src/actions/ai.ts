@@ -9,6 +9,9 @@ import { logAudit } from '@/lib/audit';
 import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
+import { getDashboardData } from '@/actions/dashboard';
+import { detectAnomalies } from '@/lib/anomaly';
+import { getPeriodSummary } from '@/actions/ai-summary';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -301,3 +304,102 @@ export async function generateResultMessagesChunkAction(input: {
     };
   }
 }
+
+/**
+ * Soạn biên bản kết thúc kỳ đánh giá bằng AI (Manager-only).
+ * Fetch: getDashboardData + detectAnomalies + getPeriodSummary + period info.
+ * ẨN DANH HÓA: strip tên thật khỏi recentActivities và anomalies (chỉ giữ mã NV).
+ */
+export async function generatePeriodMinutesAction(input: {
+  periodId: string;
+}): Promise<{ minutes?: string; periodName?: string; error?: string }> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { error: auth.error };
+  if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
+  if (!input.periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
+
+  try {
+    const [d, periodSummaryRes, users, periodRes] = await Promise.all([
+      getDashboardData(input.periodId),
+      getPeriodSummary(input.periodId),
+      getUsers(),
+      supabaseAdmin
+        .from('evaluation_periods')
+        .select('id, name, year, status')
+        .eq('id', input.periodId)
+        .maybeSingle(),
+    ]);
+
+    const periodData = periodRes.data;
+    const periodName = periodData ? `${periodData.name} (${periodData.year})` : 'Kỳ đánh giá';
+
+    if (!d) {
+      return { error: 'Không tìm thấy dữ liệu đánh giá cho kỳ này.' };
+    }
+
+    const codeById = new Map(users.map((u) => [u.id, u.employeeCode || `NV-${u.id.slice(0, 6)}`]));
+    const anomalies = detectAnomalies(d.rawEvaluations || [], codeById);
+
+    // Ẩn danh hóa: Chỉ giữ mã NV, strip toàn bộ tên người
+    const anomalyText = anomalies.length
+      ? anomalies
+          .slice(0, 5)
+          .map(
+            (a) =>
+              `- Mã NV ${a.name}: Vòng ${a.prevRound} (${a.prevScore}đ) -> Vòng ${a.round} (${a.score}đ), chênh lệch ${a.diff} điểm (${a.severity === 'high' ? 'nghiêm trọng' : 'trung bình'})`
+          )
+          .join('\n')
+      : 'Không ghi nhận bất thường đáng kể.';
+
+    const statsText = `Tổng số nhân sự: ${d.stats.total}. Đã hoàn thành (Approved): ${d.stats.completed} (${d.stats.percent}%). Đang thực hiện: ${d.stats.inProgress}. Chưa bắt đầu: ${d.stats.notStarted}.`;
+
+    const gradeText = (d.gradeDistribution || [])
+      .map((g) => `${g.grade}: ${g.count}`)
+      .join(', ');
+
+    const teamText = (d.teamStatus || [])
+      .map((t) => `${t.name}: ${t.progress}% (${t.membersCount} nhân sự)`)
+      .join('; ');
+
+    const recentText = (d.recentActivities || [])
+      .map((a) => `- Đánh giá trạng thái ${a.status}, xếp loại ${a.grade || 'chưa có'}`)
+      .join('\n');
+
+    const summaryContent = periodSummaryRes.summary || 'Chưa có tóm tắt tổng hợp trước đó.';
+
+    const prompt = `Bạn là thư ký/trợ lý nhân sự chuyên nghiệp của công ty. Hãy soạn BIÊN BẢN KẾT THÚC KỲ ĐÁNH GIÁ NĂNG LỰC QAQC (${periodName}).
+Văn phong: Tiếng Việt, chính thức, trang trọng, cô đọng, khách quan (~250-350 từ).
+
+DỮ LIỆU ĐÁNH GIÁ (Đã ẩn danh hóa):
+- Kỳ đánh giá: ${periodName} (Trạng thái: ${periodData?.status || 'Active'})
+- Thống kê tiến độ: ${statsText}
+- Phân bổ xếp loại: ${gradeText || 'Chưa có dữ liệu'}
+- Tiến độ theo nhóm: ${teamText || 'Chưa có dữ liệu'}
+- Hoạt động gần đây:
+${recentText || 'Không có'}
+- Tóm tắt tổng hợp kỳ:
+${summaryContent}
+- Cảnh báo bất thường (chênh lệch điểm giữa các vòng):
+${anomalyText}
+
+CẤU TRÚC BIÊN BẢN (đầy đủ các phần rõ ràng):
+1. TIÊU ĐỀ: BIÊN BẢN TỔNG KẾT KỲ ĐÁNH GIÁ NĂNG LỰC QAQC - ${periodName.toUpperCase()}
+2. MỤC ĐÍCH & PHẠM VI: Nêu rõ mục đích tổng kết và phạm vi áp dụng (bộ phận QAQC).
+3. TỔNG QUAN KẾT QUẢ: Nêu cụ thể số lượng nhân sự tham gia, tỷ lệ hoàn thành, bức tranh phân bổ xếp loại (S, A, B, C, D) và tiến độ các nhóm.
+4. ĐIỂM NỔI BẬT & ĐÁNH GIÁ CHUNG: Đúc kết từ tóm tắt kỳ về năng lực, tinh thần kỷ luật và những mặt làm tốt.
+5. VẤN ĐỀ TỒN TẠI & BẤT THƯỜNG: Nêu các vấn đề cần lưu ý (tiến độ chưa xong, chênh lệch điểm bất thường giữa các vòng nếu có).
+6. KHUYẾN NGHỊ & KẾ HOẠCH KỲ TIẾP THEO: 2-3 kiến nghị cụ thể cho kỳ đánh giá tiếp theo (đào tạo, chuẩn hóa tiêu chí chấm, cải thiện tiến độ).
+
+YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ ràng, chuẩn phong cách biên bản hành chính doanh nghiệp.`;
+
+    const minutes = await callAI(prompt, { maxTokens: 1200, temperature: 0.4 });
+    if (!minutes) {
+      return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
+    }
+
+    return { minutes, periodName };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : 'Lỗi tạo biên bản kết thúc kỳ' };
+  }
+}
+

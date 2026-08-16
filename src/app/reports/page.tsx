@@ -10,6 +10,7 @@ import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
 import BatchResultMessageModal from '@/components/reports/BatchResultMessageModal';
+import PeriodMinutesModal from '@/components/reports/PeriodMinutesModal';
 import AiSummaryCard from '@/components/reports/AiSummaryCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import TeamComparison from '@/components/reports/TeamComparison';
@@ -103,7 +104,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
           </div>
 
           {viewer?.role === 'Manager' && (
-            <BatchResultMessageModal periodId={periodId || ''} />
+            <>
+              <PeriodMinutesModal periodId={periodId || ''} />
+              <BatchResultMessageModal periodId={periodId || ''} />
+            </>
           )}
           <ExportReportButton periodId={periodId || ''} />
         </div>
