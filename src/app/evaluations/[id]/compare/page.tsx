@@ -362,7 +362,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                   </div>
                   
                   <div className="flex-1">
-                    <div className="text-[9px] font-black text-outline/50 uppercase mb-2">Nhận xét chung</div>
+                    <div className="text-[11px] font-black text-outline/50 uppercase mb-2">Nhận xét chung</div>
                     <p className="text-sm text-on-surface/80 leading-relaxed italic font-medium">
                       &quot;{r.comment || "Không có nhận xét."}&quot;
                     </p>
@@ -370,7 +370,7 @@ export default function ComparePage({ params }: ComparePageProps) {
 
                   {r.additionalComment && (
                     <div className="pt-4 border-t border-outline-variant/30 bg-surface/30 -mx-6 -mb-6 p-6 rounded-b-[2rem]">
-                      <div className="text-[9px] font-black text-outline/50 uppercase mb-2">Thông tin bổ sung</div>
+                      <div className="text-[11px] font-black text-outline/50 uppercase mb-2">Thông tin bổ sung</div>
                       <p className="text-xs text-on-surface/70 leading-relaxed italic">
                         {r.additionalComment}
                       </p>
@@ -399,7 +399,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                     return (
                       <div key={criterion.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface/20 border border-outline-variant/50 hover:border-primary/20 transition-colors">
                         <div className="flex flex-col truncate pr-2">
-                          <span className="text-[9px] font-black text-outline-variant uppercase">{criterion.id}</span>
+                          <span className="text-[11px] font-black text-outline-variant uppercase">{criterion.id}</span>
                           <span className="text-xs font-bold text-on-surface/70 truncate">{criterion.name}</span>
                         </div>
                         <span className="shrink-0 text-sm font-black text-outline px-2.5 py-1 bg-white rounded-xl shadow-sm border border-outline-variant/30">{score}</span>

@@ -113,7 +113,7 @@ export default function PeriodSelector() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">Kỳ {period.year}</span>
                       {isClosed && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-white/40 text-[9px] font-bold uppercase">
+                        <span className="px-1.5 py-0.5 rounded-md bg-white/10 text-white/40 text-[11px] font-bold uppercase">
                           Closed
                         </span>
                       )}
