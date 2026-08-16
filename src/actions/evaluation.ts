@@ -222,6 +222,26 @@ export async function saveEvaluationRound(
 
         if (eError) {
           submitFlowError = 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message;
+        } else {
+          // Guard chống data kẹt: verify status sau update, retry 1 lần nếu lệch (Phase 79)
+          const { data: statusCheck } = await supabaseAdmin
+            .from('evaluations')
+            .select('status')
+            .eq('id', evaluationId)
+            .maybeSingle();
+          if (statusCheck && statusCheck.status !== evalUpdate.status) {
+            const { error: retryError } = await supabaseAdmin
+              .from('evaluations')
+              .update({ status: evalUpdate.status, updated_at: now })
+              .eq('id', evaluationId);
+            if (retryError) {
+              console.error('[saveEvaluationRound] status khong khop sau update', {
+                id: evaluationId,
+                expected: evalUpdate.status,
+                actual: statusCheck.status,
+              });
+            }
+          }
         }
       }
 
