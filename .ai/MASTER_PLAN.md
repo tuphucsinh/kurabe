@@ -760,6 +760,13 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
    - **RE-SEND (Reviewer R3)**: Manager có thể soạn lại + ghi đè result_message (saveResultMessageAction overwrite) — không khóa.
    - **CON ĐƯỜNG ĐỌC EMPLOYEE (Reviewer R3 HIGH)**: Employee card dùng getEvaluationByEmployee(employeeId = auth.user.id, period active, user) → eval.resultMessage + finalGrade + totalScore → hiển thị; KHÔNG cần query mới.
    - **PHẠM VI HIỂN THỊ (Reviewer R3)**: result_message CHỈ hiển thị cho Employee chủ phiếu + Manager (soạn/xem); Leader/SubLeader KHÔNG cần thấy trong scope này (chốt).
+   - **T2b — GIỚI HẠN NAVIGATION EMPLOYEE (anh chốt 15-08)**: Employee CHỈ thấy 3 thứ: (1) Phiếu đánh giá của mình /evaluations/{id}; (2) Cài đặt /settings (đổi mật khẩu); (3) Hướng dẫn /support. KHÔNG thấy dashboard/teams/employees/reports/criteria.
+     - **CƠ CHẾ CHẶN (Reviewer T2b #1)**: per-route server guard — dashboard inline + layout.tsx async cho teams/employees/criteria; KHÔNG dùng middleware (cookie không có role). Redirect đích = /evaluations/{employeeId} (cần DB lookup lấy employeeId — không làm được ở middleware).
+     - **reports/page.tsx (Reviewer T2b #2)**: đổi đích redirect — hiện về /dashboard → về /evaluations/{id} cho Employee.
+     - **getEvaluationByEmployee (Reviewer T2b #3)**: truyền active periodId (khử maybeSingle nhiều kỳ) + định nghĩa message "chưa có phiếu" khi Employee chưa có phiếu kỳ active.
+     - **Sidebar + BottomNav (Reviewer T2b #4)**: filter theo role — Employee: "Phiếu đánh giá của tôi" + Cài đặt (bỏ Home/Teams/Users).
+     - **Landing / (Reviewer T2b #5)**: login/`/` redirect role-aware — Employee → /evaluations/{id} (KHÔNG /dashboard).
+     - **(Khuyến nghị T2b #6)**: thêm requireRole vào getDashboardData + getReportAggregation (defense-in-depth).
    - Scope: Employee CHỈ đọc evaluation của mình (getEvaluationByEmployee user scope — đã có); không API mới cho Employee ngoài UI đọc đã có.
    - Rate: soạn hàng loạt = N lượt LLM chunk 5/đợt (Manager không giới hạn — OK); ẩn danh prompt như draftResult hiện có.
 
