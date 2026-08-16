@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence, LazyMotion, domAnimation } from 'framer-motion';
 import { AlertTriangle, Trash2, Info } from 'lucide-react';
 
 interface ConfirmOptions {
@@ -48,17 +48,19 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
-      <AnimatePresence>
-        {confirmState && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => handleClose(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
+      {/* LazyMotion riêng cho dialog — không kéo bản full framer-motion vào bundle mọi trang (C5) */}
+      <LazyMotion features={domAnimation} strict>
+        <AnimatePresence>
+          {confirmState && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+              <m.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => handleClose(false)}
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              />
+              <m.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -102,10 +104,11 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
                   {confirmState.confirmText || 'Xác nhận'}
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </LazyMotion>
     </ConfirmContext.Provider>
   );
 }

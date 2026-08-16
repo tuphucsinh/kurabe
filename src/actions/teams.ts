@@ -5,6 +5,7 @@ import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { Team } from '@/types';
+import { toClientError } from '@/lib/errors';
 
 function revalidateTeamPaths() {
   revalidateTag('dashboard-data', 'default');
@@ -48,7 +49,7 @@ export async function upsertTeamAction(
       .single();
 
     if (error || !data) {
-      return { success: false, error: 'Lỗi khi lưu nhóm: ' + (error?.message || 'unknown') };
+      return { success: false, error: toClientError(error, 'Lỗi khi lưu nhóm. Vui lòng thử lại.') };
     }
 
     const savedTeam: Team = {
@@ -69,7 +70,7 @@ export async function upsertTeamAction(
 
     return { success: true, team: savedTeam };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu nhóm.') };
   }
 }
 
@@ -87,7 +88,7 @@ export async function softDeleteTeamAction(
       .select('id');
 
     if (error) {
-      return { success: false, error: 'Lỗi khi xóa nhóm: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi khi xóa nhóm. Vui lòng thử lại.') };
     }
 
     if (!data || data.length === 0) {
@@ -99,7 +100,7 @@ export async function softDeleteTeamAction(
     await logAudit(auth.user, 'DELETE_TEAM', 'team', id);
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi xóa nhóm.') };
   }
 }
 

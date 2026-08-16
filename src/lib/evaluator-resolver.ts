@@ -1,6 +1,24 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Role } from '@/types';
+import { Database } from '@/types/database';
 import { EvaluatorSelector } from './evaluation-workflow';
+import { parseRole } from '@/lib/parsers';
+
+/**
+ * Build map teamId → teams.leader_id cho resolveEvaluatorFromList (batch flows).
+ * Server callers truyền supabaseAdmin; mặc định anon client (mô hình anon-read).
+ */
+export async function loadTeamLeaderIds(
+  db: SupabaseClient<Database> = supabase
+): Promise<Record<string, string | null>> {
+  const { data } = await db.from('teams').select('id, leader_id');
+  const map: Record<string, string | null> = {};
+  for (const t of data || []) {
+    map[t.id] = t.leader_id ?? null;
+  }
+  return map;
+}
 
 export interface EvaluatorResolution {
   id: string;
@@ -46,7 +64,7 @@ export async function resolveEvaluatorFromDb(
         .maybeSingle();
 
       if (subLeader) {
-        return { id: subLeader.id, role: subLeader.role as Role };
+        return { id: subLeader.id, role: parseRole(subLeader.role) };
       }
     }
     return null;
@@ -70,7 +88,7 @@ export async function resolveEvaluatorFromDb(
         .single();
 
       if (teamLeader) {
-        return { id: teamLeader.id, role: teamLeader.role as Role };
+        return { id: teamLeader.id, role: parseRole(teamLeader.role) };
       }
     }
 
@@ -85,7 +103,7 @@ export async function resolveEvaluatorFromDb(
       .maybeSingle();
 
     if (fallbackLeader) {
-      return { id: fallbackLeader.id, role: fallbackLeader.role as Role };
+      return { id: fallbackLeader.id, role: parseRole(fallbackLeader.role) };
     }
   }
 
@@ -99,7 +117,7 @@ export async function resolveEvaluatorFromDb(
       .maybeSingle();
 
     if (manager) {
-      return { id: manager.id, role: manager.role as Role };
+      return { id: manager.id, role: parseRole(manager.role) };
     }
   }
 
@@ -108,11 +126,14 @@ export async function resolveEvaluatorFromDb(
 
 /**
  * Tìm evaluator tương ứng với selector từ danh sách bộ nhớ (Batch).
+ * `teamLeaderIds` (optional): map teamId → teams.leader_id — truyền để Leader-resolve
+ * ƯU TIÊN leader được chỉ định (giống resolveEvaluatorFromDb); thiếu thì scan role Leader trong team.
  */
 export function resolveEvaluatorFromList(
   selector: EvaluatorSelector,
   subject: EvaluationSubject,
-  allUsers: EvaluationSubject[]
+  allUsers: EvaluationSubject[],
+  teamLeaderIds?: Record<string, string | null>
 ): EvaluatorResolution | null {
   if (selector === 'SELF') {
     return { id: subject.id, role: subject.role };
@@ -128,6 +149,17 @@ export function resolveEvaluatorFromList(
 
   if (selector === 'Leader') {
     if (!subject.teamId) return null;
+    // 1. Ưu tiên leader được chỉ định (teams.leader_id) — còn active + đúng role Leader
+    const appointedId = teamLeaderIds?.[subject.teamId];
+    if (appointedId) {
+      const appointed = allUsers.find(u =>
+        u.id === appointedId && u.role === 'Leader'
+      );
+      if (appointed) {
+        return { id: appointed.id, role: appointed.role };
+      }
+    }
+    // 2. Fallback: user có role Leader trong team
     const leader = allUsers.find(u =>
       u.teamId === subject.teamId && u.role === 'Leader'
     );

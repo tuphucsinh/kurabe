@@ -1,18 +1,23 @@
 
 'use client';
 
-import { useState, useReducer, use, useEffect, useMemo } from 'react';
+import { useState, use, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCriteriaForRole } from '@/lib/db/criteria';
 import { useUser, useUsers, useEvaluationByEmployee } from '@/hooks/use-db';
-import { User, Evaluation, EvaluationRound, CriteriaGroup, RoundNumber } from '@/types';
+import { User, EvaluationRound, RoundNumber } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
 import EvaluationHeader from '@/components/evaluation/EvaluationHeader';
 import GroupNavTabs from '@/components/evaluation/GroupNavTabs';
+import AccessDenied, { RoundLoading } from '@/components/evaluation/AccessDenied';
+import HistoryList from '@/components/evaluation/HistoryList';
+import ReturnDialog from '@/components/evaluation/ReturnDialog';
+import ResultCard from '@/components/evaluation/ResultCard';
+import { useEvaluationPageState } from '@/hooks/use-evaluation-page-state';
+import { useAutoResetToast } from '@/hooks/use-auto-reset-toast';
 import { calculateRoundScore } from '@/lib/scoring';
-import { 
+import {
   ChevronRight,
   CheckCircle2,
   Lock,
@@ -22,10 +27,6 @@ import {
   Send,
   Undo2,
   AlertTriangle,
-  History,
-  MessageSquareQuote,
-  ChevronDown,
-  ChevronUp,
   Copy,
   Check,
 } from 'lucide-react';
@@ -38,66 +39,7 @@ import {
 } from '@/lib/evaluation-workflow';
 import { useToast } from '@/components/ui/Toast';
 import { suggestCommentAction, draftResultMessageAction, saveResultMessageAction } from '@/actions/ai';
-import { getGradeBandsSync } from '@/lib/grade-bands';
-import { getEvaluationHistoryByEmployee } from '@/lib/db/evaluations';
 import { usePeriods } from '@/hooks/use-db';
-
-const GRADE_EXPLANATION: Record<string, string> = {
-  S: 'Xuất sắc',
-  AB: 'Tốt',
-  B: 'Đáp ứng tốt yêu cầu',
-  C: 'Cần cải thiện',
-};
-
-interface EvaluationState {
-  employee: User | null;
-  evaluation: Evaluation | null;
-  currentRoundData: EvaluationRound | null;
-  allPreviousRounds: EvaluationRound[];
-  scores: Record<string, number>;
-  selectedLevelIndexes: Record<string, number>;
-  notes: Record<string, string>;
-  comment: string;
-}
-
-type EvaluationAction =
-  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState> }
-  | { type: 'SET_SCORE'; criterionId: string; points: number; levelIndex: number }
-  | { type: 'SET_NOTE'; criterionId: string; note: string }
-  | { type: 'SET_COMMENT'; comment: string };
-
-const initialState: EvaluationState = {
-  employee: null,
-  evaluation: null,
-  currentRoundData: null,
-  allPreviousRounds: [],
-  scores: {},
-  selectedLevelIndexes: {},
-  notes: {},
-  comment: '',
-};
-
-function evaluationReducer(state: EvaluationState, action: EvaluationAction): EvaluationState {
-  switch (action.type) {
-    case 'SET_INITIAL_DATA':
-      return { ...state, ...action.payload };
-    case 'SET_SCORE':
-      return {
-        ...state,
-        scores: { ...state.scores, [action.criterionId]: action.points },
-        selectedLevelIndexes: {
-          ...state.selectedLevelIndexes,
-          [action.criterionId]: action.levelIndex,
-        }
-      };
-    case 'SET_NOTE':
-      return { ...state, notes: { ...state.notes, [action.criterionId]: action.note } };
-    case 'SET_COMMENT':
-      return { ...state, comment: action.comment };
-    default:
-      return state;
-  }
-}
 
 interface EvaluationPageProps {
   params: Promise<{ id: string }>;
@@ -113,7 +55,7 @@ const ROLE_RANK: Record<User['role'], number> = {
 export default function EvaluationPage({ params }: EvaluationPageProps) {
   const router = useRouter();
   const { id } = use(params);
-  
+
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: employee = null, isLoading: isLoadingUser } = useUser(id);
@@ -122,22 +64,16 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { data: periods = [] } = usePeriods();
 
   const isEmployeeOwner = user?.role === 'Employee' && evaluation?.employeeId === user.id;
-  const [history, setHistory] = useState<Evaluation[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [isSavingDraftMessage, setIsSavingDraftMessage] = useState(false);
 
-  const [state, dispatch] = useReducer(evaluationReducer, initialState);
-  const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
+  const [showDraftSavedToast, showDraftSaved] = useAutoResetToast();
+  const [showSubmitSuccessToast, showSubmitSuccess] = useAutoResetToast();
 
-  // Tải lịch sử đánh giá các kỳ trước của Employee
-  useEffect(() => {
-    if (isEmployeeOwner && user?.id) {
-      getEvaluationHistoryByEmployee(user.id, user)
-        .then((data) => { setHistory(data); setIsLoadingHistory(false); })
-        .catch((err) => { console.error('Error loading eval history:', err); setIsLoadingHistory(false); });
-    }
-  }, [isEmployeeOwner, user]);
+  // Redirect sau submit — giữ timer ref để cleanup khi unmount (tránh update after unmount)
+  const redirectTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (redirectTimer.current !== null) window.clearTimeout(redirectTimer.current);
+  }, []);
 
   // AI (Manager-only)
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -149,109 +85,26 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [returnReason, setReturnReason] = useState('');
   const [isReturning, setIsReturning] = useState(false);
 
-  const [criteriaGroups, setCriteriaGroups] = useState<CriteriaGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [isSaving, setIsSaving] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
-  const [showDraftSavedToast, setShowDraftSavedToast] = useState(false);
-  const [showSubmitSuccessToast, setShowSubmitSuccessToast] = useState(false);
 
-  // New access control logic
-  const accessState = useMemo(() => 
+  // Access control
+  const accessState = useMemo(() =>
     evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
   [evaluation, user, users]);
 
-  useEffect(() => {
-    async function loadData() {
-      if (employee && evaluation && accessState) {
-        if (accessState.mode === 'blocked') return;
-
-        // Fetch criteria from DB
-        const roleForCriteria = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
-        const dbCriteria = await getCriteriaForRole(roleForCriteria);
-        setCriteriaGroups(dbCriteria);
-
-        // Identify which round to show/edit
-        const targetRoundNum = accessState.editableRound || accessState.displayRound;
-        const targetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
-        
-        const prevRounds = evaluation.rounds
-          .filter(r => accessState.visibleRounds.some((vr: EvaluationRound) => vr.round === r.round) && r.round < (targetRoundNum || 0))
-          .sort((a, b) => a.round - b.round);
-
-        let initialScores: Record<string, number> = {};
-        let initialSelectedLevelIndexes: Record<string, number> = {};
-        let initialNotes: Record<string, string> = {};
-        let initialComment = '';
-
-        if (targetRound?.scores && Object.keys(targetRound.scores).length > 0) {
-          initialScores = { ...targetRound.scores };
-          initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
-          initialNotes = targetRound.notes || {};
-          initialComment = targetRound.comment || '';
-        } else if (!accessState.editableRound && targetRound) {
-          initialScores = { ...targetRound.scores };
-          initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
-          initialNotes = targetRound.notes || {};
-          initialComment = targetRound.comment || '';
-        } else if (prevRounds.length > 0 && accessState.editableRound) {
-          // Carry forward from previous round if we are starting a new round
-          const lastRound = prevRounds[prevRounds.length - 1];
-          initialScores = { ...lastRound.scores };
-          initialSelectedLevelIndexes = lastRound.selectedLevelIndexes || {};
-          initialNotes = lastRound.notes || {};
-        }
-
-        // Pre-fill defaults chỉ khi đang edit round và chưa có dữ liệu.
-        if (Object.keys(initialScores).length === 0 && !!accessState.editableRound) {
-          for (const group of dbCriteria) {
-            for (const criterion of group.criteria) {
-              if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
-                initialScores[criterion.id!] = criterion.levels[criterion.defaultLevelIndex].points;
-              }
-            }
-          }
-        }
-
-        dispatch({
-          type: 'SET_INITIAL_DATA',
-          payload: {
-            employee,
-            evaluation,
-            currentRoundData: targetRound,
-            allPreviousRounds: prevRounds,
-            scores: initialScores,
-            selectedLevelIndexes: initialSelectedLevelIndexes,
-            notes: initialNotes,
-            comment: initialComment,
-          }
-        });
-      }
-    }
-    loadData();
-  }, [employee, evaluation, accessState]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!showDraftSavedToast) return;
-    const timeoutId = window.setTimeout(() => {
-      setShowDraftSavedToast(false);
-    }, 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [showDraftSavedToast]);
-
-  useEffect(() => {
-    if (!showSubmitSuccessToast) return;
-    const timeoutId = window.setTimeout(() => {
-      setShowSubmitSuccessToast(false);
-    }, 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [showSubmitSuccessToast]);
+  // State + data loading (reducer, criteria, history, grade bands) — tách sang hook (D3)
+  const {
+    state,
+    dispatch,
+    criteriaGroups,
+    history,
+    isLoadingHistory,
+    gradeBands,
+    isMounted,
+  } = useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user });
+  const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
 
   if (!isMounted || isLoadingUser || isLoadingEval) {
     return (
@@ -266,19 +119,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   if (!employee) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-4 bg-red-50 rounded-full text-red-500">
-          <Lock size={48} />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối</h2>
-        <p className="text-slate-500 max-w-md">Bạn không có quyền truy cập</p>
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-        >
-          Quay lại
-        </button>
-      </div>
+      <AccessDenied
+        title="Quyền truy cập bị từ chối"
+        message="Bạn không có quyền truy cập"
+        onBack={() => router.back()}
+      />
     );
   }
 
@@ -287,52 +132,29 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
     if (isViewerLowerThanTarget) {
       return (
-        <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-          <div className="p-4 bg-red-50 rounded-full text-red-500">
-            <Lock size={48} />
-          </div>
-          <p className="text-slate-500 max-w-md">Bạn không thể xem đánh giá của cấp trên</p>
-          <button
-            onClick={() => router.back()}
-            className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-          >
-            Quay lại
-          </button>
-        </div>
+        <AccessDenied
+          message="Bạn không thể xem đánh giá của cấp trên"
+          onBack={() => router.back()}
+        />
       );
     }
 
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-4 bg-amber-50 rounded-full text-amber-500">
-          <Lock size={48} />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Chưa có dữ liệu đánh giá</h2>
-        <p className="text-slate-500 max-w-md">Không có dữ liệu evaluation tương ứng cho nhân viên này.</p>
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-        >
-          Quay lại
-        </button>
-      </div>
+      <AccessDenied
+        tone="amber"
+        title="Chưa có dữ liệu đánh giá"
+        message="Không có dữ liệu evaluation tương ứng cho nhân viên này."
+        onBack={() => router.back()}
+      />
     );
   }
 
   if (!accessState) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-4 bg-red-50 rounded-full text-red-500">
-          <Lock size={48} />
-        </div>
-        <p className="text-slate-500 max-w-md">Bạn không thể xem đánh giá của cấp trên</p>
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-        >
-          Quay lại
-        </button>
-      </div>
+      <AccessDenied
+        message="Bạn không thể xem đánh giá của cấp trên"
+        onBack={() => router.back()}
+      />
     );
   }
 
@@ -350,20 +172,10 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         ? `${employee.name} (${roleLabel[employee.role] || employee.role}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
         : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.';
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-4 bg-red-50 rounded-full text-red-500">
-          <Lock size={48} />
-        </div>
-        <p className="text-slate-500 max-w-md">
-          {blockedDetail}
-        </p>
-        <button 
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-        >
-          Quay lại
-        </button>
-      </div>
+      <AccessDenied
+        message={blockedDetail}
+        onBack={() => router.back()}
+      />
     );
   }
 
@@ -383,31 +195,16 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const activeRoundData = currentRoundData?.round === activeRound ? currentRoundData : null;
 
   if (activeRound && activeRoundExists && !activeRoundData) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 rounded-full"></div>
-          <div className="text-slate-400 font-medium">Đang tải dữ liệu...</div>
-        </div>
-      </div>
-    );
+    return <RoundLoading />;
   }
 
   if (!activeRound || !activeRoundExists || !activeRoundData) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-4 bg-red-50 rounded-full text-red-500">
-          <Lock size={48} />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Không thể tải vòng đánh giá</h2>
-        <p className="text-slate-500 max-w-md">Vòng đánh giá hiện tại chưa sẵn sàng hoặc đã bị khóa.</p>
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
-        >
-          Quay lại
-        </button>
-      </div>
+      <AccessDenied
+        title="Không thể tải vòng đánh giá"
+        message="Vòng đánh giá hiện tại chưa sẵn sàng hoặc đã bị khóa."
+        onBack={() => router.back()}
+      />
     );
   }
 
@@ -432,12 +229,12 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);
         if (isSubmit) {
-          setShowSubmitSuccessToast(true);
-          window.setTimeout(() => {
+          showSubmitSuccess();
+          redirectTimer.current = window.setTimeout(() => {
             router.push('/employees');
           }, 900);
         } else {
-          setShowDraftSavedToast(true);
+          showDraftSaved();
         }
       } else {
         toast(`Lỗi: ${res.error}`, 'error');
@@ -505,7 +302,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     createdAt: activeRoundData.createdAt || '',
   };
 
-  const { totalScore, grade } = calculateRoundScore(currentSummaryRound);
+  const { totalScore, grade } = calculateRoundScore(currentSummaryRound, gradeBands);
 
   const handleSuggestComment = async () => {
     if (!employee) return;
@@ -588,7 +385,10 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           .filter(Boolean)
           .join(' | '),
         summaryNotes: comment || (evaluation.rounds || []).map((r) => r.comment).filter(Boolean).join(' | '),
-        periodName: '2026',
+        periodName: (() => {
+          const period = evaluation.periodId ? periods.find((p) => p.id === evaluation.periodId) : undefined;
+          return period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
+        })(),
       });
       if (result.message) {
         setDraftMessage(result.message);
@@ -629,7 +429,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   };
 
   return (
-      <LazyMotion features={domAnimation}>
+    <LazyMotion features={domAnimation}>
       {showDraftSavedToast && (
         <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-xl">
           <p className="text-sm font-semibold text-emerald-700">Đã lưu bản nháp.</p>
@@ -650,7 +450,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 Lần {accessState.editableRound || accessState.displayRound} / {maxRound}
               </span>
               {allPreviousRounds.length > 0 && (
-                <button 
+                <button
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-outline-variant rounded-xl text-xs sm:text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
                 >
@@ -672,7 +472,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               {!isReadOnly ? (
                 <>
                   {accessState.editableRound !== null && accessState.editableRound > 1 && (
-                    <button 
+                    <button
                       onClick={() => setReturnDialogOpen(true)}
                       disabled={isSaving}
                       className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
@@ -681,14 +481,14 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                       <span>Trả lại đánh giá</span>
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
                     className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
                   >
                     Lưu bản nháp
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleSave(true)}
                     disabled={isSaving}
                     className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-sm whitespace-nowrap"
@@ -740,171 +540,25 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             </div>
           )}
 
-          {/* 1. CARD KẾT QUẢ EMPLOYEE (T2 + T2d) */}
+          {/* 1. CARD KẾT QUẢ EMPLOYEE */}
           {isEmployeeOwner && evaluation?.status === 'Approved' && (
-            <div className="bg-gradient-to-br from-white via-indigo-50/20 to-blue-50/20 rounded-3xl p-6 md:p-8 border border-indigo-100 shadow-md space-y-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-indigo-100/80 pb-5">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-2">
-                    <CheckCircle2 size={13} />
-                    <span>Kết quả chính thức đã phê duyệt</span>
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                    Thông báo Kết quả Đánh giá Năng lực
-                  </h2>
-                  <p className="text-xs md:text-sm text-slate-500 mt-0.5">
-                    Dành cho nhân sự: <span className="font-semibold text-slate-700">{employee.name}</span> ({employee.employeeCode})
-                    {evaluation.updatedAt && ` • Ngày duyệt: ${new Date(evaluation.updatedAt).toLocaleDateString('vi-VN')}`}
-                  </p>
-                </div>
-
-                {/* Big Grade Badge & Score */}
-                <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-indigo-100 shadow-sm shrink-0">
-                  <div className="text-right">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Điểm tổng kết</p>
-                    <p className="text-2xl font-black text-slate-900 leading-none mt-0.5">
-                      {evaluation.finalScore ?? totalScore} <span className="text-sm font-semibold text-slate-500">điểm</span>
-                    </p>
-                  </div>
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${
-                    (evaluation.finalGrade || grade) === 'S' ? 'bg-indigo-600 text-white' :
-                    (evaluation.finalGrade || grade) === 'A' || (evaluation.finalGrade || grade) === 'AB' ? 'bg-teal-600 text-white' :
-                    (evaluation.finalGrade || grade) === 'B' ? 'bg-blue-600 text-white' :
-                    (evaluation.finalGrade || grade) === 'C' ? 'bg-amber-500 text-white' :
-                    'bg-slate-700 text-white'
-                  }`}>
-                    {evaluation.finalGrade || grade || '-'}
-                  </div>
-                </div>
-              </div>
-
-              {/* T2d: Dòng giải thích xếp loại & ngưỡng điểm & lời động viên */}
-              {(() => {
-                const finalGradeVal = evaluation.finalGrade || grade;
-                const explanation = finalGradeVal ? GRADE_EXPLANATION[finalGradeVal] : null;
-                if (!explanation) return null;
-
-                const roleGroup = isLeaderGradingRole(employee.role) ? 'leader' : 'staff';
-                const bands = getGradeBandsSync()[roleGroup];
-                const band = bands.find((b) => b.grade === finalGradeVal);
-                let thresholdText = '';
-                if (band) {
-                  if (band.minScore != null && band.maxScore != null) {
-                    thresholdText = `từ ${band.minScore} đến ${band.maxScore} điểm`;
-                  } else if (band.minScore != null) {
-                    thresholdText = `từ ${band.minScore} điểm trở lên`;
-                  } else if (band.maxScore != null) {
-                    thresholdText = `dưới ${band.maxScore + 1} điểm`;
-                  }
-                }
-
-                return (
-                  <div className="p-4 bg-white/90 rounded-2xl border border-indigo-100/80 text-sm text-slate-700 leading-relaxed flex items-start gap-3 shadow-2xs">
-                    <Sparkles size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Xếp loại {finalGradeVal}: <span className="text-indigo-700 font-bold">{explanation}</span>
-                        {thresholdText ? ` (${thresholdText})` : ''}.
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1 font-medium">
-                        Chúc anh/chị tiếp tục phát huy trong kỳ tới!
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Thông báo kết quả từ Quản lý (resultMessage) */}
-              {evaluation.resultMessage && (
-                <div className="bg-sky-50/90 border border-sky-200 rounded-2xl p-5 shadow-2xs space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-800">
-                    <MessageSquareQuote size={16} className="text-sky-600" />
-                    <span>Nhận xét & Định hướng từ Ban Quản lý</span>
-                  </div>
-                  <p className="text-sm text-sky-950 leading-relaxed whitespace-pre-wrap font-medium">
-                    {evaluation.resultMessage}
-                  </p>
-                </div>
-              )}
-            </div>
+            <ResultCard
+              employee={employee}
+              evaluation={evaluation}
+              totalScore={totalScore}
+              grade={grade}
+              gradeBands={gradeBands}
+            />
           )}
 
-          {/* 2. TAB/SECTION KẾT QUẢ CÁC KỲ TRƯỚC (T2c) */}
+          {/* 2. TAB/SECTION KẾT QUẢ CÁC KỲ TRƯỚC */}
           {isEmployeeOwner && (
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-outline-variant shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <History className="text-primary" size={20} />
-                  <h3 className="text-lg font-bold text-slate-900">Kết quả các kỳ trước</h3>
-                </div>
-                <span className="text-xs font-medium text-slate-400">
-                  {history.filter((h) => h.id !== evaluation.id).length} kỳ đã lưu
-                </span>
-              </div>
-
-              {isLoadingHistory ? (
-                <div className="py-6 text-center text-xs text-slate-400 animate-pulse">
-                  Đang tải lịch sử đánh giá...
-                </div>
-              ) : history.filter((h) => h.id !== evaluation.id).length === 0 ? (
-                <p className="text-xs text-slate-500 italic py-2">
-                  Chưa có dữ liệu kết quả từ các kỳ đánh giá trước.
-                </p>
-              ) : (
-                <div className="space-y-3 pt-2">
-                  {history
-                    .filter((h) => h.id !== evaluation.id)
-                    .map((h) => {
-                      const period = periods.find((p) => p.id === h.periodId);
-                      const pName = period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
-                      const isExpanded = expandedHistoryId === h.id;
-
-                      return (
-                        <div
-                          key={h.id}
-                          className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-primary/30 transition-all space-y-3"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <span className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-sm text-primary shadow-2xs">
-                                {h.finalGrade || '-'}
-                              </span>
-                              <div>
-                                <p className="text-sm font-bold text-slate-900">{pName}</p>
-                                <p className="text-xs text-slate-500">
-                                  Điểm: <b className="text-slate-800 font-semibold">{h.finalScore ?? '-'}</b>
-                                  {h.updatedAt && ` • ${new Date(h.updatedAt).toLocaleDateString('vi-VN')}`}
-                                </p>
-                              </div>
-                            </div>
-
-                            {h.resultMessage && (
-                              <button
-                                type="button"
-                                onClick={() => setExpandedHistoryId(isExpanded ? null : h.id)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:text-primary transition-colors"
-                              >
-                                <span>{isExpanded ? 'Ẩn nhận xét' : 'Xem nhận xét'}</span>
-                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                              </button>
-                            )}
-                          </div>
-
-                          {isExpanded && h.resultMessage && (
-                            <div className="p-3.5 rounded-xl bg-white border border-sky-200 text-xs text-sky-950 leading-relaxed whitespace-pre-wrap animate-in fade-in duration-200">
-                              <p className="font-semibold text-sky-900 mb-1 flex items-center gap-1.5">
-                                <MessageSquareQuote size={13} className="text-sky-600" />
-                                Nhận xét kỳ này:
-                              </p>
-                              {h.resultMessage}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
+            <HistoryList
+              history={history}
+              currentEvaluationId={evaluation.id}
+              periods={periods}
+              isLoading={isLoadingHistory}
+            />
           )}
         </div>
 
@@ -916,7 +570,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               onSelect={handleGroupSelect}
               scores={scores}
             />
-            
+
             {activeGroup && (
               <CriteriaTab
                 group={activeGroup}
@@ -1011,55 +665,15 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         )}
       </div>
 
-      {returnDialogOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => {
-              if (!isReturning) setReturnDialogOpen(false);
-            }}
-          />
-          <div className="relative w-full max-w-md bg-surface p-6 rounded-2xl border shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-on-surface">
-              {(accessState.editableRound ?? activeRound) === 1
-                ? 'Trả lại báo cáo'
-                : 'Trả lại đánh giá'}
-            </h3>
-            <p className="text-sm text-outline">
-              {(accessState.editableRound ?? activeRound) === 1
-                ? 'Báo cáo sẽ quay về bản nháp để chỉnh sửa.'
-                : `Đánh giá sẽ quay về vòng ${(accessState.editableRound ?? activeRound) - 1} để chỉnh sửa. Dữ liệu vòng hiện tại sẽ bị reset.`}
-            </p>
-            <textarea
-              className="w-full mt-4 p-3 border border-outline-variant rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Lý do trả lại (bắt buộc)"
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              rows={3}
-              disabled={isReturning}
-            />
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setReturnDialogOpen(false)}
-                disabled={isReturning}
-                className="px-4 py-2 text-sm font-semibold text-outline hover:text-on-surface disabled:opacity-50 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleReturnEvaluation}
-                disabled={!returnReason.trim() || isReturning}
-                className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                {isReturning && <Loader2 size={16} className="animate-spin" />}
-                <span>Xác nhận trả lại</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReturnDialog
+        open={returnDialogOpen}
+        round={accessState.editableRound ?? activeRound}
+        reason={returnReason}
+        isReturning={isReturning}
+        onReasonChange={setReturnReason}
+        onClose={() => setReturnDialogOpen(false)}
+        onConfirm={handleReturnEvaluation}
+      />
     </LazyMotion>
   );
 }

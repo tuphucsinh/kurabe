@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
 import { CriteriaGroup, Criterion, Role } from '@/types';
 import { Database } from '@/types/database';
+import { toClientError } from '@/lib/errors';
 
 type DbCriteriaGroupInsert = Database['public']['Tables']['criteria_groups']['Insert'];
 type DbCriterionInsert = Database['public']['Tables']['criteria']['Insert'];
@@ -61,7 +62,7 @@ export async function upsertCriteriaGroupAction(
       .single();
 
     if (error || !data) {
-      return { success: false, error: 'Lỗi khi lưu nhóm tiêu chí: ' + (error?.message || 'unknown') };
+      return { success: false, error: toClientError(error, 'Lỗi khi lưu nhóm tiêu chí. Vui lòng thử lại.') };
     }
 
     const savedGroup: CriteriaGroup = {
@@ -85,7 +86,7 @@ export async function upsertCriteriaGroupAction(
 
     return { success: true, group: savedGroup };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu nhóm tiêu chí.') };
   }
 }
 
@@ -138,7 +139,7 @@ export async function upsertCriterionAction(
       .single();
 
     if (error || !data) {
-      return { success: false, error: 'Lỗi khi lưu tiêu chí: ' + (error?.message || 'unknown') };
+      return { success: false, error: toClientError(error, 'Lỗi khi lưu tiêu chí. Vui lòng thử lại.') };
     }
 
     // Save levels: delete old then insert new
@@ -149,7 +150,7 @@ export async function upsertCriterionAction(
         .eq('criterion_id', data.id);
 
       if (delErr) {
-        return { success: false, error: 'Lỗi khi xóa mức đánh giá cũ: ' + delErr.message };
+        return { success: false, error: toClientError(delErr, 'Lỗi khi xóa mức đánh giá cũ. Vui lòng thử lại.') };
       }
 
       const levelsToInsert: DbCriterionLevelInsert[] = criterion.levels.map((l, idx) => ({
@@ -165,7 +166,7 @@ export async function upsertCriterionAction(
         .insert(levelsToInsert);
 
       if (insErr) {
-        return { success: false, error: 'Lỗi khi thêm mức đánh giá: ' + insErr.message };
+        return { success: false, error: toClientError(insErr, 'Lỗi khi thêm mức đánh giá. Vui lòng thử lại.') };
       }
     }
 
@@ -193,7 +194,7 @@ export async function upsertCriterionAction(
 
     return { success: true, criterion: savedCriterion };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu tiêu chí.') };
   }
 }
 
@@ -212,7 +213,7 @@ export async function updateDefaultLevelAction(
       .select('id');
 
     if (error) {
-      return { success: false, error: 'Lỗi khi cập nhật mức mặc định: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi khi cập nhật mức mặc định. Vui lòng thử lại.') };
     }
 
     if (!data || data.length === 0) {
@@ -223,7 +224,7 @@ export async function updateDefaultLevelAction(
 
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định. Vui lòng thử lại.') };
   }
 }
 
@@ -241,7 +242,7 @@ export async function deleteCriteriaGroupAction(
       .select('id');
 
     if (error) {
-      return { success: false, error: 'Lỗi khi xóa nhóm tiêu chí: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi khi xóa nhóm tiêu chí. Vui lòng thử lại.') };
     }
 
     if (!data || data.length === 0) {
@@ -252,7 +253,7 @@ export async function deleteCriteriaGroupAction(
     await logAudit(auth.user, 'DELETE_CRITERIA_GROUP', 'criteria_group', id);
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi xóa nhóm tiêu chí.') };
   }
 }
 
@@ -270,7 +271,7 @@ export async function deleteCriterionAction(
       .select('id');
 
     if (error) {
-      return { success: false, error: 'Lỗi khi xóa tiêu chí: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi khi xóa tiêu chí. Vui lòng thử lại.') };
     }
 
     if (!data || data.length === 0) {
@@ -281,7 +282,7 @@ export async function deleteCriterionAction(
     await logAudit(auth.user, 'DELETE_CRITERION', 'criterion', id);
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi xóa tiêu chí.') };
   }
 }
 

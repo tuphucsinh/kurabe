@@ -1,5 +1,4 @@
 import React from 'react';
-import { supabase } from '@/lib/supabase';
 import { getDashboardData } from '@/actions/dashboard';
 import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -11,6 +10,8 @@ import LazySkillGapRadar from '@/components/charts/LazySkillGapRadar';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
+import { resolveCurrentPeriod } from '@/lib/db/evaluations';
+import type { EvaluationPeriod } from '@/types';
 
 export default async function DashboardPage() {
   const viewer = await getSessionUser();
@@ -18,40 +19,10 @@ export default async function DashboardPage() {
     redirect(`/evaluations/${viewer.id}`);
   }
 
-  const cookieStore = await cookies();
-  let periodId = cookieStore.get('selected_period_id')?.value;
-  
-  let currentPeriod = null;
-  try {
-    if (!periodId) {
-      const { data: activePeriodData } = await supabase
-        .from('evaluation_periods')
-        .select('id')
-        .eq('status', 'Active')
-        .maybeSingle();
-        
-      if (activePeriodData) {
-        periodId = activePeriodData.id;
-      } else {
-        const { data: fallbackPeriodData } = await supabase
-          .from('evaluation_periods')
-          .select('id')
-          .order('year', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (fallbackPeriodData) {
-          periodId = fallbackPeriodData.id;
-        }
-      }
-    }
-
-    if (periodId) {
-      const { data } = await supabase.from('evaluation_periods').select('*').eq('id', periodId).maybeSingle();
-      if (data) currentPeriod = data;
-    }
-  } catch (err) {
-    console.error('Error loading evaluation period in DashboardPage:', err);
-  }
+  // Giải kỳ hiện tại: cookie → kỳ Active → kỳ mới nhất (helper chung — C5)
+  const preferredPeriodId = (await cookies()).get('selected_period_id')?.value;
+  const currentPeriod: EvaluationPeriod | null = await resolveCurrentPeriod(preferredPeriodId);
+  const periodId = currentPeriod?.id;
 
   const dashboardData = periodId ? await getDashboardData(periodId) : null;
 

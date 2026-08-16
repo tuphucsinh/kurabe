@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Layers, Tag } from 'lucide-react';
 import { CriteriaGroup } from '@/types';
 
@@ -19,26 +19,11 @@ export default function CriteriaGroupModal({
   group,
   existingGroupIds = [] 
 }: CriteriaGroupModalProps) {
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [shortName, setShortName] = useState('');
+  // Init từ props + parent truyền key={group?.id ?? 'new'} để đổi đối tượng → remount (state reset)
+  const [code, setCode] = useState(group?.code || '');
+  const [name, setName] = useState(group?.name || '');
+  const [shortName, setShortName] = useState(group?.shortName || '');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    if (group) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCode(group.code || '');
-      setName(group.name);
-      setShortName(group.shortName || '');
-    } else {
-      setCode('');
-      setName('');
-      setShortName('');
-    }
-    setError('');
-  }, [group, isOpen]);
 
   if (!isOpen) return null;
 

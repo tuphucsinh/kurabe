@@ -12,6 +12,7 @@ import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getDashboardData } from '@/actions/dashboard';
 import { detectAnomalies } from '@/lib/anomaly';
 import { getPeriodSummary } from '@/actions/ai-summary';
+import { toClientError } from '@/lib/errors';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -144,7 +145,7 @@ export async function saveResultMessageAction(input: {
       .eq('id', input.evaluationId);
 
     if (error) {
-      return { error: 'Lỗi cập nhật thông báo kết quả: ' + error.message };
+      return { error: toClientError(error, 'Lỗi cập nhật thông báo kết quả. Vui lòng thử lại.') };
     }
 
     revalidatePath(`/evaluations/${input.evaluationId}`);
@@ -160,7 +161,7 @@ export async function saveResultMessageAction(input: {
 
     return { ok: true };
   } catch (err: unknown) {
-    return { error: err instanceof Error ? err.message : 'Unknown error' };
+    return { error: toClientError(err, 'Lỗi không xác định khi lưu thông báo kết quả.') };
   }
 }
 
@@ -283,7 +284,7 @@ export async function generateResultMessagesChunkAction(input: {
           return {
             evaluationId: ev.id,
             ok: false,
-            error: err instanceof Error ? err.message : 'Lỗi tạo thông báo',
+            error: toClientError(err, 'Lỗi tạo thông báo'),
           };
         }
       })
@@ -300,7 +301,7 @@ export async function generateResultMessagesChunkAction(input: {
     };
   } catch (err: unknown) {
     return {
-      error: err instanceof Error ? err.message : 'Lỗi xử lý tạo thông báo hàng loạt',
+      error: toClientError(err, 'Lỗi xử lý tạo thông báo hàng loạt. Vui lòng thử lại.'),
     };
   }
 }
@@ -399,7 +400,7 @@ YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ r�
 
     return { minutes, periodName };
   } catch (err: unknown) {
-    return { error: err instanceof Error ? err.message : 'Lỗi tạo biên bản kết thúc kỳ' };
+    return { error: toClientError(err, 'Lỗi tạo biên bản kết thúc kỳ. Vui lòng thử lại.') };
   }
 }
 

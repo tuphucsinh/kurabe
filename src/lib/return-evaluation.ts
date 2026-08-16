@@ -1,5 +1,6 @@
 import { EvalStatus, Role, RoundNumber } from '@/types';
 import { ACTIVE_STEP_STATUSES } from './evaluation-workflow';
+import { parseRoundNumber } from '@/lib/parsers';
 
 export interface ReturnCheck {
   ok: boolean;
@@ -88,6 +89,6 @@ export function resetRoundFields() {
 }
 
 export function nextStatusAfterReturn(round: RoundNumber): EvalStatus {
-  const prevRound = (round - 1) as RoundNumber;
+  const prevRound = parseRoundNumber(round - 1);
   return ACTIVE_STEP_STATUSES[prevRound] ?? 'Draft';
 }

@@ -5,7 +5,9 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { calculateRoundScore } from '@/lib/scoring';
-import { RoundNumber, EvaluationRound, Grade, Role, EvalStatus } from '@/types';
+import { ensureServerGradeBands } from '@/lib/grade-bands-server';
+import { toClientError } from '@/lib/errors';
+import { RoundNumber, EvaluationRound, Role } from '@/types';
 import {
   getEvaluationFlow,
   getNextEvaluationStep,
@@ -22,6 +24,7 @@ import {
   resetRoundFields,
   nextStatusAfterReturn,
 } from '@/lib/return-evaluation';
+import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -65,11 +68,14 @@ export async function saveEvaluationRound(
 
     const evaluation: EvaluationSnapshot = {
       employeeId: evalInfo.employee_id,
-      employeeRole: evalInfo.employee_role as Role,
+      employeeRole: parseRole(evalInfo.employee_role),
       teamId: evalInfo.team_id,
     };
 
     // 2. Tính toán điểm và grade theo role người được đánh giá
+    // Nạp thang điểm từ DB trước khi tính — nếu không server dùng fallback hardcode cũ
+    await ensureServerGradeBands();
+
     const tempRound: Partial<EvaluationRound> = {
       scores,
       evaluatorRole: isLeaderGradingRole(evaluation.employeeRole) ? 'Leader' : 'Employee'
@@ -105,7 +111,7 @@ export async function saveEvaluationRound(
       notes: composedNotes,
       comment,
       total_score: totalScore,
-      grade: grade as Grade,
+      grade: grade,
       status: isSubmit ? 'Submitted' : 'Draft'
     };
 
@@ -130,7 +136,7 @@ export async function saveEvaluationRound(
     const { data: updatedRounds, error: rError } = await roundQuery;
 
     if (rError) {
-      return { success: false, error: 'Lỗi cập nhật kết quả: ' + rError.message };
+      return { success: false, error: toClientError(rError, 'Lỗi cập nhật kết quả. Vui lòng thử lại.') };
     }
 
     // Nếu không có row nào được update, có nghĩa là record đã được submit (lock) hoặc không tồn tại hoặc sai evaluator
@@ -204,14 +210,14 @@ export async function saveEvaluationRound(
           .maybeSingle();
 
         if (existingNextRoundError) {
-          submitFlowError = 'Lỗi kiểm tra vòng đánh giá tiếp theo: ' + existingNextRoundError.message;
+          submitFlowError = toClientError(existingNextRoundError, 'Lỗi kiểm tra vòng đánh giá tiếp theo. Vui lòng thử lại.');
         } else if (!existingNextRound) {
           const { error: nextRoundError } = await supabaseAdmin
             .from('evaluation_rounds')
             .insert(nextRoundData);
 
           if (nextRoundError) {
-            submitFlowError = 'Lỗi tạo vòng đánh giá tiếp theo: ' + nextRoundError.message;
+            submitFlowError = toClientError(nextRoundError, 'Lỗi tạo vòng đánh giá tiếp theo. Vui lòng thử lại.');
           }
         }
       }
@@ -235,7 +241,7 @@ export async function saveEvaluationRound(
           .eq('id', evaluationId);
 
         if (eError) {
-          submitFlowError = 'Lỗi cập nhật trạng thái đánh giá: ' + eError.message;
+          submitFlowError = toClientError(eError, 'Lỗi cập nhật trạng thái đánh giá. Vui lòng thử lại.');
         } else {
           // Guard chống data kẹt: verify status sau update, retry 1 lần nếu lệch (Phase 79)
           const { data: statusCheck, error: statusCheckError } = await supabaseAdmin
@@ -302,7 +308,7 @@ export async function saveEvaluationRound(
     }
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
   }
 }
 
@@ -345,10 +351,10 @@ export async function returnEvaluationRound(
     }
 
     const currentRoundRecord = roundsData.find((r) => r.round === round);
-    const prevRound = (round - 1) as RoundNumber;
+    const prevRound = parseRoundNumber(round - 1);
     const prevRoundRecord = roundsData.find((r) => r.round === prevRound);
 
-    const flow = getEvaluationFlow(evalInfo.employee_role as Role);
+    const flow = getEvaluationFlow(parseRole(evalInfo.employee_role));
     const flowStep = flow.find((step) => step.round === round);
     const flowEvaluator = flowStep?.evaluator ?? null;
 
@@ -357,8 +363,8 @@ export async function returnEvaluationRound(
       actorId,
       employeeId: evalInfo.employee_id,
       actorRole: auth.user.role,
-      evaluationStatus: evalInfo.status as EvalStatus,
-      currentRound: (evalInfo.current_round ?? 1) as RoundNumber,
+      evaluationStatus: parseEvalStatus(evalInfo.status),
+      currentRound: parseRoundNumber(evalInfo.current_round),
       currentRoundEvaluatorId: currentRoundRecord?.evaluator_id ?? null,
       currentRoundSubmitted: Boolean(currentRoundRecord?.submitted_at),
       prevRoundExists: Boolean(prevRoundRecord),
@@ -436,7 +442,7 @@ export async function returnEvaluationRound(
       notes: currentRoundRecord?.notes ?? {},
       comment: currentRoundRecord?.comment ?? null,
       total_score: currentRoundRecord?.total_score ?? 0,
-      grade: (currentRoundRecord?.grade as Grade) ?? 'Pending',
+      grade: currentRoundRecord?.grade ? parseGrade(currentRoundRecord.grade) : 'Pending',
       status: currentRoundRecord?.status ?? 'NotStarted',
       submitted_at: currentRoundRecord?.submitted_at ?? null,
     };
@@ -530,7 +536,7 @@ export async function returnEvaluationRound(
 
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
   }
 }
 

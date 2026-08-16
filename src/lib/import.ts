@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { User, Role, Team } from '@/types';
 
 export interface ImportResult {
@@ -11,7 +10,7 @@ export interface ImportResult {
 const VALID_ROLES: Role[] = ['Manager', 'Leader', 'SubLeader', 'Employee'];
 
 export async function parseEmployeeExcel(
-  file: File, 
+  file: File,
   teams: Team[]
 ): Promise<ImportResult> {
   const result: ImportResult = {
@@ -22,6 +21,8 @@ export async function parseEmployeeExcel(
   };
 
   try {
+    // xlsx nặng (~140KB gzip) — chỉ load khi user thật sự import (C1)
+    const XLSX = await import('xlsx');
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'array' });
     const firstSheetName = workbook.SheetNames[0];
@@ -112,7 +113,8 @@ export async function parseEmployeeExcel(
   }
 }
 
-export function downloadSampleExcel(teams: Team[]) {
+export async function downloadSampleExcel(teams: Team[]) {
+  const XLSX = await import('xlsx');
   const teamNames = teams.map(t => t.name);
 
   // --- Sheet 1: Danh sách nhân viên (Data) ---

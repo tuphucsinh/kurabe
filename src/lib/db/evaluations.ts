@@ -1,9 +1,10 @@
 import { supabase } from '../supabase';
-import { Evaluation, EvaluationPeriod, EvaluationRound, EvalStatus, Grade, Role, RoundNumber, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
 import { DatabaseError } from '../errors';
 import { canViewEvaluation } from '@/data/workflow';
 import { Tables } from '@/types/database';
 import { splitRoundNotes } from '@/lib/round-level-selection';
+import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
 
 type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
@@ -44,14 +45,37 @@ export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: U
   return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers));
 }
 
-export async function getEvaluations(user?: User | null): Promise<Evaluation[]> {
+/** Context SubLeader cho canViewEvaluation: stub User {id, subleaderId} của các NV mình quản. */
+async function getSubLeaderViewContext(user: User): Promise<User[] | undefined> {
+  if (user.role !== 'SubLeader') return undefined;
+  const { data: subEmployees } = await supabase
+    .from('users')
+    .select('id, subleader_id')
+    .eq('subleader_id', user.id);
+  return (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
+}
+
+/**
+ * Query evaluations theo viewer (D1 — gom logic lặp giữa getEvaluations / getEvaluationsByPeriod).
+ * Manager: tất cả. Người khác: của mình + được giao chấm (+ Leader: team; SubLeader: NV quản).
+ */
+async function fetchEvaluationsForViewer(
+  user: User,
+  periodId?: string,
+  errorLabel = 'Error fetching evaluations'
+): Promise<Evaluation[]> {
   let query = supabase
     .from('evaluations')
     .select('*, evaluation_rounds(*)');
 
+  if (periodId) {
+    query = query.eq('period_id', periodId);
+  }
+
   let allUsers: User[] | undefined = undefined;
 
-  if (user && user.role !== 'Manager') {
+  if (user.role !== 'Manager') {
+    // Evaluations mà viewer là người chấm (mọi vòng)
     const { data: rounds } = await supabase
       .from('evaluation_rounds')
       .select('evaluation_id')
@@ -60,7 +84,7 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
 
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
-    
+
     // Leader xem evaluations trong team
     if (user.role === 'Leader' && user.teamId) {
       orFilters.push(`team_id.eq.${user.teamId}`);
@@ -68,15 +92,11 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
 
     // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
     if (user.role === 'SubLeader') {
-      const { data: subEmployees } = await supabase
-        .from('users')
-        .select('id, subleader_id')
-        .eq('subleader_id', user.id);
-      const subEmpIds = (subEmployees || []).map(u => u.id).filter(Boolean);
+      allUsers = await getSubLeaderViewContext(user);
+      const subEmpIds = (allUsers || []).map(u => u.id).filter(Boolean);
       if (subEmpIds.length > 0) {
         orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
       }
-      allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
     }
 
     query = query.or(orFilters.join(','));
@@ -85,11 +105,17 @@ export async function getEvaluations(user?: User | null): Promise<Evaluation[]> 
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
-    throw new DatabaseError('Error fetching evaluations', error);
+    throw new DatabaseError(errorLabel, error);
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
   return filterEvaluationsForViewer(evaluations, user, allUsers);
+}
+
+export async function getEvaluations(user?: User | null): Promise<Evaluation[]> {
+  // Guard sớm: không viewer → filterEvaluationsForViewer sẽ trả [] — đỡ query nguyên bảng (C2)
+  if (!user) return [];
+  return fetchEvaluationsForViewer(user);
 }
 
 export async function getEvaluationById(id: string, user?: User | null): Promise<Evaluation | null> {
@@ -106,14 +132,7 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
 
   const evaluation = mapEvaluationFromDb(data);
 
-  let allUsers: User[] | undefined = undefined;
-  if (user?.role === 'SubLeader') {
-    const { data: subEmployees } = await supabase
-      .from('users')
-      .select('id, subleader_id')
-      .eq('subleader_id', user.id);
-    allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
-  }
+  const allUsers = user ? await getSubLeaderViewContext(user) : undefined;
 
   if (!canViewEvaluation(user, evaluation, allUsers)) {
     return null;
@@ -123,52 +142,9 @@ export async function getEvaluationById(id: string, user?: User | null): Promise
 }
 
 export async function getEvaluationsByPeriod(periodId: string, user?: User | null): Promise<Evaluation[]> {
-  let query = supabase
-    .from('evaluations')
-    .select('*, evaluation_rounds(*)')
-    .eq('period_id', periodId);
-
-  let allUsers: User[] | undefined = undefined;
-
-  if (user && user.role !== 'Manager') {
-    const { data: rounds } = await supabase
-      .from('evaluation_rounds')
-      .select('evaluation_id')
-      .eq('evaluator_id', user.id);
-    const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
-
-    const orFilters = [`employee_id.eq.${user.id}`];
-    if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
-
-    // Leader xem evaluations trong team
-    if (user.role === 'Leader' && user.teamId) {
-      orFilters.push(`team_id.eq.${user.teamId}`);
-    }
-
-    // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
-    if (user.role === 'SubLeader') {
-      const { data: subEmployees } = await supabase
-        .from('users')
-        .select('id, subleader_id')
-        .eq('subleader_id', user.id);
-      const subEmpIds = (subEmployees || []).map(u => u.id).filter(Boolean);
-      if (subEmpIds.length > 0) {
-        orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
-      }
-      allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
-    }
-
-    query = query.or(orFilters.join(','));
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
-
-  if (error) {
-    throw new DatabaseError('Error fetching evaluations by period', error);
-  }
-
-  const evaluations = (data || []).map(mapEvaluationFromDb);
-  return filterEvaluationsForViewer(evaluations, user, allUsers);
+  // Guard sớm: không viewer → filterEvaluationsForViewer sẽ trả [] — đỡ query nguyên kỳ (C2)
+  if (!user) return [];
+  return fetchEvaluationsForViewer(user, periodId, 'Error fetching evaluations by period');
 }
 
 export async function getEvaluationByEmployee(employeeId: string, periodId?: string, user?: User | null): Promise<Evaluation | null> {
@@ -191,14 +167,7 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
 
   const evaluation = mapEvaluationFromDb(data);
 
-  let allUsers: User[] | undefined = undefined;
-  if (user?.role === 'SubLeader') {
-    const { data: subEmployees } = await supabase
-      .from('users')
-      .select('id, subleader_id')
-      .eq('subleader_id', user.id);
-    allUsers = (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
-  }
+  const allUsers = user ? await getSubLeaderViewContext(user) : undefined;
 
   if (!canViewEvaluation(user, evaluation, allUsers)) {
     return null;
@@ -234,6 +203,32 @@ const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {
   closed: 'Closed',
 };
 
+/**
+ * Giải kỳ hiện tại cho trang server: id ưu tiên (cookie) → kỳ Active → kỳ mới nhất.
+ * Tối đa 2 query (thay 3 query tuần tự cũ — C5). Lỗi → null, không làm vỡ page.
+ */
+export async function resolveCurrentPeriod(preferredId?: string): Promise<EvaluationPeriod | null> {
+  try {
+    if (preferredId) {
+      const { data } = await supabase
+        .from('evaluation_periods')
+        .select('*')
+        .eq('id', preferredId)
+        .maybeSingle();
+      if (data) return mapPeriodFromDb(data);
+    }
+    // 1 query lấy tất cả theo năm giảm dần — ưu tiên Active, không có thì kỳ mới nhất
+    const { data } = await supabase
+      .from('evaluation_periods')
+      .select('*')
+      .order('year', { ascending: false });
+    if (!data || data.length === 0) return null;
+    return mapPeriodFromDb(data.find((p) => p.status === 'active') || data[0]);
+  } catch {
+    return null;
+  }
+}
+
 // Helpers
 export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
   return {
@@ -254,14 +249,14 @@ export function mapEvaluationFromDb(db: DbEvaluation): Evaluation {
     id: db.id,
     periodId: db.period_id || '',
     employeeId: db.employee_id || '',
-    employeeRole: db.employee_role as Role,
+    employeeRole: parseRole(db.employee_role),
     teamId: db.team_id || '',
     rounds: (db.evaluation_rounds || [])
       .map(mapRoundFromDb)
       .sort((a, b) => a.round - b.round),
-    currentRound: (db.current_round || 1) as RoundNumber,
-    status: db.status as EvalStatus,
-    finalGrade: db.final_grade as Grade || undefined,
+    currentRound: parseRoundNumber(db.current_round),
+    status: parseEvalStatus(db.status),
+    finalGrade: db.final_grade ? parseGrade(db.final_grade) : undefined,
     finalScore: db.final_score || undefined,
     resultMessage: db.result_message ?? null,
     returnNote: db.return_note || undefined,
@@ -275,15 +270,15 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
   return {
     id: db.id,
     evaluationId: db.evaluation_id || '',
-    round: db.round as RoundNumber,
+    round: parseRoundNumber(db.round),
     evaluatorId: db.evaluator_id || '',
-    evaluatorRole: db.evaluator_role as Role,
+    evaluatorRole: parseRole(db.evaluator_role),
     status: normalizeRoundStatus(db),
     scores: (db.scores as Record<string, number>) || {},
     selectedLevelIndexes,
     notes: userNotes,
     totalScore: db.total_score || 0,
-    grade: db.grade as Grade,
+    grade: parseGrade(db.grade),
     comment: db.comment || undefined,
     additionalComment: db.additional_comment || undefined,
     submittedAt: db.submitted_at || undefined,

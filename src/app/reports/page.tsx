@@ -4,7 +4,7 @@ import { getReportAggregation } from '@/actions/reports';
 import { getPeriodSummary } from '@/actions/ai-summary';
 import { getTeams } from '@/lib/db/teams';
 import { getSessionUser } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { resolveCurrentPeriod } from '@/lib/db/evaluations';
 import PageHeader from '@/components/layout/PageHeader';
 import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
@@ -27,38 +27,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
     redirect('/dashboard');
   }
 
-  const cookieStore = await cookies();
-  let periodId = cookieStore.get('selected_period_id')?.value;
-  
-  try {
-    if (!periodId) {
-      const { data: activePeriodData } = await supabase
-        .from('evaluation_periods')
-        .select('id')
-        .eq('status', 'Active')
-        .maybeSingle();
-      if (activePeriodData) {
-        periodId = activePeriodData.id;
-      } else {
-        const { data: fallbackPeriodData } = await supabase
-          .from('evaluation_periods')
-          .select('id')
-          .order('year', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (fallbackPeriodData) {
-          periodId = fallbackPeriodData.id;
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching period in ReportsPage:', err);
-  }
+  // Giải kỳ hiện tại: cookie → kỳ Active → kỳ mới nhất (helper chung — C5)
+  const preferredPeriodId = (await cookies()).get('selected_period_id')?.value;
+  const period = await resolveCurrentPeriod(preferredPeriodId);
+  const periodId = period?.id;
 
   const team = searchParams.team || 'all';
-  const teams = await getTeams();
-  const reportData = periodId ? await getReportAggregation(periodId, team) : null;
-  const aiSummary = periodId ? await getPeriodSummary(periodId) : {};
+  // 3 nguồn độc lập — chạy song song (C5)
+  const [teams, reportData, aiSummary] = await Promise.all([
+    getTeams(),
+    periodId ? getReportAggregation(periodId, team) : Promise.resolve(null),
+    periodId ? getPeriodSummary(periodId) : Promise.resolve({} as Awaited<ReturnType<typeof getPeriodSummary>>),
+  ]);
 
   if (!reportData) {
     return (

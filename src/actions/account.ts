@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuth, requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
+import { toClientError } from '@/lib/errors';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -79,7 +80,7 @@ export async function changePassword(
       .eq('id', userId);
 
     if (updateError) {
-      return { success: false, error: 'Lỗi lưu mật khẩu: ' + updateError.message };
+      return { success: false, error: toClientError(updateError, 'Lỗi lưu mật khẩu. Vui lòng thử lại.') };
     }
 
     await logAudit(auth.user, 'CHANGE_PASSWORD', 'user', userId);
@@ -87,7 +88,7 @@ export async function changePassword(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Lỗi không xác định khi đổi mật khẩu.',
+      error: toClientError(err, 'Lỗi không xác định khi đổi mật khẩu. Vui lòng thử lại.'),
     };
   }
 }
@@ -112,7 +113,7 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
       .eq('id', userId);
 
     if (error) {
-      return { success: false, error: 'Lỗi đặt lại mật khẩu: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi đặt lại mật khẩu. Vui lòng thử lại.') };
     }
 
     await logAudit(auth.user, 'RESET_PASSWORD', 'user', userId);
@@ -120,7 +121,7 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Lỗi không xác định khi đặt lại mật khẩu.',
+      error: toClientError(err, 'Lỗi không xác định khi đặt lại mật khẩu. Vui lòng thử lại.'),
     };
   }
 }

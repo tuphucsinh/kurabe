@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Users, User as UserIcon } from 'lucide-react';
 import { Team } from '@/types';
 import { useUsers } from '@/hooks/use-db';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -13,26 +14,14 @@ interface TeamModalProps {
 }
 
 export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalProps) {
-  const { data: users = [] } = useUsers();
+  const { user } = useAuth();
+  // Modal chỉ Manager mở — truyền requester để hook enabled && scope đúng (C2)
+  const { data: users = [] } = useUsers(user);
+  // Init từ props + parent truyền key={team?.id ?? 'new'} để đổi đối tượng → remount (state reset)
   const [formData, setFormData] = useState<Partial<Team>>({
-    name: '',
-    leaderId: '',
+    name: team?.name ?? '',
+    leaderId: team?.leaderId || '',
   });
-
-  useEffect(() => {
-    if (team) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFormData({
-        name: team.name,
-        leaderId: team.leaderId || '',
-      });
-    } else {
-      setFormData({
-        name: '',
-        leaderId: '',
-      });
-    }
-  }, [team, isOpen]);
 
   if (!isOpen) return null;
 

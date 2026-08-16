@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
+import GradeBadge from '@/components/ui/GradeBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { upsertUserAction } from '@/actions/users';
@@ -54,7 +55,7 @@ export default function TeamDetailPage() {
   const params = useParams<{ id: string }>();
   const teamId = params.id;
 
-  const { user } = useAuth();
+  const { user, currentPeriod } = useAuth();
 
   useEffect(() => {
     if (user?.role === 'Employee') {
@@ -72,7 +73,8 @@ export default function TeamDetailPage() {
 
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
+  // Chỉ tải evaluations của kỳ đang chọn (C3)
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id, user);
 
   const isLoading = usersLoading || teamsLoading || evalsLoading;
 
@@ -293,16 +295,7 @@ export default function TeamDetailPage() {
                           </div>
                         </div>
                         {leaderGrade && leaderGrade !== 'Pending' ? (
-                          <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                            leaderGrade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                            leaderGrade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                            leaderGrade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                            leaderGrade === 'B' ? 'bg-blue-100 text-blue-700' :
-                            leaderGrade === 'C' ? 'bg-amber-100 text-amber-700' :
-                            leaderGrade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                          }`}>
-                            {leaderGrade}
-                          </span>
+                          <GradeBadge grade={leaderGrade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black" />
                         ) : (
                           <span className="w-8" />
                         )}
@@ -385,16 +378,7 @@ export default function TeamDetailPage() {
                       </div>
                     </div>
                     {slGrade && slGrade !== 'Pending' ? (
-                      <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                        slGrade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                        slGrade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                        slGrade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                        slGrade === 'B' ? 'bg-blue-100 text-blue-700' :
-                        slGrade === 'C' ? 'bg-amber-100 text-amber-700' :
-                        slGrade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                      }`}>
-                        {slGrade}
-                      </span>
+                      <GradeBadge grade={slGrade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black" />
                     ) : (
                       <span className="w-8" />
                     )}
@@ -469,16 +453,7 @@ export default function TeamDetailPage() {
                               <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                             </div>
                             {grade && grade !== 'Pending' ? (
-                              <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                                grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                                grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                                grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                                grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                                grade === 'C' ? 'bg-amber-100 text-amber-700' :
-                                grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                              }`}>
-                                {grade}
-                              </span>
+                              <GradeBadge grade={grade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black" />
                             ) : (
                               <span className="w-8" />
                             )}
@@ -565,16 +540,7 @@ export default function TeamDetailPage() {
                           <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                         </div>
                         {grade && grade !== 'Pending' ? (
-                          <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                            grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                            grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                            grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                            grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                            grade === 'C' ? 'bg-amber-100 text-amber-700' :
-                            grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                          }`}>
-                            {grade}
-                          </span>
+                          <GradeBadge grade={grade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black" />
                         ) : (
                           <span className="w-8" />
                         )}

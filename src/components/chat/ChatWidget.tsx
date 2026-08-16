@@ -5,7 +5,6 @@ import { MessageCircle, X, Send, Loader2, Bug } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { chatAskAction, chatAskWithScreenshotAction, chatGreetingAction, chatReportErrorAction } from '@/actions/chat';
-import { domToPng } from 'modern-screenshot';
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -83,6 +82,8 @@ export default function ChatWidget() {
   const autoCaptureAndSend = async (question: string) => {
     setSendingShot(true);
     try {
+      // modern-screenshot nặng — chỉ load khi thật sự cần chụp màn hình (C1)
+      const { domToPng } = await import('modern-screenshot');
       const dataUrl = await domToPng(document.body, { scale: 0.5, backgroundColor: '#f8fafc', quality: 0.8 });
       let b64 = dataUrl.split(',')[1] || '';
       if (b64.length > 921600) {

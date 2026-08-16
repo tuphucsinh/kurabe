@@ -2,19 +2,21 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireManager, requireRole } from '@/lib/auth';
-import { logAudit } from '@/lib/audit';
+import { logAudit, logAuditBatch } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { User, Role } from '@/types';
 import { Database } from '@/types/database';
 import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
 import { ensureEvaluationsForUsers } from '@/lib/db/evaluations-write';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
-import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-resolver';
+import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
+import { toClientError, ClientSafeError } from '@/lib/errors';
+import { parseRole } from '@/lib/parsers';
 
 type DbUserInsert = Database['public']['Tables']['users']['Insert'];
 
 function mapSlot(u: { id: string; role: string; team_id: string | null }): Pick<User, 'id' | 'role' | 'teamId'> {
-  return { id: u.id, role: u.role as Role, teamId: u.team_id || '' };
+  return { id: u.id, role: parseRole(u.role), teamId: u.team_id || '' };
 }
 
 /**
@@ -36,7 +38,7 @@ function assertLeadershipSlot(
   );
   if (holders.length > 0) {
     const holderName = holders[0].id; // caller có thể enrich tên
-    throw new Error(
+    throw new ClientSafeError(
       `Nhóm này đã có ${candidate.role === 'Leader' ? 'Leader' : 'SubLeader'}` +
       (holderName ? ` (id: ${holderName})` : '') +
       `. Muốn thay đổi, hãy hạ người giữ chức hiện tại xuống Nhân viên trước, rồi mới thăng người khác lên.`
@@ -50,12 +52,14 @@ function assertLeadershipSlot(
  * - Round 1: Employee → gán SubLeader team (nếu team có); Leader/SubLeader/Manager → SELF
  * - KHÔNG đụng round đã submit (giữ lịch sử)
  */
-async function syncEvaluationAfterUserChange(user: User): Promise<void> {
+async function syncEvaluationsAfterUsersChange(users: User[]): Promise<void> {
+  if (users.length === 0) return;
   try {
     // 0. Đồng bộ teams.leader_id theo role hiện tại (rule: Leader = role user)
     //    - user thành Leader → set leader_id của team = user.id
     //    - user bị hạ khỏi Leader → xóa leader_id nếu đang trỏ tới user
-    if (user.teamId) {
+    for (const user of users) {
+      if (!user.teamId) continue;
       if (user.role === 'Leader') {
         await supabaseAdmin.from('teams').update({ leader_id: user.id }).eq('id', user.teamId);
       } else {
@@ -67,69 +71,97 @@ async function syncEvaluationAfterUserChange(user: User): Promise<void> {
       }
     }
 
-    // 1. Đồng bộ employee_role và team_id trên mọi evaluation
-    await supabaseAdmin
-      .from('evaluations')
-      .update({
-        employee_role: user.role,
-        team_id: user.teamId || null,
-      })
-      .eq('employee_id', user.id);
+    // 1. Đồng bộ employee_role và team_id trên mọi evaluation (giá trị khác nhau per user)
+    for (const user of users) {
+      await supabaseAdmin
+        .from('evaluations')
+        .update({
+          employee_role: user.role,
+          team_id: user.teamId || null,
+        })
+        .eq('employee_id', user.id);
+    }
 
-    // 2. Lấy toàn bộ user active để resolve evaluator
-    const { data: allUsers } = await supabaseAdmin
-      .from('users')
-      .select('id, role, team_id, subleader_id')
-      .eq('is_active', true);
+    // 2. Tải 1 lần cho cả batch: toàn bộ user active + map leader chỉ định
+    //    (map fetched SAU bước 0 để phản ánh leader_id mới sync)
+    const [{ data: allUsers }, teamLeaderIds] = await Promise.all([
+      supabaseAdmin
+        .from('users')
+        .select('id, role, team_id, subleader_id')
+        .eq('is_active', true),
+      loadTeamLeaderIds(supabaseAdmin),
+    ]);
     const subjects: EvaluationSubject[] = (allUsers || []).map(u => ({
       id: u.id,
-      role: u.role as Role,
+      role: parseRole(u.role),
       teamId: u.team_id || null,
       subleaderId: u.subleader_id || null,
     }));
 
-    const subject: EvaluationSubject = {
-      id: user.id,
-      role: user.role,
-      teamId: user.teamId || null,
-      subleaderId: user.subleaderId || null,
-    };
+    const userById = new Map(users.map(u => [u.id, u]));
+    const flowByRole = new Map<Role, ReturnType<typeof getEvaluationFlow>>();
 
-    const flow = getEvaluationFlow(user.role);
-
-    // 3. Round 1..3 theo flow mới (chỉ khi chưa submit)
+    // 3. Tải evaluations + rounds MỘT query cho cả batch (C4 — hết N+1 từng evaluation)
     const { data: evs } = await supabaseAdmin
       .from('evaluations')
-      .select('id, team_id')
-      .eq('employee_id', user.id);
+      .select('id, employee_id')
+      .in('employee_id', users.map(u => u.id));
+    if (!evs || evs.length === 0) return;
 
-    for (const ev of evs || []) {
-      const { data: rounds } = await supabaseAdmin
-        .from('evaluation_rounds')
-        .select('id, round, status, submitted_at')
-        .eq('evaluation_id', ev.id)
-        .order('round');
+    const { data: rounds } = await supabaseAdmin
+      .from('evaluation_rounds')
+      .select('id, evaluation_id, round, status, submitted_at')
+      .in('evaluation_id', evs.map(e => e.id))
+      .order('round');
+    if (!rounds) return;
 
-      for (const r of rounds || []) {
-        if (r.status === 'Submitted' || r.submitted_at) continue; // đã submit → giữ nguyên
+    // 4. Resolve evaluator rồi GOM update theo evaluator — batch .in() thay vì 1 update/round
+    const updatesByKey = new Map<string, { evaluatorId: string | null; evaluatorRole: Role; roundIds: string[] }>();
+    for (const r of rounds) {
+      if (r.status === 'Submitted' || r.submitted_at) continue; // đã submit → giữ nguyên
 
-        const step = flow.find(s => s.round === r.round);
-        if (!step) continue;
+      const ev = evs.find(e => e.id === r.evaluation_id);
+      const user = ev ? userById.get(ev.employee_id) : undefined;
+      if (!user) continue;
 
-        const evaluator = resolveEvaluatorFromList(step.evaluator, subject, subjects);
-
-        await supabaseAdmin
-          .from('evaluation_rounds')
-          .update({
-            evaluator_id: evaluator?.id || null,
-            evaluator_role: evaluator?.role || (step.evaluator as Role),
-          })
-          .eq('id', r.id);
+      let flow = flowByRole.get(user.role);
+      if (!flow) {
+        flow = getEvaluationFlow(user.role);
+        flowByRole.set(user.role, flow);
       }
+      const step = flow.find(s => s.round === r.round);
+      if (!step) continue;
+
+      const subject: EvaluationSubject = {
+        id: user.id,
+        role: user.role,
+        teamId: user.teamId || null,
+        subleaderId: user.subleaderId || null,
+      };
+      const evaluator = resolveEvaluatorFromList(step.evaluator, subject, subjects, teamLeaderIds);
+
+      const key = `${evaluator?.id || 'none'}::${evaluator?.role || step.evaluator}`;
+      const bucket = updatesByKey.get(key) || {
+        evaluatorId: evaluator?.id || null,
+        evaluatorRole: parseRole(evaluator?.role || step.evaluator),
+        roundIds: [],
+      };
+      bucket.roundIds.push(r.id);
+      updatesByKey.set(key, bucket);
+    }
+
+    for (const bucket of updatesByKey.values()) {
+      await supabaseAdmin
+        .from('evaluation_rounds')
+        .update({
+          evaluator_id: bucket.evaluatorId,
+          evaluator_role: bucket.evaluatorRole,
+        })
+        .in('id', bucket.roundIds);
     }
   } catch (err) {
     // Sync là best-effort: không làm hỏng upsert user đã thành công
-    console.error('syncEvaluationAfterUserChange error:', err);
+    console.error('syncEvaluationsAfterUsersChange error:', err);
   }
 }
 
@@ -183,7 +215,7 @@ export async function upsertUserAction(
         }
         // (c) payload.role rỗng khi sửa → giữ nguyên role cũ (chặn hạ SubLeader→Employee vô tình)
         if (!user.role) {
-          user.role = existingUser.role as Role;
+          user.role = parseRole(existingUser.role);
         }
       }
     }
@@ -235,14 +267,14 @@ export async function upsertUserAction(
       .single();
 
     if (error || !data) {
-      return { success: false, error: 'Error upserting user: ' + (error?.message || 'unknown') };
+      return { success: false, error: toClientError(error, 'Lỗi lưu nhân viên. Vui lòng thử lại.') };
     }
 
     const saved = mapUserFromDb(data);
 
     // Đổi chức vụ/team/SubLeader → đồng bộ evaluation + round 1 theo flow mới
     if (user.role || user.teamId || user.subleaderId !== undefined) {
-      await syncEvaluationAfterUserChange(saved);
+      await syncEvaluationsAfterUsersChange([saved]);
     }
 
     // Nếu user mới → gọi ensureEvaluationsForUsers (admin) nội bộ
@@ -266,7 +298,7 @@ export async function upsertUserAction(
 
     return { success: true, user: saved };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu nhân viên.') };
   }
 }
 
@@ -319,21 +351,25 @@ export async function upsertUsersAction(
       .select(USER_SELECT);
 
     if (error || !data) {
-      return { success: false, error: 'Error batch upserting users: ' + (error?.message || 'unknown') };
+      return { success: false, error: toClientError(error, 'Lỗi lưu hàng loạt nhân viên. Vui lòng thử lại.') };
     }
 
     const saved = (data || []).map(d => mapUserFromDb(d));
 
-    // Đồng bộ evaluation cho user đổi chức vụ
+    // Đồng bộ evaluation cho user đổi chức vụ — 1 lần cho cả batch (C4)
+    const usersToSync: User[] = [];
     const newUsersList: User[] = [];
     for (const u of saved) {
       const orig = users.find(x => x.id === u.id || (x.employeeCode && x.employeeCode === u.employeeCode));
       if (orig?.role || orig?.teamId) {
-        await syncEvaluationAfterUserChange(u);
+        usersToSync.push(u);
       }
       if (!existingIdSet.has(u.id)) {
         newUsersList.push(u);
       }
+    }
+    if (usersToSync.length > 0) {
+      await syncEvaluationsAfterUsersChange(usersToSync);
     }
 
     // Tự tạo evaluation cho các user mới
@@ -345,22 +381,22 @@ export async function upsertUsersAction(
       }
     }
 
-    for (const u of saved) {
-      const isNew = !existingIdSet.has(u.id);
-      await logAudit(
-        auth.user,
-        isNew ? 'CREATE_USER' : 'UPDATE_USER',
-        'user',
-        u.id,
-        { name: u.name, role: u.role, teamId: u.teamId }
-      );
-    }
+    // Audit batch — 1 insert thay vì 1 insert/user (C4)
+    await logAuditBatch(
+      auth.user,
+      saved.map((u) => ({
+        action: existingIdSet.has(u.id) ? 'UPDATE_USER' : 'CREATE_USER',
+        entity: 'user',
+        entityId: u.id,
+        detail: { name: u.name, role: u.role, teamId: u.teamId },
+      }))
+    );
 
     revalidateUserPaths();
 
     return { success: true, users: saved };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu hàng loạt nhân viên.') };
   }
 }
 
@@ -376,7 +412,7 @@ export async function softDeleteUserAction(id: string): Promise<{ success: boole
       .select('id');
 
     if (error) {
-      return { success: false, error: 'Error soft deleting user: ' + error.message };
+      return { success: false, error: toClientError(error, 'Lỗi xóa nhân viên. Vui lòng thử lại.') };
     }
 
     if (!data || data.length === 0) {
@@ -387,7 +423,7 @@ export async function softDeleteUserAction(id: string): Promise<{ success: boole
     await logAudit(auth.user, 'DELETE_USER', 'user', id);
     return { success: true };
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: toClientError(error, 'Lỗi không xác định khi xóa nhân viên.') };
   }
 }
 

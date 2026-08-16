@@ -1,5 +1,7 @@
-import { getGradeBandsSync } from '@/lib/grade-bands';
+import { getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
+import { matchGradeBand } from '@/lib/grade-match';
 import { Evaluation, EvaluationRound, Grade, RoundNumber, Role } from '@/types';
+import { parseGrade } from '@/lib/parsers';
 
 const LEADER_ROLES: Role[] = ['Leader', 'Manager', 'SubLeader'];
 
@@ -15,10 +17,14 @@ const GRADE_COLORS: Record<string, string> = {
 /**
  * Tính score cho 1 round
  * Trả về { totalScore: number; grade: Grade }
+ * `bands` optional: thang điểm đã load từ DB (caller giữ state để recompute khi bands đổi); mặc định module cache.
  */
-export function calculateRoundScore(round: EvaluationRound): { totalScore: number; grade: Grade } {
+export function calculateRoundScore(
+  round: EvaluationRound,
+  bands?: GradeBands
+): { totalScore: number; grade: Grade } {
   const totalScore = Object.values(round.scores).reduce((sum, score) => sum + score, 0);
-  const grade = getGradeFromScore(totalScore, round.evaluatorRole);
+  const grade = getGradeFromScore(totalScore, round.evaluatorRole, bands);
   return { totalScore, grade };
 }
 
@@ -55,18 +61,21 @@ export function getFinalResult(evaluation: Evaluation): { totalScore: number; gr
 
 /**
  * Lấy xếp loại từ điểm và vai trò
+ * `bandsOverride` optional: thang điểm đã load từ DB; mặc định module cache.
  */
-export function getGradeFromScore(totalScore: number, role: Role): Grade {
+export function getGradeFromScore(
+  totalScore: number,
+  role: Role,
+  bandsOverride?: GradeBands
+): Grade {
   const isLeader = LEADER_ROLES.includes(role);
-  const bands = getGradeBandsSync();
+  const bands = bandsOverride ?? getGradeBandsSync();
   const targetGrading = isLeader ? bands.leader : bands.staff;
 
-  // Tìm range phù hợp nhất, ưu tiên các mức cao trước nếu bị chồng lấn (overlapping)
-  const result = [...targetGrading]
-    .sort((a, b) => (b.minScore ?? 0) - (a.minScore ?? 0))
-    .find(range => totalScore >= (range.minScore ?? -Infinity));
+  // Match qua pure helper — ngữ nghĩa null duy nhất: minScore null = band thấp nhất catch-all
+  const result = matchGradeBand(targetGrading, totalScore);
 
-  return (result?.grade as Grade) || 'D';
+  return parseGrade(result, 'D');
 }
 
 /**

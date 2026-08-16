@@ -1,6 +1,5 @@
 'use client';
 
-import * as XLSX from 'xlsx';
 import { getEvaluationsByPeriod, mapPeriodFromDb } from './db/evaluations';
 import { getUsers } from './db/users';
 import { getTeams } from './db/teams';
@@ -19,6 +18,9 @@ export async function exportEvaluationsToExcel(
   viewer?: User | null
 ): Promise<void> {
   try {
+    // xlsx nặng (~140KB gzip) — chỉ load khi user thật sự bấm export (C1)
+    const XLSX = await import('xlsx');
+
     // 1. Fetch data
     const [evaluations, users, teams, criteriaGroups, periodData] = await Promise.all([
       getEvaluationsByPeriod(periodId, viewer),
@@ -49,7 +51,7 @@ export async function exportEvaluationsToExcel(
         'Team': team?.name || '',
         'Chức Vụ': ev.employeeRole,
         'Trạng Thái': ev.status,
-        'Điểm Tổng': ev.finalScore || '',
+        'Điểm Tổng': ev.finalScore ?? '',
         'Xếp Loại': ev.finalGrade || ''
       };
     });
@@ -60,13 +62,13 @@ export async function exportEvaluationsToExcel(
 
     // 3. Prepare Sheet 2: Chi tiết Round (Optional)
     if (options.includeRoundDetails) {
-      const detailData: Record<string, string | number>[] = [];
-      
+      const detailData: Record<string, string | number | null>[] = [];
+
       evaluations.forEach(ev => {
         const employee = userMap.get(ev.employeeId);
-        
+
         ev.rounds.forEach(round => {
-          const row: Record<string, string | number> = {
+          const row: Record<string, string | number | null> = {
             'Mã Nhân Viên': employee?.employeeCode || '',
             'Họ Tên': employee?.name || '',
             'Vòng': round.round,
@@ -77,9 +79,9 @@ export async function exportEvaluationsToExcel(
             'Nhận Xét': round.comment || ''
           };
 
-          // Thêm điểm chi tiết từng tiêu chí
+          // Thêm điểm chi tiết từng tiêu chí (null = chưa chấm, phân biệt với 0 điểm)
           allCriteria.forEach(c => {
-            row[c.name] = round.scores[c.id] || 0;
+            row[c.name] = round.scores[c.id] ?? null;
           });
 
           detailData.push(row);

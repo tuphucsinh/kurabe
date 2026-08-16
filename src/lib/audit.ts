@@ -26,3 +26,32 @@ export async function logAudit(
     console.error('logAudit error:', err);
   }
 }
+
+export interface AuditEntry {
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  detail?: Record<string, unknown> | null;
+}
+
+/**
+ * Ghi N audit log trong 1 insert duy nhất (batch import — C4).
+ * Fire-and-forget như logAudit — lỗi không làm fail action chính.
+ */
+export async function logAuditBatch(actor: User | null, entries: AuditEntry[]): Promise<void> {
+  if (!entries.length) return;
+  try {
+    await supabaseAdmin.from('audit_logs').insert(
+      entries.map((e) => ({
+        actor_id: actor?.id ?? null,
+        actor_name: actor?.name ?? 'unknown',
+        action: e.action,
+        entity: e.entity,
+        entity_id: e.entityId ?? null,
+        detail: e.detail ?? null,
+      }))
+    );
+  } catch (err) {
+    console.error('logAuditBatch error:', err);
+  }
+}

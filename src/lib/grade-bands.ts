@@ -1,6 +1,8 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { gradingLeader, gradingStaff } from '@/data/criteria';
+import { Database } from '@/types/database';
 import type { Grade } from '@/types';
+import { parseGrade } from '@/lib/parsers';
 
 export type GradeBand = {
   grade: Grade;
@@ -13,18 +15,25 @@ export type GradeBands = {
   staff: GradeBand[];
 };
 
-// Fallback hardcode hiện tại (src/data/criteria.ts) — KHÔNG BAO GIỜ throw
+// Fallback hardcode — NGUỒN DUY NHẤT của thang mặc định (D4: gộp từ src/data/criteria.ts).
+// KHÔNG BAO GIỜ throw; DB lỗi/chưa nạp → dùng bản này.
 const HARDCODED_BANDS: GradeBands = {
-  leader: gradingLeader.map((g) => ({
-    grade: g.grade as Grade,
-    minScore: g.minScore ?? null,
-    maxScore: g.maxScore ?? null,
-  })),
-  staff: gradingStaff.map((g) => ({
-    grade: g.grade as Grade,
-    minScore: g.minScore ?? null,
-    maxScore: g.maxScore ?? null,
-  })),
+  leader: [
+    { grade: 'S', minScore: 170, maxScore: null },
+    { grade: 'A', minScore: 160, maxScore: 169 },
+    { grade: 'AB', minScore: 130, maxScore: 159 },
+    { grade: 'B', minScore: 100, maxScore: 129 },
+    { grade: 'C', minScore: 70, maxScore: 99 },
+    { grade: 'D', minScore: null, maxScore: 69 },
+  ],
+  staff: [
+    { grade: 'S', minScore: 155, maxScore: null },
+    { grade: 'A', minScore: 145, maxScore: 154 },
+    { grade: 'AB', minScore: 115, maxScore: 144 },
+    { grade: 'B', minScore: 90, maxScore: 114 },
+    { grade: 'C', minScore: 60, maxScore: 89 },
+    { grade: 'D', minScore: null, maxScore: 59 },
+  ],
 };
 
 // Module cache — dùng chung cho client lẫn server trong cùng runtime
@@ -36,9 +45,11 @@ export function getGradeBandsSync(): GradeBands {
 }
 
 /** Load dải điểm từ DB (bảng grade_bands), set module cache. Lỗi/thiếu bảng → giữ fallback. */
-export async function loadGradeBandsFromDb(): Promise<GradeBands> {
+export async function loadGradeBandsFromDb(
+  db: SupabaseClient<Database> = supabase
+): Promise<GradeBands> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('grade_bands')
       .select('role_group, grade, min_score, max_score, sort_order')
       .order('sort_order', { ascending: true });
@@ -56,7 +67,7 @@ export async function loadGradeBandsFromDb(): Promise<GradeBands> {
     for (const row of data) {
       const group = row.role_group === 'staff' ? 'staff' : 'leader';
       bands[group].push({
-        grade: row.grade as Grade,
+        grade: parseGrade(row.grade),
         minScore: row.min_score,
         maxScore: row.max_score,
       });

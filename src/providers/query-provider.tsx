@@ -10,6 +10,8 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
       queries: {
         staleTime: 60 * 1000,
         retry: 1,
+        // App nội bộ — dữ liệu đổi qua chính app; focus tab không cần refetch query nặng (C5)
+        refetchOnWindowFocus: false,
       },
     },
     queryCache: new QueryCache({

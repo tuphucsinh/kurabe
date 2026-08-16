@@ -41,7 +41,13 @@ export const ACTIVE_STEP_STATUSES: Record<RoundNumber, EvalStatus> = {
 };
 
 export function getEvaluationFlow(employeeRole: Role): EvaluationFlowStep[] {
-  return EVALUATION_FLOWS[employeeRole].map(step => ({ ...step }));
+  const flow = EVALUATION_FLOWS[employeeRole];
+  if (!flow) {
+    // Role lạ từ DB (data bẩn) — fallback Employee để không crash action (A3)
+    console.warn(`[evaluation-workflow] Role không xác định "${employeeRole}" — dùng flow Employee`);
+    return EVALUATION_FLOWS.Employee.map(step => ({ ...step }));
+  }
+  return flow.map(step => ({ ...step }));
 }
 
 export function getMaxEvaluationRound(employeeRole: Role): RoundNumber {

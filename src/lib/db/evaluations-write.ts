@@ -1,70 +1,18 @@
 import 'server-only';
 
 import { supabaseAdmin } from '../supabase-admin';
-import { Evaluation, EvaluationRound, Grade, Role, User, RoundNumber } from '@/types';
-import { DatabaseError } from '../errors';
+import { User, RoundNumber } from '@/types';
 import { TablesInsert, Json } from '@/types/database';
-import { composeRoundNotes } from '@/lib/round-level-selection';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
-import { resolveEvaluatorFromList, EvaluationSubject } from '@/lib/evaluator-resolver';
-import { getActivePeriod, mapEvaluationFromDb } from './evaluations';
+import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
+import { getActivePeriod } from './evaluations';
+import { parseRole } from '@/lib/parsers';
 
 /**
  * CÁC HÀM GHI evaluation/evaluation_rounds — server-only (service-role client).
  * KHÔNG import vào client bundle (server-only chặn build — tránh lộ service key).
  * Chỉ được gọi từ server actions (P70T01 — C3: server actions là lớp ghi DUY NHẤT).
  */
-
-export async function upsertEvaluation(evalData: Partial<Evaluation>): Promise<Evaluation | null> {
-  const dbEval: TablesInsert<'evaluations'> = {
-    id: evalData.id,
-    period_id: evalData.periodId || '',
-    employee_id: evalData.employeeId || '',
-    employee_role: evalData.employeeRole || 'Employee',
-    team_id: evalData.teamId || null,
-    current_round: evalData.currentRound ?? 1,
-    status: evalData.status || 'NotStarted',
-    final_grade: evalData.finalGrade || null,
-    final_score: evalData.finalScore ?? null,
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabaseAdmin
-    .from('evaluations')
-    .upsert(dbEval)
-    .select()
-    .single();
-
-  if (error) {
-    throw new DatabaseError('Error upserting evaluation', error);
-  }
-
-  return mapEvaluationFromDb(data);
-}
-
-export async function upsertEvaluationRound(evaluationId: string, round: Partial<EvaluationRound>): Promise<void> {
-  const composedNotes = composeRoundNotes(round.notes || {}, round.selectedLevelIndexes || {});
-  const dbRound: TablesInsert<'evaluation_rounds'> = {
-    evaluation_id: evaluationId,
-    round: round.round || 1,
-    evaluator_id: round.evaluatorId || null,
-    evaluator_role: round.evaluatorRole || 'Employee',
-    status: round.status || 'Draft',
-    scores: (round.scores as Json) || null,
-    notes: (composedNotes as Json) || null,
-    total_score: round.totalScore ?? 0,
-    grade: round.grade || 'Pending',
-    comment: round.comment || null,
-    additional_comment: round.additionalComment || null,
-    submitted_at: round.status === 'Submitted' ? (round.submittedAt || new Date().toISOString()) : null,
-  };
-
-  const { error } = await supabaseAdmin
-    .from('evaluation_rounds')
-    .upsert(dbRound, { onConflict: 'evaluation_id,round' });
-
-  if (error) throw new DatabaseError('Error upserting evaluation round', error);
-}
 
 /**
  * Tự động tạo evaluation + round 1 cho các user MỚI được thêm vào kỳ đang active.
@@ -83,10 +31,11 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
     return result;
   }
 
-  // 2. Tải toàn bộ user active để resolve evaluator (batch) + danh sách evaluation hiện có
-  const [allUsersRes, existingEvalsRes] = await Promise.all([
+  // 2. Tải toàn bộ user active để resolve evaluator (batch) + map leader chỉ định + evaluation hiện có
+  const [allUsersRes, existingEvalsRes, teamLeaderIds] = await Promise.all([
     supabaseAdmin.from('users').select('id, role, team_id, subleader_id').eq('is_active', true),
     supabaseAdmin.from('evaluations').select('employee_id').eq('period_id', activePeriod.id),
+    loadTeamLeaderIds(supabaseAdmin),
   ]);
   if (allUsersRes.error || existingEvalsRes.error) {
     result.errors.push('Không thể tải dữ liệu để khởi tạo đánh giá.');
@@ -96,7 +45,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
 
   const subjects: EvaluationSubject[] = (allUsersRes.data || []).map(u => ({
     id: u.id,
-    role: u.role as Role,
+    role: parseRole(u.role),
     teamId: u.team_id || null,
     subleaderId: u.subleader_id || null,
   }));
@@ -118,7 +67,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       role: user.role,
       teamId: user.teamId || null,
       subleaderId: user.subleaderId || null,
-    }, subjects);
+    }, subjects, teamLeaderIds);
 
     if (!evaluator && firstStep.evaluator !== 'SubLeader') {
       result.errors.push(`Không tìm thấy ${firstStep.evaluator} phù hợp cho ${user.name || user.id} ở Round 1.`);
@@ -154,11 +103,11 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       evaluation_id: evId,
       round: 1,
       evaluator_id: evaluator?.id || null,
-      evaluator_role: evaluator?.role || (firstStep.evaluator as Role),
+      evaluator_role: parseRole(evaluator?.role || firstStep.evaluator),
       scores: {} as Json,
       notes: {} as Json,
       total_score: 0,
-      grade: 'Pending' as Grade,
+      grade: 'Pending',
       status: 'NotStarted',
       created_at: now,
     };

@@ -16,7 +16,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { generateResultMessagesChunkAction, saveResultMessageAction, draftResultMessageAction } from '@/actions/ai';
-import { useEvaluations, useUsers, usePeriods } from '@/hooks/use-db';
+import { useEvaluations, useUsers, usePeriods, useTeams } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Evaluation, User } from '@/types';
@@ -49,6 +49,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
   const { data: evaluations = [], isLoading: isEvalsLoading } = useEvaluations(periodId, user);
   const { data: users = [], isLoading: isUsersLoading } = useUsers(user);
   const { data: periods = [] } = usePeriods();
+  const { data: teams = [] } = useTeams(user);
 
   const currentPeriod = periods.find((p) => p.id === periodId);
   const periodName = currentPeriod ? `${currentPeriod.name} (${currentPeriod.year})` : 'Kỳ đánh giá';
@@ -63,6 +64,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+  const teamNameMap = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
 
   // Approved evaluations in this period
   const approvedEvals = useMemo(() => {
@@ -87,7 +89,9 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
           employeeId: ev.employeeId,
           employeeName: emp?.name || 'Nhân viên',
           employeeCode: emp?.employeeCode || '',
-          teamName: emp?.role === 'Manager' ? 'Toàn bộ bộ phận' : 'Nhóm QAQC',
+          teamName: emp?.role === 'Manager'
+            ? 'Toàn bộ bộ phận'
+            : (emp?.teamId ? teamNameMap.get(emp.teamId) : undefined) || 'Chưa phân nhóm',
           role: ev.employeeRole || emp?.role || 'Employee',
           grade,
           score,

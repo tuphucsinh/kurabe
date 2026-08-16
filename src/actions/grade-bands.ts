@@ -6,6 +6,7 @@ import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate'
 import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { revalidatePath } from 'next/cache';
+import { toClientError } from '@/lib/errors';
 
 /**
  * Lưu toàn bộ thang điểm (upsert từng dòng theo role_group + grade).
@@ -41,7 +42,7 @@ export async function saveGradeBands(
           { onConflict: 'role_group,grade' }
         );
       if (error) {
-        return { success: false, error: 'Lỗi lưu thang điểm: ' + error.message };
+        return { success: false, error: toClientError(error, 'Lỗi lưu thang điểm. Vui lòng thử lại.') };
       }
     }
 
@@ -53,7 +54,7 @@ export async function saveGradeBands(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Lỗi không xác định khi lưu thang điểm.',
+      error: toClientError(err, 'Lỗi không xác định khi lưu thang điểm. Vui lòng thử lại.'),
     };
   }
 }

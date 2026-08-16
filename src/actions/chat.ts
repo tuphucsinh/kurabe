@@ -343,31 +343,48 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
   return { greeting: `${greet}. ${Addr} đang ở ${page} — ${hint}` };
 }
 
-export async function chatAskAction(input: {
+interface ChatAskInputBase {
   question: string;
   pathname: string;
   history?: { role: 'user' | 'assistant'; text: string }[];
-}): Promise<{ reply?: string; error?: string }> {
+}
+
+interface ChatPrepared {
+  userId: string;
+  role: string;
+  addr: string;
+  Addr: string;
+  user: User | null;
+  question: string;
+  prompt: string;
+}
+
+/**
+ * Phần chung của chatAskAction / chatAskWithScreenshotAction (D4 — gom ~90% logic trùng):
+ * auth → validate câu hỏi → rate limit (non-Manager) → AI configured → page context → build prompt.
+ */
+async function prepareChatContext(
+  input: ChatAskInputBase
+): Promise<{ ok: true; data: ChatPrepared } | { ok: false; error: string }> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
-  if (auth.error !== null) return { error: auth.error };
+  if (auth.error !== null) return { ok: false, error: auth.error };
   const userId = auth.user?.id;
   const role = auth.user?.role ?? 'Employee';
   const addr = address(auth.user?.gender);
   const Addr = capitalize(addr);
-  if (!userId) return { error: 'Không xác định được tài khoản.' };
+  if (!userId) return { ok: false, error: 'Không xác định được tài khoản.' };
 
   const question = (input.question || '').trim();
-  if (!question) return { error: `${Addr} chưa nhập câu hỏi.` };
-  if (question.length > 500) return { error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
+  if (!question) return { ok: false, error: `${Addr} chưa nhập câu hỏi.` };
 
   if (role !== 'Manager') {
     const recent = await countRecent(userId);
     if (recent >= CHAT_LIMIT) {
-      return { error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
+      return { ok: false, error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
     }
   }
   if (!isAIConfigured()) {
-    return { error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
+    return { ok: false, error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
   }
 
   const page = pageName(input.pathname || '');
@@ -383,8 +400,24 @@ export async function chatAskAction(input: {
   }
   prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.${pageContext}\n\n${prompt}`;
 
+  return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
+}
+
+export async function chatAskAction(input: {
+  question: string;
+  pathname: string;
+  history?: { role: 'user' | 'assistant'; text: string }[];
+}): Promise<{ reply?: string; error?: string }> {
+  const prepared = await prepareChatContext(input);
+  if (!prepared.ok) return { error: prepared.error };
+  const { userId, role, addr, user, prompt } = prepared.data;
+
+  if (input.question.length > 500) {
+    return { error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
+  }
+
   const reply = await callAI(prompt, {
-    system: buildSystem(role, auth.user?.gender),
+    system: buildSystem(role, user?.gender),
     maxTokens: 400,
     temperature: 0.4,
   });
@@ -403,37 +436,18 @@ export async function chatAskWithScreenshotAction(input: {
   history?: { role: 'user' | 'assistant'; text: string }[];
   imageBase64: string;
 }): Promise<{ reply?: string; error?: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
-  if (auth.error !== null) return { error: auth.error };
-  const userId = auth.user?.id;
-  const role = auth.user?.role ?? 'Employee';
-  const addr = address(auth.user?.gender);
-  const Addr = capitalize(addr);
-  if (!userId) return { error: 'Không xác định được tài khoản.' };
-  const question = (input.question || '').trim();
-  if (!question) return { error: `${Addr} chưa nhập câu hỏi.` };
-  // server-side size cap: độ dài chuỗi base64 ≤ 900KB (Reviewer R2+R3)
+  // server-side size cap: độ dài chuỗi base64 ≤ 900KB (Reviewer R2+R3) — check trước khi tốn quota
   if (!input.imageBase64 || input.imageBase64.length > 921600) {
-    return { error: `Ảnh quá lớn hoặc không hợp lệ. ${Addr} thử lại với ảnh nhỏ hơn ạ.` };
+    const addr = 'anh/chị';
+    return { error: `Ảnh quá lớn hoặc không hợp lệ. ${capitalize(addr)} thử lại với ảnh nhỏ hơn ạ.` };
   }
-  if (role !== 'Manager') {
-    const recent = await countRecent(userId);
-    if (recent >= CHAT_LIMIT) return { error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
-  }
-  if (!isAIConfigured()) return { error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
-  const page = pageName(input.pathname || '');
-  const pageContext = await buildPageContext(input.pathname || '', role, auth.user);
-  const history = (input.history || []).slice(-12);
-  let prompt = `Câu hỏi mới của ${addr}:\n${question}`;
-  if (history.length > 0) {
-    const historyText = history
-      .map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`)
-      .join('\n');
-    prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\n${prompt}`;
-  }
-  prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.${pageContext}\n\n${prompt}`;
-  const system = buildSystem(role, auth.user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
-  const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500 });
+
+  const prepared = await prepareChatContext(input);
+  if (!prepared.ok) return { error: prepared.error };
+  const { userId, role, addr, Addr, user, prompt } = prepared.data;
+
+  const system = buildSystem(role, user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
+  const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500, system });
   if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
   if (role !== 'Manager') await recordUsage(userId);
   return { reply };

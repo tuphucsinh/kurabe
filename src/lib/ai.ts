@@ -84,7 +84,7 @@ const DEFAULT_VISION_MODEL = 'qwen3.7-plus';
 export async function callAIVision(
   prompt: string,
   imageBase64: string, // data URL hoặc base64 thuần của ảnh (jpg/png)
-  opts: { maxTokens?: number } = {}
+  opts: { maxTokens?: number; system?: string } = {}
 ): Promise<string | null> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
@@ -96,7 +96,8 @@ export async function callAIVision(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 60000);
-      const textContent = extraSystem ? `${prompt}\n\n${extraSystem}` : prompt;
+      // Vision endpoint chỉ nhận message 'user' — system rules ghép vào đầu text content
+      const textContent = [opts.system, prompt, extraSystem].filter(Boolean).join('\n\n');
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },

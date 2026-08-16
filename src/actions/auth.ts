@@ -4,6 +4,7 @@ import { cookies, headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 import { mapUserFromDb } from '@/lib/db/users';
+import { toClientError } from '@/lib/errors';
 import type { User } from '@/types';
 
 export async function loginAction(
@@ -49,7 +50,7 @@ export async function loginAction(
   } catch (err: unknown) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Lỗi không xác định khi đăng nhập.',
+      error: toClientError(err, 'Lỗi không xác định khi đăng nhập. Vui lòng thử lại.'),
     };
   }
 }

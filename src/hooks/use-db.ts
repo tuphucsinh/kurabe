@@ -23,10 +23,12 @@ import {
 import { CriteriaGroup, Criterion, Team, User } from '@/types';
 
 // Users
-export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({ 
-  queryKey: ['users', requester?.id, options?.limit, options?.offset], 
-  queryFn: () => getUsers(requester, options), 
-  staleTime: 5 * 60 * 1000 
+export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({
+  queryKey: ['users', requester?.id, options?.limit, options?.offset],
+  queryFn: () => getUsers(requester, options),
+  staleTime: 5 * 60 * 1000,
+  // Chưa load xong user (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
+  enabled: requester != null
 });
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserById(id), enabled: !!id });
 export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeam(teamId), enabled: !!teamId });
@@ -77,10 +79,11 @@ export const useDeleteUser = () => {
 
 
 // Teams
-export const useTeams = (requester?: User | null) => useQuery({ 
-  queryKey: ['teams', requester?.id], 
-  queryFn: () => getTeams(requester), 
-  staleTime: 5 * 60 * 1000 
+export const useTeams = (requester?: User | null) => useQuery({
+  queryKey: ['teams', requester?.id],
+  queryFn: () => getTeams(requester),
+  staleTime: 5 * 60 * 1000,
+  enabled: requester != null
 });
 export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamById(id), enabled: !!id });
 
@@ -119,10 +122,11 @@ export const useDeleteTeam = () => {
 export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods, staleTime: 10 * 60 * 1000 });
 export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod, staleTime: 10 * 60 * 1000 });
 
-export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({ 
-  queryKey: ['evaluations', periodId, user?.id], 
+export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
+  queryKey: ['evaluations', periodId, user?.id],
   queryFn: () => periodId ? getEvaluationsByPeriod(periodId, user) : getEvaluations(user),
-  staleTime: 2 * 60 * 1000
+  staleTime: 2 * 60 * 1000,
+  enabled: !!user
 });
 
 export const useEvaluation = (id: string, user?: User | null) => useQuery({ 

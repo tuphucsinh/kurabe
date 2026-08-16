@@ -36,10 +36,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, isLoading, pathname, router]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Đóng sidebar khi đổi route — adjust state during render (không cần effect)
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setIsSidebarOpen(false);
-  }, [pathname]);
+  }
 
   // Trang login luôn full-screen (không sidebar) — tránh hiện sidebar + login card
   // trong 1-2s sau khi set session trước khi redirect dashboard.

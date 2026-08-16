@@ -1,7 +1,8 @@
 import { supabase } from '../supabase';
-import { User, Role } from '@/types';
+import { User } from '@/types';
 import { DatabaseError } from '../errors';
 import { Tables } from '@/types/database';
+import { parseRole } from '@/lib/parsers';
 
 type DbUser = Tables<'users'>;
 
@@ -82,7 +83,7 @@ export function mapUserFromDb(dbUser: Omit<DbUser, 'password_hash'>): User {
     id: dbUser.id,
     employeeCode: dbUser.employee_code || '',
     name: dbUser.name,
-    role: dbUser.role as Role,
+    role: parseRole(dbUser.role),
     teamId: dbUser.team_id || '',
     joinDate: dbUser.join_date || '',
     avatar: dbUser.avatar_url || undefined,

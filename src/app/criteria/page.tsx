@@ -486,6 +486,7 @@ export default function CriteriaPage() {
       />
 
       <CriteriaGroupModal
+        key={editingGroup?.id ?? 'new'}
         isOpen={groupModalOpen}
         onClose={() => setGroupModalOpen(false)}
         onSave={handleSaveGroup}

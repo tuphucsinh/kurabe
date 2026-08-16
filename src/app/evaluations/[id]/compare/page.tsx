@@ -1,10 +1,12 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useUsers, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
+import { getGradeBandsSync, loadGradeBandsFromDb } from '@/lib/grade-bands';
+import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { 
@@ -33,6 +35,14 @@ export default function ComparePage({ params }: ComparePageProps) {
   const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id, undefined, user);
   const { data: users = [] } = useUsers(user);
   const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
+
+  // Nạp thang điểm từ DB (load trang trực tiếp sẽ còn fallback hardcode nếu thiếu)
+  const [gradeBands, setGradeBands] = useState(() => getGradeBandsSync());
+  useEffect(() => {
+    let cancelled = false;
+    loadGradeBandsFromDb().then((bands) => { if (!cancelled) setGradeBands(bands); });
+    return () => { cancelled = true; };
+  }, []);
 
   const accessState = useMemo(() => 
     evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
@@ -67,9 +77,9 @@ export default function ComparePage({ params }: ComparePageProps) {
 
     return allRounds.map(r => ({
       round: r,
-      result: calculateRoundScore({ ...r, evaluatorRole }),
+      result: calculateRoundScore({ ...r, evaluatorRole }, gradeBands),
     }));
-  }, [allRounds, employee]);
+  }, [allRounds, employee, gradeBands]);
 
   // Tìm tiêu chí có thay đổi giữa BẤT KỲ 2 round nào
   const changedCriteriaIds = useMemo(() => {
@@ -210,14 +220,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                         Lần {r.round} {r.round === evaluation.currentRound ? '(Hiện tại)' : ''}
                       </span>
                       <div className="text-4xl font-black text-on-surface mb-1">{result.totalScore}</div>
-                      <div className={`px-4 py-1.5 rounded-full text-sm font-black uppercase shadow-md ${
-                        result.grade === 'S' ? 'bg-amber-500 text-white' :
-                        result.grade === 'A' || result.grade === 'AB' ? 'bg-blue-600 text-white' :
-                        result.grade === 'B' ? 'bg-green-600 text-white' :
-                        result.grade === 'C' ? 'bg-orange-500 text-white' :
-                        result.grade === 'D' ? 'bg-red-600 text-white' :
-                        'bg-gray-500 text-white'
-                      }`}>
+                      <div className={`px-4 py-1.5 rounded-full text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
                         Hạng {result.grade}
                       </div>
                       <button 

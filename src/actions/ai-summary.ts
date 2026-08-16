@@ -6,6 +6,7 @@ import { callAI, isAIConfigured } from '@/lib/ai';
 import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { revalidatePath } from 'next/cache';
+import { toClientError } from '@/lib/errors';
 
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
 export async function getPeriodSummary(periodId: string): Promise<{ summary?: string; created_at?: string }> {
@@ -95,6 +96,6 @@ Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown n
     return { summary };
   } catch (err) {
     console.error('generatePeriodSummary error:', err);
-    return { error: 'Lỗi khi tạo tóm tắt: ' + (err instanceof Error ? err.message : 'không xác định') };
+    return { error: toClientError(err, 'Lỗi khi tạo tóm tắt. Vui lòng thử lại.') };
   }
 }

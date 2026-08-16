@@ -4,14 +4,16 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidatePath } from 'next/cache';
 import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
-import { Grade, Role } from '@/types';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import {
   resolveEvaluatorFromList,
+  loadTeamLeaderIds,
   EvaluationSubject,
   EvaluatorResolution,
 } from '@/lib/evaluator-resolver';
 import { Database } from '@/types/database';
+import { toClientError } from '@/lib/errors';
+import { parseRole } from '@/lib/parsers';
 
 type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
 type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
@@ -42,22 +44,24 @@ export async function createEvaluationPeriod(year: number) {
       .eq('is_active', true);
 
     if (eError) {
-      return { success: false, error: 'Lỗi lấy danh sách nhân viên: ' + eError.message };
+      return { success: false, error: toClientError(eError, 'Lỗi lấy danh sách nhân viên. Vui lòng thử lại.') };
     }
 
     const periodEmployees: EvaluationSubject[] = (employees || []).map(emp => ({
       id: emp.id,
-      role: emp.role as Role,
+      role: parseRole(emp.role),
       teamId: emp.team_id,
       subleaderId: emp.subleader_id,
     }));
+    // Map leader được chỉ định — đồng bộ ngữ cảnh resolve với resolveEvaluatorFromDb (A3)
+    const teamLeaderIds = await loadTeamLeaderIds(supabaseAdmin);
     const initialEvaluators = new Map<string, EvaluatorResolution | null>();
 
     // Validate/Resolve evaluator round 1 trước khi tạo bất kỳ record nào.
     // Nếu employee.subleaderId null (chưa gán SubLeader), round 1 sẽ được tạo với evaluator_id = null (không fail kỳ).
     for (const employee of periodEmployees) {
       const [firstStep] = getEvaluationFlow(employee.role);
-      const evaluator = resolveEvaluatorFromList(firstStep.evaluator, employee, periodEmployees);
+      const evaluator = resolveEvaluatorFromList(firstStep.evaluator, employee, periodEmployees, teamLeaderIds);
       if (!evaluator && firstStep.evaluator !== 'SubLeader') {
         return { success: false, error: getMissingEvaluatorError(employee.id, firstStep.evaluator, firstStep.round) };
       }
@@ -78,7 +82,7 @@ export async function createEvaluationPeriod(year: number) {
       .single();
 
     if (pError || !period) {
-      return { success: false, error: 'Lỗi tạo kỳ đánh giá: ' + (pError?.message || 'Unknown error') };
+      return { success: false, error: toClientError(pError, 'Lỗi tạo kỳ đánh giá. Vui lòng thử lại.') };
     }
 
     if (periodEmployees.length === 0) {
@@ -103,7 +107,7 @@ export async function createEvaluationPeriod(year: number) {
       .select();
 
     if (evError || !insertedEvals) {
-      return { success: false, error: 'Lỗi khởi tạo danh sách đánh giá: ' + evError.message };
+      return { success: false, error: toClientError(evError, 'Lỗi khởi tạo danh sách đánh giá. Vui lòng thử lại.') };
     }
 
     const employeeMap = new Map(periodEmployees.map(emp => [emp.id, emp]));
@@ -124,11 +128,11 @@ export async function createEvaluationPeriod(year: number) {
         evaluation_id: ev.id,
         round: firstStep.round,
         evaluator_id: evaluator?.id || null,
-        evaluator_role: evaluator?.role || (firstStep.evaluator as Role),
+        evaluator_role: parseRole(evaluator?.role || firstStep.evaluator),
         scores: {},
         notes: {},
         total_score: 0,
-        grade: 'Pending' as Grade,
+        grade: 'Pending',
         status: 'NotStarted',
         created_at: now
       });
@@ -139,14 +143,14 @@ export async function createEvaluationPeriod(year: number) {
       .insert(roundsData);
 
     if (rError) {
-      return { success: false, error: 'Lỗi tạo các vòng đánh giá: ' + rError.message };
+      return { success: false, error: toClientError(rError, 'Lỗi tạo các vòng đánh giá. Vui lòng thử lại.') };
     }
 
     revalidatePath('/admin/periods');
     await logAudit(auth.user, 'CREATE_PERIOD', 'period', period.id, { year });
     return { success: true, periodId: period.id };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định khi tạo kỳ đánh giá.') };
   }
 }
 
@@ -166,13 +170,13 @@ export async function closeEvaluationPeriod(periodId: string) {
       })
       .eq('id', periodId);
 
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: toClientError(error, 'Lỗi đóng kỳ đánh giá. Vui lòng thử lại.') };
 
     revalidatePath('/admin/periods');
     await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định khi đóng kỳ đánh giá.') };
   }
 }
 
@@ -190,7 +194,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
       .delete()
       .eq('period_id', periodId);
 
-    if (evalError) return { success: false, error: evalError.message };
+    if (evalError) return { success: false, error: toClientError(evalError, 'Lỗi xóa dữ liệu đánh giá của kỳ. Vui lòng thử lại.') };
 
     // 3. Xóa period
     const { error } = await supabaseAdmin
@@ -198,14 +202,14 @@ export async function deleteEvaluationPeriod(periodId: string) {
       .delete()
       .eq('id', periodId);
 
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: toClientError(error, 'Lỗi xóa kỳ đánh giá. Vui lòng thử lại.') };
 
     revalidatePath('/admin/periods');
     revalidatePath('/dashboard');
     await logAudit(auth.user, 'DELETE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định khi xóa kỳ đánh giá.') };
   }
 }
 
@@ -235,13 +239,13 @@ export async function savePeriodTarget(
       .update({ target_rate: Math.round(rate), target_grade: grade })
       .eq('id', periodId);
 
-    if (error) return { success: false, error: 'Lỗi lưu mục tiêu: ' + error.message };
+    if (error) return { success: false, error: toClientError(error, 'Lỗi lưu mục tiêu. Vui lòng thử lại.') };
 
     revalidatePath('/settings');
     revalidatePath('/reports');
     await logAudit(auth.user, 'UPDATE_PERIOD_TARGET', 'period', periodId, { rate, grade });
     return { success: true };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+    return { success: false, error: toClientError(err, 'Lỗi không xác định khi lưu mục tiêu.') };
   }
 }

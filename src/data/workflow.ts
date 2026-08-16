@@ -11,6 +11,7 @@ import {
   getEvaluationFlow,
   getNextEvaluationStep,
 } from '@/lib/evaluation-workflow';
+import { parseRoundNumber } from '@/lib/parsers';
 
 function getLatestVisibleRound(rounds: EvaluationRound[]): RoundNumber | null {
   if (rounds.length === 0) return null;
@@ -203,7 +204,7 @@ export function getEvaluationAccessState(
     const currentRoundData = evaluation.rounds.find(r => r.round === evaluation.currentRound);
     let previousSubmitted = true;
     if (evaluation.currentRound > 1) {
-      const prevRound = evaluation.rounds.find(r => r.round === (evaluation.currentRound - 1) as RoundNumber);
+      const prevRound = evaluation.rounds.find(r => r.round === parseRoundNumber(evaluation.currentRound - 1));
       previousSubmitted = !!prevRound && isRoundSubmitted(prevRound);
     }
 

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/supabase';
 import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
@@ -5,8 +6,11 @@ import { User, Role } from '@/types';
 
 export type AuthResult = { user: User; error: null } | { user: null; error: string };
 
-/** Lấy user từ session cookie `auth_session` (server-side). Trả null nếu không có/không hợp lệ. */
-export async function getSessionUser(): Promise<User | null> {
+/**
+ * Lấy user từ session cookie `auth_session` (server-side). Trả null nếu không có/không hợp lệ.
+ * Bọc cache() của React: page + action gọi nhiều lần trong 1 request chỉ ra 1 query (C5).
+ */
+export const getSessionUser = cache(async (): Promise<User | null> => {
   try {
     const cookieStore = await cookies();
     const userId = cookieStore.get('auth_session')?.value;
@@ -23,7 +27,7 @@ export async function getSessionUser(): Promise<User | null> {
   } catch {
     return null;
   }
-}
+});
 
 /** Bắt buộc đăng nhập — trả user hoặc {error} để action trả về ngay. */
 export async function requireAuth(): Promise<AuthResult> {
