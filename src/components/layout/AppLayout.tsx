@@ -104,19 +104,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile Floating Navigation */}
-      <nav className="md:hidden fixed bottom-6 left-6 right-6 h-16 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
+      <nav className="md:hidden fixed bottom-6 left-6 right-6 h-14 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
         {user?.role === 'Employee' ? (
           <>
-            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={22} />} label="Phiếu" active={pathname.startsWith('/evaluations')} />
-            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Cài đặt" active={pathname === '/settings'} />
-            <BottomNavItem href="/support" icon={<HelpCircle size={22} />} label="Hướng dẫn" active={pathname === '/support'} />
+            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={24} />} active={pathname.startsWith('/evaluations')} />
+            <BottomNavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} />
+            <BottomNavItem href="/support" icon={<HelpCircle size={24} />} active={pathname === '/support'} />
           </>
         ) : (
           <>
-            <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Trang chủ" active={pathname === '/dashboard'} />
-            <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Nhóm" active={pathname === '/teams'} />
-            <BottomNavItem href="/employees" icon={<Users size={22} />} label="Nhân sự" active={pathname === '/employees'} />
-            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Cài đặt" active={pathname === '/settings'} />
+            <BottomNavItem href="/dashboard" icon={<Home size={24} />} active={pathname === '/dashboard'} />
+            <BottomNavItem href="/teams" icon={<Layout size={24} />} active={pathname === '/teams'} />
+            <BottomNavItem href="/employees" icon={<Users size={24} />} active={pathname === '/employees'} />
+            <BottomNavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} />
           </>
         )}
       </nav>
@@ -124,7 +124,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BottomNavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active: boolean }) {
+function BottomNavItem({ href, icon, active }: { href: string; icon: React.ReactNode; active: boolean }) {
   return (
     <Link 
       href={href}
@@ -133,9 +133,6 @@ function BottomNavItem({ href, icon, label, active }: { href: string; icon: Reac
       <div className={`transition-transform duration-300 ${active ? '-translate-y-1 scale-110' : ''}`}>
         {icon}
       </div>
-      <span className={`text-[11px] font-bold tracking-wide mt-0.5 transition-all duration-300 ${active ? 'opacity-100' : 'opacity-70'}`}>
-        {label}
-      </span>
       {active && (
         <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--color-primary),0.8)]" />
       )}
