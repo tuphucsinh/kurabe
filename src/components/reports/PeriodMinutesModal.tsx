@@ -164,7 +164,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
     <>
       <button
         onClick={handleOpen}
-        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-outline-variant rounded-2xl text-xs sm:text-sm font-medium hover:bg-surface-container text-on-surface shadow-2xs hover:opacity-95 active:scale-95 transition-all shrink-0"
+        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-outline-variant rounded-2xl text-xs sm:text-sm font-medium hover:bg-surface-container text-on-surface shadow-2xs hover:opacity-95 active:scale-95 transition-all shrink-0 w-full sm:w-auto justify-center"
       >
         <FileText className="w-4 h-4 text-primary" />
         <span>Soạn biên bản kết thúc kỳ</span>

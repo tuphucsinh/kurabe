@@ -24,7 +24,7 @@ export default function ReportFilters({ teams }: { teams: { id: string, name: st
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-2xl border border-outline-variant shadow-sm">
+    <div className="flex flex-wrap items-center gap-3 bg-white p-3 md:p-4 rounded-2xl border border-outline-variant shadow-sm">
       <div className="flex items-center gap-2 px-3 py-2 bg-surface-container rounded-xl">
         <Filter className="w-4 h-4 text-outline" />
         <span className="text-sm font-medium text-outline">Lọc:</span>
@@ -33,7 +33,7 @@ export default function ReportFilters({ teams }: { teams: { id: string, name: st
       <select 
         value={selectedTeam}
         onChange={handleTeamChange}
-        className="px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+        className="px-3 md:px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all flex-1 min-w-0 md:flex-none"
       >
         <option value="all">Tất cả nhóm</option>
         {teams.map(t => (
@@ -41,13 +41,13 @@ export default function ReportFilters({ teams }: { teams: { id: string, name: st
         ))}
       </select>
 
-      <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-semibold text-indigo-600">
+      <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-semibold text-indigo-600">
         <Calendar className="w-4 h-4" />
         <span>Kỳ {currentPeriod?.year}</span>
       </div>
 
-      <div className="ml-auto text-sm text-outline flex items-center gap-2">
-        <Clock className="w-4 h-4" />
+      <div className="md:ml-auto text-xs md:text-sm text-outline flex items-center gap-2 w-full md:w-auto">
+        <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
         Dữ liệu thời gian thực
       </div>
     </div>

@@ -36,7 +36,7 @@ export default function CriteriaHeatmap({ data }: CriteriaHeatmapProps) {
     <div className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-on-surface">Phân tích nhóm tiêu chuẩn</h3>
-        <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-outline">
+        <div className="flex gap-4 text-[11px] font-bold uppercase tracking-wider text-outline">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
             <span>≥80%</span>
