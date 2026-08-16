@@ -80,24 +80,24 @@ export default async function DashboardPage() {
       ) : (
         <>
           {/* KPI Compact */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
-              <Users size={18} className="text-primary" />
+          <div className="grid grid-cols-2 gap-3 md:flex md:items-center md:gap-4 md:flex-wrap">
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <Users size={18} className="text-primary shrink-0" />
               <span className="text-lg font-black text-slate-900">{dashboardData.stats.total}</span>
               <span className="text-sm text-slate-500">nhân sự</span>
             </div>
-            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
-              <TrendingUp size={18} className="text-emerald-600" />
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <TrendingUp size={18} className="text-emerald-600 shrink-0" />
               <span className="text-lg font-black text-slate-900">{dashboardData.stats.percent}%</span>
               <span className="text-sm text-slate-500">tiến độ</span>
             </div>
-            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
-              <CheckCircle2 size={18} className="text-green-600" />
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-green-600 shrink-0" />
               <span className="text-lg font-black text-slate-900">{dashboardData.stats.completed}/{dashboardData.stats.total}</span>
               <span className="text-sm text-slate-500">đã đánh giá</span>
             </div>
-            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-2.5 flex items-center gap-2">
-              <Clock size={18} className="text-amber-600" />
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <Clock size={18} className="text-amber-600 shrink-0" />
               <span className="text-lg font-black text-slate-900">{dashboardData.stats.total - dashboardData.stats.completed}</span>
               <span className="text-sm text-slate-500">chưa xong</span>
             </div>
