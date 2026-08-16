@@ -842,3 +842,49 @@
 **Definition of Done**: metrics đạt chuẩn + desktop không vỡ + build/lint 0 + báo cáo kèm screenshots trước/sau.
 
 **Status**: `[x]` — DONE 16-08: 12/12 task (11 commits `98bc154..c6e310f`, chưa push). Verify Playwright thật 375×812 (login 158): 10 trang + compare = **0 tap-target <40px, 0 font <11px, 0 overflowX**; content cuối scroll hết = 636px < FAB 676 < nav 724 (pb-44 không che); desktop 1280px = 0 overflowX (stats card md:flex + grid sm:4 cột khôi phục); build PASS + lint 0 errors; sweep toàn src 0 chỗ text-[9px]/[10px]. Reviewer: plan R1 CHANGES_REQUIRED→R2 PASS; thực thi vòng toàn bộ CHANGES_REQUIRED (4 chỗ text-[9px] sót) → fix `c6e310f` → **PASS** ✅.
+
+---
+
+## Phase 79: BottomNav chỉ icon + Redesign team-detail + Fix status kẹt 🟡 (2026-08-16)
+
+> Plan + evidence: `.ai/MASTER_PLAN.md` Phase 79 (3 ảnh anh gửi 16-08; bug Trang đã điều tra: 1 row kẹt status). UI thuần + 1 backfill. 1 task = 1 commit `[#P79Tzz]`.
+
+### [#P79T01] [src/components/layout/AppLayout.tsx] BottomNav chỉ icon (bỏ text)
+
+**Goal**: Nav mobile gọn — chỉ icon, không nhãn chữ.
+
+**Depends on**: `none`
+
+**Concrete changes**: BottomNavItem bỏ span label (:136-138 — text-[11px]...); bỏ `label` prop khỏi 7 BottomNavItem call (:110-112 Employee 3 mục + :116-119 Manager 4 mục); nav `h-16`→`h-14`; icon `size={22}`→`size={24}`; giữ active text-primary + -translate-y-1 scale-110; inactive text-slate-400. Đổi signature BottomNavItem bỏ label (hoặc giữ param nhưng không render — chọn bỏ hẳn cho sạch).
+
+**Definition of Done**: 375px: nav chỉ icon 24px, không text, không wrap; desktop md:hidden không đổi.
+
+### [#P79T02] [src/app/teams/[id]/page.tsx] Redesign card thành viên — bỏ icon đánh giá + bỏ status badge + chỉ điểm cuối
+
+**Goal**: Card dễ nhìn: tên/mã/role + grade + điểm lần cuối. Click tên → /evaluations/{id}.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. Xóa `STATUS_BADGE` map (:26-33) + `getStatusBadge` (:35-44) + các call `getStatusBadge(...)` (:273/:352/:432/:526) — không còn label trạng thái.
+2. Xóa icon Link FileText "Xem đánh giá" (4 chỗ :330-338 leader / :413-421 sl / :487-492 + :574-582 member) — click tên đã vào được.
+3. Chỉ hiện lần đánh giá CUỐI: bỏ `previousRounds` render (khối L1 cũ opacity-55 :309-325 leader / tương tự sl + member) — chỉ giữ `L{gradeRound}: {score}` (hoặc `L{gradeRound}` nhãn + score đậm). Nếu chưa có round nộp → ẩn vùng điểm (không placeholder).
+4. Grid đơn giản: `grid-cols-[minmax(0,1fr)_32px_104px]` (bỏ cột badge 144px) ở 4 chỗ (:284/:367/:438/:532) — bỏ luôn `sm:grid-cols-...144px` + `col-span-3 sm:col-span-1` badge class.
+5. Tên không vỡ: name Link leader/sl thêm `truncate` (member đã có).
+6. `memberRows` (:99-119) giữ nguyên tính toán (grade/score/latestRound) — chỉ đổi render. `completedCount` :150 giữ (dùng status Approved — sau backfill T3a đúng).
+
+**Definition of Done**: mobile + desktop: card gọn 3 cột (tên/mã/role | grade | điểm cuối), không badge trạng thái, không icon đánh giá, tên không vỡ; click tên vẫn vào phiếu.
+
+### [#P79T03] [src/actions/evaluation.ts + backfill] Fix status kẹt (guard + data)
+
+**Goal**: Evaluation không bao giờ kẹt status NotStarted khi đã nộp đủ vòng; data Trang đúng Approved.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. Guard code (src/actions/evaluation.ts, sau khối update :218-221 trong `if (isSubmit && nextStep)`): sau `update(evalUpdate)` — `select('status')` đọc lại, nếu `data[0]?.status !== evalUpdate.status` → update lại 1 lần (retry) — log `console.error('[saveEvaluationRound] status không khớp sau update', ...)` nếu vẫn lệch.
+2. Backfill (Mika làm riêng, service role — KHÔNG cho runner): `UPDATE evaluations SET status='Approved' WHERE id='a1b9c3ba-223f-48b5-9a5a-2be7cf7d33fc'` (Hoàng Thị Trang — 3 rounds Submitted, final B/110) + verify anon đọc thấy Approved + dashboard đếm đúng.
+
+**Definition of Done**: DB Trang status=Approved; submit final mới → status Approved (test 1 vòng trên user test nếu cần); build/lint 0.
+
+**Status**: `[x]` — DONE 16-08: 3/3 task + fix. T1 BottomNav chỉ icon (aria-label accessibility) commit `e7abeff`; T2 team-detail redesign (bỏ icon Xem đánh giá + bỏ status badges + chỉ lần cuối + grid 3 cột + truncate) `66f7d25`; T3b guard status (verify + retry + self-heal idempotent) `0f7596e` + `9024c33`; T3a backfill Trang status='Approved' (verified anon SELECT + stats 2/15). Verify Playwright 375×812: nav 4 icon/0 text, team-detail 0 label trạng thái/0 icon/0 font <11px/0 overflow; tsc 0; build PASS; lint 0 errors. Reviewer: **PASS** ✅ (3 góp ý THẤP đã fix). Chưa push (ahead 18).

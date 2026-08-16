@@ -836,6 +836,36 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 
 **Phase 78: DONE** ✅ (2026-08-16).
 
+---
+
+## Phase 79: BottomNav chỉ icon + Redesign team-detail + Fix status kẹt 🟡 (2026-08-16)
+
+> Yêu cầu anh (16-08, kèm 3 ảnh): (1) bottom nav bỏ text chỉ icon; (2) trang chi tiết nhóm thiết kế lại — bỏ icon đánh giá (click tên được rồi), chỉ show lần đánh giá CUỐI, bỏ label trạng thái "Chưa bắt đầu"/"Đã nộp vòng x"; (3) bug: Hoàng Thị Trang (16735) nộp đủ 3 vòng (104/91/110, B) nhưng label "Chưa bắt đầu".
+
+**Bằng chứng điều tra bug #3 (16-08, PostgREST anon)**:
+- evaluations `b13d800c…` (Hoàng Thị Trang): `status='NotStarted'`, `current_round=3`, `final_grade='B'`, `final_score=110` — NHƯNG 3 evaluation_rounds đều `Submitted` (submitted_at 13-08 13:15/13:46/14:25, grade B).
+- `saveEvaluationRound` (src/actions/evaluation.ts:205-221): final submit set `status: nextStep.status` ('Approved') + final_grade/final_score — final_grade đã được set (nghĩa là update chạy) nhưng status cuối = NotStarted → **data kẹt từ 13-08** (trước các fix Phase 61-64; bị ghi đè status sau đó hoặc update status thất bại im lặng ở phiên bản cũ).
+- **Toàn DB chỉ 1 evaluation kẹt** (query status=NotStarted & current_round>1 → 1 row).
+- `getStatusBadge` (teams/[id]/page.tsx:35-44): label từ `ev.status` → hiện "Chưa bắt đầu" sai.
+
+**Thiết kế (3 task — UI thuần + 1 backfill data)**:
+- **T1 [AppLayout.tsx]** BottomNav chỉ icon: xóa label span (BottomNavItem :136-138) + bỏ label props (4 mục Manager + 3 Employee); nav `h-16`→`h-14`; icon 22→24; active = text-primary + scale (giữ), inactive slate-400.
+- **T2 [teams/[id]/page.tsx]** Redesign card thành viên (leader/sl/member):
+  - Bỏ icon FileText "Xem đánh giá" (3 chỗ Link :333-337/:415-420/:487-492/:577-582 — click tên đã vào /evaluations/{id}).
+  - Bỏ status badge: xóa `getStatusBadge` usage + `STATUS_BADGE` map (:26-44) + cột badge trong grid.
+  - Chỉ show lần đánh giá CUỐI: bỏ `previousRounds` render (L1 cũ mờ) — chỉ hiện `L{gradeRound}: {score}` + grade badge; nếu chưa có round nộp → ẩn (hoặc "—").
+  - Grid đơn giản: `grid-cols-[minmax(0,1fr)_32px_auto]` (bỏ cột 144px).
+  - Tên không vỡ: thêm `truncate`/`min-w-0` cho name Link (leader/sl/member).
+- **T3 [bug]**: (a) **Backfill** (Mika, service role): `UPDATE evaluations SET status='Approved' WHERE id='a1b9c3ba-223f-48b5-9a5a-2be7cf7d33fc'` + verify anon đọc thấy Approved; (b) **Guard code** (src/actions/evaluation.ts): sau update status submit — đọc lại eval.status, nếu ≠ nextStep.status → update lại 1 lần (chống data kẹt tái diễn).
+
+**Acceptance**: nav mobile không text; team-detail hiển thị tên/mã/role/grade/điểm cuối gọn, không label trạng thái, không icon đánh giá; Trang status='Approved' (dashboard đếm đúng); build/lint 0; desktop regression 0 overflow.
+
+**Note**: T2 làm mất hiển thị tiến độ vòng — anh đã chốt (chỉ lần cuối). Status đầy đủ vẫn ở /evaluations/{id}.
+
+**KẾT QUẢ THỰC THI (16-08)**: 3/3 task DONE — commits `e7abeff` (T1 BottomNav chỉ icon + aria-label) + `66f7d25` (T2 redesign) + `0f7596e` (T3b guard) + `9024c33` (fix góp ý reviewer: aria-label, xóa dead code latestSubmittedRound/previousRounds, guard bắt lỗi select + re-verify sau retry + self-heal nhánh idempotent). **T3a backfill** (Mika, service role): Trang `b13d800c` → status='Approved' — verified anon SELECT Approved + stats team 2/15. Verify Playwright 375×812: nav = 4 icon/0 text/0 label/56px; team-detail = 0 overflowX, 0 label trạng thái ("Chưa bắt đầu"/"Đã nộp vòng x"/"Đã có KQĐG" hết), 0 icon FileText, 0 font <11px; tsc 0; build PASS; lint 0 errors. **Reviewer: PASS** ✅ (3 góp ý THẤP — đã fix hết, không blocking).
+
+**Phase 79: DONE** ✅ (2026-08-16).
+
 **Reviewer R1 (16-08)**: CHANGES_REQUIRED — (1) T01 label 10px mâu thuẫn T12 "0 font <11px" → đã đổi `text-[11px]`; (2) thiếu file chứa lỗi: support/page.tsx:130, AnomalyAlertCard.tsx:59, header bell AppLayout.tsx:82 (36px) → đã thêm T11 sweep + bell p-3 vào T01; (3) file list sai: T08 thực ở CriteriaHeatmap/ReportFilters/3 modal (page chỉ wrapper :78), T09 thực ở `src/components/evaluation/CriteriaTab.tsx` + `GroupNavTabs.tsx` (page.tsx chỉ :648-660), T05 KHÔNG có absolute — badge là grid cột `grid-cols-[minmax(0,1fr)_32px_104px_144px]` :284/367/438/532, T04 KPI là `flex flex-wrap` :83 → đã sửa hết mô tả + file. Ghi chú phụ đã xử lý: T03 bỏ wildcard modals, teams stats label 10px :259/263/267 → T11, T12 thêm evaluations list/detail vào metric + baseline trước, class base ghi rõ gate md. → gửi lại R2.
 
 **Reviewer R2 (16-08)**: **PASS** ✅ — đối chiếu 7/7 delta với code thật (AppLayout.tsx:82/136, support:130, AnomalyAlertCard:59, teams:259-267, team-detail:284/367/438/532, dashboard:83, CriteriaTab/GroupNavTabs, CriteriaHeatmap:39, reports:78) đều khớp; ghi chú nhỏ không blocking: dải trạng thái evaluations/[id] thực bắt đầu :646 (plan ghi :648 — lệch 2 dòng). Sẵn sàng implementation → /plan2task.
