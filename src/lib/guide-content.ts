@@ -100,7 +100,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Dùng các tính năng AI',
-        body: 'Hệ thống có 4 nút AI hỗ trợ: (1) Gợi ý nhận xét AI khi chấm điểm — tự viết nhận xét dựa trên điểm/ghi chú; (2) Soạn thông báo kết quả AI trên phiếu đã chốt — tạo nháp thông báo cho nhân viên; (3) Giải thích bằng AI khi Dashboard cảnh báo điểm chênh lệch ≥20 giữa 2 vòng; (4) Tạo tóm tắt AI trên trang Báo cáo — tổng hợp cả kỳ. AI chạy 10–60 giây, kết quả chỉ là gợi ý — hãy rà soát và chỉnh sửa trước khi dùng.',
+        body: 'Hệ thống có AI hỗ trợ rộng khắp: (1) Gợi ý nhận xét AI khi chấm điểm; (2) Giải thích bằng AI khi Dashboard cảnh báo điểm chênh lệch; (3) Trợ lý chat (góc phải dưới) — hỏi hướng dẫn, tình hình, số liệu bằng tiếng Việt tự nhiên ("Ai giảm điểm nhiều nhất?", "Tóm tắt báo cáo") — AI trả lời số liệu thật theo trang; (4) Soạn thông báo kết quả AI (trên phiếu chốt và Soạn thông báo hàng loạt ở trang Báo cáo — tự viết thông báo riêng cho từng nhân viên); (5) Biên bản kết thúc kỳ ở trang Báo cáo; (6) Tạo tóm tắt AI ở trang Báo cáo. AI chạy 10–60 giây, kết quả chỉ là gợi ý — hãy rà soát và chỉnh sửa trước khi dùng.',
         screenshotPath: '/screenshots/guide/manager-13-ai.jpg',
         annotate: null,
       },
@@ -114,6 +114,12 @@ export const guideContent: Record<GuideRole, GuideSection> = {
         title: 'Đóng kỳ đánh giá khi hoàn tất',
         body: 'Khi mọi nhân viên đã có kết quả vòng cuối, vào Cài đặt → tab Kỳ đánh giá, chọn kỳ hiện tại và bấm Đóng kỳ (hoặc kết thúc kỳ). Kỳ đã đóng sẽ khóa mọi thao tác đánh giá; dữ liệu vẫn xem được ở các màn báo cáo. Chỉ đóng khi chắc chắn mọi kết quả đã đúng.',
         screenshotPath: '/screenshots/guide/manager-15-close-period.jpg',
+        annotate: null,
+      },
+      {
+        title: 'Soạn biên bản kết thúc kỳ và thông báo kết quả cho nhân viên',
+        body: 'Sau khi đóng kỳ, vào trang Báo cáo: (1) bấm Soạn thông báo kết quả (AI) để AI tự viết thông báo riêng cho từng nhân viên (giải thích xếp loại, điểm mạnh, điều cần cải thiện, động viên — có gọi đúng tên nhân viên), rà soát rồi bấm Gửi tất cả; (2) bấm Soạn biên bản kết thúc kỳ để AI tổng hợp cả kỳ thành biên bản chính thức (kết quả, xếp loại, vấn đề, khuyến nghị) — rà soát, sửa rồi Sao chép/In. Khi đã gửi thông báo, nhân viên đăng nhập sẽ thấy card kết quả của mình ngay trên phiếu.',
+        screenshotPath: null,
         annotate: null,
       },
     ],
@@ -302,7 +308,7 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       },
       {
         title: 'Xem kết quả đánh giá của mình',
-        body: 'Vào Nhân viên, tìm tên bạn và mở phiếu (biểu tượng tài liệu ở cuối dòng). Bạn xem được điểm và nhận xét của mình theo từng vòng; khi Manager chốt xong, bạn thấy xếp loại và tổng điểm cuối kỳ. Có thể bấm vào tên mình trong danh sách để mở phiếu.',
+        body: 'Sau khi đăng nhập, hệ thống đưa bạn thẳng đến phiếu đánh giá của mình. Khi Manager đã chốt và gửi thông báo, phiếu hiện card kết quả nổi bật: xếp loại, thông điệp từ Ban Quản lý (giải thích điểm mạnh, điều cần cải thiện, động viên) và ý nghĩa từng xếp loại. Dưới phiếu có mục "Kết quả các kỳ trước" để xem lại lịch sử đánh giá của bạn. Bạn chỉ có 3 trang: Phiếu đánh giá, Cài đặt (đổi mật khẩu) và Hướng dẫn.',
         screenshotPath: '/screenshots/guide/employee-03-result.jpg',
         annotate: null,
       },
