@@ -525,7 +525,7 @@ export default function EmployeesPage() {
           {canDeleteEmployees && (
             <button
               onClick={() => handleDelete(item.id, item.name)}
-              className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
               title="Xóa"
             >
               <Trash2 size={18} />

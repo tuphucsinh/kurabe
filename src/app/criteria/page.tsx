@@ -268,14 +268,14 @@ export default function CriteriaPage() {
                       setEditingGroup(activeGroup);
                       setGroupModalOpen(true);
                     }}
-                    className="p-1.5 text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                     title="Sửa nhóm"
                   >
                     <Pencil size={18} />
                   </button>
                   <button
                     onClick={() => handleDeleteGroup(activeGroup.id!, activeGroup.name)}
-                    className="p-1.5 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                     title="Xóa nhóm"
                   >
                     <Trash2 size={18} />
@@ -319,13 +319,13 @@ export default function CriteriaPage() {
                               setEditingGroupId(safeGroupId);
                               setCriteriaModalOpen(true);
                             }}
-                            className="p-2 text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
                           >
                             <Pencil size={18} />
                           </button>
                           <button
                             onClick={() => handleDeleteCriterion(criterion.id!, criterion.name)}
-                            className="p-2 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -361,7 +361,7 @@ export default function CriteriaPage() {
                           {isManager && (
                             <button
                               onClick={() => handleSetDefaultLevel(criterion.id!, idx, criterion.defaultLevelIndex)}
-                              className={`shrink-0 p-1.5 rounded-lg transition-colors ${
+                              className={`shrink-0 p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors ${
                                 isDefault 
                                   ? 'text-amber-500 bg-amber-100 hover:bg-amber-200' 
                                   : 'text-outline-variant hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
