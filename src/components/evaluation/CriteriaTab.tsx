@@ -72,7 +72,7 @@ const CriteriaTab = memo(function CriteriaTab({
             <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center flex-wrap gap-2">
               <div className="flex items-center gap-4">
                 <h3 className="font-bold text-on-surface flex items-center gap-2">
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border transition-colors ${hasHistoryVariance ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-primary border-primary/20'}`}>
+                  <span className={`text-[11px] font-black px-1.5 py-0.5 rounded border transition-colors ${hasHistoryVariance ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-primary border-primary/20'}`}>
                     {criterion.code}
                   </span>
                   {criterion.name}
@@ -80,7 +80,7 @@ const CriteriaTab = memo(function CriteriaTab({
                 <button 
                   onClick={() => toggleNote(criterion.id)}
                   className={`
-                    flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider
+                    flex items-center gap-1.5 px-3 py-2 min-h-11 rounded-lg transition-all text-[11px] font-black uppercase tracking-wider
                     ${isNoteVisible 
                       ? 'bg-primary text-white shadow-sm' 
                       : 'text-outline hover:bg-primary/10 hover:text-primary border border-dashed border-outline-variant'
@@ -102,7 +102,7 @@ const CriteriaTab = memo(function CriteriaTab({
                   const scoreChangedAtThisRound = prevRScore !== undefined && prevRScore !== rScore;
 
                   return (
-                    <span key={round.round} className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 transition-colors ${
+                    <span key={round.round} className={`text-[11px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 transition-colors ${
                       scoreChangedAtThisRound ? 'text-amber-700 bg-amber-50 border-amber-200 shadow-sm' : 'text-outline-variant bg-surface border-outline-variant/60'
                     }`}>
                       <History size={10} />
@@ -161,7 +161,7 @@ const CriteriaTab = memo(function CriteriaTab({
                       {selectedRounds.length > 0 && (
                         <div className="flex flex-col gap-0.5 shrink-0">
                           {selectedRounds.map(r => (
-                            <span key={r.round} className={`w-5 h-5 flex items-center justify-center text-[9px] font-bold border rounded shadow-sm ${
+                            <span key={r.round} className={`w-6 h-6 flex items-center justify-center text-[11px] font-bold border rounded shadow-sm ${
                               isSelected ? 'bg-primary text-white border-primary' : 'bg-amber-100 text-amber-700 border-amber-200'
                             }`}>
                               L{r.round}
@@ -178,7 +178,7 @@ const CriteriaTab = memo(function CriteriaTab({
                     {level.description && (
                       <div className="mt-2 flex items-start gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                         <Info size={12} className="shrink-0 mt-0.5" />
-                        <p className="text-[10px] italic">{level.description}</p>
+                        <p className="text-[11px] italic">{level.description}</p>
                       </div>
                     )}
                   </button>
@@ -202,7 +202,7 @@ const CriteriaTab = memo(function CriteriaTab({
                   {allPreviousRounds.some(r => r.notes?.[criterion.id]) && (
                     <div className="flex items-center gap-1 shrink-0">
                       {allPreviousRounds.map(round => round.notes?.[criterion.id] && (
-                        <span key={round.round} title={`L${round.round}: ${round.notes[criterion.id]}`} className="flex items-center gap-1 text-[10px] text-outline-variant border border-outline-variant/40 rounded px-1.5 py-0.5 bg-white cursor-help">
+                        <span key={round.round} title={`L${round.round}: ${round.notes[criterion.id]}`} className="flex items-center gap-1 text-[11px] text-outline-variant border border-outline-variant/40 rounded px-1.5 py-0.5 bg-white cursor-help">
                           <History size={9} />L{round.round}
                         </span>
                       ))}

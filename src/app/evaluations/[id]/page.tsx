@@ -643,24 +643,24 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-outline font-medium">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-outline font-medium">
               <span>Đánh giá</span>
-              <ChevronRight size={14} />
+              <ChevronRight size={14} className="shrink-0" />
               <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">
                 Lần {accessState.editableRound || accessState.displayRound} / {maxRound}
               </span>
               {allPreviousRounds.length > 0 && (
                 <button 
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
-                  className="flex items-center gap-2 px-4 py-1.5 bg-white border border-outline-variant rounded-xl text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95 ml-2"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-outline-variant rounded-xl text-xs sm:text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
                 >
-                  <ArrowLeftRight size={16} />
+                  <ArrowLeftRight size={14} />
                   <span>Chi tiết so sánh</span>
                 </button>
               )}
               {isReadOnly && (
                 <>
-                  <ChevronRight size={14} />
+                  <ChevronRight size={14} className="shrink-0" />
                   <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
                     <Lock size={12} /> {activeRoundData.status === 'Submitted' ? 'Đã nộp' : 'Chỉ xem'}
                   </span>

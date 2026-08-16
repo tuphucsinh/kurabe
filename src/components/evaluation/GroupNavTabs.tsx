@@ -59,7 +59,7 @@ export default function GroupNavTabs({
             
             {/* Label */}
             <div className="relative z-20 flex flex-col items-start">
-              <span className={`text-[9px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
                 Nhóm {group.code}
               </span>
               <span className={`text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
@@ -81,7 +81,7 @@ export default function GroupNavTabs({
                   {groupScore > 0 ? `+${groupScore}` : groupScore}
                 </m.span>
               ) : (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
                   isActive ? 'bg-white/20 text-white/70' : 'bg-surface text-outline'
                 }`}>
                   {group.criteria.length}
