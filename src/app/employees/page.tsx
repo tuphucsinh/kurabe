@@ -456,7 +456,7 @@ export default function EmployeesPage() {
     },
     {
       key: 'grade',
-      header: 'Xếp loại gần nhất',
+      header: 'Xếp loại',
       sortable: true,
       render: (item) => (
           <div className="flex items-center gap-2">
@@ -590,7 +590,7 @@ export default function EmployeesPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={20} />
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên nhân viên hoặc mã số..."
+            placeholder="Tìm tên hoặc mã NV"
             className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all text-sm md:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
