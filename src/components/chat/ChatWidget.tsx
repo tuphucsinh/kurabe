@@ -109,17 +109,17 @@ export default function ChatWidget() {
       {!open && (
         <button
           onClick={openWidget}
-          className="fixed right-4 bottom-24 md:bottom-6 z-[9998] w-16 h-16 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
+          className="fixed right-4 bottom-20 md:bottom-6 z-[9998] w-14 h-14 rounded-full bg-primary text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:bg-primary/90 transition-all"
           aria-label="Hỗ trợ"
           title="Hỗ trợ"
         >
-          <MessageCircle size={28} />
+          <MessageCircle size={24} />
         </button>
       )}
 
       {/* Panel chat */}
       {open && (
-        <div className="fixed right-4 bottom-4 md:bottom-6 z-[9999] w-[calc(100vw-2rem)] max-w-sm h-[calc(100dvh-6rem)] bg-white rounded-2xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed right-4 bottom-4 md:bottom-6 z-[9999] w-[calc(100vw-1.5rem)] max-w-sm h-[calc(100dvh-6rem)] bg-white rounded-2xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden">
           <div className="px-4 py-3 bg-primary text-white flex items-center justify-between">
             <div>
               <p className="font-bold text-sm">Trợ lý KURABE</p>
