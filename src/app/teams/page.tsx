@@ -256,15 +256,15 @@ export default function TeamsPage() {
                   {/* Stats Row */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center p-3 rounded-xl bg-surface">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
                       <p className="text-xl font-black text-on-surface">{team.membersCount}</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-surface">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
                       <p className="text-xl font-black text-green-600">{team.completedCount}</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-surface">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
                       <p className="text-xl font-black text-amber-600">{team.membersCount - team.completedCount}</p>
                     </div>
                   </div>

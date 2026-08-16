@@ -127,7 +127,7 @@ export default function SupportPage() {
                     {roleWorkflows[role].map((step, index) => (
                       <div key={`${role}-wf-${index}`} className="flex items-center gap-2">
                         <div className="min-w-[138px] rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
+                          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">{step.round}</p>
                           <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">{step.evaluator}</p>
                         </div>
                         {index < roleWorkflows[role].length - 1 && (

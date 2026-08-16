@@ -56,7 +56,7 @@ export default function AnomalyAlertCard({ evaluations }: { evaluations: Evaluat
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-slate-800">
                       {a.name}
-                      <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isHigh ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                      <span className={`ml-2 text-[11px] font-bold px-1.5 py-0.5 rounded-full ${isHigh ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
                         {isHigh ? 'Nghiêm trọng' : 'Chú ý'}
                       </span>
                     </p>
