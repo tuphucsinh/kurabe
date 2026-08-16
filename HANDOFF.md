@@ -1,7 +1,13 @@
-# HANDOFF — Kurabe QAQC (cập nhật 2026-08-16)
+# HANDOFF — Kurabe QAQC (cập nhật 2026-08-16 cuối phiên)
 
 ## Trạng thái
-- **Phase 79 (BottomNav chỉ icon + Redesign team-detail + Fix status kẹt, 16-08)**: DONE ✅ — Reviewer PASS. Bottom nav chỉ icon (aria-label); team-detail bỏ icon Xem đánh giá + bỏ status badges + chỉ lần đánh giá cuối; bug Trang: backfill Approved (stats 2/15) + guard status self-heal. Commits `e7abeff..9024c33` (chưa push, ahead 18). Verify: 0 font <11px/0 tap nhỏ/0 overflow + desktop 0.
+- **Đợt refactor 1-2 + anon-read bước 1+2 (16-08, phiên chính)**: DONE ✅ — ĐÃ PUSH (main == origin/main, 25 commits mới).
+  - Đợt 1 `740bc62`: bug + hiệu năng + gọn nhẹ (47 files +735/−2192; dashboard 880→415ms, transfer −51%; xóa data/criteria.ts; xlsx 0.20.3 CDN; SSR-ify employees/teams; tách evaluation page).
+  - Đợt 2 `b62b26d`: session thật (token 256-bit sha256, soft-migration UUID) + rate-limit login 5/15ph + gộp lỗi + REVOKE anon write (k1/k2 + chat_reports) + AI limit fail-close + security headers + audit whitelist — Reviewer Opus PASS (2 minor đã fix).
+  - Bước 1 anon-read `63c7b2d`: REVOKE anon SELECT 6 bảng nhạy cảm (evaluations/rounds/responses/ai_summaries/audit_logs/chat_reports — K3, bỏ grant cột theo Reviewer) + server actions read (requireAuth + canViewEvaluation). Anon dump BLOCKED verified + browser Manager/Employee OK.
+  - Bước 2 anon-read `bc207cd`: REVOKE anon users/teams (K4, bỏ cả column-grant cũ) + server actions users/teams (requireAuth + phân quyền scope) — fix 2 lỗ hổng review lần 1 (ByID/ByTeam thiếu scope, Leader teamId null bypass) + fix review lần 2 (dashboard/reports thiếu viewer, **unstable_cache keyParts rỗng → cache cross-user** — pre-existing, đã fix keyParts gồm periodId/viewer.id/team).
+  - **Vercel production: lykiv.vercel.app ĐÃ deploy tới bc207cd** (Ready ~40s, login thật 158 → dashboard OK).
+- **Phase 79 (BottomNav chỉ icon + Redesign team-detail + Fix status kẹt, 16-08)**: DONE ✅ — đã nằm trong 25 commits push (efa4b29..bc207cd).
 - **Phase 78 (Tối ưu giao diện Mobile, 16-08)**: DONE ✅ — Reviewer plan R1→R2 PASS; thực thi 12/12 task (11 commits `98bc154..c6e310f`, chưa push) + Reviewer toàn bộ CHANGES_REQUIRED → fix → PASS. Mobile đạt chuẩn: 0 tap <40px, 0 font <11px, 0 overflow, content cuối không bị FAB/nav che (pb-44); desktop regression 0. Chi tiết MASTER_PLAN Phase 78 + evidence /tmp/kurabe-p78-verify/ /tmp/kurabe-p78-desktop/.
 - **Phase 71 (Hướng dẫn 4 vai trò + sidebar "Hướng dẫn" + in theo vai trò)**: DONE ✅ — Reviewer R1→R2 PASS (plan). `guide-content.ts` 1 nguồn data 4 role (Manager 16 bước/Leader 8/SubLeader 6/Employee 4 + FAQ); **32/32 screenshot thật annotate khoanh vùng đỏ** (login 158/663/432/16735); sidebar "Hỗ trợ"→"Hướng dẫn"; `/support` render guide theo role đang login + selector (Manager 4 role); print `/support/print?role=` A4. E2E 4 role ALL PASS + lint 0 + build PASS.
 - **Phase 72 (Tinh gọn trang Hướng dẫn)**: DONE ✅ — Reviewer R1→R2 PASS (plan). page.tsx **738→208 dòng**: xóa 6 section cũ + 7 hằng data + quickLinks + dọn import. Trang chỉ còn: header gọn + block "Hướng dẫn theo vai trò của bạn" + cột phải "Nguyên tắc quyền truy cập". Build PASS + E2E 4 role ALL PASS + visual verified.
@@ -15,13 +21,16 @@
 - ⚠️ **MÔI TRƯỜNG**: shell env bị ô nhiễm `NEXT_PUBLIC_SUPABASE_URL=https://iloaeaoojxdovedjtowt...` (sangwebsite — SAI project) → build/start KURABE phải `unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY` trước (Next ưu tiên env có sẵn > .env.local; NEXT_PUBLIC inline lúc build). Đã phát hiện khi E2E login fail "Mã nhân viên không hợp lệ".
 
 ## Còn mở
-1. Nút "Giải thích bằng AI" (explainAnomalyAction — dashboard anomaly card): code+wire đủ, **chưa E2E verify** (cần anomaly thật để card hiện). Nút "Soạn thông báo" đã VERIFIED (P77 T2g).
-2. Deploy Vercel: ✅ DONE 16-08 (deploy Ready map commit mới nhất, AI env đã set Production+Preview, lykiv.vercel.app 200). ⚠️ Code local ahead 22 (P78+P79) CHƯA PUSH — deploy Vercel chỉ tới commit `0143010` (P77).
-3. [THẤP] deleteEvaluationPeriod hard-delete không check dòng (actions/period.ts:182).
-4. [THẤP] Rate-limit login chống brute-force.
+1. Nút "Giải thích bằng AI" (explainAnomalyAction — dashboard anomaly card): code+wire đủ, **chưa E2E verify** (cần anomaly thật để card hiện). Nút "Soạn thông báo" ĐÃ VERIFIED (P77 T2g).
+2. Anon-read đã đóng 8/13 bảng (PII + nhân sự). Còn mở anon-read (chấp nhận — data cấu hình): criteria, criterion_levels, criteria_groups, grade_bands, evaluation_periods. Nếu sau này thêm cột nhạy cảm vào users → bắt buộc tách/đóng (xem skill anon-read hardening).
+3. Xóa nhánh soft-migration UUID cũ sau 2-4 tuần deploy (đã ghi REFACTOR_PLAN).
+4. [THẤP] deleteEvaluationPeriod hard-delete không check dòng (actions/period.ts:182).
+5. [THẤP] Zod validation, phân trang audit/evaluation khi data lớn.
+6. Webhook báo lỗi: production Vercel chưa reach Pi5 LAN (chưa bật tailscale funnel) — khi chuyển deploy Pi5 sẽ hoạt động tự nhiên localhost.
 
 ## Việc tiếp theo gợi ý
-- Push 22 commits (P78 + P79) khi anh duyệt → deploy Vercel tự cập nhật.
+- Theo dõi production vài ngày (login/logout/đủ role trên lykiv.vercel.app) — anon-read vừa siết nên kiểm tra mọi trang vẫn load đủ role.
 - Verify nút "Giải thích bằng AI" E2E (tạo anomaly tạm, click, dọn).
-- Mobile còn có thể tinh chỉnh: stats card team-detail, bottom nav FAB overlap — chờ anh feedback sau khi dùng thật.
+- Audit anon-read baseline cho các dự án Supabase khác (affvn, sangwebsite) — cùng mô hình anon key trong client.
+- Nếu cần gì chạm DB mới: migration PHẢI theo pattern k1-k4 (code trước, REVOKE sau, rollback sẵn, apply từng câu qua Management API).
 
