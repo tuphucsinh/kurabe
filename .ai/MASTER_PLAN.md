@@ -788,3 +788,54 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **Reviewer R2 (15-08)**: **PASS** ✅ (cho T1+T3) — ghi chú code-time: (a) T1 gate chọn hard-disable hoặc soft-confirm; (b) T1 fallback nếu chưa có ai_summaries → nhắc Manager tạo summary trước; (c) [SUPERSEDED — T2 đổi hướng không mở chat, bỏ ý mở 4 roles].
 
 **KẾT QUẢ TEST KỸ (15-08): 24/24 PASS** — T1 6/6 (biên bản: nút/modal/soạn/ẩn danh/gate/leader-chặn), T2 13/13 (Employee: redirect/3-mục/chặn 3 trang/card kết quả/grade-map/lịch sử; Manager: batch soạn→gửi→lưu DB; Leader UI-gate không thấy resultMessage), T3 5/5 (giảm nhiều nhất/nhóm tệ nhất/đếm chưa đánh giá/giới hạn đa kỳ/Leader không lộ số). Report /tmp/kurabe-p77-test-report.md. 2 fail ban đầu do script đo sai — retest/code-inspection PASS. Data test dọn sạch.
+
+---
+
+## Phase 78: Tối ưu giao diện Mobile (UI responsive <md) 🟡 (2026-08-16)
+
+> Yêu cầu anh (16-08): giao diện mobile lộn xộn, kích thước không phù hợp, khó sử dụng trên mobile.
+
+**Bằng chứng audit thật (16-08, Playwright Chrome 375×812 login 158 — screenshots + metrics tại `/tmp/kurabe-mobile-audit/`, script `/tmp/kurabe-mobile-audit.py`)**:
+- **FAB chat che nội dung**: `w-16` (64px) tại `fixed right-4 bottom-24` (ChatWidget.tsx:112) — main chỉ `pb-32` (128px, AppLayout.tsx:98) < FAB chiếm ~160px từ đáy → content cuối + vùng chấm điểm phiếu bị che.
+- **BottomNav** (AppLayout.tsx:107-121): label CHỈ active hiện (`opacity-0 h-0` :136), font `text-[9px]`, nhãn tiếng Anh (Home/Teams/Users/Settings) — trái chuẩn tiếng Việt toàn app.
+- **Icon buttons 28-36px** (<44px chuẩn tap): edit/delete ở criteria (nhóm+tiêu chí), teams, team-detail, employees.
+- **Font 9-10px** (<11px tối thiểu đọc được): nav label, teams stats (Nhân sự/Xong/Chờ), criteria tabs (Nhóm A-F), reports legend (≥80%…), support steps (Vòng 1/2/3).
+- **Dashboard KPI lệch grid**: hàng 1 có 2 card, hàng 2 chỉ 2 card căn trái — không `grid-cols-2` đều; khoảng trắng dọc lớn.
+- **Teams list**: stats card 3 cột bị cắt cột 3 ("tiến độ đánh giá" cụt). **Team detail**: tên NV vỡ từng từ, badge trạng thái absolute tràn/chồng L2.
+- **Criteria tabs**: cắt mép phải (NHÓM C) không affordance scroll; tab 2 tầng cao.
+- **Reports**: 3 nút hành động lệch width; filter card cao; KPI nhãn dài; legend 10px.
+- **Evaluation detail**: dải trạng thái chật ("Đánh giá" vỡ 2 dòng, nút "Chi tiết so sánh" to, "Đã nộp" 2 dòng + lặp trạng thái); header tiêu chí vỡ (tên + nút GHI CHÚ chen); radio nhỏ; tabs nhóm cuộn không hint.
+- **Login**: ổn nhất — chỉ khoảng trắng trên lớn + header banner cao.
+- **KHÔNG có overflow ngang toàn trang** (scrollWidth = 375 mọi trang) — vấn đề là chi tiết layout, không phải break.
+
+**Nguyên tắc**: CHỈ sửa mobile (<md) + fix chung vô hại (pb, font tối thiểu). KHÔNG đụng desktop (md+) layout, KHÔNG chạm auth/DB/logic. UI class thuần → **FAST route** (Mika verify Playwright metrics + screenshots).
+
+**Thiết kế (12 task — chi tiết /plan2task → tasks.md)**:
+- **T01** `src/components/layout/AppLayout.tsx`: main `pb-32`→`pb-44` (mobile, chừa FAB+nav ~176px); Mobile Header gọn (avatar `w-9 h-9`→`w-8 h-8`, gap gọn, px-6→px-4; **bell button :82 `p-2` (36px) → `p-3` (44px tap)**); BottomNav: nhãn tiếng Việt đủ 4 tab (Trang chủ/Nhóm/Nhân sự/Cài đặt — Employee: Phiếu/Cài đặt/Hướng dẫn), luôn hiện label **`text-[11px]`** (KHÔNG 10px — T12 đo 0 font <11px), bỏ `opacity-0 h-0` inactive.
+- **T02** `src/components/chat/ChatWidget.tsx`: FAB `w-16 h-16`→`w-14 h-14` (56px), `bottom-24`→`bottom-20`, giữ z-[9998]; panel `w-[calc(100vw-2rem)]`→`w-[calc(100vw-1.5rem)]`.
+- **T03** Icon buttons ≥44px tap (chỉ các file audit có nút 28-36px): `src/app/criteria/page.tsx`, `src/app/teams/page.tsx`, `src/app/teams/[id]/page.tsx`, `src/app/employees/page.tsx` — thêm `min-w-11 min-h-11 flex items-center justify-center` (thay padding nhỏ). KHÔNG đụng modals (ngoài scope audit). Class base đổi → ảnh hưởng cả desktop nhưng vô hại (chỉ tăng vùng chạm) — verify desktop regression ở T12.
+- **T04** Dashboard `src/app/dashboard/page.tsx` (:83 KPI đang `flex flex-wrap`): đổi `grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4` (mobile grid đều 2 cột, **desktop giữ nguyên flex** nhờ gate `md:flex`) + nhãn ngắn + giảm khoảng trắng dọc (section gap).
+- **T05** Teams list `src/app/teams/page.tsx` (stats card 3 cột cắt cột 3 + stats label 10px → label đưa T11) + detail `src/app/teams/[id]/page.tsx`: hiện trạng badge trạng thái là **grid cột cố định `grid-cols-[minmax(0,1fr)_32px_104px_144px]`** (:284/:367/:438/:532 — KHÔNG có absolute) → mobile đổi template `grid-cols-[minmax(0,1fr)_32px_104px]` + badge xuống dòng riêng hoặc `sm:` khôi phục 4 cột; tên NV không vỡ (`min-w-0` + `truncate` hoặc wrap chuẩn); stats card 3 cột `grid-cols-3 minmax(0,1fr)` + nhãn ngắn.
+- **T06** Employees `src/app/employees/page.tsx`: header cột "XẾP LOẠI GẦN NHẤT"→"Xếp loại"; hàng padding tăng; placeholder ngắn ("Tìm tên hoặc mã NV"); giữ table (KHÔNG đổi card-list — non-goal).
+- **T07** Criteria `src/app/criteria/page.tsx`: tabs `overflow-x-auto` + peek (hiện mép tab kế) + fade gradient phải; tab compact 1 tầng (`NHÓM A · Kỷ luật (9)`); icon edit/delete 44px; hàng mức điểm compact (bỏ card lồng). Đổi class base → verify desktop T12.
+- **T08** Reports: page.tsx chỉ là wrapper (:78) — thay đổi thực ở: **3 nút hành động** `src/components/reports/PeriodMinutesModal.tsx` + `BatchResultMessageModal.tsx` + `ExportReportButton.tsx` (full-width đều mobile); **KPI nhãn ngắn** ("Điểm TB", "≥AB") trong page; **filter compact** `src/components/reports/ReportFilters.tsx` (nhóm+kỳ 1 hàng, "Dữ liệu thời gian thực" thành status line nhỏ); **legend `text-[10px]`→`text-[11px]`** `src/components/reports/CriteriaHeatmap.tsx:39`.
+- **T09** Evaluation detail: dải trạng thái trong `src/app/evaluations/[id]/page.tsx` (:648-660) 1 dòng (chip "Lần 2/2" + "Đã nộp", nút so sánh icon+text compact); **phần còn lại ở `src/components/evaluation/CriteriaTab.tsx`** (round chip `text-[9px]` :164, GHI CHÚ :83, điểm badge :75/:105/:181/:205 → ≥`text-[11px]` + vùng chạm 44px) + **`src/components/evaluation/GroupNavTabs.tsx`** (tab `text-[9px]` :62, badge :84 → compact + peek scroll).
+- **T10** Login `src/app/login/page.tsx`: giảm khoảng trắng trên (padding-top), banner gọn.
+- **T11** Sweep font/tap còn sót (đảm bảo T12 đạt 0 <11px / <40px): `src/app/support/page.tsx:130` (step round `text-[10px]`→`text-[11px]`), `src/components/dashboard/AnomalyAlertCard.tsx:59` (badge "Chú ý/Nghiêm trọng" `text-[10px]`→`text-[11px]`), `src/app/teams/page.tsx:259/263/267` (stats label `text-[10px]`→`text-[11px]`). Sau khi chạy audit lại → còn font <11px/tap <40px ở trang chính nào thì fix ngay trong task này (trừ thay đổi thiết kế lớn — báo Mika).
+- **T12** Verify E2E mobile: script Playwright đo toàn bộ trang chính (dashboard/employees/teams/team-detail/criteria/reports/evaluations list + detail/support/settings) — 0 tap-target <40px, 0 font <11px, content cuối scroll hết KHÔNG bị FAB/nav che; **baseline chụp TRƯỚC khi sửa** (evaluations list/detail chưa có baseline — chụp bổ sung ngay đầu); screenshots trước/sau đối chiếu; **regression desktop 1280px** (không vỡ — đặc biệt các class base T03/T04/T05/T07 đổi); `npm run build` + lint 0.
+
+**Acceptance**: mọi trang chính đạt chuẩn metrics trên; desktop không vỡ; build/lint 0; không đổi hành vi nghiệp vụ.
+
+**Non-goals**: KHÔNG đổi employees table → card list; KHÔNG đổi logic chấm điểm/trạng thái; KHÔNG đổi desktop layout; KHÔNG đụng auth/DB.
+
+**Rủi ro**: UI class thuần, thấp. Chú ý: các class mobile nằm chung với desktop trong cùng component — verify desktop regression bắt buộc ở T12 (thay đổi padding/font có thể ảnh hưởng cả md+ nếu không gói breakpoint).
+
+**KẾT QUẢ THỰC THI (16-08)**: 12/12 task DONE — 11 commit code `98bc154..c6e310f` (T01 shell pb-44/BottomNav Việt 11px → T11B sweep text-[9px], chưa push). **Verify Playwright thật 375×812** (script /tmp/kurabe-p78-verify-full.py): dashboard/employees/teams/team-detail/criteria/reports/support/settings/evaluations list+detail/compare = 0 tap <40px, 0 font <11px, 0 overflowX; content cuối scroll hết 636 < FAB 676 < nav 724 (pb-44 đúng). **Desktop 1280px**: 0 overflowX 6 trang + stats/team-detail khôi phục (screenshot /tmp/kurabe-p78-desktop/). Build PASS + lint 0 errors. Sweep toàn src: 0 chỗ text-[9px]/[10px] (73 chỗ text-[11px] chuẩn).
+
+**Reviewer thực thi**: vòng toàn bộ Phase (deleg, đọc diff 12 commits + evidence) → CHANGES_REQUIRED: sót 4 chỗ `text-[9px]` (compare/page.tsx:365/373/402 + PeriodSelector.tsx:116) + verify thiếu compare/dropdown → fix `c6e310f` + re-run 10 trang + compare 0 font → **vòng fix PASS** ✅. Đợt 1/đợt 2 trước đó timeout (600s, browser heavy) — bị thay thế bởi review toàn bộ (bài học: gửi reviewer với evidence ảnh + cấm mở browser khi diff UI lớn).
+
+**Phase 78: DONE** ✅ (2026-08-16).
+
+**Reviewer R1 (16-08)**: CHANGES_REQUIRED — (1) T01 label 10px mâu thuẫn T12 "0 font <11px" → đã đổi `text-[11px]`; (2) thiếu file chứa lỗi: support/page.tsx:130, AnomalyAlertCard.tsx:59, header bell AppLayout.tsx:82 (36px) → đã thêm T11 sweep + bell p-3 vào T01; (3) file list sai: T08 thực ở CriteriaHeatmap/ReportFilters/3 modal (page chỉ wrapper :78), T09 thực ở `src/components/evaluation/CriteriaTab.tsx` + `GroupNavTabs.tsx` (page.tsx chỉ :648-660), T05 KHÔNG có absolute — badge là grid cột `grid-cols-[minmax(0,1fr)_32px_104px_144px]` :284/367/438/532, T04 KPI là `flex flex-wrap` :83 → đã sửa hết mô tả + file. Ghi chú phụ đã xử lý: T03 bỏ wildcard modals, teams stats label 10px :259/263/267 → T11, T12 thêm evaluations list/detail vào metric + baseline trước, class base ghi rõ gate md. → gửi lại R2.
+
+**Reviewer R2 (16-08)**: **PASS** ✅ — đối chiếu 7/7 delta với code thật (AppLayout.tsx:82/136, support:130, AnomalyAlertCard:59, teams:259-267, team-detail:284/367/438/532, dashboard:83, CriteriaTab/GroupNavTabs, CriteriaHeatmap:39, reports:78) đều khớp; ghi chú nhỏ không blocking: dải trạng thái evaluations/[id] thực bắt đầu :646 (plan ghi :648 — lệch 2 dòng). Sẵn sàng implementation → /plan2task.

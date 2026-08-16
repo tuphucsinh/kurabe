@@ -1,6 +1,7 @@
-# HANDOFF — Kurabe QAQC (cập nhật 2026-08-15)
+# HANDOFF — Kurabe QAQC (cập nhật 2026-08-16)
 
 ## Trạng thái
+- **Phase 78 (Tối ưu giao diện Mobile, 16-08)**: DONE ✅ — Reviewer plan R1→R2 PASS; thực thi 12/12 task (11 commits `98bc154..c6e310f`, chưa push) + Reviewer toàn bộ CHANGES_REQUIRED → fix → PASS. Mobile đạt chuẩn: 0 tap <40px, 0 font <11px, 0 overflow, content cuối không bị FAB/nav che (pb-44); desktop regression 0. Chi tiết MASTER_PLAN Phase 78 + evidence /tmp/kurabe-p78-verify/ /tmp/kurabe-p78-desktop/.
 - **Phase 71 (Hướng dẫn 4 vai trò + sidebar "Hướng dẫn" + in theo vai trò)**: DONE ✅ — Reviewer R1→R2 PASS (plan). `guide-content.ts` 1 nguồn data 4 role (Manager 16 bước/Leader 8/SubLeader 6/Employee 4 + FAQ); **32/32 screenshot thật annotate khoanh vùng đỏ** (login 158/663/432/16735); sidebar "Hỗ trợ"→"Hướng dẫn"; `/support` render guide theo role đang login + selector (Manager 4 role); print `/support/print?role=` A4. E2E 4 role ALL PASS + lint 0 + build PASS.
 - **Phase 72 (Tinh gọn trang Hướng dẫn)**: DONE ✅ — Reviewer R1→R2 PASS (plan). page.tsx **738→208 dòng**: xóa 6 section cũ + 7 hằng data + quickLinks + dọn import. Trang chỉ còn: header gọn + block "Hướng dẫn theo vai trò của bạn" + cột phải "Nguyên tắc quyền truy cập". Build PASS + E2E 4 role ALL PASS + visual verified.
 - **Phase 73 (Nút "THÊM NHÂN VIÊN" ở trang chi tiết nhóm)**: DONE ✅ — Reviewer R1→R5 (4 vòng: dead-code modal → 2 lỗ bảo mật → 3 lỗ quyền → PASS thực thi). EmployeeModal **shared** (extract từ employees inline, dùng chung 2 nơi). Nút "Thêm nhân viên" ở `/teams/[id]` (Manager mọi nhóm / Leader nhóm mình; SubLeader/Employee không thấy) + `restrictToTeamId` (nhóm mặc định = nhóm đang mở, select disabled). **Nới quyền upsertUserAction: Leader được thêm/sửa Employee/SubLeader trong nhóm mình** (ép teamId server-side + chặn hạ chức + 3 check EDIT). E2E thật PASS: Manager/Leader thêm NV OK, SubLeader không thấy nút. NV tạm đã xóa mềm.
@@ -13,8 +14,8 @@
 - ⚠️ **MÔI TRƯỜNG**: shell env bị ô nhiễm `NEXT_PUBLIC_SUPABASE_URL=https://iloaeaoojxdovedjtowt...` (sangwebsite — SAI project) → build/start KURABE phải `unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY` trước (Next ưu tiên env có sẵn > .env.local; NEXT_PUBLIC inline lúc build). Đã phát hiện khi E2E login fail "Mã nhân viên không hợp lệ".
 
 ## Còn mở
-1. 2 nút AI chưa verify ("Soạn thông báo", "Giải thích bằng AI" — action đã có, actions/ai.ts).
-2. Deploy Vercel (⚠️ AI env chưa set trên Vercel) + Cloudflare Tunnel chờ domain vorigin.vn.
+1. Nút "Giải thích bằng AI" (explainAnomalyAction — dashboard anomaly card): code+wire đủ, **chưa E2E verify** (cần anomaly thật để card hiện). Nút "Soạn thông báo" đã VERIFIED (P77 T2g).
+2. Deploy Vercel: ✅ DONE 16-08 (deploy Ready 2h map commit mới nhất, AI env đã set Production+Preview, lykiv.vercel.app 200).
 3. [THẤP] deleteEvaluationPeriod hard-delete không check dòng (actions/period.ts:182).
 4. [THẤP] Rate-limit login chống brute-force.
 

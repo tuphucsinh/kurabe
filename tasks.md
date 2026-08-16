@@ -696,3 +696,149 @@
 - T03 ChatWidget: `[x]` — nút fixed + panel chat + greeting + role filter + không emoji + mobile offset.
 - T04 mount AppLayout: `[x]`.
 - T05 verify: `[x]` — build PASS, tsc/lint 0, E2E thật: Manager nút ✓ + greeting "Chào chị" ✓ + trả lời thật (gpt-5.6-luna) ✓ + Employee không thấy ✓ + rate-limit chặn "hết 15 lượt" ✓. Rows test đã dọn (0).
+
+---
+
+## Phase 78: Tối ưu giao diện Mobile (UI responsive <md) 🟡 (2026-08-16)
+
+> Plan + evidence: `.ai/MASTER_PLAN.md` Phase 78 (Reviewer R1 CHANGES_REQUIRED → R2 PASS). Audit: `/tmp/kurabe-mobile-audit/`. Chỉ sửa mobile <md + fix chung vô hại; KHÔNG đụng desktop/auth/DB/logic. UI thuần → FAST route. 1 task = 1 commit `[#P78Tzz]`.
+
+### [#P78T01] [src/components/layout/AppLayout.tsx] Shell mobile: pb-44 + header gọn + bell 44px + BottomNav Việt 11px
+
+**Goal**: Content cuối không bị FAB/nav che; header mobile gọn; nav chuẩn đọc được.
+
+**Depends on**: `none` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. main (:98): `pb-32 md:pb-0` → `pb-44 md:pb-0` (176px — chừa FAB+nav).
+2. Mobile header (:73-90): `px-6`→`px-4`; avatar `w-9 h-9`→`w-8 h-8`; bell button (:82) `p-2`→`p-3` (44px tap); gap-3→gap-2.5.
+3. BottomNav (:107-121): label tiếng Việt — Manager: Trang chủ/Nhóm/Nhân sự/Cài đặt; Employee: Phiếu/Cài đặt/Hướng dẫn; `text-[9px]`→`text-[11px]`; bỏ `opacity-0 h-0` khi inactive (:136) — luôn hiện label (inactive màu slate-400).
+
+**Definition of Done**: metrics mobile: bell ≥40px, nav label 11px hiện đủ 4 tab; desktop (md+) không đổi (nav/header là md:hidden).
+
+### [#P78T02] [src/components/chat/ChatWidget.tsx] FAB chat gọn + không che nội dung
+
+**Goal**: FAB không che content cuối + vùng chấm điểm.
+
+**Depends on**: `[#P78T01]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. FAB (:112): `w-16 h-16`→`w-14 h-14` (56px); `bottom-24`→`bottom-20`; giữ z-[9998] + right-4.
+2. Panel (:122): `w-[calc(100vw-2rem)]`→`w-[calc(100vw-1.5rem)]`.
+
+**Definition of Done**: FAB 56px nằm trên nav (bottom-20), không đè vùng thao tác chính; panel vừa viewport 375px.
+
+### [#P78T03] [criteria/teams/team-detail/employees] Icon buttons ≥44px tap
+
+**Goal**: Nút icon sửa/xóa 28-36px đạt chuẩn chạm mobile.
+
+**Depends on**: `none` — **Parallel-safe**: `yes` (khác file với T01/T02; nhưng giữ tuần tự trước T12)
+
+**Concrete changes**: các nút icon edit/delete (audit 28-36px) trong `src/app/criteria/page.tsx`, `src/app/teams/page.tsx`, `src/app/teams/[id]/page.tsx`, `src/app/employees/page.tsx` → thêm `min-w-11 min-h-11 flex items-center justify-center` (thay padding nhỏ). KHÔNG đụng modals.
+
+**Definition of Done**: mọi icon button audit ≥44px; desktop không vỡ (tăng vùng chạm vô hại).
+
+### [#P78T04] [src/app/dashboard/page.tsx] KPI grid đều 2 cột mobile
+
+**Goal**: KPI hết lệch grid (2 card hàng 1 + 2 card căn trái hàng 2).
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**: (:83) `flex items-center gap-4 flex-wrap` → `grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4`; nhãn ngắn ("nhân sự"/"tiến độ"/"đã đánh giá"/"chưa xong"); giảm khoảng trắng dọc section.
+
+**Definition of Done**: KPI 2×2 đều 375px; desktop giữ flex (md:flex).
+
+### [#P78T05] [src/app/teams/page.tsx + src/app/teams/[id]/page.tsx] Stats card + card NV không vỡ
+
+**Goal**: Cột 3 stats không bị cắt; tên NV không vỡ từng từ; badge trạng thái không tràn.
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**:
+1. teams/page.tsx: stats card `grid-cols-3` đều `minmax(0,1fr)`; nhãn ngắn (Nhân sự/Đã đánh giá/Còn lại).
+2. teams/[id]/page.tsx: grid cột (:284/367/438/532) `grid-cols-[minmax(0,1fr)_32px_104px_144px]` → mobile `grid-cols-[minmax(0,1fr)_32px_104px]` + badge trạng thái dòng riêng, `sm:` khôi phục 4 cột; tên `min-w-0 truncate` (hoặc wrap chuẩn 2 dòng).
+
+**Definition of Done**: cột 3 hiện đủ trên 375px; tên NV không vỡ từng từ; badge không tràn.
+
+### [#P78T06] [src/app/employees/page.tsx] Table nén mobile
+
+**Goal**: Bảng NV dễ đọc/dễ chạm mobile (giữ table — không đổi card-list).
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**: header cột "XẾP LOẠI GẦN NHẤT"→"Xếp loại"; padding hàng tăng (py-2.5/3); placeholder ngắn "Tìm tên hoặc mã NV".
+
+**Definition of Done**: bảng không ép chặt, placeholder không bị cắt.
+
+### [#P78T07] [src/app/criteria/page.tsx] Tabs cuộn + compact + icon 44px
+
+**Goal**: Tabs nhóm không bị cắt mép, dễ thấy scroll; icon edit/delete đủ lớn.
+
+**Depends on**: `[#P78T03]` (icon chung — thực hiện cùng file) — **Parallel-safe**: `no`
+
+**Concrete changes**: tabs `overflow-x-auto` + peek mép tab kế + fade gradient phải; tab compact 1 tầng (`NHÓM A · Kỷ luật (9)`); icon edit/delete 44px; hàng mức điểm compact (bỏ card lồng → divider).
+
+**Definition of Done**: tabs cuộn được + thấy tab kế; 0 font <11px trong tabs (Nhóm A-F).
+
+### [#P78T08] [src/components/reports/*] Reports: nút đều + filter compact + legend 11px
+
+**Goal**: 3 nút đồng width, filter gọn, legend đọc được.
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**:
+1. `PeriodMinutesModal.tsx` + `BatchResultMessageModal.tsx` + `ExportReportButton.tsx`: nút full-width đều mobile.
+2. `ReportFilters.tsx`: nhóm+kỳ 1 hàng (grid-cols-2), "Dữ liệu thời gian thực" → status line nhỏ.
+3. `CriteriaHeatmap.tsx:39`: legend `text-[10px]`→`text-[11px]`.
+4. `src/app/reports/page.tsx`: KPI nhãn ngắn ("Điểm TB", "≥AB").
+
+**Definition of Done**: nút thẳng hàng; legend ≥11px; filter card thấp hơn.
+
+### [#P78T09] [src/app/evaluations/[id]/page.tsx + src/components/evaluation/*] Phiếu đánh giá gọn
+
+**Goal**: Dải trạng thái 1 dòng; header tiêu chí không vỡ; radio đủ chạm.
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**:
+1. page.tsx (:646-660): dải trạng thái 1 dòng — chip "Lần 2/2" + "Đã nộp" (bỏ trùng "Đã nộp lúc..."), nút so sánh icon+text compact.
+2. `src/components/evaluation/CriteriaTab.tsx`: round chip `text-[9px]` (:164) + badges (:75/105/181/205) `text-[10px]` → `text-[11px]`; GHI CHÚ (:83) vùng chạm ≥44px; option row radio đủ cao chạm.
+3. `src/components/evaluation/GroupNavTabs.tsx`: tab `text-[9px]` (:62) → `text-[11px]` + compact + peek scroll.
+
+**Definition of Done**: dải trạng thái 1 dòng không vỡ; 0 font <11px trong phiếu; option row dễ chạm.
+
+### [#P78T10] [src/app/login/page.tsx] Login gọn
+
+**Goal**: Giảm khoảng trắng trên, form lên cao hơn.
+
+**Depends on**: `none` — **Parallel-safe**: `yes`
+
+**Concrete changes**: giảm padding-top container; banner header gọn (giảm chiều cao/padding).
+
+**Definition of Done**: card login cao hơn trên viewport 812px; không vỡ khi bàn phím mở (scroll được).
+
+### [#P78T11] [sweep] Font/tap còn sót đạt chuẩn
+
+**Goal**: Đảm bảo T12 đo 0 font <11px / 0 tap <40px trên trang chính.
+
+**Depends on**: `[#P78T01]`–`[#P78T10]` — **Parallel-safe**: `no`
+
+**Concrete changes**: `src/app/support/page.tsx:130` (step round → text-[11px]); `src/components/dashboard/AnomalyAlertCard.tsx:59` (badge → text-[11px]); `src/app/teams/page.tsx:259/263/267` (stats label → text-[11px]). Chạy audit lại → còn font/tap vi phạm ở trang chính → fix ngay (thiết kế lớn → báo Mika).
+
+**Definition of Done**: audit lại: 0 font <11px, 0 tap <40px (trừ bottom nav/FAB đã chuẩn).
+
+### [#P78T12] [verify] E2E mobile + regression desktop + build/lint
+
+**Goal**: Bằng chứng đạt acceptance; desktop không vỡ.
+
+**Depends on**: `[#P78T11]` — **Parallel-safe**: `no`
+
+**Concrete changes**:
+1. Baseline: chụp metrics/screenshots TRƯỚC khi sửa (đã có phần lớn — bổ sung evaluations list + detail).
+2. Sau sửa: chạy script Playwright 375×812 — metrics toàn trang chính (dashboard/employees/teams/team-detail/criteria/reports/evaluations list+detail/support/settings): 0 tap <40px, 0 font <11px, scroll hết không bị FAB/nav che.
+3. Regression desktop 1280px: screenshot đối chiếu các trang (đặc biệt T03/T04/T05/T07 đổi class base).
+4. `npm run build` + `npm run lint` (0 errors) — nhớ kill PID 3000 trước build (ss -tlnp | grep 3000).
+
+**Definition of Done**: metrics đạt chuẩn + desktop không vỡ + build/lint 0 + báo cáo kèm screenshots trước/sau.
+
+**Status**: `[x]` — DONE 16-08: 12/12 task (11 commits `98bc154..c6e310f`, chưa push). Verify Playwright thật 375×812 (login 158): 10 trang + compare = **0 tap-target <40px, 0 font <11px, 0 overflowX**; content cuối scroll hết = 636px < FAB 676 < nav 724 (pb-44 không che); desktop 1280px = 0 overflowX (stats card md:flex + grid sm:4 cột khôi phục); build PASS + lint 0 errors; sweep toàn src 0 chỗ text-[9px]/[10px]. Reviewer: plan R1 CHANGES_REQUIRED→R2 PASS; thực thi vòng toàn bộ CHANGES_REQUIRED (4 chỗ text-[9px] sót) → fix `c6e310f` → **PASS** ✅.
