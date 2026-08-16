@@ -9,9 +9,15 @@ import AnomalyAlertCard from '@/components/dashboard/AnomalyAlertCard';
 import { cookies } from 'next/headers';
 import LazySkillGapRadar from '@/components/charts/LazySkillGapRadar';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
-
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/lib/auth';
 
 export default async function DashboardPage() {
+  const viewer = await getSessionUser();
+  if (viewer?.role === 'Employee') {
+    redirect(`/evaluations/${viewer.id}`);
+  }
+
   const cookieStore = await cookies();
   let periodId = cookieStore.get('selected_period_id')?.value;
   

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, Users, Layout, Settings, Bell } from 'lucide-react';
+import { Menu, Home, Users, Layout, Settings, Bell, FileText, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 
 import PageTransition from '@/components/layout/PageTransition';
@@ -22,9 +22,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!user && pathname !== '/login') {
       router.push('/login');
     } else if (user && pathname === '/login') {
-      router.push('/dashboard');
+      if (user.role === 'Employee') {
+        router.push(`/evaluations/${user.id}`);
+      } else {
+        router.push('/dashboard');
+      }
     } else if (user && pathname === '/') {
-      router.push('/dashboard');
+      if (user.role === 'Employee') {
+        router.push(`/evaluations/${user.id}`);
+      } else {
+        router.push('/dashboard');
+      }
     }
   }, [user, isLoading, pathname, router]);
 
@@ -97,10 +105,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Floating Navigation */}
       <nav className="md:hidden fixed bottom-6 left-6 right-6 h-16 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
-        <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Home" active={pathname === '/dashboard'} />
-        <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Teams" active={pathname === '/teams'} />
-        <BottomNavItem href="/employees" icon={<Users size={22} />} label="Users" active={pathname === '/employees'} />
-        <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Settings" active={pathname === '/settings'} />
+        {user?.role === 'Employee' ? (
+          <>
+            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={22} />} label="Phiếu" active={pathname.startsWith('/evaluations')} />
+            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Cài đặt" active={pathname === '/settings'} />
+            <BottomNavItem href="/support" icon={<HelpCircle size={22} />} label="Hướng dẫn" active={pathname === '/support'} />
+          </>
+        ) : (
+          <>
+            <BottomNavItem href="/dashboard" icon={<Home size={22} />} label="Home" active={pathname === '/dashboard'} />
+            <BottomNavItem href="/teams" icon={<Layout size={22} />} label="Teams" active={pathname === '/teams'} />
+            <BottomNavItem href="/employees" icon={<Users size={22} />} label="Users" active={pathname === '/employees'} />
+            <BottomNavItem href="/settings" icon={<Settings size={22} />} label="Settings" active={pathname === '/settings'} />
+          </>
+        )}
       </nav>
     </div>
   );

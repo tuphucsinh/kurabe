@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
   }
   
   if (request.nextUrl.pathname === '/login' && authSession) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
   
   return NextResponse.next();

@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useRouter } from 'next/navigation';
 import EmployeeModal from '@/components/modals/EmployeeModal';
 
 interface EmployeeTableItem extends User {
@@ -36,7 +37,15 @@ const ROLE_ORDER: Record<string, number> = {
 };
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'Employee') {
+      router.replace(`/evaluations/${user.id}`);
+    }
+  }, [user, router]);
+
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);

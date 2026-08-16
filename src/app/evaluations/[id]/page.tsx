@@ -22,6 +22,12 @@ import {
   Send,
   Undo2,
   AlertTriangle,
+  History,
+  MessageSquareQuote,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
@@ -31,7 +37,17 @@ import {
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
 import { useToast } from '@/components/ui/Toast';
-import { suggestCommentAction, draftResultMessageAction } from '@/actions/ai';
+import { suggestCommentAction, draftResultMessageAction, saveResultMessageAction } from '@/actions/ai';
+import { getGradeBandsSync } from '@/lib/grade-bands';
+import { getEvaluationHistoryByEmployee } from '@/lib/db/evaluations';
+import { usePeriods } from '@/hooks/use-db';
+
+const GRADE_EXPLANATION: Record<string, string> = {
+  S: 'Xuất sắc',
+  AB: 'Tốt',
+  B: 'Đáp ứng tốt yêu cầu',
+  C: 'Cần cải thiện',
+};
 
 interface EvaluationState {
   employee: User | null;
@@ -103,9 +119,25 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { data: employee = null, isLoading: isLoadingUser } = useUser(id);
   const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id, undefined, user);
   const { data: users = [] } = useUsers(user);
+  const { data: periods = [] } = usePeriods();
+
+  const isEmployeeOwner = user?.role === 'Employee' && evaluation?.employeeId === user.id;
+  const [history, setHistory] = useState<Evaluation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [isSavingDraftMessage, setIsSavingDraftMessage] = useState(false);
 
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
+
+  // Tải lịch sử đánh giá các kỳ trước của Employee
+  useEffect(() => {
+    if (isEmployeeOwner && user?.id) {
+      getEvaluationHistoryByEmployee(user.id, user)
+        .then((data) => { setHistory(data); setIsLoadingHistory(false); })
+        .catch((err) => { console.error('Error loading eval history:', err); setIsLoadingHistory(false); });
+    }
+  }, [isEmployeeOwner, user]);
 
   // AI (Manager-only)
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -571,6 +603,31 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     }
   };
 
+  const handleSaveDraftMessage = async () => {
+    if (!evaluation || !draftMessage.trim()) return;
+    setIsSavingDraftMessage(true);
+    try {
+      const res = await saveResultMessageAction({
+        evaluationId: evaluation.id,
+        message: draftMessage.trim(),
+      });
+      if (res.ok) {
+        toast('Đã lưu thông báo kết quả vào phiếu!', 'success');
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
+          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
+        ]);
+      } else {
+        toast(res.error || 'Lỗi khi lưu thông báo.', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving draft message:', err);
+      toast('Lỗi khi lưu thông báo.', 'error');
+    } finally {
+      setIsSavingDraftMessage(false);
+    }
+  };
+
   return (
       <LazyMotion features={domAnimation}>
       {showDraftSavedToast && (
@@ -682,6 +739,173 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               <span>Đánh giá bị trả lại: {evaluation.returnNote}</span>
             </div>
           )}
+
+          {/* 1. CARD KẾT QUẢ EMPLOYEE (T2 + T2d) */}
+          {isEmployeeOwner && evaluation?.status === 'Approved' && (
+            <div className="bg-gradient-to-br from-white via-indigo-50/20 to-blue-50/20 rounded-3xl p-6 md:p-8 border border-indigo-100 shadow-md space-y-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-indigo-100/80 pb-5">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-2">
+                    <CheckCircle2 size={13} />
+                    <span>Kết quả chính thức đã phê duyệt</span>
+                  </div>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                    Thông báo Kết quả Đánh giá Năng lực
+                  </h2>
+                  <p className="text-xs md:text-sm text-slate-500 mt-0.5">
+                    Dành cho nhân sự: <span className="font-semibold text-slate-700">{employee.name}</span> ({employee.employeeCode})
+                    {evaluation.updatedAt && ` • Ngày duyệt: ${new Date(evaluation.updatedAt).toLocaleDateString('vi-VN')}`}
+                  </p>
+                </div>
+
+                {/* Big Grade Badge & Score */}
+                <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-indigo-100 shadow-sm shrink-0">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Điểm tổng kết</p>
+                    <p className="text-2xl font-black text-slate-900 leading-none mt-0.5">
+                      {evaluation.finalScore ?? totalScore} <span className="text-sm font-semibold text-slate-500">điểm</span>
+                    </p>
+                  </div>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${
+                    (evaluation.finalGrade || grade) === 'S' ? 'bg-indigo-600 text-white' :
+                    (evaluation.finalGrade || grade) === 'A' || (evaluation.finalGrade || grade) === 'AB' ? 'bg-teal-600 text-white' :
+                    (evaluation.finalGrade || grade) === 'B' ? 'bg-blue-600 text-white' :
+                    (evaluation.finalGrade || grade) === 'C' ? 'bg-amber-500 text-white' :
+                    'bg-slate-700 text-white'
+                  }`}>
+                    {evaluation.finalGrade || grade || '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* T2d: Dòng giải thích xếp loại & ngưỡng điểm & lời động viên */}
+              {(() => {
+                const finalGradeVal = evaluation.finalGrade || grade;
+                const explanation = finalGradeVal ? GRADE_EXPLANATION[finalGradeVal] : null;
+                if (!explanation) return null;
+
+                const roleGroup = isLeaderGradingRole(employee.role) ? 'leader' : 'staff';
+                const bands = getGradeBandsSync()[roleGroup];
+                const band = bands.find((b) => b.grade === finalGradeVal);
+                let thresholdText = '';
+                if (band) {
+                  if (band.minScore != null && band.maxScore != null) {
+                    thresholdText = `từ ${band.minScore} đến ${band.maxScore} điểm`;
+                  } else if (band.minScore != null) {
+                    thresholdText = `từ ${band.minScore} điểm trở lên`;
+                  } else if (band.maxScore != null) {
+                    thresholdText = `dưới ${band.maxScore + 1} điểm`;
+                  }
+                }
+
+                return (
+                  <div className="p-4 bg-white/90 rounded-2xl border border-indigo-100/80 text-sm text-slate-700 leading-relaxed flex items-start gap-3 shadow-2xs">
+                    <Sparkles size={18} className="text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        Xếp loại {finalGradeVal}: <span className="text-indigo-700 font-bold">{explanation}</span>
+                        {thresholdText ? ` (${thresholdText})` : ''}.
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1 font-medium">
+                        Chúc anh/chị tiếp tục phát huy trong kỳ tới!
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Thông báo kết quả từ Quản lý (resultMessage) */}
+              {evaluation.resultMessage && (
+                <div className="bg-sky-50/90 border border-sky-200 rounded-2xl p-5 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-800">
+                    <MessageSquareQuote size={16} className="text-sky-600" />
+                    <span>Nhận xét & Định hướng từ Ban Quản lý</span>
+                  </div>
+                  <p className="text-sm text-sky-950 leading-relaxed whitespace-pre-wrap font-medium">
+                    {evaluation.resultMessage}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. TAB/SECTION KẾT QUẢ CÁC KỲ TRƯỚC (T2c) */}
+          {isEmployeeOwner && (
+            <div className="bg-white rounded-3xl p-6 md:p-8 border border-outline-variant shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <History className="text-primary" size={20} />
+                  <h3 className="text-lg font-bold text-slate-900">Kết quả các kỳ trước</h3>
+                </div>
+                <span className="text-xs font-medium text-slate-400">
+                  {history.filter((h) => h.id !== evaluation.id).length} kỳ đã lưu
+                </span>
+              </div>
+
+              {isLoadingHistory ? (
+                <div className="py-6 text-center text-xs text-slate-400 animate-pulse">
+                  Đang tải lịch sử đánh giá...
+                </div>
+              ) : history.filter((h) => h.id !== evaluation.id).length === 0 ? (
+                <p className="text-xs text-slate-500 italic py-2">
+                  Chưa có dữ liệu kết quả từ các kỳ đánh giá trước.
+                </p>
+              ) : (
+                <div className="space-y-3 pt-2">
+                  {history
+                    .filter((h) => h.id !== evaluation.id)
+                    .map((h) => {
+                      const period = periods.find((p) => p.id === h.periodId);
+                      const pName = period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
+                      const isExpanded = expandedHistoryId === h.id;
+
+                      return (
+                        <div
+                          key={h.id}
+                          className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-primary/30 transition-all space-y-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-sm text-primary shadow-2xs">
+                                {h.finalGrade || '-'}
+                              </span>
+                              <div>
+                                <p className="text-sm font-bold text-slate-900">{pName}</p>
+                                <p className="text-xs text-slate-500">
+                                  Điểm: <b className="text-slate-800 font-semibold">{h.finalScore ?? '-'}</b>
+                                  {h.updatedAt && ` • ${new Date(h.updatedAt).toLocaleDateString('vi-VN')}`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {h.resultMessage && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedHistoryId(isExpanded ? null : h.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:text-primary transition-colors"
+                              >
+                                <span>{isExpanded ? 'Ẩn nhận xét' : 'Xem nhận xét'}</span>
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            )}
+                          </div>
+
+                          {isExpanded && h.resultMessage && (
+                            <div className="p-3.5 rounded-xl bg-white border border-sky-200 text-xs text-sky-950 leading-relaxed whitespace-pre-wrap animate-in fade-in duration-200">
+                              <p className="font-semibold text-sky-900 mb-1 flex items-center gap-1.5">
+                                <MessageSquareQuote size={13} className="text-sky-600" />
+                                Nhận xét kỳ này:
+                              </p>
+                              {h.resultMessage}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -743,14 +967,28 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                     {isDrafting ? 'Đang soạn...' : 'Soạn thông báo kết quả (AI)'}
                   </button>
                   {draftMessage && (
-                    <div className="mt-3 p-3 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface leading-relaxed">
+                    <div className="mt-3 p-3 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface leading-relaxed space-y-2">
                       <p className="whitespace-pre-wrap">{draftMessage}</p>
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(draftMessage); toast('Đã sao chép thông báo.', 'success'); }}
-                        className="mt-2 text-primary font-bold hover:underline"
-                      >
-                        📋 Sao chép
-                      </button>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(draftMessage); toast('Đã sao chép thông báo.', 'success'); }}
+                          className="text-primary font-bold hover:underline flex items-center gap-1"
+                        >
+                          <Copy size={12} />
+                          <span>Sao chép</span>
+                        </button>
+                        <span>•</span>
+                        <button
+                          type="button"
+                          onClick={handleSaveDraftMessage}
+                          disabled={isSavingDraftMessage}
+                          className="text-emerald-700 font-bold hover:underline flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {isSavingDraftMessage ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          <span>{isSavingDraftMessage ? 'Đang lưu...' : 'Lưu vào phiếu'}</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>

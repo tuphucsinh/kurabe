@@ -13,7 +13,8 @@ import {
   Trash2
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import TeamModal from '@/components/modals/TeamModal';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -21,10 +22,17 @@ import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function TeamsPage() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'Employee') {
+      router.replace(`/evaluations/${user.id}`);
+    }
+  }, [user, router]);
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);

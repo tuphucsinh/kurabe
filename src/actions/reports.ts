@@ -4,7 +4,7 @@ import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
-import { getSessionUser } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { unstable_cache } from 'next/cache';
 import { Grade, User } from '@/types';
 
@@ -222,7 +222,9 @@ export async function getReportAggregation(
   selectedTeam: string = 'all'
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
-  const viewer = await getSessionUser();
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null) return null;
+  const viewer = auth.user;
   return getReportAggregationCached(periodId, selectedTeam, viewer);
 }
 

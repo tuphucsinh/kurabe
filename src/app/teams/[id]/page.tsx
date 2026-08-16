@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
@@ -50,10 +50,17 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 export default function TeamDetailPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const teamId = params.id;
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'Employee') {
+      router.replace(`/evaluations/${user.id}`);
+    }
+  }, [user, router]);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

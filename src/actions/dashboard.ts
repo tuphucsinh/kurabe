@@ -4,7 +4,7 @@ import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
 import { getUsers } from '@/lib/db/users';
 import { getTeams } from '@/lib/db/teams';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
-import { getSessionUser } from '@/lib/auth';
+import { requireRole } from '@/lib/auth';
 import { unstable_cache } from 'next/cache';
 import { EvaluationRound } from '@/types';
 import { User, Evaluation, CriteriaGroup } from '@/types';
@@ -150,7 +150,9 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
 }
 
 export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
-  const viewer = await getSessionUser();
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null) return null;
+  const viewer = auth.user;
   return getDashboardDataCached(periodId, viewer);
 }
 

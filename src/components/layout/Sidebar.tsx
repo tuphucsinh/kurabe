@@ -12,7 +12,8 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  X
+  X,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
@@ -29,13 +30,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const mainLinks = [
-    { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
-    { href: '/teams', label: 'Nhóm', icon: UsersRound },
-    { href: '/employees', label: 'Nhân viên', icon: Users },
-    { href: '/reports', label: 'Báo cáo', icon: BarChart3 },
-    { href: '/criteria', label: 'Tiêu chuẩn', icon: Scale },
-  ];
+  const mainLinks = user?.role === 'Employee'
+    ? [
+        { href: `/evaluations/${user?.id || ''}`, label: 'Phiếu đánh giá của tôi', icon: FileText },
+      ]
+    : [
+        { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
+        { href: '/teams', label: 'Nhóm', icon: UsersRound },
+        { href: '/employees', label: 'Nhân viên', icon: Users },
+        { href: '/reports', label: 'Báo cáo', icon: BarChart3 },
+        { href: '/criteria', label: 'Tiêu chuẩn', icon: Scale },
+      ];
 
   const bottomLinks = [
     { href: '/settings', label: 'Cài đặt', icon: Settings },

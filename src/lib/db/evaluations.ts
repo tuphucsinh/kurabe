@@ -207,6 +207,28 @@ export async function getEvaluationByEmployee(employeeId: string, periodId?: str
   return evaluation;
 }
 
+export async function getEvaluationHistoryByEmployee(
+  employeeId: string,
+  user?: { id: string; role: string } | null
+): Promise<Evaluation[]> {
+  if (!user || (user.role !== 'Manager' && employeeId !== user.id)) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('evaluations')
+    .select('*, evaluation_rounds(*)')
+    .eq('employee_id', employeeId)
+    .eq('status', 'Approved')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new DatabaseError('Error fetching evaluation history by employee', error);
+  }
+
+  return (data || []).map(mapEvaluationFromDb);
+}
+
 const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {
   active: 'Active',
   closed: 'Closed',
@@ -241,6 +263,7 @@ export function mapEvaluationFromDb(db: DbEvaluation): Evaluation {
     status: db.status as EvalStatus,
     finalGrade: db.final_grade as Grade || undefined,
     finalScore: db.final_score || undefined,
+    resultMessage: db.result_message ?? null,
     returnNote: db.return_note || undefined,
     createdAt: db.created_at || '',
     updatedAt: db.updated_at || '',

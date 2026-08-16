@@ -2,6 +2,13 @@
 
 import { requireManager } from '@/lib/auth';
 import { callAI, isAIConfigured } from '@/lib/ai';
+import { buildResultPrompt, type ResultPromptInput } from '@/lib/ai-prompts';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/audit';
+import { getEvaluationsByPeriod } from '@/lib/db/evaluations';
+import { getUsers } from '@/lib/db/users';
+import { getAllCriteriaGroups } from '@/lib/db/criteria';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -95,10 +102,6 @@ YÊU CẦU: NGẮN GỌN 4-5 câu, sát dữ liệu, cụ thể theo TÊN tiêu 
   return { comment };
 }
 
-/**
- * Soạn thông báo kết quả cá nhân hóa cho nhân viên — Manager-only.
- * Dựa trên CHI TIẾT tiêu chuẩn của vòng cuối để thông báo cụ thể, hữu ích.
- */
 export async function draftResultMessageAction(input: {
   employeeCode: string;
   name: string;
@@ -115,41 +118,186 @@ export async function draftResultMessageAction(input: {
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
-  const detailText = input.criteriaDetail.length
-    ? input.criteriaDetail
-        .filter((c) => c.points !== 0)
-        .map((c) => `- ${c.code} ${c.name}: ${c.points} điểm (${c.levelLabel || ''})`)
-        .join('\n')
-    : 'không có chi tiết';
-  const prevText = input.previousComments.length
-    ? input.previousComments.map((c, i) => `- Vòng ${i + 1}: ${c}`).join('\n')
-    : 'không có';
-
-  const prompt = `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):
-- Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
-- CHI TIẾT TIÊU CHUẨN VÒNG CUỐI (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
-${detailText}
-${input.notesSummary ? `- GHI CHÚ QUAN TRỌNG: ${input.notesSummary}` : ''}
-- NHẬN XÉT CÁC VÒNG TRƯỚC (tham khảo nếu có — các vòng do NHỮNG NGƯỜI ĐÁNH GIÁ KHÁC NHAU chấm, KHÔNG so sánh tiến bộ/lùi):
-${prevText}
-- Nhận xét tổng hợp: ${input.summaryNotes || 'không có'}
-
-MẪU PHONG CÁCH (chỉ THAM KHẢO CÁCH VIẾT — không sao chép nội dung):
-"Kỳ này anh/chị hoàn thành tốt vai trò dẫn dắt: việc bố trí nhân sự và đào tạo người mới đi vào nề nếp, kíp ít khi bị động khi có người nghỉ. Cần lưu ý thêm khâu kiểm tra sau khi giao việc để tránh sót chi tiết. Chúc anh/chị tiếp tục phát huy."
-
-Hãy viết TIN NHẮN THÔNG BÁO KẾT QUẢ cho nhân viên (3-5 câu, tiếng Việt, chân thành):
-1. Xác nhận xếp loại (KHÔNG nói điểm số cụ thể).
-2. Nêu 1-2 điểm mạnh CỤ THỂ theo TÊN tiêu chuẩn (quản lý: ưu tiên F*; nhân viên: tiêu chuẩn mạnh nhất) — tham khảo NGẦM nhận xét vòng trước (KHÔNG trích dẫn "như nhận xét trước").
-3. Nếu CÓ tiêu chuẩn thực sự yếu (điểm âm/thiếu sót rõ): 1 điều cần cải thiện + gợi ý ngắn. Nếu KHÔNG: 1 gợi ý phát triển nhẹ nhàng.
-4. Kỷ luật (A*) không vi phạm → KHÔNG nêu hoặc tối đa nửa câu, DIỄN ĐẠT ĐA DẠNG theo từng người — không lặp lại cùng một câu.
-5. XƯNG HÔ: gọi người được đánh giá là "Nhân viên" — KHÔNG dùng "Anh/chị", "bạn", "em".
-6. VAI TRÒ: LUÔN dùng từ "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager", "điều phối", "dẫn dắt" để chỉ vai trò) và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với vai trò quản lý...", "Là người quản lý...", "Trong vai trò quản lý...") — không lặp cùng một cụm cho mọi người.
-7. NHẮC TIÊU CHUẨN: MÔ TẢ NGẮN nội dung rồi mã trong ngoặc (vd: "tiêu chuẩn về hợp tác, phối hợp (B1)") — KHÔNG viết "Ở B1" hoặc mã đứng một mình.
-8. Kết 1 câu khuyến khích.
-VIẾT GIỐNG NGƯỜI THẬT, BẮT CHƯỚC PHONG CÁCH MẪU — tự nhiên, ấm áp như quản lý viết tin riêng — TRÁNH giọng văn AI (không "cho thấy sự nỗ lực", "đáng ghi nhận", liệt kê đều đều, sáo rỗng). Mỗi nhân viên một cách diễn đạt khác nhau.
-YÊU CẦU: NGẮN GỌN 3-5 câu, cụ thể theo TÊN tiêu chuẩn, sát dữ liệu, không bịa thông tin, KHÔNG so sánh điểm/tiến bộ giữa các vòng.`;
-
+  const prompt = buildResultPrompt(input);
   const message = await callAI(prompt, { maxTokens: 800, temperature: 0.7 });
   if (!message) return aiError();
   return { message };
+}
+
+/**
+ * Lưu thông báo kết quả vào evaluation (Manager-only).
+ */
+export async function saveResultMessageAction(input: {
+  evaluationId: string;
+  message: string;
+}): Promise<{ ok?: boolean; error?: string }> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { error: auth.error };
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('evaluations')
+      .update({ result_message: input.message })
+      .eq('id', input.evaluationId);
+
+    if (error) {
+      return { error: 'Lỗi cập nhật thông báo kết quả: ' + error.message };
+    }
+
+    revalidatePath(`/evaluations/${input.evaluationId}`);
+    revalidatePath('/dashboard');
+
+    await logAudit(
+      auth.user,
+      'SAVE_RESULT_MESSAGE',
+      'evaluation',
+      input.evaluationId,
+      { messageLength: input.message?.length || 0 }
+    );
+
+    return { ok: true };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+export interface GenerateResultChunkItem {
+  evaluationId: string;
+  message?: string;
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Sinh thông báo kết quả hàng loạt theo từng chunk (Manager-only).
+ */
+export async function generateResultMessagesChunkAction(input: {
+  periodId: string;
+  offset: number;
+  limit?: number;
+}): Promise<{
+  items?: GenerateResultChunkItem[];
+  nextOffset?: number;
+  done?: boolean;
+  total?: number;
+  error?: string;
+}> {
+  const auth = await requireManager();
+  if (auth.error !== null) return { error: auth.error };
+  if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
+
+  const limit = input.limit ?? 5;
+  const offset = Math.max(0, input.offset || 0);
+
+  try {
+    const [evaluations, users, criteriaGroups] = await Promise.all([
+      getEvaluationsByPeriod(input.periodId, auth.user),
+      getUsers(),
+      getAllCriteriaGroups(),
+    ]);
+
+    const { data: periodData } = await supabaseAdmin
+      .from('evaluation_periods')
+      .select('id, name, year')
+      .eq('id', input.periodId)
+      .maybeSingle();
+
+    const periodName = periodData ? `${periodData.name} (${periodData.year})` : 'Kỳ đánh giá';
+
+    // Chỉ xử lý evaluations đã Approved
+    const approvedEvals = evaluations.filter((e) => e.status === 'Approved');
+    const totalApproved = approvedEvals.length;
+    const chunk = approvedEvals.slice(offset, offset + limit);
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
+    const criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
+
+    const items: GenerateResultChunkItem[] = await Promise.all(
+      chunk.map(async (ev) => {
+        try {
+          const employee = userMap.get(ev.employeeId);
+          const rounds = ev.rounds || [];
+          const lastRound =
+            [...rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0) ||
+            rounds[rounds.length - 1];
+          const lastScores = lastRound?.scores || {};
+
+          const criteriaDetail = allCriteria
+            .filter((c) => lastScores[c.id] !== undefined)
+            .map((c) => {
+              const levelIdx = lastRound?.selectedLevelIndexes?.[c.id] ?? 0;
+              const level = c.levels?.[levelIdx];
+              return {
+                code: c.code,
+                name: c.name,
+                points: Number(lastScores[c.id]) || 0,
+                levelLabel: level?.label || '',
+              };
+            });
+
+          const previousComments = rounds
+            .filter((r) => r.round < (lastRound?.round ?? 0))
+            .map((r) => r.comment || '')
+            .filter(Boolean);
+
+          const notesSummary = Object.entries(lastRound?.notes || {})
+            .filter(([, v]) => v && v.trim())
+            .slice(0, 3)
+            .map(([k, v]) => {
+              const c = criteriaMap.get(k);
+              return `${c?.code || ''} ${c?.name || ''}: ${v}`;
+            })
+            .filter(Boolean)
+            .join(' | ');
+
+          const summaryNotes =
+            lastRound?.comment || rounds.map((r) => r.comment).filter(Boolean).join(' | ');
+
+          const totalScore = ev.finalScore ?? lastRound?.totalScore ?? 0;
+          const grade = ev.finalGrade ?? lastRound?.grade ?? '';
+
+          const prompt = buildResultPrompt({
+            employeeCode: employee?.employeeCode || '',
+            name: employee?.name || '',
+            role: ev.employeeRole || employee?.role || '',
+            totalScore,
+            grade,
+            criteriaDetail,
+            previousComments,
+            notesSummary,
+            summaryNotes,
+            periodName,
+          });
+
+          const message = await callAI(prompt, { maxTokens: 800, temperature: 0.7 });
+          if (message) {
+            return { evaluationId: ev.id, message, ok: true };
+          } else {
+            return { evaluationId: ev.id, ok: false, error: 'AI không phản hồi' };
+          }
+        } catch (err) {
+          return {
+            evaluationId: ev.id,
+            ok: false,
+            error: err instanceof Error ? err.message : 'Lỗi tạo thông báo',
+          };
+        }
+      })
+    );
+
+    const nextOffset = offset + chunk.length;
+    const done = nextOffset >= totalApproved;
+
+    return {
+      items,
+      nextOffset,
+      done,
+      total: totalApproved,
+    };
+  } catch (err: unknown) {
+    return {
+      error: err instanceof Error ? err.message : 'Lỗi xử lý tạo thông báo hàng loạt',
+    };
+  }
 }

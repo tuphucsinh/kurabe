@@ -16,9 +16,8 @@ export default function LoginPage() {
     
     try {
       await login(employeeCode, password);
-      // Full reload — middleware đọc cookie auth_session và redirect chắc chắn
-      // (router.push có thể bị kẹt nếu RSC navigation fail)
-      window.location.href = '/dashboard';
+      // Full reload — middleware đọc cookie auth_session và redirect role-aware qua '/'
+      window.location.href = '/';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }

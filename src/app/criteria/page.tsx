@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   useCriteria, 
   useUpsertCriteriaGroup, 
@@ -27,9 +28,17 @@ import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CriteriaPage() {
+  const router = useRouter();
   const confirm = useConfirm();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'Employee') {
+      router.replace(`/evaluations/${user.id}`);
+    }
+  }, [user, router]);
+
   const isManager = user?.role === 'Manager'; // Chỉ Manager được thêm/sửa/xóa tiêu chuẩn
   const { data: groups = [] } = useCriteria();
   const [, setGradeTick] = useState(0);

@@ -9,6 +9,7 @@ import PageHeader from '@/components/layout/PageHeader';
 import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
+import BatchResultMessageModal from '@/components/reports/BatchResultMessageModal';
 import AiSummaryCard from '@/components/reports/AiSummaryCard';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import TeamComparison from '@/components/reports/TeamComparison';
@@ -16,9 +17,12 @@ import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
 import TopPerformers from '@/components/reports/TopPerformers';
 
 export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
-  // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39)
+  // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39). Employee chuyển về phiếu đánh giá.
   const viewer = await getSessionUser();
   if (!viewer || (viewer.role !== 'Manager' && viewer.role !== 'Leader')) {
+    if (viewer?.role === 'Employee') {
+      redirect(`/evaluations/${viewer.id}`);
+    }
     redirect('/dashboard');
   }
 
@@ -98,6 +102,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
             </div>
           </div>
 
+          {viewer?.role === 'Manager' && (
+            <BatchResultMessageModal periodId={periodId || ''} />
+          )}
           <ExportReportButton periodId={periodId || ''} />
         </div>
       </PageHeader>
