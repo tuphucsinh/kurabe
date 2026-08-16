@@ -687,7 +687,7 @@
 
 > Yêu cầu anh: chat widget góc dưới phải giải đáp thắc mắc cho Manager/Leader/SubLeader; tham khảo file .md mô tả toàn bộ webapp; không trả lời ngoài lề; 15 lượt/account/2h; model gpt-5.6-luna (opencode go); gọi "chị"/xưng "em"; chào ngắn theo trang khi mở; không emoji. Reviewer R1→R2 PASS (plan). CONTROLLED (chạm DB chat_usage + LLM backend).
 
-**Status**: `[ ]` — chờ anh duyệt thực thi (6 tasks: T01 knowledge.md / T02a action / T02b bảng + type / T03 widget / T04 mount / T05 verify).
+**Status**: `[x]` — DONE (tick 16-08 khi sweep phiên: các task đều đã `[x]` + HANDOFF xác nhận P75.1 DONE — status line bị bỏ sót từ trước).
 
 ### Phase 75 tick
 - T01 knowledge.md: `[x]` — 11KB PII-sanitized.

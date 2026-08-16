@@ -16,11 +16,12 @@
 
 ## Còn mở
 1. Nút "Giải thích bằng AI" (explainAnomalyAction — dashboard anomaly card): code+wire đủ, **chưa E2E verify** (cần anomaly thật để card hiện). Nút "Soạn thông báo" đã VERIFIED (P77 T2g).
-2. Deploy Vercel: ✅ DONE 16-08 (deploy Ready 2h map commit mới nhất, AI env đã set Production+Preview, lykiv.vercel.app 200).
+2. Deploy Vercel: ✅ DONE 16-08 (deploy Ready map commit mới nhất, AI env đã set Production+Preview, lykiv.vercel.app 200). ⚠️ Code local ahead 22 (P78+P79) CHƯA PUSH — deploy Vercel chỉ tới commit `0143010` (P77).
 3. [THẤP] deleteEvaluationPeriod hard-delete không check dòng (actions/period.ts:182).
 4. [THẤP] Rate-limit login chống brute-force.
 
 ## Việc tiếp theo gợi ý
-- Push nốt 2 commits Phase 72 khi anh duyệt; verify 2 nút AI; deploy Vercel.
-- Session sau mở: đọc AGENTS.md + tasks.md (P71 6/6 + P72 3/3 [x]) + .ai/KNOWN_BUGS.md.
+- Push 22 commits (P78 + P79) khi anh duyệt → deploy Vercel tự cập nhật.
+- Verify nút "Giải thích bằng AI" E2E (tạo anomaly tạm, click, dọn).
+- Mobile còn có thể tinh chỉnh: stats card team-detail, bottom nav FAB overlap — chờ anh feedback sau khi dùng thật.
 
