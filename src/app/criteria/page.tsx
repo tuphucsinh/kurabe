@@ -192,7 +192,7 @@ export default function CriteriaPage() {
         {/* Main Content */}
         <div className="xl:col-span-3 space-y-8">
           {/* Group Navigation Tabs - pill style */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-3 snap-x">
             {currentCriteria.map((group) => {
               const isActive = safeGroupCode === group.code;
               const displayName = group.shortName || group.name;
@@ -202,7 +202,7 @@ export default function CriteriaPage() {
                   key={group.code}
                   onClick={() => setActiveGroupId(group.code)}
                   className={`
-                    relative flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-300 shrink-0
+                    relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border transition-all duration-300 shrink-0 snap-start
                     ${isActive 
                       ? 'border-transparent text-white z-10 shadow-lg shadow-primary/30' 
                       : 'bg-white border-outline-variant/40 hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
@@ -221,7 +221,7 @@ export default function CriteriaPage() {
                   
                   {/* Label */}
                   <div className="relative z-20 flex flex-col items-start">
-                    <span className={`text-[9px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
+                    <span className={`text-[11px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
                       Nhóm {group.code}
                     </span>
                     <span className={`text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
@@ -231,7 +231,7 @@ export default function CriteriaPage() {
 
                   {/* Badge - criteria count */}
                   <div className="relative z-20 ml-1">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
                       isActive ? 'bg-white/20 text-white/70' : 'bg-surface text-outline'
                     }`}>
                       {group.criteria.length}
