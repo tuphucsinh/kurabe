@@ -786,3 +786,5 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 
 **Reviewer R1 (15-08)**: CHANGES_REQUIRED — T3 rescope within-period (chưa có lịch sử đa kỳ — ghi rõ giới hạn) + summary deterministic code; [T2 cũ: Employee branch — SUPERSEDED bởi quyết định anh 15-08 (không mở chat Employee — đổi sang thông báo kết quả)]; T1 gating kỳ + strip tên + nguồn nổi bật getPeriodSummary. Đã sửa hết.
 **Reviewer R2 (15-08)**: **PASS** ✅ (cho T1+T3) — ghi chú code-time: (a) T1 gate chọn hard-disable hoặc soft-confirm; (b) T1 fallback nếu chưa có ai_summaries → nhắc Manager tạo summary trước; (c) [SUPERSEDED — T2 đổi hướng không mở chat, bỏ ý mở 4 roles].
+
+**KẾT QUẢ TEST KỸ (15-08): 24/24 PASS** — T1 6/6 (biên bản: nút/modal/soạn/ẩn danh/gate/leader-chặn), T2 13/13 (Employee: redirect/3-mục/chặn 3 trang/card kết quả/grade-map/lịch sử; Manager: batch soạn→gửi→lưu DB; Leader UI-gate không thấy resultMessage), T3 5/5 (giảm nhiều nhất/nhóm tệ nhất/đếm chưa đánh giá/giới hạn đa kỳ/Leader không lộ số). Report /tmp/kurabe-p77-test-report.md. 2 fail ban đầu do script đo sai — retest/code-inspection PASS. Data test dọn sạch.
