@@ -281,7 +281,8 @@ export default function TeamDetailPage() {
                 return (
                   <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                     <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                      <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                      {/* Desktop: giữ nguyên bản cũ */}
+                      <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{leader.name}</Link>
@@ -336,6 +337,14 @@ export default function TeamDetailPage() {
                           <FileText size={18} />
                         </Link>
                       )}
+                      {/* Mobile: text thuần (không badge/box) */}
+                      <div className="md:hidden min-w-0 flex-1">
+                        <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
+                        <p className="text-xs text-slate-500 mt-1">Mã: {leader.employeeCode} · Vai trò: Leader</p>
+                        {leaderScore != null && leaderGradeRound != null && leaderGrade && leaderGrade !== 'Pending' && (
+                          <p className="text-xs text-slate-600 mt-1">Xếp loại: {leaderGrade} · Vòng L{leaderGradeRound} · <span className="font-bold text-slate-800">{leaderScore} điểm</span></p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -364,7 +373,8 @@ export default function TeamDetailPage() {
               >
                 {/* Block Header */}
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                  {/* Desktop: giữ nguyên bản cũ */}
+                  <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{sl.name}</Link>
@@ -419,6 +429,14 @@ export default function TeamDetailPage() {
                       <FileText size={18} />
                     </Link>
                   )}
+                  {/* Mobile: text thuần (không badge/box) */}
+                  <div className="md:hidden min-w-0 flex-1">
+                    <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
+                    <p className="text-xs text-slate-500 mt-1">Mã: {sl.employeeCode} · Vai trò: SubLeader{sl.description && sl.description.trim() !== '' && !['SubLeader', 'Sub Leader', 'Leader', 'Manager'].includes(sl.description.trim()) ? ` · ${sl.description}` : ''}</p>
+                    {slScore != null && slGradeRound != null && slGrade && slGrade !== 'Pending' && (
+                      <p className="text-xs text-slate-600 mt-1">Xếp loại: {slGrade} · Vòng L{slGradeRound} · <span className="font-bold text-slate-800">{slScore} điểm</span></p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Direct Employees List */}
@@ -435,7 +453,8 @@ export default function TeamDetailPage() {
                           key={member.id}
                           className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
-                          <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                          {/* Desktop: giữ nguyên bản cũ */}
+                          <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
@@ -492,6 +511,14 @@ export default function TeamDetailPage() {
                           >
                             <FileText size={18} />
                           </Link>
+                          {/* Mobile: text thuần */}
+                          <div className="md:hidden min-w-0 flex-1">
+                            <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                            <p className="text-xs text-slate-500 mt-1">Mã: {member.employeeCode}</p>
+                            {score != null && gradeRound != null && grade && grade !== 'Pending' && (
+                              <p className="text-xs text-slate-600 mt-1">Xếp loại: {grade} · Vòng L{gradeRound} · <span className="font-bold text-slate-800">{score} điểm</span></p>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -529,57 +556,66 @@ export default function TeamDetailPage() {
                         key={member.id}
                         className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
-                        <div className="min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
-                            </div>
-                            <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
+                        {/* Desktop: giữ nguyên bản cũ */}
+                        <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
                           </div>
-                          {grade && grade !== 'Pending' ? (
-                            <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                              grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
-                              grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                              grade === 'AB' ? 'bg-teal-100 text-teal-700' :
-                              grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                              grade === 'C' ? 'bg-amber-100 text-amber-700' :
-                              grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
-                            }`}>
-                              {grade}
-                            </span>
-                          ) : (
-                            <span className="w-8" />
-                          )}
-                          {grade && grade !== 'Pending' ? (
-                            <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
-                              {previousRounds.map((roundData) => (
-                                <div key={roundData.round} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
-                                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-                                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-                                </div>
-                              ))}
-                              {gradeRound != null && (
-                                <div className="w-12 flex flex-col items-center leading-none">
-                                  <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
-                                  <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="w-[104px]" />
-                          )}
-                          <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
-                            {badge.label}
+                          <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
+                        </div>
+                        {grade && grade !== 'Pending' ? (
+                          <span className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                            grade === 'S' ? 'bg-indigo-100 text-indigo-700' :
+                            grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                            grade === 'AB' ? 'bg-teal-100 text-teal-700' :
+                            grade === 'B' ? 'bg-blue-100 text-blue-700' :
+                            grade === 'C' ? 'bg-amber-100 text-amber-700' :
+                            grade === 'D' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-400'
+                          }`}>
+                            {grade}
                           </span>
+                        ) : (
+                          <span className="w-8" />
+                        )}
+                        {grade && grade !== 'Pending' ? (
+                          <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+                            {previousRounds.map((roundData) => (
+                              <div key={roundData.round} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                                <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
+                                <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
+                              </div>
+                            ))}
+                            {gradeRound != null && (
+                              <div className="w-12 flex flex-col items-center leading-none">
+                                <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
+                                <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="w-[104px]" />
+                        )}
+                        <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+                          {badge.label}
+                        </span>
                         </div>
                         <Link
-                          href={`/evaluations/${member.id}`}
-                          className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-                          title="Xem đánh giá"
+                        href={`/evaluations/${member.id}`}
+                        className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+                        title="Xem đánh giá"
                         >
-                          <FileText size={18} />
+                        <FileText size={18} />
                         </Link>
-                      </div>
+                        {/* Mobile: text thuần */}
+                        <div className="md:hidden min-w-0 flex-1">
+                        <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                        <p className="text-xs text-slate-500 mt-1">Mã: {member.employeeCode}</p>
+                        {score != null && gradeRound != null && grade && grade !== 'Pending' && (
+                          <p className="text-xs text-slate-600 mt-1">Xếp loại: {grade} · Vòng L{gradeRound} · <span className="font-bold text-slate-800">{score} điểm</span></p>
+                        )}
+                        </div>
+                        </div>
                     );
                   })}
                 </div>
