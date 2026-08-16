@@ -767,6 +767,8 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
      - **Sidebar + BottomNav (Reviewer T2b #4)**: filter theo role — Employee: "Phiếu đánh giá của tôi" + Cài đặt (bỏ Home/Teams/Users).
      - **Landing / (Reviewer T2b #5)**: login/`/` redirect role-aware — Employee → /evaluations/{id} (KHÔNG /dashboard).
      - **(Khuyến nghị T2b #6)**: thêm requireRole vào getDashboardData + getReportAggregation (defense-in-depth).
+   - **T2c — LỊCH SỬ KẾT QUẢ CÁC KỲ TRƯỚC (anh chốt 15-08 #1)**: trong /evaluations/{id}, thêm tab/khối "Kết quả các kỳ trước". HÀM MỚI `getEvaluationHistoryByEmployee(employeeId, user)` (Reviewer R8) — enforce scope server-side: `employeeId === user.id` cho non-Manager (hoặc canViewEvaluation từng row); **truyền auth.user.id từ session, KHÔNG nhận id từ URL**. Filter "có kết quả" = status Approved (hoặc kỳ đã đóng). Trả: period name, grade, score, result_message (nếu có).
+   - **T2d — GIẢI THÍCH XẾP LOẠI TRÊN CARD (anh chốt 15-08 #2)**: card kết quả hiển thị ý nghĩa xếp loại. **Dùng HARDCODED map grade→meaning (Reviewer R8 khuyến nghị — grade_bands không có cột description tin cậy)**: {S: 'Xuất sắc', AB: 'Tốt', B: 'Đáp ứng tốt yêu cầu', C: 'Cần cải thiện'} + ngưỡng điểm từ grade_bands (đọc role_group phù hợp) — hiện: "Xếp loại B — Đáp ứng tốt yêu cầu (ngưỡng: 70-79)" + **động viên = static template 1 dòng** (không gọi LLM). Nếu grade không có trong map → ẩn phần giải thích.
    - Scope: Employee CHỈ đọc evaluation của mình (getEvaluationByEmployee user scope — đã có); không API mới cho Employee ngoài UI đọc đã có.
    - Rate: soạn hàng loạt = N lượt LLM chunk 5/đợt (Manager không giới hạn — OK); ẩn danh prompt như draftResult hiện có.
 
