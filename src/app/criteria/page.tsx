@@ -2,21 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  useCriteria, 
-  useUpsertCriteriaGroup, 
+import {
+  useCriteria,
+  useUpsertCriteriaGroup,
   useUpsertCriterion,
   useUpdateDefaultLevel,
+  useUpdateCriterionAudiences,
   useDeleteCriteriaGroup,
   useDeleteCriterion
 } from '@/hooks/use-db';
 import { Criterion, CriteriaGroup } from '@/types';
+import {
+  CriterionAudience,
+  CRITERION_AUDIENCES,
+  mapRolesToAudiences
+} from '@/lib/criteria-applicability';
 import { getGradeBandsSync } from '@/lib/grade-bands';
 import { getGradeBandsAction } from '@/actions/read';
-import { 
-  Award, 
-  Info, 
-  Pencil, 
+import {
+  Award,
+  Info,
+  Pencil,
   Plus,
   Star,
   Trash2
@@ -28,6 +34,30 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { isIndividualRole } from '@/lib/role-policy';
+
+const AUDIENCE_BADGES = [
+  {
+    key: 'management' as const,
+    shortLabel: 'QL',
+    title: 'Quản lý',
+    checkedClass: 'bg-amber-100/90 text-amber-800 border-amber-300 font-bold',
+    accentColor: 'accent-amber-600',
+  },
+  {
+    key: 'employee' as const,
+    shortLabel: 'NV',
+    title: 'Nhân viên',
+    checkedClass: 'bg-blue-100/90 text-blue-800 border-blue-300 font-bold',
+    accentColor: 'accent-blue-600',
+  },
+  {
+    key: 'worker' as const,
+    shortLabel: 'CN',
+    title: 'Công nhân',
+    checkedClass: 'bg-teal-100/90 text-teal-800 border-teal-300 font-bold',
+    accentColor: 'accent-teal-600',
+  },
+] as const;
 
 export default function CriteriaPage() {
   const router = useRouter();
@@ -63,8 +93,39 @@ export default function CriteriaPage() {
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();
   const updateDefaultLevel = useUpdateDefaultLevel();
+  const updateCriterionAudiences = useUpdateCriterionAudiences();
   const { mutate: deleteGroup } = useDeleteCriteriaGroup();
   const { mutate: deleteCriterion } = useDeleteCriterion();
+
+  const handleToggleAudience = (criterion: Criterion, audience: CriterionAudience) => {
+    if (!isManager) return;
+    const currentAudiences = mapRolesToAudiences(criterion.appliesTo || []);
+    const isChecked = currentAudiences.includes(audience);
+
+    let newAudiences: CriterionAudience[];
+    if (isChecked) {
+      newAudiences = currentAudiences.filter(a => a !== audience);
+    } else {
+      newAudiences = CRITERION_AUDIENCES.filter(a => currentAudiences.includes(a) || a === audience);
+    }
+
+    if (newAudiences.length === 0) {
+      toast('Tiêu chí phải áp dụng cho ít nhất một đối tượng.', 'warning');
+      return;
+    }
+
+    updateCriterionAudiences.mutate(
+      { criterionId: criterion.id, audiences: newAudiences },
+      {
+        onSuccess: () => {
+          toast('Cập nhật đối tượng áp dụng thành công.', 'success');
+        },
+        onError: (err: Error) => {
+          toast(err?.message || 'Lỗi khi cập nhật đối tượng áp dụng.', 'error');
+        },
+      }
+    );
+  };
 
   const [activeGroupId, setActiveGroupId] = useState('A');
 
@@ -205,22 +266,22 @@ export default function CriteriaPage() {
                   onClick={() => setActiveGroupId(group.code)}
                   className={`
                     relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl border transition-all duration-300 shrink-0 snap-start
-                    ${isActive 
-                      ? 'border-transparent text-white z-10 shadow-lg shadow-primary/30' 
+                    ${isActive
+                      ? 'border-transparent text-white z-10 shadow-lg shadow-primary/30'
                       : 'bg-white border-outline-variant/40 hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
                     }
                   `}
                 >
                   {isActive && (
-                    <m.div 
+                    <m.div
                       layoutId="criteriaActiveTab"
                       className="absolute inset-0 bg-gradient-to-r from-[#0E4B66] to-[#1A6D91] rounded-2xl"
                       transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
                     />
                   )}
-                  
 
-                  
+
+
                   {/* Label */}
                   <div className="relative z-20 flex flex-col items-start">
                     <span className={`text-[11px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
@@ -242,7 +303,7 @@ export default function CriteriaPage() {
                 </button>
               );
             })}
-            
+
             {/* Add Group Button — chỉ Manager */}
             {isManager && (
               <button
@@ -290,52 +351,88 @@ export default function CriteriaPage() {
           {/* Criteria List - same style as evaluation detail */}
           {filteredCriteria.length > 0 ? (
             <div className="space-y-2 animate-in fade-in slide-in-from-right-4 duration-300">
-              {filteredCriteria.map((criterion) => (
+              {filteredCriteria.map((criterion) => {
+                const criterionAudiences = mapRolesToAudiences(criterion.appliesTo || []);
+                const isUpdatingThis = updateCriterionAudiences.isPending &&
+                  updateCriterionAudiences.variables?.criterionId === criterion.id;
+
+                return (
                 <div key={criterion.id} className="bg-white rounded-2xl border border-outline-variant overflow-hidden shadow-sm hover:border-primary/20 transition-all duration-300">
-                  <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center">
-                    <h3 className="font-bold text-on-surface flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <div className="px-4 sm:px-6 py-2.5 bg-surface border-b border-outline-variant flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
                       <span className="text-xs font-black bg-white text-primary px-2 py-0.5 rounded border border-primary/20 shrink-0">
                         {criterion.code || criterion.id}
                       </span>
-                      {(() => {
-                        const hasQL = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader') || criterion.appliesTo.includes('SubLeader');
-                        const hasNV = criterion.appliesTo.includes('Employee');
-                        if (hasQL && !hasNV) return <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full shrink-0">Chỉ QL</span>;
-                        if (!hasQL && hasNV) return <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full shrink-0">Chỉ NV</span>;
-                        return null;
-                      })()}
-                      <span className="shrink-0">{criterion.name}</span>
+                      <span className="font-bold text-on-surface shrink-0">{criterion.name}</span>
                       {criterion.description && (
                         <span className="text-sm font-normal text-outline/80 block w-full md:inline md:w-auto">
                           <span className="hidden md:inline">— </span>{criterion.description}
                         </span>
                       )}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1">
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                      {/* QL / NV / CN Checkbox Fieldset */}
+                      <fieldset
+                        className="inline-flex items-center gap-1 sm:gap-1.5 p-1 bg-white rounded-lg border border-outline-variant/60 shrink-0"
+                        aria-label={`Đối tượng áp dụng cho tiêu chí ${criterion.code || criterion.name}`}
+                      >
+                        <legend className="sr-only">Đối tượng áp dụng</legend>
+                        {AUDIENCE_BADGES.map(({ key, shortLabel, title, checkedClass, accentColor }) => {
+                          const isChecked = criterionAudiences.includes(key);
+                          return (
+                            <label
+                              key={key}
+                              title={`${title} (${shortLabel})`}
+                              className={`
+                                inline-flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded border text-xs transition-all select-none
+                                ${isManager ? 'cursor-pointer' : 'cursor-default opacity-80'}
+                                ${isChecked
+                                  ? checkedClass
+                                  : 'bg-slate-50/50 text-slate-400 border-slate-200'
+                                }
+                                ${isUpdatingThis ? 'opacity-50 pointer-events-none' : ''}
+                              `}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                disabled={!isManager || isUpdatingThis}
+                                onChange={() => handleToggleAudience(criterion, key)}
+                                className={`w-3.5 h-3.5 rounded border-slate-300 ${accentColor} focus:ring-1 focus:ring-primary/20 ${isManager ? 'cursor-pointer' : 'cursor-default'}`}
+                                aria-label={`${title} (${shortLabel})`}
+                              />
+                              <span className="font-bold text-[11px] sm:text-xs">{shortLabel}</span>
+                            </label>
+                          );
+                        })}
+                      </fieldset>
+
                       {isManager && (
-                        <>
+                        <div className="flex items-center gap-0.5 sm:gap-1">
                           <button
                             onClick={() => {
                               setEditingCriterion(criterion);
                               setEditingGroupId(safeGroupId);
                               setCriteriaModalOpen(true);
                             }}
-                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                            className="p-2 min-w-10 min-h-10 sm:p-2.5 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/10 rounded-xl transition-colors shrink-0"
+                            title="Sửa tiêu chí"
                           >
                             <Pencil size={18} />
                           </button>
                           <button
                             onClick={() => handleDeleteCriterion(criterion.id!, criterion.name)}
-                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+                            className="p-2 min-w-10 min-h-10 sm:p-2.5 sm:min-w-11 sm:min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors shrink-0"
+                            title="Xóa tiêu chí"
                           >
                             <Trash2 size={18} />
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="p-2 md:p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-3">
                     {criterion.levels.map((level, idx) => {
                       const isDefault = criterion.defaultLevelIndex === idx;
@@ -343,8 +440,8 @@ export default function CriteriaPage() {
                       <div
                         key={idx}
                         className={`relative p-3 rounded-xl border text-left group transition-all duration-200 ${
-                          isDefault 
-                            ? 'border-amber-400 bg-amber-50/30 shadow-sm' 
+                          isDefault
+                            ? 'border-amber-400 bg-amber-50/30 shadow-sm'
                             : 'border-outline-variant hover:border-primary/30 hover:bg-surface'
                         }`}
                       >
@@ -364,8 +461,8 @@ export default function CriteriaPage() {
                             <button
                               onClick={() => handleSetDefaultLevel(criterion.id!, idx, criterion.defaultLevelIndex)}
                               className={`shrink-0 p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors ${
-                                isDefault 
-                                  ? 'text-amber-500 bg-amber-100 hover:bg-amber-200' 
+                                isDefault
+                                  ? 'text-amber-500 bg-amber-100 hover:bg-amber-200'
                                   : 'text-outline-variant hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
                               }`}
                               title={isDefault ? "Đang là mức mặc định" : "Đặt làm mặc định"}
@@ -384,8 +481,9 @@ export default function CriteriaPage() {
                     )})}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           ) : (
             <div className="py-20 text-center bg-surface rounded-3xl border border-dashed border-outline-variant">
               <p className="text-outline">Không có tiêu chí nào trong nhóm này.</p>
@@ -411,7 +509,7 @@ export default function CriteriaPage() {
                           <div className="flex items-center gap-3">
                             <div className={`
                               w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg transition-transform group-hover:scale-110
-                              ${g.grade === 'S' ? 'bg-amber-100 text-amber-700' : 
+                              ${g.grade === 'S' ? 'bg-amber-100 text-amber-700' :
                                 g.grade === 'A' || g.grade === 'AB' ? 'bg-blue-100 text-blue-700' :
                                 g.grade === 'B' ? 'bg-green-100 text-green-700' :
                                 'bg-surface text-outline'}
@@ -422,10 +520,10 @@ export default function CriteriaPage() {
                           </div>
                           <div className="text-right">
                             <span className="text-sm font-medium text-outline">
-                              {g.minScore && g.maxScore 
-                                ? `${g.minScore} - ${g.maxScore}` 
-                                : g.minScore 
-                                ? `Trên ${g.minScore}` 
+                              {g.minScore && g.maxScore
+                                ? `${g.minScore} - ${g.maxScore}`
+                                : g.minScore
+                                ? `Trên ${g.minScore}`
                                 : `Dưới ${g.maxScore}`}
                             </span>
                           </div>
@@ -433,7 +531,7 @@ export default function CriteriaPage() {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="pt-6 border-t border-outline-variant">
                     <h4 className="text-xs font-bold text-outline uppercase mb-4 tracking-wider">Nhân viên (Staff)</h4>
                     <div className="space-y-3">
@@ -442,7 +540,7 @@ export default function CriteriaPage() {
                           <div className="flex items-center gap-3">
                             <div className={`
                               w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg transition-transform group-hover:scale-110
-                              ${g.grade === 'S' ? 'bg-amber-100 text-amber-700' : 
+                              ${g.grade === 'S' ? 'bg-amber-100 text-amber-700' :
                                 g.grade === 'A' || g.grade === 'AB' ? 'bg-blue-100 text-blue-700' :
                                 g.grade === 'B' ? 'bg-green-100 text-green-700' :
                                 'bg-surface text-outline'}
@@ -453,10 +551,10 @@ export default function CriteriaPage() {
                           </div>
                           <div className="text-right">
                             <span className="text-sm font-medium text-outline">
-                              {g.minScore && g.maxScore 
-                                ? `${g.minScore} - ${g.maxScore}` 
-                                : g.minScore 
-                                ? `Trên ${g.minScore}` 
+                              {g.minScore && g.maxScore
+                                ? `${g.minScore} - ${g.maxScore}`
+                                : g.minScore
+                                ? `Trên ${g.minScore}`
                                 : `Dưới ${g.maxScore}`}
                             </span>
                           </div>

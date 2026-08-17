@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { Criterion, CriteriaGroup, CriteriaLevel, AppliesTo, Role } from '@/types';
+import { Criterion, CriteriaGroup, CriteriaLevel } from '@/types';
+import {
+  CriterionAudience,
+  CRITERION_AUDIENCES,
+  mapRolesToAudiences,
+  mapAudiencesToRoles
+} from '@/lib/criteria-applicability';
 
 interface CriteriaModalProps {
   isOpen: boolean;
@@ -13,67 +19,85 @@ interface CriteriaModalProps {
   groups: CriteriaGroup[];
 }
 
+const AUDIENCE_OPTIONS: { id: CriterionAudience; label: string }[] = [
+  { id: 'management', label: 'Quản lý (QL)' },
+  { id: 'employee', label: 'Nhân viên (NV)' },
+  { id: 'worker', label: 'Công nhân (CN)' },
+];
+
+const DEFAULT_AUDIENCES: CriterionAudience[] = ['management', 'employee'];
+
 export default function CriteriaModal({ isOpen, onClose, onSave, criterion, groupId, groups }: CriteriaModalProps) {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [idSuffix, setIdSuffix] = useState<string>('');
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [appliesTo, setAppliesTo] = useState<AppliesTo>('both');
+  const [selectedAudiences, setSelectedAudiences] = useState<CriterionAudience[]>(DEFAULT_AUDIENCES);
+  const [audienceError, setAudienceError] = useState<string | null>(null);
   const [levels, setLevels] = useState<CriteriaLevel[]>([{ label: '', points: 0 }]);
 
   useEffect(() => {
     if (!isOpen) return;
-    
+
     if (criterion) {
       const activeGroup = groupId || groups.find(g => g.criteria.some(c => c.id === criterion.id))?.id || groups[0]?.id || '';
       const activeGroupCode = groups.find(g => g.id === activeGroup)?.code || '';
-      
+
       let suffix = criterion.code || '';
       if (activeGroupCode && suffix.startsWith(activeGroupCode)) {
         suffix = suffix.slice(activeGroupCode.length);
       }
-      
+
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGroupId(activeGroup);
       setIdSuffix(suffix);
       setName(criterion.name);
       setDescription(criterion.description || '');
-      
-      let mappedAppliesTo: AppliesTo = 'both';
-      if (criterion.appliesTo && criterion.appliesTo.length > 0) {
-        // DB map: 'leader' → [Manager, Leader, SubLeader]; 'staff' → [Employee]; 'both' → cả 4
-        const hasLeader = criterion.appliesTo.includes('Manager') || criterion.appliesTo.includes('Leader') || criterion.appliesTo.includes('SubLeader');
-        const hasStaff = criterion.appliesTo.includes('Employee');
-        if (hasLeader && !hasStaff) mappedAppliesTo = 'leader';
-        else if (!hasLeader && hasStaff) mappedAppliesTo = 'staff';
-        // else → both (có cả 2 nhóm)
-      }
-      setAppliesTo(mappedAppliesTo);
 
-      setLevels(criterion.levels && criterion.levels.length > 0 
-        ? criterion.levels.map(l => ({ ...l })) 
+      const mapped = criterion.appliesTo && criterion.appliesTo.length > 0
+        ? mapRolesToAudiences(criterion.appliesTo)
+        : DEFAULT_AUDIENCES;
+      setSelectedAudiences(mapped.length > 0 ? mapped : DEFAULT_AUDIENCES);
+      setAudienceError(null);
+
+      setLevels(criterion.levels && criterion.levels.length > 0
+        ? criterion.levels.map(l => ({ ...l }))
         : [{ label: '', points: 0 }]);
     } else {
       setSelectedGroupId(groupId || groups[0]?.id || '');
       setIdSuffix('');
       setName('');
       setDescription('');
-      setAppliesTo('both');
+      setSelectedAudiences(DEFAULT_AUDIENCES);
+      setAudienceError(null);
       setLevels([{ label: '', points: 0 }]);
     }
   }, [criterion, groupId, groups, isOpen]);
 
   if (!isOpen) return null;
 
+  const toggleAudience = (aud: CriterionAudience) => {
+    setSelectedAudiences(prev => {
+      const next = prev.includes(aud)
+        ? prev.filter(a => a !== aud)
+        : CRITERION_AUDIENCES.filter(a => prev.includes(a) || a === aud);
+      if (next.length > 0) {
+        setAudienceError(null);
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (levels.length === 0) return;
-    
+    if (selectedAudiences.length === 0) {
+      setAudienceError('Vui lòng chọn ít nhất một đối tượng áp dụng.');
+      return;
+    }
+
     const selectedGroupCode = groups.find(g => g.id === selectedGroupId)?.code || '';
-    
-    let roleAppliesTo: Role[] = ['Leader', 'Employee'];
-    if (appliesTo === 'leader') roleAppliesTo = ['Leader'];
-    if (appliesTo === 'staff') roleAppliesTo = ['Employee'];
+    const roleAppliesTo = mapAudiencesToRoles(selectedAudiences);
 
     const newCriterion: Criterion = {
       id: criterion?.id || '',
@@ -83,7 +107,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
       levels,
       ...(description.trim() ? { description: description.trim() } : {})
     };
-    
+
     onSave(newCriterion, selectedGroupId);
     onClose();
   };
@@ -105,18 +129,18 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <h2 className="text-lg font-bold text-slate-800">
             {criterion ? 'Chỉnh sửa tiêu chuẩn' : 'Thêm tiêu chuẩn mới'}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
@@ -126,87 +150,107 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-6">
-          <form id="criteria-form" onSubmit={handleSubmit} className="space-y-2">
-            
-            {/* Row 1 & 2: Grid 4 columns - dùng style inline để đảm bảo Tailwind v4 không render sai */}
-            <div 
-              className="grid gap-x-4 gap-y-2 items-center"
-              style={{ gridTemplateColumns: '84px 1fr 84px 200px' }}
-            >
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[84px] text-right pr-4">
-                Nhóm
-              </label>
-              <select
-                required
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 bg-white"
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-              >
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>[{g.code}] {g.name}</option>
-                ))}
-              </select>
+          <form id="criteria-form" onSubmit={handleSubmit} className="space-y-4">
 
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[84px] text-right pr-4">
-                Mã
-              </label>
-              <div className="relative w-full">
-                <span className="absolute left-0 inset-y-0 flex items-center font-bold text-slate-500 bg-slate-50 border border-r-0 border-slate-200 rounded-l-lg px-2 pointer-events-none select-none text-sm">
-                  {groups.find(g => g.id === selectedGroupId)?.code || ''}
-                </span>
-                <input
-                  type="text"
+            {/* Row 1: Nhóm & Mã */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
+                  Nhóm
+                </label>
+                <select
                   required
-                  pattern="\d+"
-                  className="w-full pl-10 pr-3 py-1.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
-                  placeholder="1, 2..."
-                  value={idSuffix}
-                  onChange={(e) => setIdSuffix(e.target.value.replace(/\D/g, ''))}
-                />
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 bg-white"
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                >
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>[{g.code}] {g.name}</option>
+                  ))}
+                </select>
               </div>
 
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[84px] text-right pr-4">
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
+                  Mã
+                </label>
+                <div className="relative w-full">
+                  <span className="absolute left-0 inset-y-0 flex items-center font-bold text-slate-500 bg-slate-50 border border-r-0 border-slate-200 rounded-l-lg px-2 pointer-events-none select-none text-sm">
+                    {groups.find(g => g.id === selectedGroupId)?.code || ''}
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    pattern="\d+"
+                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
+                    placeholder="1, 2..."
+                    value={idSuffix}
+                    onChange={(e) => setIdSuffix(e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Tên TC */}
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
                 Tên TC
               </label>
               <input
                 type="text"
                 required
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
                 placeholder="VD: Vi phạm ATGT..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[84px] text-right pr-4">
-                Áp dụng
-              </label>
-              <select
-                required
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 bg-white"
-                value={appliesTo}
-                onChange={(e) => setAppliesTo(e.target.value as AppliesTo)}
-              >
-                <option value="both">Quản Lý và Nhân Viên</option>
-                <option value="leader">Chỉ Quản Lý</option>
-                <option value="staff">Chỉ Nhân Viên</option>
-              </select>
             </div>
 
-            {/* Row 3: Mô tả */}
-            <div className="flex items-start gap-4">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 pt-2 w-[84px] text-right pr-4">
+            {/* Row 3: Áp dụng (3 checkboxes) */}
+            <div className="flex items-start gap-2">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-3">
+                Áp dụng
+              </label>
+              <div className="flex-1">
+                <fieldset className="flex flex-wrap items-center gap-x-6 gap-y-2 border-0 p-0 m-0" aria-label="Đối tượng áp dụng">
+                  <legend className="sr-only">Đối tượng áp dụng</legend>
+                  {AUDIENCE_OPTIONS.map((opt) => {
+                    const checked = selectedAudiences.includes(opt.id);
+                    return (
+                      <label
+                        key={opt.id}
+                        className="min-h-[44px] inline-flex items-center gap-2.5 cursor-pointer select-none text-sm text-slate-700 font-medium hover:text-slate-900 transition-colors focus-within:ring-2 focus-within:ring-primary/20 rounded-lg px-2 py-1"
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 focus:ring-2 cursor-pointer accent-primary"
+                          checked={checked}
+                          onChange={() => toggleAudience(opt.id)}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+                {audienceError && (
+                  <p className="text-xs text-rose-500 font-medium mt-1">{audienceError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 4: Mô tả */}
+            <div className="flex items-start gap-2">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-2">
                 Mô tả
               </label>
               <textarea
-                className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 resize-none"
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 resize-none"
                 placeholder="Mô tả chi tiết (không bắt buộc)..."
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-
-
 
             {/* Các mức điểm */}
             <div className="space-y-2 pt-1">
@@ -222,7 +266,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                   Thêm option
                 </button>
               </div>
-              
+
               <div className="space-y-2">
                 {levels.map((level, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
@@ -273,7 +317,8 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
           <button
             type="submit"
             form="criteria-form"
-            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+            disabled={selectedAudiences.length === 0}
+            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {criterion ? 'Cập nhật' : 'Thêm mới'}
           </button>

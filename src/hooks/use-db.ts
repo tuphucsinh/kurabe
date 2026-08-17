@@ -21,8 +21,10 @@ import {
   deleteCriterionAction,
   upsertCriteriaGroupAction,
   upsertCriterionAction,
-  updateDefaultLevelAction
+  updateDefaultLevelAction,
+  updateCriterionAudiencesAction
 } from '@/actions/criteria';
+import { CriterionAudience } from '@/lib/criteria-applicability';
 
 import { CriteriaGroup, Criterion, Team, User } from '@/types';
 
@@ -212,6 +214,20 @@ export const useUpdateDefaultLevel = () => {
     mutationFn: async ({ criterionId, levelIndex }: { criterionId: string; levelIndex: number | null }) => {
       const res = await updateDefaultLevelAction(criterionId, levelIndex);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật mức mặc định');
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+    },
+  });
+};
+
+export const useUpdateCriterionAudiences = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ criterionId, audiences }: { criterionId: string; audiences: CriterionAudience[] }) => {
+      const res = await updateCriterionAudiencesAction(criterionId, audiences);
+      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật đối tượng áp dụng');
       return res;
     },
     onSuccess: () => {
