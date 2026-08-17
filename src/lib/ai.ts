@@ -25,7 +25,10 @@ export async function callAI(
   const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
 
-  const attempt = async (maxTokens: number, extraSystem: string): Promise<string | null> => {
+  const attempt = async (
+    maxTokens: number,
+    extraSystem: string
+  ): Promise<{ content: string | null; finishReason: string | null } | null> => {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 45000);
@@ -60,8 +63,11 @@ export async function callAI(
       }
 
       const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content;
-      return typeof text === 'string' && text.trim() ? text.trim() : null;
+      const choice = data?.choices?.[0];
+      const text = choice?.message?.content;
+      const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
+      const content = typeof text === 'string' && text.trim() ? text.trim() : null;
+      return { content, finishReason };
     } catch (err) {
       console.error('callAI error:', err);
       return null;
@@ -72,12 +78,17 @@ export async function callAI(
 
   // Lần 1: token đủ lớn
   const first = await attempt(maxTokens, '');
-  if (first) return first;
+  if (first?.content && first.finishReason !== 'length') {
+    return first.content;
+  }
 
-  // Lần 2 (retry): model reasoning có thể ngốn hết token → content rỗng.
+  // Lần 2 (retry): model reasoning có thể ngốn hết token hoặc bị cắt giữa chừng (finish_reason = "length").
   // Tăng token + nhấn mạnh trả lời ngắn trực tiếp.
   const second = await attempt(Math.max(2500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 8 CÂU, KHÔNG PHÂN TÍCH.');
-  return second;
+  if (second?.content && second.finishReason !== 'length') {
+    return second.content;
+  }
+  return null;
 }
 
 // Vision: gửi ảnh (base64 dataURL) + text — model vision riêng (gpt-5.6-luna KHÔNG nhận ảnh — đã test 400; qwen3.7-plus hoạt động).
@@ -94,7 +105,10 @@ export async function callAIVision(
   const model = process.env.AI_VISION_MODEL || DEFAULT_VISION_MODEL;
   const dataUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
 
-  const attempt = async (maxTokens: number, extraSystem: string): Promise<string | null> => {
+  const attempt = async (
+    maxTokens: number,
+    extraSystem: string
+  ): Promise<{ content: string | null; finishReason: string | null } | null> => {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 60000);
@@ -125,8 +139,11 @@ export async function callAIVision(
         return null;
       }
       const data = await res.json();
-      const text = data?.choices?.[0]?.message?.content;
-      return typeof text === 'string' && text.trim() ? text.trim() : null;
+      const choice = data?.choices?.[0];
+      const text = choice?.message?.content;
+      const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
+      const content = typeof text === 'string' && text.trim() ? text.trim() : null;
+      return { content, finishReason };
     } catch (err) {
       console.error('callAIVision error:', err);
       return null;
@@ -137,10 +154,15 @@ export async function callAIVision(
 
   // Lần 1
   const first = await attempt(baseTokens, '');
-  if (first) return first;
+  if (first?.content && first.finishReason !== 'length') {
+    return first.content;
+  }
 
   // Lần 2 (retry): tăng maxTokens (×1.5) + nhấn mạnh trả lời ngắn gọn
   const second = await attempt(Math.round(baseTokens * 1.5), 'TRẢ LỜI NGẮN GỌN, KHÔNG PHÂN TÍCH DÀI.');
-  return second;
+  if (second?.content && second.finishReason !== 'length') {
+    return second.content;
+  }
+  return null;
 }
 

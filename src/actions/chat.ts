@@ -436,7 +436,7 @@ export async function chatAskAction(input: {
 
   const reply = await callAI(prompt, {
     system: buildSystem(role, user?.gender),
-    maxTokens: 400,
+    maxTokens: 800,
     temperature: 0.4,
   });
   if (!reply) {
@@ -462,7 +462,7 @@ export async function chatAskWithScreenshotAction(input: {
   const { role, addr, Addr, user, prompt } = prepared.data;
 
   const system = buildSystem(role, user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
-  const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 500, system });
+  const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 800, system });
   if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
   return { reply };
 }
