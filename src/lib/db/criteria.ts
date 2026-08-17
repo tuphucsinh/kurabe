@@ -2,10 +2,17 @@ import { supabase } from '../supabase';
 import { CriteriaGroup, Role } from '@/types';
 import { DatabaseError } from '../errors';
 import { Tables } from '@/types/database';
+import {
+  isCriterionAudience,
+  mapAudiencesToRoles,
+  decodeLegacyAppliesToRoles,
+} from '../criteria-applicability';
 
 type DbCriterionLevel = Tables<'criterion_levels'>;
+type DbCriterionAudience = Tables<'criterion_audiences'>;
 type DbCriterionRow = Tables<'criteria'> & {
   criterion_levels?: DbCriterionLevel[];
+  criterion_audiences?: Pick<DbCriterionAudience, 'audience'>[];
 };
 type DbCriteriaGroup = Tables<'criteria_groups'> & {
   criteria?: DbCriterionRow[];
@@ -32,6 +39,9 @@ export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
         sort_order,
         group_id,
         is_active,
+        criterion_audiences (
+          audience
+        ),
         criterion_levels (
           id,
           criterion_id,
@@ -74,6 +84,9 @@ export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | 
         sort_order,
         group_id,
         is_active,
+        criterion_audiences (
+          audience
+        ),
         criterion_levels (
           id,
           criterion_id,
@@ -108,13 +121,20 @@ export async function getCriteriaForRole(role: Role): Promise<CriteriaGroup[]> {
 }
 
 // Helpers
-function mapAppliesToRoles(appliesTo: string): Role[] {
-  switch (appliesTo) {
-    case 'leader': return ['Manager', 'Leader', 'SubLeader'];
-    case 'staff': return ['Employee'];
-    case 'both': 
-    default: return ['Manager', 'Leader', 'SubLeader', 'Employee'];
+function mapCriterionAppliesTo(c: DbCriterionRow): Role[] {
+  // If relation rows exist, map them canonically to Criterion.appliesTo
+  if (c.criterion_audiences && c.criterion_audiences.length > 0) {
+    const validAudiences = c.criterion_audiences
+      .map(a => a.audience)
+      .filter(isCriterionAudience);
+
+    if (validAudiences.length > 0) {
+      return mapAudiencesToRoles(validAudiences);
+    }
   }
+
+  // Fallback for pre-activation window before criterion_audiences rows are populated
+  return decodeLegacyAppliesToRoles(c.applies_to);
 }
 
 function mapGroupFromDb(dbGroup: DbCriteriaGroup): CriteriaGroup {
@@ -130,7 +150,7 @@ function mapGroupFromDb(dbGroup: DbCriteriaGroup): CriteriaGroup {
         code: c.code,
         name: c.name,
         description: c.description || undefined,
-        appliesTo: mapAppliesToRoles(c.applies_to || 'both'),
+        appliesTo: mapCriterionAppliesTo(c),
         weight: c.weight || 0,
         defaultLevelIndex: c.default_level_index ?? undefined,
         levels: (c.criterion_levels || [])

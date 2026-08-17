@@ -123,6 +123,32 @@ export type Database = {
           },
         ]
       }
+      criterion_audiences: {
+        Row: {
+          audience: string
+          created_at: string | null
+          criterion_id: string
+        }
+        Insert: {
+          audience: string
+          created_at?: string | null
+          criterion_id: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string | null
+          criterion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "criterion_audiences_criterion_id_fkey"
+            columns: ["criterion_id"]
+            isOneToOne: false
+            referencedRelation: "criteria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_periods: {
         Row: {
           closed_at: string | null
