@@ -4,7 +4,7 @@
 
 ## 1. Tổng quan
 
-KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy trình gồm nhiều vòng đánh giá tuần tự, mỗi vai trò có số vòng riêng. Hệ thống quản lý: nhân viên, nhóm, tiêu chuẩn đánh giá, thang điểm, kỳ đánh giá, kết quả xếp loại.
+KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy trình gồm nhiều vòng đánh giá tuần tự, mỗi chức vụ có số vòng riêng. Hệ thống quản lý: nhân viên, nhóm, tiêu chuẩn đánh giá, thang điểm, kỳ đánh giá, kết quả xếp loại.
 
 ## 2. Kiến trúc kỹ thuật
 
@@ -20,7 +20,7 @@ KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy tr�
 | **Manager** | Quản trị toàn hệ thống: nhân sự, nhóm, Leader, tiêu chuẩn, thang điểm, kỳ đánh giá; chấm vòng cuối; trả lại đánh giá; đóng kỳ; xem báo cáo toàn hệ thống; dùng AI nâng cao. |
 | **Leader** | Quản lý 1 nhóm: tự đánh giá, chấm vòng 2 cho nhân viên, trả lại vòng 1 cho SubLeader, thêm/sửa Nhân viên hoặc SubLeader trong nhóm mình, xem báo cáo phạm vi nhóm. KHÔNG xóa nhân viên, không đổi Leader. |
 | **SubLeader** | Phụ trách nhóm nhỏ: tự đánh giá, chấm vòng 1 cho nhân viên trong nhóm phụ trách, sửa lại khi bị trả về. KHÔNG thêm/sửa/xóa nhân viên. |
-| **Nhân viên (Employee)** | Chỉ xem kết quả đánh giá của mình sau khi chốt. KHÔNG tự chấm. |
+| **Nhân viên** | Chỉ xem kết quả đánh giá của mình sau khi chốt. KHÔNG tự chấm. |
 
 ## 4. Workflow đánh giá (theo vòng)
 
@@ -31,7 +31,7 @@ KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy tr�
 
 Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp**. Đã nộp là khóa, không tự sửa; muốn sửa phải bị cấp trên trả lại (kèm lý do bắt buộc).
 
-## 5. Quy trình thao tác từng vai trò
+## 5. Quy trình thao tác từng chức vụ
 
 ### Manager
 1. Đăng nhập; đặt mật khẩu lần đầu (Cài đặt → Tài khoản) nếu chưa có.
@@ -90,7 +90,7 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 - **Báo cáo**: radar năng lực, khoảng cách so mục tiêu, biến động điểm qua vòng, Top Performers, tóm tắt AI (Manager).
 - **Tiêu chuẩn**: nhóm tiêu chí A-F, thêm/sửa/xóa tiêu chí, mức điểm, mức mặc định.
 - **Cài đặt**: tab Tài khoản (đổi/đặt mật khẩu), Kỳ đánh giá (tạo/đóng), Thang điểm, Nhóm & Quyền, Nhật ký, Mục tiêu.
-- **Hướng dẫn**: hướng dẫn theo vai trò + sơ đồ quy trình 3 vòng + FAQ + in A4 (nút "In Hướng Dẫn A4" mở bản in theo role).
+- **Hướng dẫn**: hướng dẫn theo chức vụ + sơ đồ quy trình 3 vòng + FAQ + in A4 (nút "In Hướng Dẫn A4" mở bản in theo chức vụ).
 
 ## 8. Lỗi và trục trặc thường gặp
 
@@ -103,4 +103,4 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 - **Chưa có kỳ đánh giá**: tạo ở Cài đặt → Kỳ đánh giá; nhân viên chỉ đánh giá trong kỳ đang hoạt động.
 - **Mỗi nhóm mấy Leader**: đúng 1; đổi Leader ở Nhóm → Chỉnh sửa nhóm.
 
-> Lưu ý: quy tắc ứng xử của trợ lý (xưng hô theo giới tính, không emoji, phạm vi trả lời theo vai trò...) do hệ thống cấu hình riêng — không liệt kê trong tài liệu này.
+> Lưu ý: quy tắc ứng xử của trợ lý (xưng hô theo giới tính, không emoji, phạm vi trả lời theo chức vụ...) do hệ thống cấu hình riêng — không liệt kê trong tài liệu này.

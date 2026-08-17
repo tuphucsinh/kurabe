@@ -51,6 +51,12 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Mã role trong DB giữ nguyên; chỉ dùng nhãn tiếng Việt khi đưa vào ngữ cảnh/prompt Chat AI.
+function roleLabel(role?: string | null): string {
+  if (role === 'Employee') return 'Nhân viên';
+  return role || 'Không xác định';
+}
+
 function buildBaseRules(addr: string): string {
   return `Quy tắc:
 1. Gọi khách là "${addr}", tự xưng "em".
@@ -59,7 +65,8 @@ function buildBaseRules(addr: string): string {
 4. Trả lời ngắn gọn, đúng trọng tâm, tối đa ~120 từ.
 5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, ${addr} có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.
 6. Nếu cần xem ảnh màn hình để trả lời chính xác, CHỈ trả về đúng dòng: [CẦN_ẢNH] — không viết thêm bất kỳ chữ nào khác (hệ thống sẽ tự chụp màn hình và phân tích lại).
-7. Nếu ${addr} báo LỖI HỆ THỐNG mà em không hướng dẫn xử lý được (vd trang lỗi, không lưu được, hiển thị sai), CHỈ trả về đúng dòng: [CẦN_DEV] — không viết thêm gì khác.`;
+7. Nếu ${addr} báo LỖI HỆ THỐNG mà em không hướng dẫn xử lý được (vd trang lỗi, không lưu được, hiển thị sai), CHỈ trả về đúng dòng: [CẦN_DEV] — không viết thêm gì khác.
+8. Luôn gọi chức vụ này là "Nhân viên"; không dùng tên tiếng Anh cho chức vụ này.`;
 }
 
 function buildSystem(role: string, gender?: string | null): string {
@@ -71,12 +78,12 @@ function buildSystem(role: string, gender?: string | null): string {
     return `${knowledge}
 
 ${baseRules}
-8. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu. Nếu được hỏi so sánh nhiều kỳ: nói rõ em chỉ phân tích trong kỳ hiện tại (lịch sử đa kỳ chưa có).`;
+9. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu. Nếu được hỏi so sánh nhiều kỳ: nói rõ em chỉ phân tích trong kỳ hiện tại (lịch sử đa kỳ chưa có).`;
   }
   return `${knowledge}
 
 ${baseRules}
-8. ${Addr} là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
+9. ${Addr} là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
 }
 
 async function countRecent(userId: string): Promise<number> {
@@ -133,7 +140,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       const fullName = emp?.name || 'Không xác định';
       const shortName = fullName.split(/\s+/).pop() || fullName;
       const teamName = (emp?.teamId && teamMap.get(emp.teamId)) || 'Chung';
-      const role = ev.employeeRole || emp?.role || 'Employee';
+      const role = roleLabel(ev.employeeRole || emp?.role || 'Employee');
 
       const scoredRounds = (ev.rounds || [])
         .filter((r) => (r.totalScore || 0) > 0)
@@ -264,7 +271,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
         const who = empName ? `Nhân viên ${empName}` : `nhân viên`;
         const subWho = subFirst ? `SubLeader ${subFirst}` : 'SubLeader phụ trách';
         const leaderWho = leaderFirst ? `Leader ${leaderFirst}` : 'Leader';
-        return `\nNgữ cảnh phiếu đánh giá đang mở: ${who}; vai trò = ${ev.employeeRole || '?'}; trạng thái phiếu = ${ev.status || '?'}; vòng hiện tại = ${ev.currentRound ?? '?'}; vòng đã nộp = ${submitted.length} (${submitted.map((r) => 'V' + r.round).join(', ') || 'chưa có'}); người chấm hiện tại: ${subWho} (V1) → ${leaderWho} (V2) → Manager (V3).`;
+        return `\nNgữ cảnh phiếu đánh giá đang mở: ${who}; chức vụ = ${roleLabel(ev.employeeRole)}; trạng thái phiếu = ${ev.status || '?'}; vòng hiện tại = ${ev.currentRound ?? '?'}; vòng đã nộp = ${submitted.length} (${submitted.map((r) => 'V' + r.round).join(', ') || 'chưa có'}); người chấm hiện tại: ${subWho} (V1) → ${leaderWho} (V2) → Manager (V3).`;
       }
     }
     // /dashboard — CHỈ Manager (getDashboardData không scope)
@@ -300,7 +307,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
       const users = await getUsersAdmin(user);
       const byRole: Record<string, number> = {};
       for (const u of users) byRole[u.role] = (byRole[u.role] || 0) + 1;
-      const roleStr = Object.entries(byRole).map(([r, c]) => `${r}: ${c}`).join(', ');
+      const roleStr = Object.entries(byRole).map(([r, c]) => `${roleLabel(r)}: ${c}`).join(', ');
       return `\nNgữ cảnh trang Nhân viên: ${users.length} nhân viên đang hoạt động (${roleStr}).`;
     }
     // /teams — getUsers(requester) scope nhóm theo team
@@ -409,7 +416,7 @@ async function prepareChatContext(
       .join('\n');
     prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\n${prompt}`;
   }
-  prompt = `Thông tin người hỏi: vai trò = ${role}, trang đang mở = ${page}.${pageContext}\n\n${prompt}`;
+  prompt = `Thông tin người hỏi: chức vụ = ${roleLabel(role)}, trang đang mở = ${page}.${pageContext}\n\n${prompt}`;
 
   return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
 }
