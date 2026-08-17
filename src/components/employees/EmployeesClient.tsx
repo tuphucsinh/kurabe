@@ -17,6 +17,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import EmployeeModal from '@/components/modals/EmployeeModal';
+import { canHaveSubLeader, isManagementRole, roleLabel, ROLE_ORDER } from '@/lib/role-policy';
 
 interface EmployeeTableItem extends User {
   teamName: string;
@@ -26,14 +27,6 @@ interface EmployeeTableItem extends User {
   previousRoundScores: Array<{ round: number; score: number }>;
   hasFinalResult: boolean;
 }
-
-// Thứ tự chức vụ cho sort theo nhóm: Manager cuối (Toàn bộ bộ phận), Leader > SubLeader > Employee
-const ROLE_ORDER: Record<string, number> = {
-  Leader: 0,
-  SubLeader: 1,
-  Employee: 2,
-  Manager: 3,
-};
 
 export default function EmployeesClient() {
   const { user, currentPeriod } = useAuth();
@@ -279,7 +272,7 @@ export default function EmployeesClient() {
 
       const targetRole = data.role || editingEmployee?.role || 'Employee';
       if (targetRole === 'Manager' || targetRole === 'Leader') {
-        toast('Leader chỉ được thêm/sửa Employee hoặc SubLeader trong nhóm mình quản lý.', 'error');
+        toast('Leader chỉ được thêm/sửa Nhân viên, Công nhân hoặc SubLeader trong nhóm mình quản lý.', 'error');
         return;
       }
 
@@ -414,9 +407,10 @@ export default function EmployeesClient() {
         <span className={`text-xs font-medium ${
           item.role === 'Manager' ? 'text-rose-600' : 
           item.role === 'Leader' ? 'text-amber-600' : 
-          item.role === 'SubLeader' ? 'text-blue-600' : 'text-slate-500'
+          item.role === 'SubLeader' ? 'text-blue-600' :
+          item.role === 'Worker' ? 'text-emerald-600' : 'text-slate-500'
         }`}>
-          {item.role === 'Employee' ? 'Nhân viên' : item.role}
+          {roleLabel(item.role)}
         </span>
       ),
     },
@@ -426,7 +420,7 @@ export default function EmployeesClient() {
       sortable: true,
       hiddenOnMobile: true,
       render: (item) => {
-        if (item.role !== 'Employee') {
+        if (!canHaveSubLeader(item.role)) {
           return <span className="text-xs text-slate-400 font-medium">—</span>;
         }
         const subleader = item.subleaderId ? userMap.get(item.subleaderId) : null;
@@ -448,8 +442,8 @@ export default function EmployeesClient() {
       hiddenOnMobile: true,
       render: (item) => (
         <span className="text-xs text-slate-600">
-          {/* Chỉ quản lý (Manager/Leader/SubLeader) mới có chức danh — Nhân viên bỏ */}
-          {item.role !== 'Employee' ? (item.description || '—') : '—'}
+          {/* Chỉ quản lý (Manager/Leader/SubLeader) mới có chức danh — Nhân viên/Công nhân bỏ */}
+          {isManagementRole(item.role) ? (item.description || '—') : '—'}
         </span>
       ),
     },
@@ -618,6 +612,7 @@ export default function EmployeesClient() {
               <option value="Leader">Leader</option>
               <option value="SubLeader">SubLeader</option>
               <option value="Employee">Nhân viên</option>
+              <option value="Worker">Công nhân</option>
             </select>
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
@@ -713,7 +708,7 @@ export default function EmployeesClient() {
         employee={editingEmployee}
         onSave={handleSaveEmployee}
         restrictToTeamId={isLeader ? (user?.teamId || null) : null}
-        roleOptions={isLeader ? ['SubLeader', 'Employee'] : ['Manager', 'Leader', 'SubLeader', 'Employee']}
+        roleOptions={isLeader ? ['SubLeader', 'Employee', 'Worker'] : ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker']}
         allUsers={users}
         teams={teams}
       />

@@ -15,6 +15,7 @@ const roleLabels: Record<GuideRole, string> = {
   Leader: 'Leader',
   SubLeader: 'SubLeader',
   Employee: 'Nhân viên',
+  Worker: 'Công nhân',
 };
 
 const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> = {
@@ -35,9 +36,14 @@ const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> =
     { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
     { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
   ],
+  Worker: [
+    { round: 'Vòng 1', evaluator: 'SubLeader đánh giá' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
 };
 
-const validRoles: GuideRole[] = ['Manager', 'Leader', 'SubLeader', 'Employee'];
+const validRoles: GuideRole[] = ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'];
 
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -56,6 +62,8 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
       ? 'Leader'
       : sessionUser?.role === 'SubLeader'
       ? 'SubLeader'
+      : sessionUser?.role === 'Worker'
+      ? 'Worker'
       : 'Employee';
 
   const selectedRole: GuideRole = validRoles.includes(roleParam as GuideRole)
@@ -165,7 +173,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-[7.5pt] font-semibold">Vòng sau mở khi vòng trước đã nộp</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+              {validRoles.map((role) => (
                 <div key={`print-wf-${role}`} className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] p-2.5 break-inside-avoid">
                   <h3 className="text-[8.5pt] font-extrabold uppercase text-[#0f172a]">
                     {roleLabels[role]} — {roleWorkflows[role].length} vòng

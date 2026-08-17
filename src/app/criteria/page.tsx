@@ -27,6 +27,7 @@ import CriteriaGroupModal from '@/components/modals/CriteriaGroupModal';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { isIndividualRole } from '@/lib/role-policy';
 
 export default function CriteriaPage() {
   const router = useRouter();
@@ -35,8 +36,8 @@ export default function CriteriaPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user?.role === 'Employee') {
-      router.replace(`/evaluations/${user.id}`);
+    if (isIndividualRole(user?.role)) {
+      router.replace(`/evaluations/${user?.id}`);
     }
   }, [user, router]);
 

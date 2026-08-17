@@ -9,7 +9,7 @@ import { mapTeamFromDb } from '@/lib/db/teams';
  * Đọc danh sách teams bằng service_role (supabaseAdmin).
  * Phân quyền theo requester:
  * - Manager: xem tất cả teams
- * - Leader / SubLeader / Employee: xem team của mình (thiếu teamId → rỗng, chống bypass)
+ * - Leader / SubLeader / Employee / Worker: xem team của mình (thiếu teamId → rỗng, chống bypass)
  */
 export async function getTeamsAdmin(requester?: User | null): Promise<Team[]> {
   let query = supabaseAdmin
@@ -35,7 +35,7 @@ export async function getTeamsAdmin(requester?: User | null): Promise<Team[]> {
 
 /**
  * Đọc chi tiết team theo ID bằng service_role (supabaseAdmin).
- * Phân quyền: Manager xem mọi team; Leader/SubLeader/Employee chỉ xem team của mình.
+ * Phân quyền: Manager xem mọi team; Leader / SubLeader / Employee / Worker chỉ xem team của mình.
  */
 export async function getTeamByIdAdmin(
   id: string,

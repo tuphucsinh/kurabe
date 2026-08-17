@@ -40,6 +40,7 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { suggestCommentAction, draftResultMessageAction, saveResultMessageAction } from '@/actions/ai';
 import { usePeriods } from '@/hooks/use-db';
+import { isIndividualRole, roleLabel } from '@/lib/role-policy';
 
 interface EvaluationPageProps {
   params: Promise<{ id: string }>;
@@ -64,7 +65,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { data: users = [] } = useUsers(user);
   const { data: periods = [] } = usePeriods();
 
-  const isEmployeeOwner = user?.role === 'Employee' && evaluation?.employeeId === user.id;
+  const isEmployeeOwner = isIndividualRole(user?.role) && evaluation?.employeeId === user?.id;
   const [isSavingDraftMessage, setIsSavingDraftMessage] = useState(false);
 
   const [showDraftSavedToast, showDraftSaved] = useAutoResetToast();
@@ -162,15 +163,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   // Blocked UI
   if (accessState.mode === 'blocked') {
     const blockedMaxRound = getMaxEvaluationRound(employee.role);
-    const roleLabel: Record<string, string> = {
-      Manager: 'Manager',
-      Leader: 'Leader',
-      SubLeader: 'SubLeader',
-      Employee: 'Nhân viên',
-    };
     const blockedDetail =
       accessState.reason === 'NO_DRAFT'
-        ? `${employee.name} (${roleLabel[employee.role] || employee.role}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
+        ? `${employee.name} (${roleLabel(employee.role)}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
         : 'Bạn không có quyền xem hoặc thực hiện đánh giá này.';
     return (
       <AccessDenied

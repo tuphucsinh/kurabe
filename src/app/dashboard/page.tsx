@@ -10,6 +10,7 @@ import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
 import { resolveCurrentPeriod } from '@/lib/db/evaluations';
+import { isIndividualRole } from '@/lib/role-policy';
 import type { EvaluationPeriod } from '@/types';
 
 export default async function DashboardPage() {
@@ -17,8 +18,8 @@ export default async function DashboardPage() {
   if (!viewer) {
     redirect('/login');
   }
-  if (viewer?.role === 'Employee') {
-    redirect(`/evaluations/${viewer.id}`);
+  if (isIndividualRole(viewer?.role)) {
+    redirect(`/evaluations/${viewer?.id}`);
   }
 
   // Giải kỳ hiện tại: cookie → kỳ Active → kỳ mới nhất (helper chung — C5)

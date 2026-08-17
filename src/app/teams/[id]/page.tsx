@@ -23,6 +23,7 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Evaluation, User } from '@/types';
+import { isIndividualRole } from '@/lib/role-policy';
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   Approved: { label: 'Đã có KQĐG', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
@@ -48,6 +49,7 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   Leader: { label: 'Leader', className: 'bg-indigo-100 text-indigo-700' },
   SubLeader: { label: 'SubLeader', className: 'bg-teal-100 text-teal-700' },
   Manager: { label: 'Manager', className: 'bg-rose-100 text-rose-700' },
+  Worker: { label: 'Công nhân', className: 'bg-amber-100 text-amber-700' },
 };
 
 export default function TeamDetailPage() {
@@ -58,8 +60,8 @@ export default function TeamDetailPage() {
   const { user, currentPeriod } = useAuth();
 
   useEffect(() => {
-    if (user?.role === 'Employee') {
-      router.replace(`/evaluations/${user.id}`);
+    if (isIndividualRole(user?.role)) {
+      router.replace(`/evaluations/${user?.id}`);
     }
   }, [user, router]);
   const queryClient = useQueryClient();
@@ -605,7 +607,7 @@ export default function TeamDetailPage() {
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleSaveEmployee}
         restrictToTeamId={teamId}
-        roleOptions={['SubLeader', 'Employee']}
+        roleOptions={isManager ? ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'] : ['SubLeader', 'Employee', 'Worker']}
         allUsers={users}
         teams={teams}
       />

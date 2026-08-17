@@ -12,6 +12,7 @@ import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
 import { toClientError, ClientSafeError } from '@/lib/errors';
 import { parseRole } from '@/lib/parsers';
+import { canHaveSubLeader } from '@/lib/role-policy';
 
 type DbUserInsert = Database['public']['Tables']['users']['Insert'];
 
@@ -189,9 +190,9 @@ export async function upsertUserAction(
     }
     const leaderTeamId = auth.user.teamId;
 
-    // Chặn tạo/sửa Manager, Leader — Leader chỉ quản Employee/SubLeader
-    if (user.role && user.role !== 'Employee' && user.role !== 'SubLeader') {
-      return { success: false, error: 'Leader chỉ được tạo hoặc sửa Nhân viên/SubLeader trong nhóm của mình.' };
+    // Chặn tạo/sửa Manager, Leader — Leader chỉ quản Employee/SubLeader/Worker
+    if (user.role && user.role !== 'Employee' && user.role !== 'SubLeader' && user.role !== 'Worker') {
+      return { success: false, error: 'Leader chỉ được tạo hoặc sửa Nhân viên/Công nhân/SubLeader trong nhóm của mình.' };
     }
 
     // ÉP teamId = team của Leader (chặn gán nhóm khác / null-strip khi sửa)
@@ -210,7 +211,7 @@ export async function upsertUserAction(
           return { success: false, error: 'Bạn chỉ được sửa nhân viên trong nhóm của mình.' };
         }
         // (b) Chặn hạ chức Manager/Leader
-        if (existingUser.role !== 'Employee' && existingUser.role !== 'SubLeader') {
+        if (existingUser.role !== 'Employee' && existingUser.role !== 'SubLeader' && existingUser.role !== 'Worker') {
           return { success: false, error: 'Bạn không được sửa đổi Manager/Leader.' };
         }
         // (c) payload.role rỗng khi sửa → giữ nguyên role cũ (chặn hạ SubLeader→Employee vô tình)
@@ -255,7 +256,7 @@ export async function upsertUserAction(
       team_id: user.teamId || null,
       join_date: user.joinDate || null,
       avatar_url: user.avatar || null,
-      subleader_id: role === 'Employee' ? (user.subleaderId || null) : null,
+      subleader_id: canHaveSubLeader(role) ? (user.subleaderId || null) : null,
       description: user.description || null,
       is_active: true,
     };
@@ -339,7 +340,7 @@ export async function upsertUsersAction(
         team_id: user.teamId || null,
         join_date: user.joinDate || null,
         avatar_url: user.avatar || null,
-        subleader_id: role === 'Employee' ? (user.subleaderId || null) : null,
+        subleader_id: canHaveSubLeader(role) ? (user.subleaderId || null) : null,
         description: user.description || null,
         is_active: true,
       };

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
+import { isIndividualRole, roleLabel } from '@/lib/role-policy';
 
 import PeriodSelector from './PeriodSelector';
 
@@ -29,7 +30,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const mainLinks = user?.role === 'Employee'
+  const mainLinks = isIndividualRole(user?.role)
     ? [
         { href: `/evaluations/${user?.id || ''}`, label: 'Phiếu đánh giá của tôi', icon: FileText },
       ]
@@ -210,7 +211,7 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-white/50">{user?.role || 'Manager'}</p>
+            <p className="text-xs text-white/50">{roleLabel(user?.role) || 'Manager'}</p>
           </div>
         </div>
       </div>

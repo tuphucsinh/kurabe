@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsers, useTeams } from '@/hooks/use-db';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { canHaveSubLeader } from '@/lib/role-policy';
 
 export default function TeamsRolesTab() {
   const { user } = useAuth();
@@ -18,11 +19,11 @@ export default function TeamsRolesTab() {
     return users.filter((u) => !u.teamId).length;
   }, [users]);
 
-  // Cảnh báo NV (role Employee) chưa được gán SubLeader (subleaderId == null)
+  // Cảnh báo NV/Công nhân (role Employee/Worker) chưa được gán SubLeader (subleaderId == null)
   const unassignedSubLeaderEmployees = useMemo(() => {
     return users.filter(
       (u) =>
-        u.role === 'Employee' &&
+        canHaveSubLeader(u.role) &&
         (!u.subleaderId || u.subleaderId.trim() === '')
     );
   }, [users]);

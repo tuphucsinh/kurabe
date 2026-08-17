@@ -18,6 +18,7 @@ const roleLabels: Record<GuideRole, string> = {
   Leader: 'Leader',
   SubLeader: 'SubLeader',
   Employee: 'Nhân viên',
+  Worker: 'Công nhân',
 };
 
 const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> = {
@@ -38,7 +39,14 @@ const roleWorkflows: Record<GuideRole, { round: string; evaluator: string }[]> =
     { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
     { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
   ],
+  Worker: [
+    { round: 'Vòng 1', evaluator: 'SubLeader đánh giá' },
+    { round: 'Vòng 2', evaluator: 'Leader đánh giá' },
+    { round: 'Vòng 3', evaluator: 'Manager đánh giá' },
+  ],
 };
+
+const ALL_GUIDE_ROLES: GuideRole[] = ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'];
 
 export default function SupportPage() {
   const { user, isManager } = useAuth();
@@ -50,6 +58,8 @@ export default function SupportPage() {
       ? 'Leader'
       : user?.role === 'SubLeader'
       ? 'SubLeader'
+      : user?.role === 'Worker'
+      ? 'Worker'
       : 'Employee';
 
   // Trang chỉ render sau khi auth load (AppLayout guard) → currentRole đúng ngay lần render đầu.
@@ -119,7 +129,7 @@ export default function SupportPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+              {ALL_GUIDE_ROLES.map((role) => (
                 <div key={role} className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4">
                   <h3 className="text-sm font-black uppercase tracking-wide text-slate-900">
                     {roleLabels[role]} — {roleWorkflows[role].length} vòng
@@ -159,7 +169,7 @@ export default function SupportPage() {
               </div>
               {isManager ? (
                 <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white rounded-2xl border-2 border-cyan-200 shadow-sm">
-                  {(['Manager', 'Leader', 'SubLeader', 'Employee'] as GuideRole[]).map((role) => (
+                  {ALL_GUIDE_ROLES.map((role) => (
                     <button
                       key={role}
                       type="button"

@@ -4,12 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { User } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
+import { isIndividualRole } from '@/lib/role-policy';
 
 /**
  * Đọc danh sách users bằng service_role (supabaseAdmin).
  * Phân quyền theo requester:
  * - Manager: xem tất cả
- * - Employee: xem chính mình
+ * - Employee / Worker: xem chính mình
  * - Leader / SubLeader: xem thành viên trong team của mình
  */
 export async function getUsersAdmin(
@@ -22,7 +23,7 @@ export async function getUsersAdmin(
     .eq('is_active', true);
 
   if (requester && requester.role !== 'Manager') {
-    if (requester.role === 'Employee') {
+    if (isIndividualRole(requester.role)) {
       query = query.eq('id', requester.id);
     } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
       if (!requester.teamId) {
@@ -59,7 +60,7 @@ export async function getUsersAdmin(
 
 /**
  * Đọc chi tiết user theo ID bằng service_role (supabaseAdmin).
- * Phân quyền: Manager xem mọi user; Employee chỉ xem chính mình;
+ * Phân quyền: Manager xem mọi user; Employee / Worker chỉ xem chính mình;
  * Leader/SubLeader chỉ xem user cùng team (hoặc chính mình).
  */
 export async function getUserByIdAdmin(
@@ -71,7 +72,7 @@ export async function getUserByIdAdmin(
 
   if (requester.role !== 'Manager') {
     const sameUser = id === requester.id;
-    const sameTeam = !!requester.teamId && (await isUserInTeam(id, requester.teamId!));
+    const sameTeam = !isIndividualRole(requester.role) && !!requester.teamId && (await isUserInTeam(id, requester.teamId!));
     if (!sameUser && !sameTeam) {
       return null;
     }
@@ -106,7 +107,7 @@ async function isUserInTeam(userId: string, teamId: string): Promise<boolean> {
 
 /**
  * Đọc danh sách users thuộc một Team bằng service_role (supabaseAdmin).
- * Phân quyền: Manager xem mọi team; Leader/SubLeader/Employee chỉ xem team của mình.
+ * Phân quyền: Manager xem mọi team; Leader/SubLeader xem team của mình; Employee/Worker chỉ xem chính mình.
  */
 export async function getUsersByTeamAdmin(
   teamId: string,
@@ -115,7 +116,7 @@ export async function getUsersByTeamAdmin(
   if (!teamId) return [];
   if (!requester) return [];
 
-  if (requester.role !== 'Manager' && requester.teamId !== teamId) {
+  if (requester.role !== 'Manager' && (isIndividualRole(requester.role) || requester.teamId !== teamId)) {
     return [];
   }
 

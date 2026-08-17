@@ -5,6 +5,7 @@ import { getPeriodSummary } from '@/actions/ai-summary';
 import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getSessionUser } from '@/lib/auth';
 import { resolveCurrentPeriod } from '@/lib/db/evaluations';
+import { isIndividualRole } from '@/lib/role-policy';
 import PageHeader from '@/components/layout/PageHeader';
 import { Users, Target, TrendingUp, Clock } from 'lucide-react';
 import ReportFilters from '@/components/reports/ReportFilters';
@@ -18,11 +19,11 @@ import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
 import TopPerformers from '@/components/reports/TopPerformers';
 
 export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
-  // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39). Employee chuyển về phiếu đánh giá.
+  // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39). Employee/Worker chuyển về phiếu đánh giá.
   const viewer = await getSessionUser();
   if (!viewer || (viewer.role !== 'Manager' && viewer.role !== 'Leader')) {
-    if (viewer?.role === 'Employee') {
-      redirect(`/evaluations/${viewer.id}`);
+    if (isIndividualRole(viewer?.role)) {
+      redirect(`/evaluations/${viewer?.id}`);
     }
     redirect('/dashboard');
   }

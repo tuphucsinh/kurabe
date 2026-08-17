@@ -6,6 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, Home, Users, Layout, Settings, Bell, FileText, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import { isIndividualRole } from '@/lib/role-policy';
 
 import PageTransition from '@/components/layout/PageTransition';
 import ChatWidget from '@/components/chat/ChatWidget';
@@ -22,13 +23,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!user && pathname !== '/login') {
       router.push('/login');
     } else if (user && pathname === '/login') {
-      if (user.role === 'Employee') {
+      if (isIndividualRole(user.role)) {
         router.push(`/evaluations/${user.id}`);
       } else {
         router.push('/dashboard');
       }
     } else if (user && pathname === '/') {
-      if (user.role === 'Employee') {
+      if (isIndividualRole(user.role)) {
         router.push(`/evaluations/${user.id}`);
       } else {
         router.push('/dashboard');
@@ -107,9 +108,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Floating Navigation */}
       <nav className="md:hidden fixed bottom-6 left-6 right-6 h-14 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
-        {user?.role === 'Employee' ? (
+        {isIndividualRole(user?.role) ? (
           <>
-            <BottomNavItem href={`/evaluations/${user.id}`} icon={<FileText size={24} />} ariaLabel="Phiếu đánh giá" active={pathname.startsWith('/evaluations')} />
+            <BottomNavItem href={`/evaluations/${user?.id}`} icon={<FileText size={24} />} ariaLabel="Phiếu đánh giá" active={pathname.startsWith('/evaluations')} />
             <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
             <BottomNavItem href="/support" icon={<HelpCircle size={24} />} ariaLabel="Hướng dẫn" active={pathname === '/support'} />
           </>

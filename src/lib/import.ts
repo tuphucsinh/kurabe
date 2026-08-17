@@ -1,4 +1,5 @@
 import { User, Role, Team } from '@/types';
+import { ALL_ROLES } from '@/lib/role-policy';
 
 export interface ImportResult {
   successCount: number;
@@ -7,7 +8,22 @@ export interface ImportResult {
   data: Partial<User>[];
 }
 
-const VALID_ROLES: Role[] = ['Manager', 'Leader', 'SubLeader', 'Employee'];
+const VALID_ROLES: Role[] = ALL_ROLES;
+
+const ROLE_ALIAS_MAP: Record<string, Role> = {
+  'manager': 'Manager',
+  'quản lý': 'Manager',
+  'quan ly': 'Manager',
+  'leader': 'Leader',
+  'subleader': 'SubLeader',
+  'sub leader': 'SubLeader',
+  'employee': 'Employee',
+  'nhân viên': 'Employee',
+  'nhan vien': 'Employee',
+  'worker': 'Worker',
+  'công nhân': 'Worker',
+  'cong nhan': 'Worker',
+};
 
 export async function parseEmployeeExcel(
   file: File,
@@ -52,7 +68,9 @@ export async function parseEmployeeExcel(
       
       let role: Role = 'Employee';
       if (roleStr) {
-        const foundRole = VALID_ROLES.find(r => r.toLowerCase() === roleStr.toLowerCase());
+        const normalized = roleStr.toLowerCase();
+        const aliasedRole = ROLE_ALIAS_MAP[normalized];
+        const foundRole = aliasedRole || VALID_ROLES.find(r => r.toLowerCase() === normalized);
         if (foundRole) {
           role = foundRole;
         } else {
@@ -121,8 +139,9 @@ export async function downloadSampleExcel(teams: Team[]) {
   const data = [
     ['Mã NV', 'Họ tên', 'Chức vụ', 'Nhóm', 'Ngày vào làm'],
     ['NV001', 'Nguyễn Văn A', 'Employee', teamNames[0] || '', '2024-01-15'],
-    ['NV002', 'Trần Thị B', 'SubLeader', teamNames[0] || '', '2023-10-01'],
-    ['NV003', 'Lê Văn C', 'Leader', teamNames[1] || teamNames[0] || '', '2022-05-20'],
+    ['NV002', 'Trần Thị B', 'Worker', teamNames[0] || '', '2024-02-01'],
+    ['NV003', 'Lê Văn C', 'SubLeader', teamNames[0] || '', '2023-10-01'],
+    ['NV004', 'Phạm Văn D', 'Leader', teamNames[1] || teamNames[0] || '', '2022-05-20'],
   ];
 
   const wb = XLSX.utils.book_new();
@@ -144,7 +163,7 @@ export async function downloadSampleExcel(teams: Team[]) {
     ['Trường dữ liệu', 'Hướng dẫn nhập liệu'],
     ['Mã NV', 'Mã nhân viên duy nhất, dùng để nhận dạng khi import cập nhật.'],
     ['Họ tên', 'Tên đầy đủ của nhân viên.'],
-    ['Chức vụ', `Chọn đúng 1 trong các giá trị: ${VALID_ROLES.join(', ')}`],
+    ['Chức vụ', `Chọn đúng 1 trong các giá trị: ${VALID_ROLES.join(', ')} (hoặc Công nhân, Nhân viên)`],
     ['Nhóm', `Nhập đúng tên nhóm. Các nhóm hiện có: ${teamNames.join(', ')}. Manager không cần nhóm.`],
     ['Ngày vào làm', 'Định dạng chuẩn: YYYY-MM-DD (VD: 2024-01-15)']
   ];

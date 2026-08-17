@@ -5,7 +5,7 @@ export type GuideStep = {
   annotate: { x: number; y: number; w: number; h: number; label: string }[] | null; // vùng khoanh trên ảnh; để null ban đầu
 };
 
-export type GuideRole = 'Manager' | 'Leader' | 'SubLeader' | 'Employee';
+export type GuideRole = 'Manager' | 'Leader' | 'SubLeader' | 'Employee' | 'Worker';
 
 export type GuideSection = {
   role: GuideRole;
@@ -315,6 +315,51 @@ export const guideContent: Record<GuideRole, GuideSection> = {
       {
         title: 'Hiểu quy trình 3 vòng đánh giá',
         body: 'Bạn được đánh giá qua 3 vòng tuần tự: Vòng 1 SubLeader chấm, Vòng 2 Leader chấm, Vòng 3 Manager chốt. Vòng sau chỉ mở khi vòng trước đã nộp. Bạn không tự chấm điểm cho mình (trừ khi bạn là SubLeader/Leader/Manager).',
+        screenshotPath: null,
+        annotate: null,
+      },
+    ],
+    faq: [
+      {
+        question: 'Khi nào tôi xem được kết quả?',
+        answer: 'Sau khi Manager chốt vòng cuối, bạn vào phiếu của mình để xem xếp loại và tổng điểm.',
+      },
+      {
+        question: 'Tôi có thể sửa đánh giá của mình không?',
+        answer: 'Bạn không tự chấm; đánh giá do SubLeader/Leader/Manager thực hiện. Bạn chỉ xem kết quả.',
+      },
+      {
+        question: 'Vì sao tôi không mở được hồ sơ của người khác?',
+        answer: 'Mỗi người chỉ xem được dữ liệu trong phạm vi của mình. Mở hồ sơ cấp trên hoặc người ngoài phạm vi sẽ bị chặn.',
+      },
+    ],
+  },
+  Worker: {
+    role: 'Worker',
+    intro:
+      'Bạn là công nhân: tự theo dõi quá trình đánh giá của mình và xem kết quả cuối kỳ. Làm theo thứ tự các bước dưới đây.',
+    steps: [
+      {
+        title: 'Đăng nhập vào hệ thống',
+        body: 'Mở trình duyệt, vào địa chỉ app (ví dụ lykiv.vercel.app hoặc địa chỉ công ty cung cấp). Nhập mã nhân viên và mật khẩu, bấm Đăng nhập. Nếu chưa có mật khẩu, xem bước 2.',
+        screenshotPath: null,
+        annotate: null,
+      },
+      {
+        title: 'Đặt mật khẩu lần đầu (nếu chưa có)',
+        body: 'Vào Cài đặt ở sidebar, tab Tài khoản. Nếu hiện nút Đặt mật khẩu thì bấm vào, nhập mật khẩu mới (tối thiểu 6 ký tự) và xác nhận. Đã có mật khẩu thì nhập mật khẩu cũ rồi bấm Đổi mật khẩu.',
+        screenshotPath: null,
+        annotate: null,
+      },
+      {
+        title: 'Xem kết quả đánh giá của mình',
+        body: 'Sau khi đăng nhập, hệ thống đưa bạn thẳng đến phiếu đánh giá của mình. Khi Manager đã chốt và gửi thông báo, phiếu hiện card kết quả nổi bật: xếp loại, thông điệp từ Ban Quản lý (giải thích điểm mạnh, điều cần cải thiện, động viên) và ý nghĩa từng xếp loại. Dưới phiếu có mục "Kết quả các kỳ trước" để xem lại lịch sử đánh giá của bạn. Bạn chỉ có 3 trang: Phiếu đánh giá, Cài đặt (đổi mật khẩu) và Hướng dẫn.',
+        screenshotPath: null,
+        annotate: null,
+      },
+      {
+        title: 'Hiểu quy trình 3 vòng đánh giá',
+        body: 'Công nhân được đánh giá qua 3 vòng tuần tự: Vòng 1 SubLeader chấm, Vòng 2 Leader chấm, Vòng 3 Manager chốt. Vòng sau chỉ mở khi vòng trước đã nộp. Bạn không tự chấm điểm cho mình.',
         screenshotPath: null,
         annotate: null,
       },

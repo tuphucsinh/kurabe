@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
+import { isIndividualRole } from '@/lib/role-policy';
 
 export default async function Home() {
   const user = await getSessionUser();
-  if (user?.role === 'Employee') {
-    redirect(`/evaluations/${user.id}`);
+  if (isIndividualRole(user?.role)) {
+    redirect(`/evaluations/${user?.id}`);
   }
   redirect('/dashboard');
 }

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { X, User as UserIcon, Shield, FileText, Users, UserCheck, Hash, Calendar } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { User, Role } from '@/types';
+import { ALL_ROLES, canHaveSubLeader, roleLabel } from '@/lib/role-policy';
 
 export interface EmployeeModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ function EmployeeModalContent({
   roleOptions,
 }: EmployeeModalContentProps) {
   const { toast } = useToast();
-  const allowedRoles: Role[] = roleOptions && roleOptions.length > 0 ? roleOptions : ['Manager', 'Leader', 'SubLeader', 'Employee'];
+  const allowedRoles: Role[] = roleOptions && roleOptions.length > 0 ? roleOptions : ALL_ROLES;
   const defaultRole = employee?.role && allowedRoles.includes(employee.role) ? employee.role : (allowedRoles[0] || 'Employee');
   const initialTeamId = employee?.teamId || restrictToTeamId || '';
 
@@ -91,7 +92,7 @@ function EmployeeModalContent({
       ...prev,
       role: newRole,
       teamId: newRole === 'Manager' ? undefined : prev.teamId,
-      subleaderId: newRole === 'Employee' ? prev.subleaderId : '',
+      subleaderId: canHaveSubLeader(newRole) ? prev.subleaderId : '',
     }));
   };
 
@@ -120,7 +121,7 @@ function EmployeeModalContent({
     if (finalData.role === 'Manager') {
       finalData.teamId = undefined;
       finalData.subleaderId = null;
-    } else if (finalData.role !== 'Employee') {
+    } else if (!canHaveSubLeader(finalData.role)) {
       finalData.subleaderId = null;
     } else if (finalData.subleaderId) {
       // Validate client-side: subleader must belong to the same team
@@ -202,7 +203,7 @@ function EmployeeModalContent({
               >
                 {allowedRoles.map((role) => (
                   <option key={role} value={role}>
-                    {role === 'Employee' ? 'Nhân viên' : role}
+                    {roleLabel(role)}
                   </option>
                 ))}
               </select>
@@ -225,7 +226,7 @@ function EmployeeModalContent({
 
           {formData.role !== 'Manager' && (
             <div className="grid grid-cols-2 gap-4">
-              <div className={`space-y-2 ${formData.role !== 'Employee' ? 'col-span-2' : ''}`}>
+              <div className={`space-y-2 ${!canHaveSubLeader(formData.role) ? 'col-span-2' : ''}`}>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                   <Users size={14} />
                   Nhóm
@@ -245,7 +246,7 @@ function EmployeeModalContent({
                 </select>
               </div>
 
-              {formData.role === 'Employee' && (
+              {canHaveSubLeader(formData.role) && (
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                     <UserCheck size={14} />

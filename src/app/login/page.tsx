@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock, User as UserIcon } from 'lucide-react';
+import { isIndividualRole } from '@/lib/role-policy';
 
 export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState('');
@@ -17,7 +18,7 @@ export default function LoginPage() {
     try {
       const user = await login(employeeCode, password);
       // Redirect thẳng theo role (loginAction đã trả user) — khỏi vòng '/' → middleware → /dashboard (bớt 1-2 hop 307 trên Vercel)
-      window.location.href = user.role === 'Employee' ? `/evaluations/${user.id}` : '/dashboard';
+      window.location.href = isIndividualRole(user.role) ? `/evaluations/${user.id}` : '/dashboard';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }
