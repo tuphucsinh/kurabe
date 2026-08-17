@@ -7,7 +7,6 @@ import {
   getEvaluationHistoryAction, 
   getGradeBandsAction 
 } from '@/actions/read';
-import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
 import { getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 
 export interface EvaluationState {
@@ -88,8 +87,7 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
         if (accessState.mode === 'blocked') return;
 
         // Fetch criteria from DB
-        const roleForCriteria = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
-        const dbCriteria = await getCriteriaForRoleAction(roleForCriteria);
+        const dbCriteria = await getCriteriaForRoleAction(employee.role);
         setCriteriaGroups(dbCriteria);
 
         // Identify which round to show/edit
