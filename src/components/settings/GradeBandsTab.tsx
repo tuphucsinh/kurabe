@@ -10,17 +10,18 @@ import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate'
 import { saveGradeBands } from '@/actions/grade-bands';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-const GROUP_LABEL: Record<'leader' | 'staff', string> = {
+const GROUP_LABEL: Record<'leader' | 'staff' | 'worker', string> = {
   leader: 'Quản lý (Leader/Manager/SubLeader)',
   staff: 'Nhân viên (Employee)',
+  worker: 'Công nhân (Worker)',
 };
 
 type Row = GradeBandsInput;
 
 function buildRows(bands: GradeBands): Row[] {
   const rows: Row[] = [];
-  for (const group of ['leader', 'staff'] as const) {
-    for (const band of bands[group]) {
+  for (const group of ['leader', 'staff', 'worker'] as const) {
+    for (const band of bands[group] || []) {
       rows.push({
         roleGroup: group,
         grade: band.grade,
@@ -93,7 +94,11 @@ export default function GradeBandsTab() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+          <Skeleton variant="text" width={220} height={20} />
+          <Skeleton variant="rectangular" height={240} className="rounded-xl" />
+        </div>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
           <Skeleton variant="text" width={220} height={20} />
           <Skeleton variant="rectangular" height={240} className="rounded-xl" />
@@ -106,7 +111,7 @@ export default function GradeBandsTab() {
     );
   }
 
-  const renderGroup = (group: 'leader' | 'staff') => {
+  const renderGroup = (group: 'leader' | 'staff' | 'worker') => {
     const groupRows = rows.filter((r) => r.roleGroup === group);
     return (
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -117,7 +122,7 @@ export default function GradeBandsTab() {
         <div className="space-y-3">
           {groupRows.map((row) => (
             <div
-              key={row.grade}
+              key={`${row.roleGroup}-${row.grade}`}
               className="flex items-center gap-3 p-3 rounded-xl bg-slate-50"
             >
               <span
@@ -160,9 +165,10 @@ export default function GradeBandsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {renderGroup('leader')}
         {renderGroup('staff')}
+        {renderGroup('worker')}
       </div>
 
       {error && (

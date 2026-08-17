@@ -1,6 +1,7 @@
-export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee';
+export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee' | 'Worker';
 
 export type AppliesTo = 'leader' | 'staff' | 'both';
+export type GradeBandRoleGroup = 'leader' | 'staff' | 'worker';
 export type Grade = 'S' | 'A' | 'AB' | 'B' | 'C' | 'D' | 'Pending';
 export type PeriodStatus = 'Active' | 'Closed';
 export type EvalStatus = 'NotStarted' | 'Draft' | 'Submitted' | 'Reviewed' | 'Approved';

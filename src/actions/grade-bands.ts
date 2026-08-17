@@ -19,7 +19,7 @@ export async function saveGradeBands(
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    if (!bands || bands.length !== 12) {
+    if (!bands || bands.length !== 18) {
       return { success: false, error: 'Dữ liệu thang điểm không đầy đủ.' };
     }
 
@@ -28,7 +28,7 @@ export async function saveGradeBands(
       return { success: false, error: validationError };
     }
 
-    // Upsert từng dòng (bảng nhỏ — 12 dòng, an toàn)
+    // Upsert từng dòng (bảng nhỏ — 18 dòng, an toàn)
     for (const band of bands) {
       const { error } = await supabaseAdmin
         .from('grade_bands')

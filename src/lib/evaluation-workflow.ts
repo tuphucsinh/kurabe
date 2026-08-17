@@ -32,6 +32,11 @@ const EVALUATION_FLOWS: Record<Role, EvaluationFlowStep[]> = {
     { round: 2, evaluator: 'Leader' },
     { round: 3, evaluator: 'Manager' },
   ],
+  Worker: [
+    { round: 1, evaluator: 'SubLeader' },
+    { round: 2, evaluator: 'Leader' },
+    { round: 3, evaluator: 'Manager' },
+  ],
 };
 
 export const ACTIVE_STEP_STATUSES: Record<RoundNumber, EvalStatus> = {

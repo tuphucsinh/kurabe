@@ -13,6 +13,7 @@ export type GradeBand = {
 export type GradeBands = {
   leader: GradeBand[];
   staff: GradeBand[];
+  worker: GradeBand[];
 };
 
 // Fallback hardcode — NGUỒN DUY NHẤT của thang mặc định (D4: gộp từ src/data/criteria.ts).
@@ -27,6 +28,14 @@ const HARDCODED_BANDS: GradeBands = {
     { grade: 'D', minScore: null, maxScore: 69 },
   ],
   staff: [
+    { grade: 'S', minScore: 155, maxScore: null },
+    { grade: 'A', minScore: 145, maxScore: 154 },
+    { grade: 'AB', minScore: 115, maxScore: 144 },
+    { grade: 'B', minScore: 90, maxScore: 114 },
+    { grade: 'C', minScore: 60, maxScore: 89 },
+    { grade: 'D', minScore: null, maxScore: 59 },
+  ],
+  worker: [
     { grade: 'S', minScore: 155, maxScore: null },
     { grade: 'A', minScore: 145, maxScore: 154 },
     { grade: 'AB', minScore: 115, maxScore: 144 },
@@ -63,18 +72,21 @@ export async function loadGradeBandsFromDb(
       return cachedBands ?? HARDCODED_BANDS;
     }
 
-    const bands: GradeBands = { leader: [], staff: [] };
+    const bands: GradeBands = { leader: [], staff: [], worker: [] };
     for (const row of data) {
-      const group = row.role_group === 'staff' ? 'staff' : 'leader';
-      bands[group].push({
-        grade: parseGrade(row.grade),
-        minScore: row.min_score,
-        maxScore: row.max_score,
-      });
+      if (row.role_group === 'leader' || row.role_group === 'staff' || row.role_group === 'worker') {
+        bands[row.role_group].push({
+          grade: parseGrade(row.grade),
+          minScore: row.min_score,
+          maxScore: row.max_score,
+        });
+      } else {
+        console.warn(`[grade-bands] Bỏ qua role_group không hợp lệ từ DB: ${JSON.stringify(row.role_group)}`);
+      }
     }
 
     // Validate đủ 6 grade/group — thiếu thì fallback group đó (tránh mất grade khi seed lỗi)
-    for (const group of ['leader', 'staff'] as const) {
+    for (const group of ['leader', 'staff', 'worker'] as const) {
       if (bands[group].length !== 6) {
         bands[group] = HARDCODED_BANDS[group];
       }

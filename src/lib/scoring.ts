@@ -70,7 +70,7 @@ export function getGradeFromScore(
 ): Grade {
   const isLeader = LEADER_ROLES.includes(role);
   const bands = bandsOverride ?? getGradeBandsSync();
-  const targetGrading = isLeader ? bands.leader : bands.staff;
+  const targetGrading = role === 'Worker' ? bands.worker : isLeader ? bands.leader : bands.staff;
 
   // Match qua pure helper — ngữ nghĩa null duy nhất: minScore null = band thấp nhất catch-all
   const result = matchGradeBand(targetGrading, totalScore);

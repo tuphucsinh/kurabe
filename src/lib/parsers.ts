@@ -1,6 +1,6 @@
 import { Role, Grade, EvalStatus, RoundNumber } from '@/types';
 
-const ROLES = ['Manager', 'Leader', 'SubLeader', 'Employee'] as const;
+const ROLES = ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'] as const;
 const GRADES = ['S', 'A', 'AB', 'B', 'C', 'D', 'Pending'] as const;
 const EVAL_STATUSES = ['NotStarted', 'Draft', 'Submitted', 'Reviewed', 'Approved'] as const;
 

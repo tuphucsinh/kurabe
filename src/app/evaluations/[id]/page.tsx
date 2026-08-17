@@ -46,6 +46,7 @@ interface EvaluationPageProps {
 }
 
 const ROLE_RANK: Record<User['role'], number> = {
+  Worker: 1,
   Employee: 1,
   SubLeader: 2,
   Leader: 3,
