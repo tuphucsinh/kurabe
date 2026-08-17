@@ -1,6 +1,5 @@
 import React from 'react';
 import { getDashboardData } from '@/actions/dashboard';
-import { PeriodSummary } from '@/components/dashboard/PeriodSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Users, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
 import PendingReviews from '@/components/dashboard/PendingReviews';
@@ -15,6 +14,9 @@ import type { EvaluationPeriod } from '@/types';
 
 export default async function DashboardPage() {
   const viewer = await getSessionUser();
+  if (!viewer) {
+    redirect('/login');
+  }
   if (viewer?.role === 'Employee') {
     redirect(`/evaluations/${viewer.id}`);
   }
@@ -106,8 +108,8 @@ export default async function DashboardPage() {
 
           {/* Grid: PendingReviews | Anomaly */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PendingReviews evaluations={dashboardData.rawEvaluations} />
-            <AnomalyAlertCard evaluations={dashboardData.rawEvaluations} />
+            <PendingReviews evaluations={dashboardData.rawEvaluations} userNameById={dashboardData.userNameById} />
+            <AnomalyAlertCard evaluations={dashboardData.rawEvaluations} userNameById={dashboardData.userNameById} isManager={viewer?.role === 'Manager'} />
           </div>
 
           {/* Grid: Radar | Recent */}

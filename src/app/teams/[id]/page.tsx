@@ -65,7 +65,7 @@ export default function TeamDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
 
   const isManager = user?.role === 'Manager';
   const isLeaderOwnTeam = user?.role === 'Leader' && user.teamId === teamId;
@@ -151,7 +151,6 @@ export default function TeamDetailPage() {
 
   const completedCount = memberRows.filter((r) => r.status === 'Approved').length;
   const pendingCount = memberRows.length - completedCount;
-  const progress = memberRows.length > 0 ? Math.round((completedCount / memberRows.length) * 100) : 0;
 
   const handleSaveEmployee = async (employee: Partial<User>) => {
     setIsSaving(true);
@@ -206,7 +205,7 @@ export default function TeamDetailPage() {
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Back + Header */}
       <div>
-        <Link href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-outline hover:text-primary transition-colors mb-4">
+        <Link prefetch={false} href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-outline hover:text-primary transition-colors mb-4">
           <ArrowLeft size={16} />
           Quay lại danh sách nhóm
         </Link>
@@ -287,7 +286,7 @@ export default function TeamDetailPage() {
                       <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{leader.name}</Link>
+                            <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{leader.name}</Link>
                             <span className="text-xs text-slate-500 font-medium">Mã: {leader.employeeCode}</span>
                             <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/70">
                               Leader
@@ -323,6 +322,7 @@ export default function TeamDetailPage() {
                       </div>
                       {leaderEvaluation && (
                         <Link
+                          prefetch={false}
                           href={`/evaluations/${leader.id}`}
                           className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                           title="Xem đánh giá"
@@ -332,7 +332,7 @@ export default function TeamDetailPage() {
                       )}
                       {/* Mobile: text thuần (không badge/box) */}
                       <div className="md:hidden min-w-0 flex-1">
-                        <Link href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
+                        <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
                         <p className="text-xs text-slate-500 mt-1">Mã: {leader.employeeCode} · Vai trò: Leader</p>
                         {leaderScore != null && leaderGradeRound != null && leaderGrade && leaderGrade !== 'Pending' && (
                           <p className="text-xs text-slate-600 mt-1">Xếp loại: {leaderGrade} · Vòng L{leaderGradeRound} · <span className="font-bold text-slate-800">{leaderScore} điểm</span></p>
@@ -370,7 +370,7 @@ export default function TeamDetailPage() {
                   <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{sl.name}</Link>
+                        <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{sl.name}</Link>
                         <span className="text-xs text-slate-500 font-medium">Mã: {sl.employeeCode}</span>
                         <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200/70">
                           {sl.description && sl.description.trim() !== '' ? sl.description : 'Chưa có chức danh'}
@@ -406,6 +406,7 @@ export default function TeamDetailPage() {
                   </div>
                   {slEvaluation && (
                     <Link
+                      prefetch={false}
                       href={`/evaluations/${sl.id}`}
                       className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                       title="Xem đánh giá"
@@ -415,7 +416,7 @@ export default function TeamDetailPage() {
                   )}
                   {/* Mobile: text thuần (không badge/box) */}
                   <div className="md:hidden min-w-0 flex-1">
-                    <Link href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
+                    <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
                     <p className="text-xs text-slate-500 mt-1">Mã: {sl.employeeCode} · Vai trò: SubLeader{sl.description && sl.description.trim() !== '' && !['SubLeader', 'Sub Leader', 'Leader', 'Manager'].includes(sl.description.trim()) ? ` · ${sl.description}` : ''}</p>
                     {slScore != null && slGradeRound != null && slGrade && slGrade !== 'Pending' && (
                       <p className="text-xs text-slate-600 mt-1">Xếp loại: {slGrade} · Vòng L{slGradeRound} · <span className="font-bold text-slate-800">{slScore} điểm</span></p>
@@ -430,7 +431,7 @@ export default function TeamDetailPage() {
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {rows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                    {rows.map(({ member, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
                       const badge = getStatusBadge(status, latestSubmittedRound);
                       return (
                         <div
@@ -441,7 +442,7 @@ export default function TeamDetailPage() {
                           <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
+                                <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
                                 {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
                                   <span
                                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
@@ -480,6 +481,7 @@ export default function TeamDetailPage() {
                             </span>
                           </div>
                           <Link
+                            prefetch={false}
                             href={`/evaluations/${member.id}`}
                             className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                             title="Xem đánh giá"
@@ -488,7 +490,7 @@ export default function TeamDetailPage() {
                           </Link>
                           {/* Mobile: text thuần */}
                           <div className="md:hidden min-w-0 flex-1">
-                            <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                            <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
                             <p className="text-xs text-slate-500 mt-1">Mã: {member.employeeCode}</p>
                             {score != null && gradeRound != null && grade && grade !== 'Pending' && (
                               <p className="text-xs text-slate-600 mt-1">Xếp loại: {grade} · Vòng L{gradeRound} · <span className="font-bold text-slate-800">{score} điểm</span></p>
@@ -524,7 +526,7 @@ export default function TeamDetailPage() {
 
                 {/* Unassigned Employees List */}
                 <div className="divide-y divide-slate-100">
-                  {subLeaderBlocks.unassignedRows.map(({ member, evaluation, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
+                  {subLeaderBlocks.unassignedRows.map(({ member, status, grade, gradeRound, latestSubmittedRound, score, previousRounds }) => {
                     const badge = getStatusBadge(status, latestSubmittedRound);
                     return (
                       <div
@@ -535,7 +537,7 @@ export default function TeamDetailPage() {
                         <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
+                            <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
                           </div>
                           <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                         </div>
@@ -567,6 +569,7 @@ export default function TeamDetailPage() {
                         </span>
                         </div>
                         <Link
+                        prefetch={false}
                         href={`/evaluations/${member.id}`}
                         className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
                         title="Xem đánh giá"
@@ -575,7 +578,7 @@ export default function TeamDetailPage() {
                         </Link>
                         {/* Mobile: text thuần */}
                         <div className="md:hidden min-w-0 flex-1">
-                        <Link href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
+                        <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
                         <p className="text-xs text-slate-500 mt-1">Mã: {member.employeeCode}</p>
                         {score != null && gradeRound != null && grade && grade !== 'Pending' && (
                           <p className="text-xs text-slate-600 mt-1">Xếp loại: {grade} · Vòng L{gradeRound} · <span className="font-bold text-slate-800">{score} điểm</span></p>

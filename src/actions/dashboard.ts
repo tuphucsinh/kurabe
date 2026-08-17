@@ -28,6 +28,8 @@ export interface DashboardData {
   }[];
   rawEvaluations: Evaluation[]; // Only needed if we still pass them to SkillGapRadar
   rawCriteriaGroups: CriteriaGroup[]; // Only needed if we still pass them to SkillGapRadar
+  /** id → tên NV (đã fetch sẵn cho stats) — client components dùng thay vì fetch lại qua useUsers (fix flash UUID) */
+  userNameById: Record<string, string>;
 }
 
 async function getDashboardDataInner(periodId: string, viewer: import('@/types').User | null): Promise<DashboardData | null> {
@@ -140,7 +142,8 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
       teamStatus,
       recentActivities,
       rawEvaluations: evaluations,
-      rawCriteriaGroups: criteriaGroups
+      rawCriteriaGroups: criteriaGroups,
+      userNameById: Object.fromEntries(users.map((u) => [u.id, u.name]))
     };
   } catch (error) {
     console.error('Error in getDashboardData:', error);

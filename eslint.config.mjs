@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
     ".claude/**",
     // Vercel build artifacts (vercel build local tạo .vercel/output):
     ".vercel/**",
+    "dist/**",
   ]),
 ]);
 

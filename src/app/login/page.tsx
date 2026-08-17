@@ -15,9 +15,9 @@ export default function LoginPage() {
     setError('');
     
     try {
-      await login(employeeCode, password);
-      // Full reload — middleware đọc cookie auth_session và redirect role-aware qua '/'
-      window.location.href = '/';
+      const user = await login(employeeCode, password);
+      // Redirect thẳng theo role (loginAction đã trả user) — khỏi vòng '/' → middleware → /dashboard (bớt 1-2 hop 307 trên Vercel)
+      window.location.href = user.role === 'Employee' ? `/evaluations/${user.id}` : '/dashboard';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }

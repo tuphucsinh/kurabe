@@ -11,15 +11,12 @@ import {
   X,
   Copy,
   Check,
-  ChevronRight,
   MessageSquareQuote,
-  Eye,
 } from 'lucide-react';
 import { generateResultMessagesChunkAction, saveResultMessageAction, draftResultMessageAction } from '@/actions/ai';
 import { useEvaluations, useUsers, usePeriods, useTeams } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Evaluation, User } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface BatchResultMessageModalProps {
@@ -196,7 +193,6 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
   const handleRetrySingle = async (item: MessageItem) => {
     setRetryingIds((prev) => new Set(prev).add(item.evaluationId));
     try {
-      const emp = userMap.get(item.employeeId);
       const ev = approvedEvals.find((e) => e.id === item.evaluationId);
       const lastRound = [...(ev?.rounds || [])].sort((a, b) => b.round - a.round)[0];
 

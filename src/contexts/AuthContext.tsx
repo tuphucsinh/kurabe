@@ -10,7 +10,7 @@ import { getCurrentUserAction } from '@/actions/read';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (employeeCode: string, password?: string) => Promise<void>;
+  login: (employeeCode: string, password?: string) => Promise<User>;
   logout: () => void | Promise<void>;
   isManager: boolean;
   isLeader: boolean;
@@ -98,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(res.user);
     localStorage.setItem('auth_user_id', res.user.id);
+    return res.user;
   };
 
   const logout = async () => {

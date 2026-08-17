@@ -186,19 +186,14 @@ export default function TeamsClient() {
       {teamsData.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
           {teamsData.map((team) => {
-            const statusColor = team.progress === 100 
-              ? 'bg-green-100 text-green-700' 
-              : team.progress > 0 
-                ? 'bg-amber-100 text-amber-700' 
-                : 'bg-surface text-outline';
-
-            const progressColor = team.progress === 100 
-              ? 'bg-green-500' 
+            const progressColor = team.progress === 100
+              ? 'bg-green-500'
               : 'bg-primary';
 
             return (
               <Link 
                 key={team.id} 
+                prefetch={false}
                 href={`/teams/${team.id}`}
                 className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
               >

@@ -11,7 +11,6 @@ import DataTable, { Column } from '@/components/ui/DataTable';
 import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, Check } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
-import { logAuditAction } from '@/actions/audit';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -383,6 +382,7 @@ export default function EmployeesClient() {
         <div className="flex items-center gap-3">
           <div>
             <Link
+              prefetch={false}
               href={`/evaluations/${item.id}`}
               className="font-semibold text-slate-900 hover:text-primary hover:underline"
               title="Đánh giá"
@@ -491,6 +491,7 @@ export default function EmployeesClient() {
       render: (item) => (
         <div className="flex justify-end gap-2">
           <Link
+            prefetch={false}
             href={`/evaluations/${item.id}`}
             className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
             title="Đánh giá"

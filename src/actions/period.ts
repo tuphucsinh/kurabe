@@ -182,12 +182,25 @@ export async function closeEvaluationPeriod(periodId: string) {
 
 /**
  * Xóa một kỳ đánh giá và toàn bộ dữ liệu liên quan.
+ * Chặn xóa kỳ đang Active (phải Đóng kỳ trước — tránh mất dữ liệu đang chấm) + dọn ai_summaries.
  */
 export async function deleteEvaluationPeriod(periodId: string) {
   const auth = await requireManager();
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
+    // 0. Kiểm tra trạng thái kỳ — kỳ Active phải đóng trước khi xóa (KNOWN_BUGS #4, fix 2026-08-17)
+    const { data: period } = await supabaseAdmin
+      .from('evaluation_periods')
+      .select('id, status')
+      .eq('id', periodId)
+      .maybeSingle();
+
+    if (!period) return { success: false, error: 'Không tìm thấy kỳ đánh giá.' };
+    if (period.status === 'Active') {
+      return { success: false, error: 'Kỳ đang Active — hãy "Đóng kỳ" trước khi xóa để tránh mất dữ liệu đang chấm.' };
+    }
+
     // 1. Xóa trực tiếp evaluations, DB đã config cascade sang evaluation_rounds và responses
     const { error: evalError } = await supabaseAdmin
       .from('evaluations')
@@ -195,6 +208,9 @@ export async function deleteEvaluationPeriod(periodId: string) {
       .eq('period_id', periodId);
 
     if (evalError) return { success: false, error: toClientError(evalError, 'Lỗi xóa dữ liệu đánh giá của kỳ. Vui lòng thử lại.') };
+
+    // 2. Dọn tóm tắt AI của kỳ — delete idempotent, đảm bảo không sót dòng mồ côi
+    await supabaseAdmin.from('ai_summaries').delete().eq('period_id', periodId);
 
     // 3. Xóa period
     const { error } = await supabaseAdmin

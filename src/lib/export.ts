@@ -12,8 +12,7 @@ import { supabase } from './supabase';
  */
 export async function exportEvaluationsToExcel(
   periodId: string,
-  options: { includeRoundDetails?: boolean } = {},
-  _viewer?: User | null
+  options: { includeRoundDetails?: boolean } = {}
 ): Promise<void> {
   try {
     // xlsx nặng (~140KB gzip) — chỉ load khi user thật sự bấm export (C1)

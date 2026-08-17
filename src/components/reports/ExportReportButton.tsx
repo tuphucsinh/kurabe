@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import { exportEvaluationsToExcel } from '@/lib/export';
 import { useToast } from '@/components/ui/Toast';
 
 /** Nút "Xuất file" trang Báo cáo — wire engine export thật (trước đây là button chết). */
 export default function ExportReportButton({ periodId }: { periodId: string }) {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
 
@@ -19,7 +17,7 @@ export default function ExportReportButton({ periodId }: { periodId: string }) {
     }
     setIsExporting(true);
     try {
-      await exportEvaluationsToExcel(periodId, { includeRoundDetails: true }, user);
+      await exportEvaluationsToExcel(periodId, { includeRoundDetails: true });
       toast('Đã xuất file Excel thành công.', 'success');
     } catch (err) {
       console.error('Export error:', err);

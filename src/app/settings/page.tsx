@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { ShieldAlert, CalendarDays, UsersRound, UserCircle, Gauge, ScrollText, Target } from 'lucide-react';
+import { CalendarDays, UsersRound, UserCircle, Gauge, ScrollText, Target } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Tabs from '@/components/ui/Tabs';
 import PeriodsTab from '@/components/settings/PeriodsTab';

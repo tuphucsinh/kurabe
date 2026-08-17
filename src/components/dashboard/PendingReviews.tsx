@@ -2,15 +2,12 @@
 
 import { useMemo } from 'react';
 import { Clock, CheckCircle2 } from 'lucide-react';
-import { useUsers } from '@/hooks/use-db';
-import { useAuth } from '@/contexts/AuthContext';
 import { Evaluation } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-/** Dashboard: ai còn nợ đánh giá (theo evaluator) — kỳ hiện tại. */
-export default function PendingReviews({ evaluations }: { evaluations: Evaluation[] }) {
-  const { user } = useAuth();
-  const { data: users = [] } = useUsers(user);
+/** Dashboard: ai còn nợ đánh giá (theo evaluator) — kỳ hiện tại.
+ * userNameById truyền từ server page (data đã fetch sẵn) — không tự fetch useUsers nữa (fix flash UUID). */
+export default function PendingReviews({ evaluations, userNameById }: { evaluations: Evaluation[]; userNameById: Record<string, string> }) {
 
   const pending = useMemo(() => {
     const map = new Map<string, { name: string; count: number; rounds: Set<number> }>();
@@ -29,11 +26,10 @@ export default function PendingReviews({ evaluations }: { evaluations: Evaluatio
       map.set(evaluatorId, entry);
     }
 
-    const nameById = new Map(users.map((u) => [u.id, u.name]));
     return [...map.entries()]
-      .map(([id, e]) => ({ ...e, name: nameById.get(id) || e.name }))
+      .map(([id, e]) => ({ ...e, name: userNameById[id] || e.name }))
       .sort((a, b) => b.count - a.count);
-  }, [evaluations, users]);
+  }, [evaluations, userNameById]);
 
   const totalPending = pending.reduce((s, p) => s + p.count, 0);
 
