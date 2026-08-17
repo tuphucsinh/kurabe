@@ -12,7 +12,7 @@ export default function TeamsRolesTab() {
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
 
-  const isLoading = usersLoading || teamsLoading;
+  const isLoading = usersLoading || teamsLoading || !user;
 
   const unassignedCount = useMemo(() => {
     return users.filter((u) => !u.teamId).length;

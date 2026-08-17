@@ -34,7 +34,7 @@ export default function TeamsClient() {
   const { toast } = useToast();
   const confirm = useConfirm();
   
-  const isLoading = usersLoading || teamsLoading || evalsLoading;
+  const isLoading = usersLoading || teamsLoading || evalsLoading || !user;
   const isManager = user?.role === 'Manager';
 
   const handleAddTeam = () => {

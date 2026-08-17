@@ -63,7 +63,7 @@ export default function EmployeesClient() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
-  const isLoading = usersLoading || teamsLoading || evalsLoading;
+  const isLoading = usersLoading || teamsLoading || evalsLoading || !user;
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
