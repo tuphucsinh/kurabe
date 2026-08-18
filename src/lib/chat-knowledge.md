@@ -21,6 +21,7 @@ KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy tr�
 | **Leader** | Quản lý 1 nhóm: tự đánh giá, chấm vòng 2 cho nhân viên, trả lại vòng 1 cho SubLeader, thêm/sửa Nhân viên hoặc SubLeader trong nhóm mình, xem báo cáo phạm vi nhóm. KHÔNG xóa nhân viên, không đổi Leader. |
 | **SubLeader** | Phụ trách nhóm nhỏ: tự đánh giá, chấm vòng 1 cho nhân viên trong nhóm phụ trách, sửa lại khi bị trả về. KHÔNG thêm/sửa/xóa nhân viên. |
 | **Nhân viên** | Chỉ xem kết quả đánh giá của mình sau khi chốt. KHÔNG tự chấm. |
+| **Công nhân** | (Role Worker) Nhân sự trực tiếp/sản xuất: chỉ xem kết quả đánh giá của mình sau khi chốt. KHÔNG tự chấm. Áp dụng bảng tiêu chuẩn và thang điểm riêng cho Công nhân (Worker). |
 
 ## 4. Workflow đánh giá (theo vòng)
 
@@ -28,6 +29,7 @@ KURABE là hệ thống đánh giá năng lực QAQC theo kỳ (period). Quy tr�
 - **Leader**: 2 vòng — Vòng 1 tự đánh giá, Vòng 2 Manager chấm.
 - **SubLeader**: 3 vòng — Vòng 1 tự đánh giá, Vòng 2 Leader, Vòng 3 Manager.
 - **Nhân viên**: 3 vòng — Vòng 1 SubLeader, Vòng 2 Leader, Vòng 3 Manager chốt.
+- **Công nhân**: 3 vòng — Vòng 1 SubLeader, Vòng 2 Leader, Vòng 3 Manager chốt (áp dụng tiêu chuẩn và thang điểm riêng cho Công nhân).
 
 Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp**. Đã nộp là khóa, không tự sửa; muốn sửa phải bị cấp trên trả lại (kèm lý do bắt buộc).
 
@@ -69,6 +71,11 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 2. Xem kết quả của mình sau khi Manager chốt: mở phiếu (icon hoặc bấm tên), xem điểm/nhận xét từng vòng + xếp loại cuối.
 3. Không tự chấm; không mở được hồ sơ người khác (chặn theo phạm vi).
 
+### Công nhân (Worker)
+1. Đăng nhập; đặt mật khẩu lần đầu nếu chưa có.
+2. Xem kết quả của mình sau khi Manager chốt: mở phiếu (icon hoặc bấm tên), xem điểm/nhận xét từng vòng + xếp loại cuối.
+3. Không tự chấm; không mở được hồ sơ người khác (chặn theo phạm vi).
+
 ## 6. Trang đánh giá (phiếu chấm điểm)
 
 - Khi mở phiếu: **nhóm tiêu chuẩn đầu tiên (NHÓM A) được highlight sẵn**.
@@ -85,7 +92,7 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 - **Bảng điều khiển (Dashboard)**: KPI, tiến độ từng nhóm, phân bổ xếp loại, cảnh báo bất thường, hoạt động gần đây.
 - **Nhóm**: danh sách nhóm; chi tiết nhóm hiển thị thẻ Leader (đầu danh sách) + các SubLeader + nhân viên trực thuộc, kèm kết quả đánh giá từng người + nút Thêm nhân viên (Manager/Leader) + nút Xem đánh giá.
 - **Nhân viên**: bảng toàn bộ nhân sự, tìm kiếm theo tên/mã, lọc theo Nhóm/Chức vụ, cột Xếp loại gần nhất, nút Thêm nhân viên / Nhập từ Excel / File mẫu, thao tác xem/sửa/đặt lại mật khẩu/xóa.
-- **Chức danh**: chỉ Manager/Leader/SubLeader mới có chức danh (vd Kakarichou, Shunin, Sub Leader); Nhân viên không hiển thị chức danh.
+- **Chức danh**: chỉ Manager/Leader/SubLeader mới có chức danh (vd Kakarichou, Shunin, Sub Leader); Nhân viên và Công nhân không hiển thị chức danh.
 - **Giới tính**: mỗi nhân viên có giới tính Nam/Nữ (khi thêm/sửa nhân viên chọn giới tính; mặc định Nữ).
 - **Báo cáo**: radar năng lực, khoảng cách so mục tiêu, biến động điểm qua vòng, Top Performers, tóm tắt AI (Manager).
 - **Tiêu chuẩn**: nhóm tiêu chí A-F, thêm/sửa/xóa tiêu chí, mức điểm, mức mặc định.

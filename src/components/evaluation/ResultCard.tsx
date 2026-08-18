@@ -61,7 +61,11 @@ export default function ResultCard({ employee, evaluation, totalScore, grade, gr
         const explanation = finalGradeVal ? GRADE_EXPLANATION[finalGradeVal] : null;
         if (!explanation) return null;
 
-        const roleGroup = isLeaderGradingRole(employee.role) ? 'leader' : 'staff';
+        const roleGroup: keyof GradeBands = employee.role === 'Worker'
+          ? 'worker'
+          : isLeaderGradingRole(employee.role)
+          ? 'leader'
+          : 'staff';
         const bands = gradeBands[roleGroup];
         const band = bands.find((b) => b.grade === finalGradeVal);
         let thresholdText = '';

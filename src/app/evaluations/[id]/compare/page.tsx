@@ -8,7 +8,6 @@ import { calculateRoundScore } from '@/lib/scoring';
 import { getGradeBandsSync } from '@/lib/grade-bands';
 import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
-import { isLeaderGradingRole } from '@/lib/evaluation-workflow';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { 
   ArrowLeft, 
@@ -59,7 +58,7 @@ export default function ComparePage({ params }: ComparePageProps) {
 
   const criteria = useMemo(() => {
     if (!employee || groups.length === 0) return [];
-    const role = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
+    const role = employee.role;
     
     return groups.map(group => {
       const filteredCriteria = group.criteria?.filter(
@@ -74,7 +73,7 @@ export default function ComparePage({ params }: ComparePageProps) {
   // Score results for each round
   const roundResults = useMemo(() => {
     if (!employee) return [];
-    const evaluatorRole = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee';
+    const evaluatorRole = employee.role;
 
     return allRounds.map(r => ({
       round: r,

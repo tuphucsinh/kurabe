@@ -286,7 +286,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     evaluationId: evaluation.id,
     round: activeRound,
     evaluatorId: activeRoundData.evaluatorId || user?.id || '',
-    evaluatorRole: usesLeaderGrading ? 'Leader' : 'Employee',
+    evaluatorRole: employee.role,
     scores,
     selectedLevelIndexes,
     notes,
@@ -527,6 +527,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             scoredCount={Object.keys(scores).length}
             totalCriteria={criteriaGroups.reduce((sum, g) => sum + g.criteria.length, 0)}
             currentRound={activeRound}
+            gradeBands={gradeBands}
           />
 
           {evaluation?.returnNote && (

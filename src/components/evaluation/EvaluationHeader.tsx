@@ -1,5 +1,6 @@
 import { User, EvaluationRound, Grade, CriteriaGroup } from '@/types';
-import { calculateGrade, getGradeColor } from '@/lib/scoring';
+import { getGradeFromScore, getGradeColor } from '@/lib/scoring';
+import { GradeBands } from '@/lib/grade-bands';
 
 interface EvaluationHeaderProps {
   employee: User;
@@ -12,6 +13,7 @@ interface EvaluationHeaderProps {
   scoredCount: number;
   totalCriteria: number;
   currentRound: number;
+  gradeBands?: GradeBands;
 }
 
 export default function EvaluationHeader({
@@ -22,7 +24,8 @@ export default function EvaluationHeader({
   totalScore,
   scoredCount,
   totalCriteria,
-  currentRound
+  currentRound,
+  gradeBands,
 }: EvaluationHeaderProps) {
   const gradeStyles = getGradeColor(grade);
   const gradeColorClass = gradeStyles.split(' ')[0];
@@ -86,7 +89,7 @@ export default function EvaluationHeader({
               {/* Previous Rounds */}
               {allPreviousRounds.map(r => {
                 const rScore = Object.values(r.scores).reduce((sum: number, s: number) => sum + s, 0);
-                const rGrade = calculateGrade(rScore, isLeader);
+                const rGrade = getGradeFromScore(rScore, employee.role, gradeBands);
                 const rScoredCount = Object.keys(r.scores).length;
                 const gradeClasses = getGradeColor(rGrade);
                 const rGradeColorClass = gradeClasses.split(' ')[0];

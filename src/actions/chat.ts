@@ -54,6 +54,7 @@ function capitalize(s: string): string {
 // Mã role trong DB giữ nguyên; chỉ dùng nhãn tiếng Việt khi đưa vào ngữ cảnh/prompt Chat AI.
 function roleLabel(role?: string | null): string {
   if (role === 'Employee') return 'Nhân viên';
+  if (role === 'Worker') return 'Công nhân';
   return role || 'Không xác định';
 }
 
@@ -66,7 +67,7 @@ function buildBaseRules(addr: string): string {
 5. Nếu chưa chắc chắn, nói thẳng "em chưa rõ, ${addr} có thể xem trang Hướng dẫn hoặc hỏi Manager". Không bịa dữ liệu.
 6. Nếu cần xem ảnh màn hình để trả lời chính xác, CHỈ trả về đúng dòng: [CẦN_ẢNH] — không viết thêm bất kỳ chữ nào khác (hệ thống sẽ tự chụp màn hình và phân tích lại).
 7. Nếu ${addr} báo LỖI HỆ THỐNG mà em không hướng dẫn xử lý được (vd trang lỗi, không lưu được, hiển thị sai), CHỈ trả về đúng dòng: [CẦN_DEV] — không viết thêm gì khác.
-8. Luôn gọi chức vụ này là "Nhân viên"; không dùng tên tiếng Anh cho chức vụ này.`;
+8. Luôn gọi chức vụ này theo tiếng Việt ("Nhân viên" cho Employee, "Công nhân" cho Worker); không dùng tên tiếng Anh cho hai chức vụ này.`;
 }
 
 function buildSystem(role: string, gender?: string | null): string {
@@ -80,10 +81,16 @@ function buildSystem(role: string, gender?: string | null): string {
 ${baseRules}
 9. ${Addr} là Manager: ngoài hướng dẫn/lỗi, được trả lời các câu hỏi NÂNG CAO: báo cáo, thống kê, tìm kiếm dữ liệu, giải thích bất thường trong đánh giá, cách đọc/điều chỉnh xếp loại, chốt kỳ. Khi ${addr} hỏi về tình hình, tóm tắt, báo cáo: ĐƯA SỐ LIỆU THẬT từ ngữ cảnh kèm PHÂN TÍCH, ĐÁNH GIÁ NGẮN GỌN SÚC TÍCH (2-4 câu): nêu con số quan trọng (tiến độ %, số xong/chưa, nhóm yếu nhất, xếp loại nổi bật, bất thường) + ý nghĩa + đề xuất hành động. KHÔNG liệt kê menu, KHÔNG nói "em chưa có số liệu" khi ngữ cảnh đã có số liệu. Nếu được hỏi so sánh nhiều kỳ: nói rõ em chỉ phân tích trong kỳ hiện tại (lịch sử đa kỳ chưa có).`;
   }
+  if (role === 'Leader' || role === 'SubLeader') {
+    return `${knowledge}
+
+${baseRules}
+9. ${Addr} là ${role}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
+  }
   return `${knowledge}
 
 ${baseRules}
-9. ${Addr} là ${role === 'Leader' ? 'Leader' : 'SubLeader'}: CHỈ trả lời về hướng dẫn sử dụng, cách thao tác, lỗi/trục trặc thường gặp trong phạm vi quyền của ${addr}. KHÔNG trả lời phân tích nâng cao (báo cáo, thống kê, bất thường đánh giá, tư vấn xếp loại...) — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ Manager.`;
+9. ${Addr} là ${role === 'Worker' ? 'Công nhân' : 'Nhân viên'}: CHỈ trả lời về hướng dẫn xem kết quả đánh giá của bản thân, giải thích thắc mắc quy trình cơ bản và cách đổi mật khẩu. KHÔNG hỗ trợ các thao tác quản lý, chấm điểm hay phân tích nâng cao — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ SubLeader hoặc Manager.`;
 }
 
 async function countRecent(userId: string): Promise<number> {
@@ -329,7 +336,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
 }
 
 export async function chatGreetingAction(pathname: string): Promise<{ greeting?: string; error?: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
   if (auth.error !== null) return { error: auth.error };
   const role = auth.user?.role ?? 'Employee';
   const addr = address(auth.user?.gender);
@@ -345,9 +352,12 @@ export async function chatGreetingAction(pathname: string): Promise<{ greeting?:
     else if (path.includes('/teams')) hint = `${Addr} cần quản lý nhóm, bổ nhiệm Leader hay thêm nhân viên, em hỗ trợ ạ.`;
     else if (path.includes('/criteria')) hint = `${Addr} cần rà soát tiêu chuẩn hay mức điểm, em hỗ trợ ạ.`;
     else hint = `${Addr} cần xem tiến độ, báo cáo hay giải đáp thắc mắc về đánh giá, em hỗ trợ được ạ.`;
-  } else {
+  } else if (role === 'Leader' || role === 'SubLeader') {
     if (path.includes('/evaluations')) hint = `${Addr} cần hỗ trợ chấm điểm hay trả lại đánh giá trong phạm vi nhóm, em hướng dẫn ạ.`;
     else hint = `${Addr} gặp thắc mắc về thao tác hay gặp lỗi gì, em hướng dẫn giúp ${addr} ạ.`;
+  } else {
+    if (path.includes('/evaluations')) hint = `${Addr} cần xem kết quả đánh giá hay thắc mắc về quy trình, em hướng dẫn ạ.`;
+    else hint = `${Addr} gặp thắc mắc về tài khoản hay quy trình đánh giá, em hướng dẫn giúp ${addr} ạ.`;
   }
   const fullName = (auth.user?.name || '').trim();
   const firstName = fullName ? fullName.split(/\s+/).pop() : '';
@@ -378,7 +388,7 @@ interface ChatPrepared {
 async function prepareChatContext(
   input: ChatAskInputBase
 ): Promise<{ ok: true; data: ChatPrepared } | { ok: false; error: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
   if (auth.error !== null) return { ok: false, error: auth.error };
   const userId = auth.user?.id;
   const role = auth.user?.role ?? 'Employee';
@@ -472,7 +482,7 @@ export async function chatReportErrorAction(input: {
   pathname: string;
   history?: { role: 'user' | 'assistant'; text: string }[];
 }): Promise<{ reply?: string; error?: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
   if (auth.error !== null) return { error: auth.error };
   const userId = auth.user?.id;
   if (!userId) return { error: 'Không xác định được tài khoản.' };

@@ -11,7 +11,6 @@ import { RoundNumber, EvaluationRound, Role } from '@/types';
 import {
   getEvaluationFlow,
   getNextEvaluationStep,
-  isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
 import {
   resolveEvaluatorFromDb,
@@ -78,7 +77,7 @@ export async function saveEvaluationRound(
 
     const tempRound: Partial<EvaluationRound> = {
       scores,
-      evaluatorRole: isLeaderGradingRole(evaluation.employeeRole) ? 'Leader' : 'Employee'
+      evaluatorRole: evaluation.employeeRole,
     };
     
     const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);

@@ -12,6 +12,7 @@ const ROLE_BADGE: Record<string, string> = {
   Leader: 'bg-emerald-100 text-emerald-700',
   SubLeader: 'bg-sky-100 text-sky-700',
   Employee: 'bg-slate-100 text-slate-600',
+  Worker: 'bg-amber-100 text-amber-700',
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -19,6 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
   Leader: 'Leader',
   SubLeader: 'SubLeader',
   Employee: 'Nhân viên',
+  Worker: 'Công nhân',
 };
 
 export default function AccountTab() {
