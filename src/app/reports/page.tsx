@@ -1,15 +1,22 @@
-import React, { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createReportsSource } from '@/lib/db/reports-source';
+import { getReportAggregation } from '@/actions/reports';
+import { getPeriodSummary } from '@/actions/ai-summary';
 import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getSessionUser } from '@/lib/auth';
 import { resolveCurrentPeriod } from '@/lib/db/evaluations';
 import { isIndividualRole } from '@/lib/role-policy';
-import ReportsPrimarySection from '@/components/reports/ReportsPrimarySection';
-import ReportsSecondarySection, {
-  ReportsSecondarySkeleton,
-} from '@/components/reports/ReportsSecondarySection';
+import PageHeader from '@/components/layout/PageHeader';
+import { Users, Target, TrendingUp, Clock } from 'lucide-react';
+import ReportFilters from '@/components/reports/ReportFilters';
+import ExportReportButton from '@/components/reports/ExportReportButton';
+import BatchResultMessageModal from '@/components/reports/BatchResultMessageModal';
+import PeriodMinutesModal from '@/components/reports/PeriodMinutesModal';
+import AiSummaryCard from '@/components/reports/AiSummaryCard';
+import { GradeDistribution } from '@/components/charts/GradeDistribution';
+import TeamComparison from '@/components/reports/TeamComparison';
+import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
+import TopPerformers from '@/components/reports/TopPerformers';
 
 export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
   // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39). Employee/Worker chuyển về phiếu đánh giá.
@@ -27,14 +34,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
   const periodId = period?.id;
 
   const team = searchParams.team || 'all';
+  // 3 nguồn độc lập — chạy song song (C5)
+  const [teams, reportData, aiSummary] = await Promise.all([
+    getTeamsAdmin(viewer),
+    periodId ? getReportAggregation(periodId, team) : Promise.resolve(null),
+    periodId ? getPeriodSummary(periodId) : Promise.resolve({} as Awaited<ReturnType<typeof getPeriodSummary>>),
+  ]);
 
-  // Khởi tạo shared source duy nhất một lần cho mỗi request trang: fan-out teams và primaryData đồng thời
-  const source = periodId ? createReportsSource(periodId, team, viewer) : null;
-  const [teams, primaryData] = source
-    ? await Promise.all([source.teams, source.primary])
-    : await Promise.all([getTeamsAdmin(viewer), Promise.resolve(null)]);
-
-  if (!primaryData) {
+  if (!reportData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <p className="text-outline font-medium">Không có dữ liệu báo cáo cho kỳ đánh giá này.</p>
@@ -44,21 +51,66 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
 
   return (
     <div className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
-      <ReportsPrimarySection
-        periodId={periodId || ''}
-        viewerRole={viewer.role}
-        teams={teams}
-        primaryData={primaryData}
-      />
-      {periodId && (
-        <Suspense fallback={<ReportsSecondarySkeleton />}>
-          <ReportsSecondarySection
-            secondaryPromise={source?.secondary}
-            periodId={periodId}
-            team={team}
-          />
-        </Suspense>
-      )}
+      {/* 1. HEADER: Flex justify-between với Tiêu đề bên trái & KPI Compact Pill + Export Button bên phải */}
+      <PageHeader
+        title="Báo cáo QAQC"
+        description="Tổng hợp kết quả đánh giá năng lực và chất lượng QAQC"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          {/* KPI COMPACT pill trắng chia 4 */}
+          <div className="bg-white px-4 py-2 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.totalEmployees}</span>
+              <span className="text-xs text-outline font-medium">nhân sự</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-primary shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
+              <span className="text-xs text-outline font-medium">điểm TB</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
+              <span className="text-xs text-outline font-medium">≥ AB</span>
+            </div>
+            <span className="text-outline-variant/60 hidden sm:inline">•</span>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-orange-600 shrink-0" />
+              <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.pendingCount}</span>
+              <span className="text-xs text-outline font-medium">chưa đánh giá</span>
+            </div>
+          </div>
+
+          {viewer?.role === 'Manager' && (
+            <>
+              <PeriodMinutesModal periodId={periodId || ''} />
+              <BatchResultMessageModal periodId={periodId || ''} />
+            </>
+          )}
+          <ExportReportButton periodId={periodId || ''} />
+        </div>
+      </PageHeader>
+
+      {/* 2. ReportFilters (giữ nguyên trên cùng dưới header) */}
+      <ReportFilters teams={teams} />
+
+      {/* 3. GradeDistribution (đưa LÊN ĐẦU nội dung, render full width, nén gọn) */}
+      <GradeDistribution data={reportData.gradeDistribution} />
+
+      {/* 4. GRID 2 CỘT: TRÁI = TeamComparison · PHẢI = CriteriaHeatmap */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TeamComparison teams={reportData.teamStats} />
+        <CriteriaHeatmap data={reportData.criteriaAnalysis} />
+      </div>
+
+      {/* 5. GRID 2 CỘT: TRÁI = TopPerformers · PHẢI = AiSummaryCard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TopPerformers employees={reportData.topPerformers} />
+        <AiSummaryCard periodId={periodId || ''} initialSummary={aiSummary.summary} initialCreatedAt={aiSummary.created_at} />
+      </div>
     </div>
   );
 }
