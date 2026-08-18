@@ -11,5 +11,5 @@ export default async function EmployeesPage() {
   const viewer = await getSessionUser();
   if (!viewer) redirect('/login');
   if (isIndividualRole(viewer.role)) redirect(`/evaluations/${viewer.id}`);
-  return <EmployeesClient />;
+  return <EmployeesClient initialViewer={viewer} />;
 }

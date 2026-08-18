@@ -276,10 +276,14 @@ function extractFunction(code, functionName) {
     'EmployeesClient must call getEvaluationSummariesBatchAction for evaluations batch'
   );
 
-  // Verify non-blocking loading gate
+  // Verify effective viewer bootstrap snapshot & static shell (no whole-page loading gate)
   assert.ok(
-    normCode.includes('isInitialLoading || teamsLoading || !user'),
-    'isLoading gate must only block on initial users, teams, or auth session'
+    /effectiveViewer\s*=\s*authLoading\s*\?\s*\(contextUser\s*\?\?\s*initialViewer\)\s*:\s*contextUser/.test(normCode),
+    'EmployeesClient must define bootstrap-only effectiveViewer from authLoading, contextUser, and initialViewer'
+  );
+  assert.ok(
+    !/if\s*\(\s*(?:isLoading|isInitialLoading|teamsLoading)\s*\)\s*return\s*\(/.test(normCode),
+    'EmployeesClient must render static shell unconditionally without whole-page loading return'
   );
 
   // Verify generation token usage

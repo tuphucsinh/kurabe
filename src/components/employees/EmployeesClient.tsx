@@ -16,10 +16,14 @@ import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import EmployeeModal from '@/components/modals/EmployeeModal';
 import { canHaveSubLeader, isManagementRole, roleLabel } from '@/lib/role-policy';
+
+interface EmployeesClientProps {
+  initialViewer: User;
+}
 
 interface EmployeeTableItem extends User {
   teamName: string;
@@ -32,10 +36,15 @@ interface EmployeeTableItem extends User {
   evaluationError?: boolean;
 }
 
-export default function EmployeesClient() {
-  const { user, currentPeriod } = useAuth();
+export default function EmployeesClient({ initialViewer }: EmployeesClientProps) {
+  const { user: contextUser, currentPeriod, isLoading: authLoading } = useAuth();
+
+  // Bootstrap-only effective viewer: initialViewer is active only while auth is loading;
+  // after auth resolves (including resolve-to-null / logout), initialViewer is inactive.
+  const effectiveViewer = authLoading ? (contextUser ?? initialViewer) : contextUser;
+
   const queryClient = useQueryClient();
-  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(effectiveViewer);
   const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();
   const { toast } = useToast();
@@ -62,17 +71,67 @@ export default function EmployeesClient() {
   // Generation token to ignore stale async responses after filter/period changes
   const generationRef = useRef<number>(0);
 
-  // Modal & permissions
+  // Modal & permissions reconciled from effectiveViewer
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
-  const canManageEmployees = user?.role === 'Manager' || user?.role === 'Leader';
-  const canDeleteEmployees = user?.role === 'Manager';
-  const isManager = user?.role === 'Manager';
-  const isLeader = user?.role === 'Leader';
+  const canManageEmployees = effectiveViewer?.role === 'Manager' || effectiveViewer?.role === 'Leader';
+  const canDeleteEmployees = effectiveViewer?.role === 'Manager';
+  const isManager = effectiveViewer?.role === 'Manager';
+  const isLeader = effectiveViewer?.role === 'Leader';
 
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentPeriodId = currentPeriod?.id;
+
+  // Primitive viewer identity & scope dependencies to prevent unnecessary refetches
+  const viewerId = effectiveViewer?.id ?? null;
+  const viewerRole = effectiveViewer?.role ?? null;
+  const viewerTeamId = effectiveViewer?.teamId ?? null;
+  const viewerScopeKey = `${viewerId ?? 'anonymous'}:${viewerRole ?? 'norole'}:${viewerTeamId ?? 'noteam'}`;
+
+  // Track viewer state to handle logout / identity change / scope mismatch
+  const prevViewerRef = useRef<{ id: string | null; role: string | null; teamId: string | null } | null>({
+    id: initialViewer?.id ?? null,
+    role: initialViewer?.role ?? null,
+    teamId: initialViewer?.teamId ?? null,
+  });
+
+  // Reconcile viewer changes: clear state on logout or identity/scope change
+  useEffect(() => {
+    let isCancelled = false;
+    const prev = prevViewerRef.current;
+    const current = { id: viewerId, role: viewerRole, teamId: viewerTeamId };
+
+    const hasChanged = !prev || prev.id !== current.id || prev.role !== current.role || prev.teamId !== current.teamId;
+
+    if (hasChanged) {
+      prevViewerRef.current = current;
+      generationRef.current += 1;
+      const currentGen = generationRef.current;
+
+      void Promise.resolve().then(() => {
+        if (isCancelled || generationRef.current !== currentGen) return;
+
+        setUsers([]);
+        setEvaluationsMap({});
+        setEvalLoadingMap({});
+        setEvalErrorMap({});
+        setTotalCount(0);
+        setHasMore(false);
+        setUserBatchError(null);
+        setIsModalOpen(false);
+        setEditingEmployee(null);
+
+        if (!effectiveViewer) {
+          setIsInitialLoading(false);
+        }
+      });
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [viewerId, viewerRole, viewerTeamId, effectiveViewer]);
 
   // Fetch evaluations batch for a list of employee IDs
   const fetchEvaluationsForIds = useCallback(async (ids: string[], periodId: string, gen: number) => {
@@ -122,9 +181,13 @@ export default function EmployeesClient() {
     }
   }, []);
 
-  // Fetch initial batch (first 20 users)
+  // Fetch initial batch (first 20 users) using effective viewer
   const loadInitialBatch = useCallback(async () => {
-    if (!user) return;
+    if (!viewerId || !viewerScopeKey) {
+      setIsInitialLoading(false);
+      return;
+    }
+    const currentScopeKey = viewerScopeKey;
     generationRef.current += 1;
     const currentGen = generationRef.current;
 
@@ -144,7 +207,7 @@ export default function EmployeesClient() {
         role: roleFilter,
       });
 
-      if (generationRef.current !== currentGen) return;
+      if (generationRef.current !== currentGen || viewerScopeKey !== currentScopeKey) return;
 
       setUsers(res.items);
       setHasMore(res.hasMore);
@@ -163,7 +226,7 @@ export default function EmployeesClient() {
         setIsInitialLoading(false);
       }
     }
-  }, [user, searchTerm, teamFilter, roleFilter, currentPeriodId, fetchEvaluationsForIds]);
+  }, [viewerId, viewerScopeKey, searchTerm, teamFilter, roleFilter, currentPeriodId, fetchEvaluationsForIds]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -177,9 +240,36 @@ export default function EmployeesClient() {
     };
   }, [loadInitialBatch]);
 
+  // Period change: refresh heavy evaluation data for existing users without blocking shell or users
+  const prevPeriodIdRef = useRef<string | undefined>(currentPeriodId);
+  useEffect(() => {
+    let isCancelled = false;
+    if (prevPeriodIdRef.current !== currentPeriodId) {
+      prevPeriodIdRef.current = currentPeriodId;
+      generationRef.current += 1;
+      const currentGen = generationRef.current;
+
+      void Promise.resolve().then(() => {
+        if (isCancelled || generationRef.current !== currentGen) return;
+
+        setEvaluationsMap({});
+        setEvalLoadingMap({});
+        setEvalErrorMap({});
+
+        if (users.length > 0 && currentPeriodId) {
+          fetchEvaluationsForIds(users.map((u) => u.id), currentPeriodId, currentGen);
+        }
+      });
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentPeriodId, users, fetchEvaluationsForIds]);
+
   // Load more users (next 20 users)
   const handleLoadMore = async () => {
-    if (isLoadingMore || isInitialLoading || !hasMore || !user) return;
+    if (isLoadingMore || isInitialLoading || !hasMore || !effectiveViewer) return;
     const currentGen = generationRef.current;
 
     setIsLoadingMore(true);
@@ -224,16 +314,17 @@ export default function EmployeesClient() {
     fetchEvaluationsForIds([employeeId], currentPeriodId, generationRef.current);
   };
 
-  // Loading gate: only blocks on users/teams/user session, never on evaluations query
-  const isLoading = isInitialLoading || teamsLoading || !user;
-
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
-  // Computed employee items
+  // Computed employee items — teamsLoading does not block row display
   const employeesData: EmployeeTableItem[] = useMemo(() => {
     return users.map((userItem) => {
       const team = teams.find((t) => t.id === userItem.teamId);
-      const evalItem = evaluationsMap[userItem.id] || null;
+      const rawEval = evaluationsMap[userItem.id] || null;
+      const evalItem =
+        rawEval && (!currentPeriodId || !rawEval.periodId || rawEval.periodId === currentPeriodId)
+          ? rawEval
+          : null;
       const isEvalLoading = !!evalLoadingMap[userItem.id];
       const isEvalError = !!evalErrorMap[userItem.id];
 
@@ -250,7 +341,13 @@ export default function EmployeesClient() {
 
       return {
         ...userItem,
-        teamName: userItem.role === 'Manager' ? 'Toàn bộ bộ phận' : (team?.name || 'Chưa gán'),
+        teamName: userItem.role === 'Manager'
+          ? 'Toàn bộ bộ phận'
+          : team
+          ? team.name
+          : teamsLoading
+          ? 'Đang tải...'
+          : 'Chưa gán',
         grade: evalItem?.finalGrade ?? latestRound?.grade ?? '-',
         score: evalItem?.finalScore ?? latestRound?.totalScore ?? 0,
         gradeRound: latestRound?.round ?? null,
@@ -260,22 +357,7 @@ export default function EmployeesClient() {
         evaluationError: isEvalError,
       };
     });
-  }, [users, teams, evaluationsMap, evalLoadingMap, evalErrorMap]);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <Skeleton variant="text" width={200} height={32} />
-            <Skeleton variant="text" width={300} height={20} />
-          </div>
-          <Skeleton variant="rectangular" width={140} height={40} className="rounded-xl" />
-        </div>
-        <TableSkeleton rows={8} columns={5} />
-      </div>
-    );
-  }
+  }, [users, teams, teamsLoading, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId]);
 
   const handleEdit = (employee: User) => {
     if (!canManageEmployees) {
@@ -283,7 +365,7 @@ export default function EmployeesClient() {
       return;
     }
     if (isLeader) {
-      if (!user?.teamId || employee.teamId !== user.teamId) {
+      if (!effectiveViewer?.teamId || employee.teamId !== effectiveViewer.teamId) {
         toast('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.', 'error');
         return;
       }
@@ -359,7 +441,7 @@ export default function EmployeesClient() {
     }
 
     if (isLeader) {
-      if (!user?.teamId) {
+      if (!effectiveViewer?.teamId) {
         toast('Leader chưa được gán nhóm nên không thể thêm/sửa nhân viên.', 'error');
         return;
       }
@@ -370,7 +452,7 @@ export default function EmployeesClient() {
         return;
       }
 
-      if (editingEmployee && editingEmployee.teamId !== user.teamId) {
+      if (editingEmployee && editingEmployee.teamId !== effectiveViewer.teamId) {
         toast('Leader chỉ được sửa nhân viên trong nhóm mình quản lý.', 'error');
         return;
       }
@@ -385,8 +467,8 @@ export default function EmployeesClient() {
           updatedAt: new Date().toISOString(),
         } as User);
 
-    if (isLeader && user?.teamId) {
-      payload.teamId = user.teamId;
+    if (isLeader && effectiveViewer?.teamId) {
+      payload.teamId = effectiveViewer.teamId;
     }
 
     try {
@@ -623,7 +705,7 @@ export default function EmployeesClient() {
           </Link>
           {canManageEmployees &&
             (!isLeader ||
-              (item.teamId === user?.teamId && item.role !== 'Manager' && item.role !== 'Leader')) && (
+              (item.teamId === effectiveViewer?.teamId && item.role !== 'Manager' && item.role !== 'Leader')) && (
               <button
                 type="button"
                 onClick={() => handleEdit(item)}
@@ -729,11 +811,14 @@ export default function EmployeesClient() {
         <div className="flex flex-col sm:flex-row gap-4 lg:w-auto">
           <div className="relative w-full sm:w-[220px]">
             <select
-              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary outline-none transition-all text-sm appearance-none font-medium text-on-surface"
+              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary outline-none transition-all text-sm appearance-none font-medium text-on-surface disabled:opacity-60"
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
+              disabled={teamsLoading && teams.length === 0}
             >
-              <option value="all">Tất cả Nhóm</option>
+              <option value="all">
+                {teamsLoading && teams.length === 0 ? 'Đang tải nhóm...' : 'Tất cả Nhóm'}
+              </option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -769,7 +854,66 @@ export default function EmployeesClient() {
 
       {/* Table Section */}
       <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
-        {employeesData.length > 0 ? (
+        {isInitialLoading ? (
+          <div className="w-full overflow-hidden rounded-xl border-none bg-white">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
+                <thead className="sticky top-0 z-10">
+                  <tr className="border-b border-outline-variant bg-surface/50 backdrop-blur-md">
+                    {columns.map((column) => (
+                      <th
+                        key={column.key as string}
+                        className={`px-4 py-3 text-[11px] font-bold text-outline uppercase tracking-wider ${
+                          column.hiddenOnMobile ? 'hidden md:table-cell' : ''
+                        }`}
+                      >
+                        {column.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/50">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className={`h-[48px] ${i % 2 === 1 ? 'bg-surface/30' : ''}`}>
+                      <td className="px-4 py-2">
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-4 w-32 rounded" />
+                          <Skeleton className="h-3 w-20 rounded" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        <Skeleton className="h-5 w-24 rounded-md" />
+                      </td>
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        <Skeleton className="h-4 w-16 rounded" />
+                      </td>
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        <Skeleton className="h-4 w-20 rounded" />
+                      </td>
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        <Skeleton className="h-4 w-12 rounded" />
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="w-8 h-8 rounded-lg" />
+                          <div className="w-12 flex flex-col items-center gap-1">
+                            <Skeleton className="h-3 w-6 rounded" />
+                            <Skeleton className="h-4 w-8 rounded" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex justify-end gap-2">
+                          <Skeleton className="w-8 h-8 rounded-lg" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : employeesData.length > 0 ? (
           <>
             <DataTable
               columns={columns}
@@ -857,7 +1001,13 @@ export default function EmployeesClient() {
 
       <div className="mt-6 flex items-center justify-between px-2">
         <p className="text-sm text-outline font-medium">
-          Tổng số: <b className="text-on-surface">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
+          {isInitialLoading ? (
+            <Skeleton className="h-5 w-64 rounded inline-block" />
+          ) : (
+            <>
+              Tổng số: <b className="text-on-surface">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
+            </>
+          )}
         </p>
       </div>
 
@@ -866,7 +1016,7 @@ export default function EmployeesClient() {
         onClose={() => setIsModalOpen(false)}
         employee={editingEmployee}
         onSave={handleSaveEmployee}
-        restrictToTeamId={isLeader ? user?.teamId || null : null}
+        restrictToTeamId={isLeader ? effectiveViewer?.teamId || null : null}
         roleOptions={
           isLeader
             ? ['SubLeader', 'Employee', 'Worker']

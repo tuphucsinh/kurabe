@@ -69,13 +69,38 @@ function extractInterface(code, interfaceName) {
 }
 
 // -------------------------------------------------------------
-// 1. Verify src/components/employees/EmployeesClient.tsx
+// 1. Verify src/app/employees/page.tsx
+// -------------------------------------------------------------
+{
+  const pageCode = readProjectFile('src/app/employees/page.tsx');
+  const normPage = normalizeWhitespace(stripComments(pageCode));
+
+  assert.ok(
+    normPage.includes('initialViewer={viewer}'),
+    'EmployeesPage must pass initialViewer={viewer} to EmployeesClient'
+  );
+  assert.ok(
+    normPage.includes("redirect('/login')") && normPage.includes("redirect(`/evaluations/${viewer.id}`)"),
+    'EmployeesPage must keep server auth guard and individual role redirects intact'
+  );
+}
+
+// -------------------------------------------------------------
+// 2. Verify src/components/employees/EmployeesClient.tsx
 // -------------------------------------------------------------
 {
   const code = readProjectFile('src/components/employees/EmployeesClient.tsx');
   const cleanCode = stripComments(code);
 
-  // 1.1 Interface EmployeeTableItem must include evaluationLoading
+  // 2.1 Interface EmployeesClientProps must declare initialViewer: User
+  const propsInterface = extractInterface(code, 'EmployeesClientProps');
+  const propsBody = normalizeWhitespace(propsInterface);
+  assert.ok(
+    propsBody.includes('initialViewer: User'),
+    'EmployeesClientProps must declare initialViewer: User'
+  );
+
+  // 2.2 Interface EmployeeTableItem must include evaluationLoading
   const interfaceCode = extractInterface(code, 'EmployeeTableItem');
   const interfaceBody = normalizeWhitespace(interfaceCode);
   assert.ok(
@@ -83,14 +108,20 @@ function extractInterface(code, interfaceName) {
     'EmployeeTableItem must declare evaluationLoading: boolean'
   );
 
-  // 1.2 EmployeesClient hook calls & batch actions
+  // 2.3 EmployeesClient function & bootstrap snapshot
   const componentFn = extractFunction(code, 'EmployeesClient');
   const normFn = normalizeWhitespace(componentFn);
 
-  // Must call useTeams, getUsersBatchAction, getEvaluationSummariesBatchAction
+  // Bootstrap effective viewer definition
   assert.ok(
-    /useTeams\s*\(\s*user\s*\)/.test(normFn),
-    'EmployeesClient must call useTeams(user)'
+    /effectiveViewer\s*=\s*authLoading\s*\?\s*\(contextUser\s*\?\?\s*initialViewer\)\s*:\s*contextUser/.test(normFn),
+    'EmployeesClient must define bootstrap-only effectiveViewer (inactive after auth resolves)'
+  );
+
+  // Must call useTeams with effectiveViewer
+  assert.ok(
+    /useTeams\s*\(\s*effectiveViewer\s*\)/.test(normFn),
+    'EmployeesClient must call useTeams(effectiveViewer)'
   );
   assert.ok(
     normFn.includes('getUsersBatchAction'),
@@ -101,35 +132,37 @@ function extractInterface(code, interfaceName) {
     'EmployeesClient must call getEvaluationSummariesBatchAction for evaluation summaries batch'
   );
 
-  // 1.3 Gate check: isLoading must block on isInitialLoading/teamsLoading/!user, but NOT on evaluation query
-  const isLoadingMatch = normFn.match(/const\s+isLoading\s*=\s*([^;]+);/);
-  assert.ok(isLoadingMatch, 'EmployeesClient must declare const isLoading = ...');
-  const isLoadingExpr = isLoadingMatch[1];
-
+  // 2.4 Static Shell Gate: NO whole-page early return replacing the shell
   assert.ok(
-    isLoadingExpr.includes('isInitialLoading') || isLoadingExpr.includes('usersLoading'),
-    'isLoading must include initial user loading state'
-  );
-  assert.ok(
-    isLoadingExpr.includes('teamsLoading'),
-    'isLoading must include teamsLoading'
-  );
-  assert.ok(
-    isLoadingExpr.includes('!user'),
-    'isLoading must include !user'
-  );
-  assert.ok(
-    !isLoadingExpr.includes('evalsLoading') && !isLoadingExpr.includes('evalLoadingMap'),
-    'isLoading must NOT block on evaluation summaries query'
+    !/if\s*\(\s*(?:isLoading|isInitialLoading|teamsLoading)\s*\)\s*return\s*\(/.test(normFn),
+    'EmployeesClient must not have a whole-page early return; static shell must render immediately'
   );
 
-  // 1.4 employeesData useMemo must populate evaluationLoading
+  // 2.5 teamsLoading and currentPeriod must not block shell or user rows
+  assert.ok(
+    normFn.includes("teamsLoading ? 'Đang tải...' : 'Chưa gán'"),
+    'teamsLoading must gracefully show placeholder team name without blocking rows'
+  );
+
+  // 2.6 Viewer state reconciliation: clear state on viewer logout or scope mismatch
+  assert.ok(
+    normFn.includes('prevViewerRef') &&
+      normFn.includes('setUsers([])') &&
+      normFn.includes('setEvaluationsMap({})') &&
+      normFn.includes('setEvalLoadingMap({})') &&
+      normFn.includes('setEvalErrorMap({})') &&
+      normFn.includes('setTotalCount(0)') &&
+      normFn.includes('setHasMore(false)'),
+    'EmployeesClient must clear users, evaluationsMap, evalLoadingMap, evalErrorMap, counts/hasMore on viewer logout/mismatch'
+  );
+
+  // 2.7 employeesData useMemo must populate evaluationLoading
   assert.ok(
     /evaluationLoading\s*:\s*isEvalLoading/.test(normFn) || /evaluationLoading\s*:/.test(normFn),
     'employeesData map must set evaluationLoading'
   );
 
-  // 1.5 Evaluation column render branch must handle evaluationLoading
+  // 2.8 Evaluation column render branch must handle evaluationLoading
   const gradeColumnMatch = cleanCode.match(/key\s*:\s*['"]grade['"][\s\S]*?render\s*:\s*\((?:item|[^)]+)\)\s*=>\s*\{([\s\S]*?)\}\s*,/);
   assert.ok(gradeColumnMatch, 'grade column with block body render function must exist');
   const gradeRenderBody = normalizeWhitespace(gradeColumnMatch[1]);
@@ -168,14 +201,34 @@ function extractInterface(code, interfaceName) {
     'Non-loading branch must render item.score'
   );
 
-  // 1.6 Preservation of links and actions
+  // 2.9 Table placeholders & EmptyState separation
+  assert.ok(
+    normFn.includes('isInitialLoading ?') && normFn.includes('EmptyState'),
+    'Table placeholders must be rendered while isInitialLoading is true, distinct from EmptyState'
+  );
+
+  // 2.10 Capability flags reconciled to effectiveViewer
+  assert.ok(
+    /canManageEmployees\s*=\s*effectiveViewer\?\.role === 'Manager' \|\| effectiveViewer\?\.role === 'Leader'/.test(normFn),
+    'canManageEmployees must be reconciled from effectiveViewer'
+  );
+  assert.ok(
+    /canDeleteEmployees\s*=\s*effectiveViewer\?\.role === 'Manager'/.test(normFn),
+    'canDeleteEmployees must be reconciled from effectiveViewer'
+  );
+  assert.ok(
+    normFn.includes('restrictToTeamId={isLeader ? effectiveViewer?.teamId || null : null}'),
+    'EmployeeModal restrictToTeamId must use effectiveViewer.teamId'
+  );
+
+  // 2.11 Preservation of links and actions
   assert.ok(
     /href=\{`\/evaluations\/\$\{item\.id\}`\}/.test(normFn),
     'Link to evaluation detail must remain preserved'
   );
   assert.ok(
-    /DataTable/.test(normFn) && /TableSkeleton/.test(normFn) && /EmptyState/.test(normFn),
-    'Core UI components (DataTable, TableSkeleton, EmptyState) must remain present'
+    /DataTable/.test(normFn) && /EmptyState/.test(normFn) && /EmployeeModal/.test(normFn),
+    'Core UI components (DataTable, EmptyState, EmployeeModal) must remain present'
   );
 }
 
