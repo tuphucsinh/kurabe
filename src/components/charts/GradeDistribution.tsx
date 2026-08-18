@@ -7,15 +7,15 @@ interface GradeData {
 }
 
 interface GradeDistributionProps {
-  data: GradeData[];
+  data?: GradeData[];
 }
 
-export function GradeDistribution({ data }: GradeDistributionProps) {
+export function GradeDistribution({ data = [] }: GradeDistributionProps) {
   const maxCount = Math.max(...data.map((d) => d.count), 1);
   const total = data.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <div className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60">
+    <div data-load-layer="light" className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-on-surface">Phân bổ Xếp loại</h3>
         <span className="text-xs text-outline font-medium">Tổng: {total} nhân sự</span>

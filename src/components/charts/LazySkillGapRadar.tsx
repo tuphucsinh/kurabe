@@ -12,6 +12,16 @@ const Radar = dynamic(() => import('@/components/charts/ClientSkillGapRadar'), {
   ),
 });
 
-export default function LazySkillGapRadar({ evaluations, criteriaGroups }: { evaluations: Evaluation[]; criteriaGroups: CriteriaGroup[] }) {
-  return <Radar evaluations={evaluations} criteriaGroups={criteriaGroups} />;
+export default function LazySkillGapRadar({
+  evaluations = [],
+  criteriaGroups = [],
+}: {
+  evaluations?: Evaluation[];
+  criteriaGroups?: CriteriaGroup[];
+}) {
+  return (
+    <div data-load-layer="heavy">
+      <Radar evaluations={evaluations} criteriaGroups={criteriaGroups} />
+    </div>
+  );
 }

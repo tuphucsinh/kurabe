@@ -1,120 +1,245 @@
 'use server';
 
-import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
+import {
+  getEvaluationsByPeriodAdmin,
+  getEvaluationSummariesByPeriodAdmin,
+} from '@/lib/db/evaluations-admin';
 import { getUsersAdmin } from '@/lib/db/users-admin';
 import { getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { requireRole } from '@/lib/auth';
-import { EvaluationRound } from '@/types';
-import { User, Evaluation, CriteriaGroup } from '@/types';
+import type { EvaluationRound, User, Evaluation, CriteriaGroup } from '@/types';
 
-export interface DashboardData {
-  stats: {
-    completed: number;
-    inProgress: number;
-    notStarted: number;
-    total: number;
-    percent: number;
-  };
-  gradeDistribution: { grade: string; count: number; color: string }[];
-  teamStatus: { id: string; name: string; membersCount: number; progress: number }[];
-  recentActivities: {
-    id: string;
-    employeeName: string;
-    evaluatorName: string;
-    status: string;
-    grade: string;
-    date: string;
-  }[];
-  rawEvaluations: Evaluation[]; // Only needed if we still pass them to SkillGapRadar
-  rawCriteriaGroups: CriteriaGroup[]; // Only needed if we still pass them to SkillGapRadar
+export interface DashboardStats {
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+  total: number;
+  percent: number;
+}
+
+export interface DashboardGradeDistributionItem {
+  grade: string;
+  count: number;
+  color: string;
+}
+
+export interface DashboardTeamStatusItem {
+  id: string;
+  name: string;
+  membersCount: number;
+  progress: number;
+}
+
+export interface DashboardRecentActivityItem {
+  id: string;
+  employeeName: string;
+  evaluatorName: string;
+  status: string;
+  grade: string;
+  date: string;
+}
+
+export interface DashboardLightData {
+  stats: DashboardStats;
+  gradeDistribution: DashboardGradeDistributionItem[];
+  teamStatus: DashboardTeamStatusItem[];
   /** id → tên NV (đã fetch sẵn cho stats) — client components dùng thay vì fetch lại qua useUsers (fix flash UUID) */
   userNameById: Record<string, string>;
 }
 
-async function getDashboardDataInner(periodId: string, viewer: import('@/types').User | null): Promise<DashboardData | null> {
-  if (!periodId) return null;
+export interface DashboardHeavyData {
+  recentActivities: DashboardRecentActivityItem[];
+  rawEvaluations: Evaluation[];
+  rawCriteriaGroups: CriteriaGroup[];
+}
+
+export interface DashboardData extends DashboardLightData, DashboardHeavyData {}
+
+const GRADE_COLORS: Record<string, string> = {
+  S: 'bg-indigo-500',
+  A: 'bg-emerald-500',
+  AB: 'bg-teal-500',
+  B: 'bg-blue-500',
+  C: 'bg-amber-500',
+  D: 'bg-rose-500',
+};
+
+/**
+ * Helper tính toán light stats/teamStatus/gradeDistribution/userNameById từ evaluations và users/teams.
+ * Tái sử dụng cho cả getDashboardLightData và getDashboardData để đảm bảo math nhất quán 100%.
+ */
+function computeDashboardLightMetrics(
+  evaluations: Evaluation[],
+  users: User[],
+  teams: { id: string; name: string }[]
+): DashboardLightData {
+  const targetUsers = users;
+  const totalCount = targetUsers.length;
+
+  // Chỉ tính evaluation của user ĐANG ACTIVE — evaluation của user đã xóa mềm (is_active=false) không tính vào dashboard
+  const activeIds = new Set(users.map((u) => u.id));
+  const activeEvaluations = evaluations.filter((e) => activeIds.has(e.employeeId));
+
+  const completed = activeEvaluations.filter((e) => e.status === 'Approved').length;
+  const dbNotStarted = activeEvaluations.filter((e) => e.status === 'NotStarted').length;
+  const inProgress = activeEvaluations.filter((e) => e.status !== 'Approved' && e.status !== 'NotStarted').length;
+  const notStarted = Math.max(0, totalCount - activeEvaluations.length) + dbNotStarted;
+
+  const stats: DashboardStats = {
+    completed,
+    inProgress,
+    notStarted,
+    total: totalCount,
+    percent: totalCount > 0 ? Math.round((completed / totalCount) * 100) : 0,
+  };
+
+  const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
+  activeEvaluations.forEach((e) => {
+    const grade = e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
+    if (grade && counts[grade as string] !== undefined) {
+      counts[grade as string]++;
+    }
+  });
+
+  const gradeDistribution: DashboardGradeDistributionItem[] = Object.entries(counts).map(([grade, count]) => ({
+    grade,
+    count,
+    color: GRADE_COLORS[grade] || 'bg-slate-500',
+  }));
+
+  const usersByTeam = new Map<string, User[]>();
+  users.forEach((u) => {
+    if (u.teamId) {
+      if (!usersByTeam.has(u.teamId)) {
+        usersByTeam.set(u.teamId, []);
+      }
+      usersByTeam.get(u.teamId)!.push(u);
+    }
+  });
+
+  const teamStatus: DashboardTeamStatusItem[] = teams.map((team) => {
+    const members = usersByTeam.get(team.id) || [];
+    const completedMembers = members.filter((m) =>
+      activeEvaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
+    ).length;
+    const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
+
+    return {
+      id: team.id,
+      name: team.name,
+      membersCount: members.length,
+      progress,
+    };
+  });
+
+  const userNameById = Object.fromEntries(users.map((u) => [u.id, u.name]));
+
+  return {
+    stats,
+    gradeDistribution,
+    teamStatus,
+    userNameById,
+  };
+}
+
+/**
+ * Server action: Lấy dữ liệu nhẹ cho Dashboard (KPI, Trạng thái nhóm, Phân bổ xếp loại).
+ * Dùng projection rút gọn getEvaluationSummariesByPeriodAdmin (EVALUATION_SUMMARY_SELECT),
+ * TUYỆT ĐỐI KHÔNG tải criteriaGroups hoặc scores/notes/comments nặng của evaluations.
+ */
+export async function getDashboardLightData(periodId: string): Promise<DashboardLightData | null> {
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null || !periodId) return null;
+
+  try {
+    const [evaluations, users, teams] = await Promise.all([
+      getEvaluationSummariesByPeriodAdmin(periodId, auth.user),
+      getUsersAdmin(auth.user),
+      getTeamsAdmin(auth.user),
+    ]);
+
+    return computeDashboardLightMetrics(evaluations, users, teams);
+  } catch (error) {
+    console.error('Error in getDashboardLightData:', error);
+    return null;
+  }
+}
+
+/**
+ * Server action: Lấy dữ liệu nặng cho Dashboard (Pending reviews, Anomaly alerts, Radar chart, Recent activities).
+ * Tải evaluations đầy đủ và criteriaGroups, thực hiện độc lập sau khi shell/light đã render.
+ * Nhận userNameById (từ light data) để render tên recent activities mà không cần query lại users.
+ */
+export async function getDashboardHeavyData(
+  periodId: string,
+  userNameById?: Record<string, string>
+): Promise<DashboardHeavyData | null> {
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null || !periodId) return null;
+
+  try {
+    const [evaluations, criteriaGroups] = await Promise.all([
+      getEvaluationsByPeriodAdmin(periodId, auth.user),
+      getAllCriteriaGroups(),
+    ]);
+
+    const nameMap = userNameById || {};
+
+    const recentActivities: DashboardRecentActivityItem[] = evaluations
+      .map((evaluation) => {
+        const employeeName = nameMap[evaluation.employeeId];
+        const submittedRounds = evaluation.rounds && evaluation.rounds.length > 0
+          ? [...evaluation.rounds].filter((r): r is EvaluationRound & { submittedAt: string } => !!r.submittedAt).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+          : [];
+        const latestRound = submittedRounds[0] || (evaluation.rounds && evaluation.rounds.length > 0 ? evaluation.rounds[evaluation.rounds.length - 1] : undefined);
+        const evaluatorName = latestRound ? nameMap[latestRound.evaluatorId] : undefined;
+        const activityDate = submittedRounds[0]?.submittedAt || evaluation.updatedAt || evaluation.createdAt;
+
+        return {
+          id: evaluation.id,
+          employeeName: employeeName || 'Unknown',
+          evaluatorName: evaluatorName || 'Unknown',
+          status: evaluation.status,
+          grade: (evaluation.finalGrade || (latestRound?.grade) || '-') as string,
+          date: new Date(activityDate).toISOString(),
+        };
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+
+    return {
+      recentActivities,
+      rawEvaluations: evaluations,
+      rawCriteriaGroups: criteriaGroups,
+    };
+  } catch (error) {
+    console.error('Error in getDashboardHeavyData:', error);
+    return null;
+  }
+}
+
+/**
+ * Server action kế thừa (legacy compatibility cho ai.ts, chat.ts).
+ */
+export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
+  if (auth.error !== null || !periodId) return null;
 
   try {
     const [evaluations, users, teams, criteriaGroups] = await Promise.all([
-      getEvaluationsByPeriodAdmin(periodId, viewer),
-      getUsersAdmin(viewer),
-      getTeamsAdmin(viewer),
-      getAllCriteriaGroups()
+      getEvaluationsByPeriodAdmin(periodId, auth.user),
+      getUsersAdmin(auth.user),
+      getTeamsAdmin(auth.user),
+      getAllCriteriaGroups(),
     ]);
 
-    // Gồm cả Manager — Manager có evaluation riêng trong kỳ (được đánh giá)
-    const targetUsers = users;
-    const totalCount = targetUsers.length;
-
-    // Chỉ tính evaluation của user ĐANG ACTIVE — evaluation của user đã xóa mềm (is_active=false) không tính vào dashboard
-    const activeIds = new Set(users.map((u) => u.id));
-    const activeEvaluations = evaluations.filter((e) => activeIds.has(e.employeeId));
-
-    const completed = activeEvaluations.filter((e) => e.status === 'Approved').length;
-    const dbNotStarted = activeEvaluations.filter((e) => e.status === 'NotStarted').length;
-    const inProgress = activeEvaluations.filter((e) => e.status !== 'Approved' && e.status !== 'NotStarted').length;
-    const notStarted = Math.max(0, totalCount - activeEvaluations.length) + dbNotStarted;
-
-    const stats = {
-      completed,
-      inProgress,
-      notStarted,
-      total: totalCount,
-      percent: totalCount > 0 ? Math.round((completed / totalCount) * 100) : 0
-    };
-
-    const counts: Record<string, number> = { S: 0, A: 0, AB: 0, B: 0, C: 0, D: 0 };
-    activeEvaluations.forEach((e) => {
-      const grade = e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null);
-      if (grade && counts[grade as string] !== undefined) {
-        counts[grade as string]++;
-      }
-    });
-
-    const colors: Record<string, string> = {
-      S: 'bg-indigo-500',
-      A: 'bg-emerald-500',
-      AB: 'bg-teal-500',
-      B: 'bg-blue-500',
-      C: 'bg-amber-500',
-      D: 'bg-rose-500'
-    };
-
-    const gradeDistribution = Object.entries(counts).map(([grade, count]) => ({
-      grade,
-      count,
-      color: colors[grade]
-    }));
+    const light = computeDashboardLightMetrics(evaluations, users, teams);
 
     const userMap = new Map<string, User>();
-    const usersByTeam = new Map<string, User[]>();
-    users.forEach((u) => {
-      userMap.set(u.id, u);
-      if (u.teamId) {
-        if (!usersByTeam.has(u.teamId)) {
-          usersByTeam.set(u.teamId, []);
-        }
-        usersByTeam.get(u.teamId)!.push(u);
-      }
-    });
+    users.forEach((u) => userMap.set(u.id, u));
 
-    const teamStatus = teams.map((team) => {
-      const members = usersByTeam.get(team.id) || [];
-      const completedMembers = members.filter((m) =>
-        activeEvaluations.some((e) => e.employeeId === m.id && e.status === 'Approved')
-      ).length;
-      const progress = members.length > 0 ? Math.round((completedMembers / members.length) * 100) : 0;
-
-      return {
-        id: team.id,
-        name: team.name,
-        membersCount: members.length,
-        progress
-      };
-    });
-
-    const recentActivities = evaluations
+    const recentActivities: DashboardRecentActivityItem[] = evaluations
       .map((evaluation) => {
         const employee = userMap.get(evaluation.employeeId);
         const submittedRounds = evaluation.rounds && evaluation.rounds.length > 0
@@ -130,29 +255,20 @@ async function getDashboardDataInner(periodId: string, viewer: import('@/types')
           evaluatorName: evaluator?.name || 'Unknown',
           status: evaluation.status,
           grade: (evaluation.finalGrade || (latestRound?.grade) || '-') as string,
-          date: new Date(activityDate).toISOString()
+          date: new Date(activityDate).toISOString(),
         };
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
 
     return {
-      stats,
-      gradeDistribution,
-      teamStatus,
+      ...light,
       recentActivities,
       rawEvaluations: evaluations,
       rawCriteriaGroups: criteriaGroups,
-      userNameById: Object.fromEntries(users.map((u) => [u.id, u.name]))
     };
   } catch (error) {
     console.error('Error in getDashboardData:', error);
     return null;
   }
-}
-
-export async function getDashboardData(periodId: string): Promise<DashboardData | null> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
-  if (auth.error !== null) return null;
-  return getDashboardDataInner(periodId, auth.user);
 }

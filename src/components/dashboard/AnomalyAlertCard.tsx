@@ -7,13 +7,21 @@ import { detectAnomalies } from '@/lib/anomaly';
 import { explainAnomalyAction } from '@/actions/ai';
 
 /** Dashboard: cảnh báo đánh giá bất thường (rule-based) + giải thích AI (Manager).
- * userNameById + isManager truyền từ server page — không tự fetch useUsers (fix flash UUID + pop-in sau hydrate). */
-export default function AnomalyAlertCard({ evaluations, userNameById, isManager }: { evaluations: Evaluation[]; userNameById: Record<string, string>; isManager: boolean }) {
+ * userNameById + isManager truyền từ server page hoặc data layer — không tự fetch useUsers (fix flash UUID + pop-in sau hydrate). */
+export default function AnomalyAlertCard({
+  evaluations = [],
+  userNameById = {},
+  isManager,
+}: {
+  evaluations?: Evaluation[];
+  userNameById?: Record<string, string>;
+  isManager: boolean;
+}) {
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
 
   const anomalies = useMemo(() => {
-    const nameById = new Map(Object.entries(userNameById));
+    const nameById = new Map(Object.entries(userNameById || {}));
     return detectAnomalies(evaluations, nameById);
   }, [evaluations, userNameById]);
 
@@ -30,7 +38,7 @@ export default function AnomalyAlertCard({ evaluations, userNameById, isManager 
   if (anomalies.length === 0) return null;
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <div className="flex items-center gap-2 mb-5">
         <AlertTriangle className="w-5 h-5 text-amber-500" />
         <h3 className="text-lg font-semibold text-slate-800">Cảnh báo đánh giá bất thường</h3>

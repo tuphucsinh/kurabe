@@ -6,15 +6,20 @@ import { Evaluation } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 /** Dashboard: ai còn nợ đánh giá (theo evaluator) — kỳ hiện tại.
- * userNameById truyền từ server page (data đã fetch sẵn) — không tự fetch useUsers nữa (fix flash UUID). */
-export default function PendingReviews({ evaluations, userNameById }: { evaluations: Evaluation[]; userNameById: Record<string, string> }) {
-
+ * userNameById truyền từ server page hoặc data layer — không tự fetch useUsers (fix flash UUID). */
+export default function PendingReviews({
+  evaluations = [],
+  userNameById = {},
+}: {
+  evaluations?: Evaluation[];
+  userNameById?: Record<string, string>;
+}) {
   const pending = useMemo(() => {
     const map = new Map<string, { name: string; count: number; rounds: Set<number> }>();
 
     for (const ev of evaluations) {
       // Round hiện tại = round nhỏ nhất chưa Submitted (theo workflow tuần tự)
-      const currentRound = ev.rounds
+      const currentRound = (ev.rounds || [])
         .filter((r) => r.status !== 'Submitted')
         .sort((a, b) => a.round - b.round)[0];
       if (!currentRound) continue;
@@ -35,7 +40,7 @@ export default function PendingReviews({ evaluations, userNameById }: { evaluati
 
   if (totalPending === 0) {
     return (
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
           <h3 className="text-lg font-semibold text-slate-800">Đánh giá tồn đọng</h3>
@@ -51,7 +56,7 @@ export default function PendingReviews({ evaluations, userNameById }: { evaluati
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
       <div className="flex items-center gap-2 mb-5">
         <Clock className="w-5 h-5 text-amber-500" />
         <h3 className="text-lg font-semibold text-slate-800">Đánh giá tồn đọng</h3>
