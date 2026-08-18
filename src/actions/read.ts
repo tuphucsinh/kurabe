@@ -21,6 +21,7 @@ import {
 } from '@/lib/db/teams-admin';
 import { getCriteriaForRole } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
+import { getActivePeriod } from '@/lib/db/evaluations';
 
 export type AuditRow = {
   id: string;
@@ -152,7 +153,12 @@ export async function getEvaluationByEmployeeAction(
     return null;
   }
 
-  return getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user);
+  const effectivePeriodId = periodId ?? (await getActivePeriod())?.id;
+  if (!effectivePeriodId) {
+    return null;
+  }
+
+  return getEvaluationByEmployeeAdmin(employeeId, effectivePeriodId, auth.user);
 }
 
 /**
