@@ -17,7 +17,7 @@ interface TopPerformersProps {
   employees: Performer[];
 }
 
-export default function TopPerformers({ employees }: TopPerformersProps) {
+export default function TopPerformers({ employees = [] }: TopPerformersProps) {
   const columns: Column<Performer>[] = [
     {
       key: 'rank',
@@ -61,7 +61,7 @@ export default function TopPerformers({ employees }: TopPerformersProps) {
       key: 'grade',
       header: 'Xếp loại',
       render: (item) => {
-        const color = getGradeColor(item.grade as 'A' | 'B' | 'C' | 'D');
+        const color = getGradeColor(item.grade as 'S' | 'A' | 'AB' | 'B' | 'C' | 'D');
         return (
           <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${color.replace('bg-', 'text-').replace('600', '700')} bg-opacity-10 ${color.replace('bg-', 'bg-')}/10`}>
             {item.grade}
@@ -72,7 +72,10 @@ export default function TopPerformers({ employees }: TopPerformersProps) {
   ];
 
   return (
-    <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col h-full">
+    <div
+      data-load-layer="heavy"
+      className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col h-full"
+    >
       <div className="p-6 border-b border-outline-variant bg-surface/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -84,19 +87,22 @@ export default function TopPerformers({ employees }: TopPerformersProps) {
               <p className="text-xs text-outline font-medium">Bảng xếp hạng 5 nhân viên xuất sắc nhất</p>
             </div>
           </div>
-          <button className="text-xs font-bold text-primary hover:underline transition-all">
-            Xem tất cả
-          </button>
         </div>
       </div>
-      
+
       <div className="flex-1 p-0">
-        <DataTable 
-          columns={columns} 
-          data={employees} 
-          className="border-none rounded-none shadow-none"
-          rowClassName="!h-14"
-        />
+        {employees.length === 0 ? (
+          <div className="flex items-center justify-center py-10 text-outline text-xs italic">
+            Chưa có dữ liệu nhân viên xuất sắc
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={employees}
+            className="border-none rounded-none shadow-none"
+            rowClassName="!h-14"
+          />
+        )}
       </div>
     </div>
   );
