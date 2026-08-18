@@ -287,6 +287,37 @@ function stripComments(code) {
     !upsertRegion.includes('name: team.name || ""') && !upsertRegion.includes("name: team.name || ''"),
     'upsertTeamAction must not unconditionally overwrite existing name with empty string'
   );
+
+  // Post-upsert unassigned leader sync and row count verification
+  const postUpsertRegion = upsertRegion.slice(upsertIdx);
+  assert.ok(
+    postUpsertRegion.includes(".from('users')"),
+    'upsertTeamAction must update users table for unassigned leader sync post-upsert'
+  );
+  assert.ok(
+    postUpsertRegion.includes(".update({ team_id: teamId })") || postUpsertRegion.includes(".update({team_id: teamId})"),
+    'upsertTeamAction must update team_id to target teamId'
+  );
+  assert.ok(
+    postUpsertRegion.includes(".eq('id', leaderId)"),
+    'upsertTeamAction must filter by leaderId when updating user'
+  );
+  assert.ok(
+    postUpsertRegion.includes(".is('team_id', null)"),
+    'upsertTeamAction must ensure user team_id is null before syncing to avoid transferring from another team'
+  );
+  assert.ok(
+    postUpsertRegion.includes(".select('id')"),
+    'upsertTeamAction must select id on user update to verify modified row count'
+  );
+  assert.ok(
+    postUpsertRegion.includes('updatedUsers.length !== 1'),
+    'upsertTeamAction must fail-closed if updated user row count is not exactly 1'
+  );
+  assert.ok(
+    postUpsertRegion.includes('if (userUpdateError)'),
+    'upsertTeamAction must check userUpdateError on user team sync'
+  );
 }
 
 // 11. src/lib/evaluator-resolver.ts
@@ -402,6 +433,27 @@ function stripComments(code) {
   assert.ok(
     code.includes('export function selectValidLeader') || code.includes('export const selectValidLeader'),
     'src/lib/team-validation.ts must export selectValidLeader'
+  );
+  assert.ok(
+    code.includes('allowUnassigned'),
+    'src/lib/team-validation.ts must support allowUnassigned option'
+  );
+}
+
+// 13. src/components/modals/TeamModal.tsx
+{
+  const code = readProjectFile('src/components/modals/TeamModal.tsx');
+  assert.ok(
+    code.includes("users.filter((u) => u.role === 'Leader')") || code.includes('u.role === "Leader"'),
+    'TeamModal must filter leader dropdown to only users with role === "Leader"'
+  );
+  assert.ok(
+    !code.includes('!isIndividualRole(u.role)') && !code.includes('!isIndividualRole'),
+    'TeamModal must not use isIndividualRole to prevent Manager/SubLeader in leader dropdown'
+  );
+  assert.ok(
+    code.includes('<option value="">-- Chọn trưởng nhóm --</option>'),
+    'TeamModal must preserve default unassigned option'
   );
 }
 

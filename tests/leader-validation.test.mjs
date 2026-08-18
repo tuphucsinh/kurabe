@@ -214,4 +214,151 @@ import {
   assert.strictEqual(selectValidLeader(null, 'team-1', []), null);
 }
 
+// -------------------------------------------------------------
+// 8. validateLeaderAssignment: allowUnassigned behavior
+// -------------------------------------------------------------
+
+// Case 8.1: Valid unassigned active Leader with allowUnassigned: true
+{
+  const unassignedLeader = {
+    id: 'leader-unassigned',
+    role: 'Leader',
+    isActive: true,
+    teamId: null,
+  };
+  const res = validateLeaderAssignment(unassignedLeader, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(res, { ok: true });
+
+  // Boolean overload test
+  const resBool = validateLeaderAssignment(unassignedLeader, 'team-1', true);
+  assert.deepStrictEqual(resBool, { ok: true });
+}
+
+// Case 8.2: Valid matching team active Leader with allowUnassigned: true
+{
+  const matchingLeader = {
+    id: 'leader-1',
+    role: 'Leader',
+    isActive: true,
+    teamId: 'team-1',
+  };
+  const res = validateLeaderAssignment(matchingLeader, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(res, { ok: true });
+}
+
+// Case 8.3: Different team Leader with allowUnassigned: true must still be rejected
+{
+  const otherTeamLeader = {
+    id: 'leader-other',
+    role: 'Leader',
+    isActive: true,
+    teamId: 'team-2',
+  };
+  const res = validateLeaderAssignment(otherTeamLeader, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(res, {
+    ok: false,
+    error: 'Trưởng nhóm phải thuộc về nhóm này.',
+  });
+}
+
+// Case 8.4: Inactive unassigned Leader with allowUnassigned: true must be rejected
+{
+  const inactiveUnassigned = {
+    id: 'leader-inactive-unassigned',
+    role: 'Leader',
+    isActive: false,
+    teamId: null,
+  };
+  const res = validateLeaderAssignment(inactiveUnassigned, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(res, {
+    ok: false,
+    error: 'Trưởng nhóm phải là người dùng đang hoạt động.',
+  });
+}
+
+// Case 8.5: Wrong role unassigned candidate with allowUnassigned: true must be rejected
+{
+  const nonLeaderRoles = ['Worker', 'SubLeader', 'Manager', 'Employee'];
+  for (const role of nonLeaderRoles) {
+    const candidate = {
+      id: `user-${role}-unassigned`,
+      role,
+      isActive: true,
+      teamId: null,
+    };
+    const res = validateLeaderAssignment(candidate, 'team-1', { allowUnassigned: true });
+    assert.deepStrictEqual(
+      res,
+      {
+        ok: false,
+        error: 'Trưởng nhóm phải có vai trò Leader.',
+      },
+      `Unassigned candidate with role "${role}" must be rejected`
+    );
+  }
+}
+
+// Case 8.6: Missing candidate with allowUnassigned: true must be rejected
+{
+  const resNull = validateLeaderAssignment(null, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(resNull, {
+    ok: false,
+    error: 'Không tìm thấy người dùng được chọn làm trưởng nhóm.',
+  });
+
+  const resUndefined = validateLeaderAssignment(undefined, 'team-1', { allowUnassigned: true });
+  assert.deepStrictEqual(resUndefined, {
+    ok: false,
+    error: 'Không tìm thấy người dùng được chọn làm trưởng nhóm.',
+  });
+}
+
+// Case 8.7: Unassigned Leader with allowUnassigned: false must be rejected
+{
+  const unassignedLeader = {
+    id: 'leader-unassigned',
+    role: 'Leader',
+    isActive: true,
+    teamId: null,
+  };
+  const resFalse = validateLeaderAssignment(unassignedLeader, 'team-1', { allowUnassigned: false });
+  assert.deepStrictEqual(resFalse, {
+    ok: false,
+    error: 'Trưởng nhóm phải thuộc về nhóm này.',
+  });
+}
+
+// -------------------------------------------------------------
+// 9. selectValidLeader: allowUnassigned behavior
+// -------------------------------------------------------------
+
+// Case 9.1: Appointed unassigned leader is selected when allowUnassigned: true
+{
+  const unassignedLeader = { id: 'leader-unassigned', role: 'Leader', isActive: true, teamId: null };
+  const matchingLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
+  const candidates = [matchingLeader, unassignedLeader];
+
+  const selected = selectValidLeader('leader-unassigned', 'team-1', candidates, { allowUnassigned: true });
+  assert.strictEqual(selected, unassignedLeader);
+}
+
+// Case 9.2: Appointed other-team leader is rejected even with allowUnassigned: true -> fallback
+{
+  const otherTeamLeader = { id: 'leader-other', role: 'Leader', isActive: true, teamId: 'team-2' };
+  const matchingLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
+  const candidates = [otherTeamLeader, matchingLeader];
+
+  const selected = selectValidLeader('leader-other', 'team-1', candidates, { allowUnassigned: true });
+  assert.strictEqual(selected, matchingLeader);
+}
+
+// Case 9.3: Appointed other-team leader with no matching or unassigned leader -> returns null
+{
+  const otherTeamLeader = { id: 'leader-other', role: 'Leader', isActive: true, teamId: 'team-2' };
+  const candidates = [otherTeamLeader];
+
+  const selected = selectValidLeader('leader-other', 'team-1', candidates, { allowUnassigned: true });
+  assert.strictEqual(selected, null);
+}
+
 console.log('Leader validation behavioral tests: ALL PASS');

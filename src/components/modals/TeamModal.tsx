@@ -5,7 +5,7 @@ import { X, Users, User as UserIcon } from 'lucide-react';
 import { Team } from '@/types';
 import { useUsers } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
-import { isIndividualRole, roleLabel } from '@/lib/role-policy';
+import { roleLabel } from '@/lib/role-policy';
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -82,7 +82,7 @@ export default function TeamModal({ isOpen, onClose, onSave, team }: TeamModalPr
               onChange={(e) => setFormData({ ...formData, leaderId: e.target.value })}
             >
               <option value="">-- Chọn trưởng nhóm --</option>
-              {users.filter((u) => !isIndividualRole(u.role)).map((user) => (
+              {users.filter((u) => u.role === 'Leader').map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name} ({roleLabel(user.role)})
                 </option>

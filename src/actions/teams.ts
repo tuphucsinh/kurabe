@@ -45,6 +45,7 @@ export async function upsertTeamAction(
     const teamId = team.id || crypto.randomUUID();
     const teamName = team.name || existingTeam?.name || '';
     const leaderId = team.leaderId ? team.leaderId : null;
+    let leaderWasUnassigned = false;
 
     if (leaderId) {
       const { data: leaderUser, error: leaderLookupError } = await supabaseAdmin
@@ -66,11 +67,16 @@ export async function upsertTeamAction(
               teamId: leaderUser.team_id,
             }
           : null,
-        teamId
+        teamId,
+        { allowUnassigned: true }
       );
 
       if (!validation.ok) {
         return { success: false, error: validation.error };
+      }
+
+      if (leaderUser && leaderUser.team_id === null) {
+        leaderWasUnassigned = true;
       }
     }
 
@@ -89,6 +95,23 @@ export async function upsertTeamAction(
 
     if (error || !data) {
       return { success: false, error: toClientError(error, 'Lỗi khi lưu nhóm. Vui lòng thử lại.') };
+    }
+
+    if (leaderId && leaderWasUnassigned) {
+      const { data: updatedUsers, error: userUpdateError } = await supabaseAdmin
+        .from('users')
+        .update({ team_id: teamId })
+        .eq('id', leaderId)
+        .is('team_id', null)
+        .select('id');
+
+      if (userUpdateError) {
+        return { success: false, error: toClientError(userUpdateError, 'Lỗi khi cập nhật nhóm cho trưởng nhóm.') };
+      }
+
+      if (!updatedUsers || updatedUsers.length !== 1) {
+        return { success: false, error: 'Không thể gán trưởng nhóm vào nhóm. Vui lòng thử lại.' };
+      }
     }
 
     const savedTeam: Team = {
