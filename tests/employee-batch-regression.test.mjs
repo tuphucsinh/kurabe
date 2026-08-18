@@ -314,18 +314,32 @@ function extractFunction(code, functionName) {
     'EmployeesClient must not maintain currentPage numbered state'
   );
 
-  // Verify evaluation skeleton cell & retry
+  // Verify evaluation cell & retry wiring
   assert.ok(
     normCode.includes('item.evaluationLoading'),
-    'EmployeesClient grade column must branch on item.evaluationLoading'
+    'EmployeesClient grade column must pass item.evaluationLoading'
   );
   assert.ok(
     normCode.includes('item.evaluationError'),
-    'EmployeesClient grade column must handle item.evaluationError'
+    'EmployeesClient grade column must pass item.evaluationError'
   );
   assert.ok(
     normCode.includes('handleRetryEvaluation'),
     'EmployeesClient must provide evaluation retry function'
+  );
+  assert.ok(
+    normCode.includes('EmployeeEvaluationCell'),
+    'EmployeesClient must render EmployeeEvaluationCell'
+  );
+
+  // Verify observability markers
+  assert.ok(
+    normCode.includes('data-load-layer="shell"'),
+    'EmployeesClient must include data-load-layer="shell"'
+  );
+  assert.ok(
+    normCode.includes('data-load-layer="light"'),
+    'EmployeesClient must include data-load-layer="light"'
   );
 }
 

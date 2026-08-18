@@ -5,12 +5,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTeams, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import { getUsersBatchAction, getEvaluationSummariesBatchAction } from '@/actions/read';
 import { mergeUserBatches } from '@/lib/employee-batch-helpers';
-import GradeBadge from '@/components/ui/GradeBadge';
+import EmployeeEvaluationCell from '@/components/employees/EmployeeEvaluationCell';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Evaluation } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, Check, RefreshCw } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
@@ -240,33 +240,6 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     };
   }, [loadInitialBatch]);
 
-  // Period change: refresh heavy evaluation data for existing users without blocking shell or users
-  const prevPeriodIdRef = useRef<string | undefined>(currentPeriodId);
-  useEffect(() => {
-    let isCancelled = false;
-    if (prevPeriodIdRef.current !== currentPeriodId) {
-      prevPeriodIdRef.current = currentPeriodId;
-      generationRef.current += 1;
-      const currentGen = generationRef.current;
-
-      void Promise.resolve().then(() => {
-        if (isCancelled || generationRef.current !== currentGen) return;
-
-        setEvaluationsMap({});
-        setEvalLoadingMap({});
-        setEvalErrorMap({});
-
-        if (users.length > 0 && currentPeriodId) {
-          fetchEvaluationsForIds(users.map((u) => u.id), currentPeriodId, currentGen);
-        }
-      });
-    }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentPeriodId, users, fetchEvaluationsForIds]);
-
   // Load more users (next 20 users)
   const handleLoadMore = async () => {
     if (isLoadingMore || isInitialLoading || !hasMore || !effectiveViewer) return;
@@ -309,10 +282,10 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   };
 
   // Retry evaluation fetch for an employee
-  const handleRetryEvaluation = (employeeId: string) => {
+  const handleRetryEvaluation = useCallback((employeeId: string) => {
     if (!currentPeriodId) return;
     fetchEvaluationsForIds([employeeId], currentPeriodId, generationRef.current);
-  };
+  }, [currentPeriodId, fetchEvaluationsForIds]);
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
@@ -626,69 +599,19 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     {
       key: 'grade',
       header: 'Xếp loại',
-      render: (item) => {
-        if (item.evaluationLoading) {
-          return (
-            <div className="flex items-center gap-2">
-              <Skeleton className="w-8 h-8 rounded-lg" />
-              <div className="w-12 flex flex-col items-center gap-1">
-                <Skeleton className="h-3 w-6 rounded" />
-                <Skeleton className="h-4 w-8 rounded" />
-              </div>
-            </div>
-          );
-        }
-
-        if (item.evaluationError) {
-          return (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-rose-500 font-medium">Lỗi tải</span>
-              <button
-                type="button"
-                onClick={() => handleRetryEvaluation(item.id)}
-                className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
-                title="Thử tải lại đánh giá"
-              >
-                <RefreshCw size={12} />
-                Thử lại
-              </button>
-            </div>
-          );
-        }
-
-        return (
-          <div className="flex items-center gap-2">
-            <GradeBadge
-              grade={item.grade}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
-                item.hasFinalResult ? 'ring-2 ring-emerald-500' : ''
-              }`}
-            />
-            {item.hasFinalResult && (
-              <span
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0"
-                title="Đã có kết quả cuối"
-              >
-                <Check size={12} strokeWidth={3} />
-              </span>
-            )}
-            <div className="flex items-end gap-2 tabular-nums">
-              {item.gradeRound != null && (
-                <div className="w-12 flex flex-col items-center leading-none">
-                  <span className="text-xs text-slate-700 font-bold">L{item.gradeRound}</span>
-                  <span className="text-base text-slate-800 font-bold mt-1">{item.score}</span>
-                </div>
-              )}
-              {item.previousRoundScores.map((roundData) => (
-                <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
-                  <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-                  <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      },
+      render: (item) => (
+        <EmployeeEvaluationCell
+          grade={item.grade}
+          score={item.score}
+          gradeRound={item.gradeRound}
+          previousRoundScores={item.previousRoundScores}
+          hasFinalResult={item.hasFinalResult}
+          evaluationLoading={item.evaluationLoading}
+          evaluationError={item.evaluationError}
+          employeeId={item.id}
+          onRetry={handleRetryEvaluation}
+        />
+      ),
     },
     {
       key: 'actions',
@@ -741,7 +664,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   ];
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div data-load-layer="shell" className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -853,7 +776,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div data-load-layer="light" className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         {isInitialLoading ? (
           <div className="w-full overflow-hidden rounded-xl border-none bg-white">
             <div className="overflow-x-auto custom-scrollbar">
@@ -894,7 +817,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                         <Skeleton className="h-4 w-12 rounded" />
                       </td>
                       <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
+                        <div data-load-layer="heavy" className="flex items-center gap-2">
                           <Skeleton className="w-8 h-8 rounded-lg" />
                           <div className="w-12 flex flex-col items-center gap-1">
                             <Skeleton className="h-3 w-6 rounded" />

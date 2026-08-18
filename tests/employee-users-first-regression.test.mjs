@@ -20,7 +20,7 @@ function normalizeWhitespace(code) {
 
 function extractFunction(code, functionName) {
   const cleanCode = stripComments(code);
-  const regex = new RegExp(`(?:export\\s+(?:default\\s+)?)?function\\s+${functionName}\\s*\\([^)]*\\)[^{]*\\{`);
+  const regex = new RegExp(`(?:export\\s+(?:default\\s+)?)?(?:async\\s+)?function\\s+${functionName}\\s*\\([^)]*\\)[^{]*\\{`);
   const match = cleanCode.match(regex);
   assert.ok(match, `Function declaration not found: ${functionName}`);
 
@@ -162,52 +162,65 @@ function extractInterface(code, interfaceName) {
     'employeesData map must set evaluationLoading'
   );
 
-  // 2.8 Evaluation column render branch must handle evaluationLoading
-  const gradeColumnMatch = cleanCode.match(/key\s*:\s*['"]grade['"][\s\S]*?render\s*:\s*\((?:item|[^)]+)\)\s*=>\s*\{([\s\S]*?)\}\s*,/);
-  assert.ok(gradeColumnMatch, 'grade column with block body render function must exist');
+  // 2.8 Evaluation column render must delegate to EmployeeEvaluationCell with proper props
+  assert.ok(
+    normFn.includes('EmployeeEvaluationCell'),
+    'EmployeesClient must import and render EmployeeEvaluationCell'
+  );
+  const gradeColumnMatch = cleanCode.match(/key\s*:\s*['"]grade['"][\s\S]*?render\s*:\s*\((?:item|[^)]+)\)\s*=>\s*([\s\S]*?)(?:,\s*\{|\s*\}\s*,\s*\]|\s*\])/);
+  assert.ok(gradeColumnMatch, 'grade column render function must exist');
   const gradeRenderBody = normalizeWhitespace(gradeColumnMatch[1]);
 
-  // Must branch on item.evaluationLoading
   assert.ok(
-    /if\s*\(\s*item\.evaluationLoading\s*\)/.test(gradeRenderBody),
-    'grade column render must branch on item.evaluationLoading'
+    gradeRenderBody.includes('<EmployeeEvaluationCell') || gradeRenderBody.includes('EmployeeEvaluationCell'),
+    'grade column render must render EmployeeEvaluationCell'
+  );
+  assert.ok(
+    gradeRenderBody.includes('grade={item.grade}') || gradeRenderBody.includes('grade: item.grade') || gradeRenderBody.includes('item.grade'),
+    'EmployeeEvaluationCell must receive item.grade'
+  );
+  assert.ok(
+    gradeRenderBody.includes('score={item.score}') || gradeRenderBody.includes('item.score'),
+    'EmployeeEvaluationCell must receive item.score'
+  );
+  assert.ok(
+    gradeRenderBody.includes('evaluationLoading={item.evaluationLoading}') || gradeRenderBody.includes('item.evaluationLoading'),
+    'EmployeeEvaluationCell must receive item.evaluationLoading'
+  );
+  assert.ok(
+    gradeRenderBody.includes('evaluationError={item.evaluationError}') || gradeRenderBody.includes('item.evaluationError'),
+    'EmployeeEvaluationCell must receive item.evaluationError'
+  );
+  assert.ok(
+    gradeRenderBody.includes('employeeId={item.id}') || gradeRenderBody.includes('item.id'),
+    'EmployeeEvaluationCell must receive employeeId'
+  );
+  assert.ok(
+    gradeRenderBody.includes('onRetry={handleRetryEvaluation}') || gradeRenderBody.includes('handleRetryEvaluation'),
+    'EmployeeEvaluationCell must receive onRetry handler'
   );
 
-  // Loading branch must render Skeleton and not fake data
-  const loadingBranchMatch = gradeRenderBody.match(/if\s*\(\s*item\.evaluationLoading\s*\)\s*\{([\s\S]*?)\}/);
-  assert.ok(loadingBranchMatch, 'item.evaluationLoading branch body must exist');
-  const loadingBranchBody = loadingBranchMatch[1];
-
+  // 2.9 Observability Markers (data-load-layer)
   assert.ok(
-    loadingBranchBody.includes('<Skeleton') || loadingBranchBody.includes('Skeleton'),
-    'Loading branch must render Skeleton component'
+    normFn.includes('data-load-layer="shell"'),
+    'EmployeesClient must render data-load-layer="shell" on the outer frame element'
   );
   assert.ok(
-    !loadingBranchBody.includes('<GradeBadge'),
-    'Loading branch must not render loaded GradeBadge'
-  );
-
-  // Loaded/fallback branch must render GradeBadge and scores
-  assert.ok(
-    gradeRenderBody.includes('<GradeBadge'),
-    'Non-loading branch must render GradeBadge'
+    normFn.includes('data-load-layer="light"'),
+    'EmployeesClient must render data-load-layer="light" on the table/data region'
   );
   assert.ok(
-    gradeRenderBody.includes('item.grade'),
-    'GradeBadge must receive item.grade'
-  );
-  assert.ok(
-    gradeRenderBody.includes('item.score'),
-    'Non-loading branch must render item.score'
+    normFn.includes('data-load-layer="heavy"'),
+    'EmployeesClient placeholder skeleton must include data-load-layer="heavy"'
   );
 
-  // 2.9 Table placeholders & EmptyState separation
+  // 2.10 Table placeholders & EmptyState separation
   assert.ok(
     normFn.includes('isInitialLoading ?') && normFn.includes('EmptyState'),
     'Table placeholders must be rendered while isInitialLoading is true, distinct from EmptyState'
   );
 
-  // 2.10 Capability flags reconciled to effectiveViewer
+  // 2.11 Capability flags reconciled to effectiveViewer
   assert.ok(
     /canManageEmployees\s*=\s*effectiveViewer\?\.role === 'Manager' \|\| effectiveViewer\?\.role === 'Leader'/.test(normFn),
     'canManageEmployees must be reconciled from effectiveViewer'
@@ -221,7 +234,7 @@ function extractInterface(code, interfaceName) {
     'EmployeeModal restrictToTeamId must use effectiveViewer.teamId'
   );
 
-  // 2.11 Preservation of links and actions
+  // 2.12 Preservation of links and actions
   assert.ok(
     /href=\{`\/evaluations\/\$\{item\.id\}`\}/.test(normFn),
     'Link to evaluation detail must remain preserved'
@@ -229,6 +242,92 @@ function extractInterface(code, interfaceName) {
   assert.ok(
     /DataTable/.test(normFn) && /EmptyState/.test(normFn) && /EmployeeModal/.test(normFn),
     'Core UI components (DataTable, EmptyState, EmployeeModal) must remain present'
+  );
+}
+
+// -------------------------------------------------------------
+// 3. Verify src/components/employees/EmployeeEvaluationCell.tsx
+// -------------------------------------------------------------
+{
+  const code = readProjectFile('src/components/employees/EmployeeEvaluationCell.tsx');
+  const cleanCode = stripComments(code);
+  const normCode = normalizeWhitespace(cleanCode);
+
+  // 3.1 Interface EmployeeEvaluationCellProps
+  const propsInterface = extractInterface(code, 'EmployeeEvaluationCellProps');
+  const propsBody = normalizeWhitespace(propsInterface);
+
+  assert.ok(propsBody.includes('grade: string'), 'EmployeeEvaluationCellProps must declare grade: string');
+  assert.ok(propsBody.includes('score: number'), 'EmployeeEvaluationCellProps must declare score: number');
+  assert.ok(propsBody.includes('gradeRound: number | null'), 'EmployeeEvaluationCellProps must declare gradeRound: number | null');
+  assert.ok(propsBody.includes('previousRoundScores:'), 'EmployeeEvaluationCellProps must declare previousRoundScores');
+  assert.ok(propsBody.includes('hasFinalResult: boolean'), 'EmployeeEvaluationCellProps must declare hasFinalResult: boolean');
+  assert.ok(propsBody.includes('evaluationLoading: boolean'), 'EmployeeEvaluationCellProps must declare evaluationLoading: boolean');
+  assert.ok(propsBody.includes('evaluationError?: boolean'), 'EmployeeEvaluationCellProps must declare evaluationError?: boolean');
+  assert.ok(propsBody.includes('employeeId: string'), 'EmployeeEvaluationCellProps must declare employeeId: string');
+  assert.ok(propsBody.includes('onRetry?:'), 'EmployeeEvaluationCellProps must declare onRetry');
+
+  // 3.2 Memoization & Client presentational
+  assert.ok(
+    normCode.includes("'use client'") || normCode.includes('"use client"'),
+    'EmployeeEvaluationCell must be a client component'
+  );
+  assert.ok(
+    normCode.includes('React.memo') || normCode.includes('memo('),
+    'EmployeeEvaluationCell must be wrapped in React.memo'
+  );
+
+  // 3.3 Heavy marker
+  assert.ok(
+    normCode.includes('data-load-layer="heavy"'),
+    'EmployeeEvaluationCell must render data-load-layer="heavy"'
+  );
+
+  // 3.4 Loading branch with Skeleton
+  assert.ok(
+    /if\s*\(\s*evaluationLoading\s*\)/.test(normCode),
+    'EmployeeEvaluationCell must branch on evaluationLoading'
+  );
+  assert.ok(
+    normCode.includes('<Skeleton') || normCode.includes('Skeleton'),
+    'EmployeeEvaluationCell loading branch must render Skeleton'
+  );
+
+  // 3.5 Error branch with Retry
+  assert.ok(
+    /if\s*\(\s*evaluationError\s*\)/.test(normCode),
+    'EmployeeEvaluationCell must branch on evaluationError'
+  );
+  assert.ok(
+    normCode.includes('onRetry?.(employeeId)') || normCode.includes('onRetry(employeeId)'),
+    'EmployeeEvaluationCell error branch must invoke onRetry with employeeId'
+  );
+  assert.ok(
+    normCode.includes('Thử lại') && normCode.includes('Lỗi tải'),
+    'EmployeeEvaluationCell error branch must render retry button and error text'
+  );
+
+  // 3.6 Loaded branch with GradeBadge and score display
+  assert.ok(
+    normCode.includes('<GradeBadge') && normCode.includes('grade={grade}'),
+    'EmployeeEvaluationCell must render GradeBadge with grade'
+  );
+  assert.ok(
+    normCode.includes('hasFinalResult') && normCode.includes('Check'),
+    'EmployeeEvaluationCell must render checkmark when hasFinalResult is true'
+  );
+  assert.ok(
+    normCode.includes('gradeRound') && normCode.includes('previousRoundScores'),
+    'EmployeeEvaluationCell must render gradeRound and previousRoundScores'
+  );
+
+  // 3.7 Pure presentational: No data fetching hooks/actions
+  assert.ok(
+    !normCode.includes('useAuth') &&
+      !normCode.includes('getUsersBatchAction') &&
+      !normCode.includes('getEvaluationSummariesBatchAction') &&
+      !normCode.includes('fetch('),
+    'EmployeeEvaluationCell must be purely presentational without direct data fetching'
   );
 }
 
