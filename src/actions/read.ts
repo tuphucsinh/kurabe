@@ -8,12 +8,16 @@ import {
   getEvaluationsByPeriodAdmin, 
   getEvaluationSummariesAdmin,
   getEvaluationSummariesByPeriodAdmin,
+  getEvaluationSummariesByEmployeeIdsAdmin,
   getEvaluationByIdAdmin, 
   getEvaluationByEmployeeAdmin, 
   getEvaluationHistoryByEmployeeAdmin 
 } from '@/lib/db/evaluations-admin';
 import { 
   getUsersAdmin, 
+  getUsersBatchAdmin,
+  UsersBatchOptions,
+  UsersBatchResult,
   getUserByIdAdmin, 
   getUsersByTeamAdmin 
 } from '@/lib/db/users-admin';
@@ -61,6 +65,20 @@ export async function getUsersAction(options?: {
   }
   return getUsersAdmin(auth.user, options);
 }
+
+/**
+ * Đọc danh sách users theo lô (batch) 20 dòng.
+ * Phân quyền theo requester: Manager xem tất cả, Employee/Leader/SubLeader theo team.
+ * Bắt buộc requireAuth().
+ */
+export async function getUsersBatchAction(options?: UsersBatchOptions): Promise<UsersBatchResult> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    return { items: [], hasMore: false, totalCount: 0 };
+  }
+  return getUsersBatchAdmin(auth.user, options);
+}
+
 
 /**
  * Đọc thông tin user theo ID.
@@ -148,6 +166,23 @@ export async function getEvaluationSummariesAction(
   }
   return getEvaluationSummariesAdmin(auth.user, opts);
 }
+
+/**
+ * Đọc danh sách tóm tắt evaluations theo lô employee IDs (1..20 UUIDs).
+ * Dùng summary projection (không tải scores/notes nặng).
+ * Bắt buộc requireAuth() — phân quyền chặt chẽ theo viewer.
+ */
+export async function getEvaluationSummariesBatchAction(
+  employeeIds: string[],
+  periodId?: string
+): Promise<Evaluation[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    return [];
+  }
+  return getEvaluationSummariesByEmployeeIdsAdmin(employeeIds, periodId, auth.user);
+}
+
 
 /**
  * Đọc chi tiết một evaluation theo ID.

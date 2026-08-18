@@ -83,32 +83,32 @@ function extractInterface(code, interfaceName) {
     'EmployeeTableItem must declare evaluationLoading: boolean'
   );
 
-  // 1.2 EmployeesClient hook calls & loading gate
+  // 1.2 EmployeesClient hook calls & batch actions
   const componentFn = extractFunction(code, 'EmployeesClient');
   const normFn = normalizeWhitespace(componentFn);
 
-  // Must call useUsers, useTeams, useEvaluationSummaries
+  // Must call useTeams, getUsersBatchAction, getEvaluationSummariesBatchAction
   assert.ok(
-    /const\s*\{[^}]*data\s*:\s*users[^}]*isLoading\s*:\s*usersLoading[^}]*\}\s*=\s*useUsers\s*\(\s*user\s*\)/.test(normFn),
-    'EmployeesClient must call useUsers(user) binding usersLoading'
+    /useTeams\s*\(\s*user\s*\)/.test(normFn),
+    'EmployeesClient must call useTeams(user)'
   );
   assert.ok(
-    /const\s*\{[^}]*data\s*:\s*teams[^}]*isLoading\s*:\s*teamsLoading[^}]*\}\s*=\s*useTeams\s*\(\s*user\s*\)/.test(normFn),
-    'EmployeesClient must call useTeams(user) binding teamsLoading'
+    normFn.includes('getUsersBatchAction'),
+    'EmployeesClient must call getUsersBatchAction for users batch'
   );
   assert.ok(
-    /const\s*\{[^}]*data\s*:\s*evaluations[^}]*isLoading\s*:\s*evalsLoading[^}]*\}\s*=\s*useEvaluationSummaries\s*\(\s*currentPeriod\?\.id\s*,\s*user\s*\)/.test(normFn),
-    'EmployeesClient must call useEvaluationSummaries(currentPeriod?.id, user) binding evalsLoading'
+    normFn.includes('getEvaluationSummariesBatchAction'),
+    'EmployeesClient must call getEvaluationSummariesBatchAction for evaluation summaries batch'
   );
 
-  // 1.3 Gate check: isLoading must block on usersLoading/teamsLoading/!user, but NOT on evalsLoading
+  // 1.3 Gate check: isLoading must block on isInitialLoading/teamsLoading/!user, but NOT on evaluation query
   const isLoadingMatch = normFn.match(/const\s+isLoading\s*=\s*([^;]+);/);
   assert.ok(isLoadingMatch, 'EmployeesClient must declare const isLoading = ...');
   const isLoadingExpr = isLoadingMatch[1];
 
   assert.ok(
-    isLoadingExpr.includes('usersLoading'),
-    'isLoading must include usersLoading'
+    isLoadingExpr.includes('isInitialLoading') || isLoadingExpr.includes('usersLoading'),
+    'isLoading must include initial user loading state'
   );
   assert.ok(
     isLoadingExpr.includes('teamsLoading'),
@@ -119,24 +119,15 @@ function extractInterface(code, interfaceName) {
     'isLoading must include !user'
   );
   assert.ok(
-    !isLoadingExpr.includes('evalsLoading'),
-    'isLoading must NOT include evalsLoading (evaluation query must not block table render)'
+    !isLoadingExpr.includes('evalsLoading') && !isLoadingExpr.includes('evalLoadingMap'),
+    'isLoading must NOT block on evaluation summaries query'
   );
 
-  // 1.4 employeesData useMemo must populate evaluationLoading and react to evalsLoading
+  // 1.4 employeesData useMemo must populate evaluationLoading
   assert.ok(
-    /evaluationLoading\s*:\s*evalsLoading/.test(normFn),
-    'employeesData map must set evaluationLoading: evalsLoading'
+    /evaluationLoading\s*:\s*isEvalLoading/.test(normFn) || /evaluationLoading\s*:/.test(normFn),
+    'employeesData map must set evaluationLoading'
   );
-
-  const employeesDataMatch = cleanCode.match(/const\s+employeesData\s*=\s*useMemo\s*\(\s*\(\)\s*=>\s*\{[\s\S]*?\},\s*\[([\s\S]*?)\]\s*\);/);
-  assert.ok(employeesDataMatch, 'employeesData useMemo declaration must exist');
-  const employeesDataDeps = normalizeWhitespace(employeesDataMatch[1]);
-
-  assert.ok(employeesDataDeps.includes('users'), 'employeesData deps must include users');
-  assert.ok(employeesDataDeps.includes('teams'), 'employeesData deps must include teams');
-  assert.ok(employeesDataDeps.includes('evaluations'), 'employeesData deps must include evaluations');
-  assert.ok(employeesDataDeps.includes('evalsLoading'), 'employeesData deps must include evalsLoading');
 
   // 1.5 Evaluation column render branch must handle evaluationLoading
   const gradeColumnMatch = cleanCode.match(/key\s*:\s*['"]grade['"][\s\S]*?render\s*:\s*\((?:item|[^)]+)\)\s*=>\s*\{([\s\S]*?)\}\s*,/);

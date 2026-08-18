@@ -202,10 +202,10 @@ function extractFunction(code, functionName) {
   const code = readProjectFile('src/components/employees/EmployeesClient.tsx');
   const cleanCode = stripComments(code);
 
-  // 4.1 Must import useEvaluationSummaries and NOT useEvaluations
+  // 4.1 Must NOT import old full list hooks (useEvaluations / useEvaluationSummaries)
   assert.ok(
-    /import\s*\{[^}]*\buseEvaluationSummaries\b[^}]*\}\s*from\s*['"]@\/hooks\/use-db['"]/.test(cleanCode),
-    'EmployeesClient.tsx must import useEvaluationSummaries from @/hooks/use-db'
+    !/import\s*\{[^}]*\buseEvaluationSummaries\b[^}]*\}\s*from\s*['"]@\/hooks\/use-db['"]/.test(cleanCode),
+    'EmployeesClient.tsx must NOT import old useEvaluationSummaries from @/hooks/use-db'
   );
 
   assert.ok(
@@ -213,15 +213,25 @@ function extractFunction(code, functionName) {
     'EmployeesClient.tsx must NOT import useEvaluations from @/hooks/use-db'
   );
 
-  // 4.2 Must call useEvaluationSummaries hook
+  // 4.2 Must import and use batch actions from @/actions/read
   assert.ok(
-    /useEvaluationSummaries\s*\(\s*currentPeriod\?\.id\s*,\s*user\s*\)/.test(cleanCode),
-    'EmployeesClient.tsx must call useEvaluationSummaries(currentPeriod?.id, user)'
+    /import\s*\{[^}]*\bgetUsersBatchAction\b[^}]*\}\s*from\s*['"]@\/actions\/read['"]/.test(cleanCode),
+    'EmployeesClient.tsx must import getUsersBatchAction from @/actions/read'
   );
 
   assert.ok(
-    !/useEvaluations\s*\(\s*currentPeriod\?\.id\s*,\s*user\s*\)/.test(cleanCode),
-    'EmployeesClient.tsx must NOT call useEvaluations(currentPeriod?.id, user)'
+    /import\s*\{[^}]*\bgetEvaluationSummariesBatchAction\b[^}]*\}\s*from\s*['"]@\/actions\/read['"]/.test(cleanCode),
+    'EmployeesClient.tsx must import getEvaluationSummariesBatchAction from @/actions/read'
+  );
+
+  const normCode = normalizeWhitespace(cleanCode);
+  assert.ok(
+    normCode.includes('getUsersBatchAction'),
+    'EmployeesClient.tsx must call getUsersBatchAction'
+  );
+  assert.ok(
+    normCode.includes('getEvaluationSummariesBatchAction'),
+    'EmployeesClient.tsx must call getEvaluationSummariesBatchAction'
   );
 }
 

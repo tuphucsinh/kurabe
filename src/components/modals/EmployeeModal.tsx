@@ -5,6 +5,7 @@ import { X, User as UserIcon, Shield, FileText, Users, UserCheck, Hash, Calendar
 import { useToast } from '@/components/ui/Toast';
 import { User, Role } from '@/types';
 import { ALL_ROLES, canHaveSubLeader, roleLabel } from '@/lib/role-policy';
+import { useTeamUsers } from '@/hooks/use-db';
 
 export interface EmployeeModalProps {
   isOpen: boolean;
@@ -13,9 +14,10 @@ export interface EmployeeModalProps {
   employee?: User | null;
   restrictToTeamId?: string | null;
   roleOptions?: Role[];
-  allUsers: User[];
+  allUsers?: User[];
   teams: { id: string; name: string }[];
 }
+
 
 export default function EmployeeModal({
   isOpen,
@@ -48,7 +50,7 @@ interface EmployeeModalContentProps {
   onSave: (employee: Partial<User>) => void;
   employee?: User | null;
   teams: { id: string; name: string }[];
-  allUsers: User[];
+  allUsers?: User[];
   restrictToTeamId?: string | null;
   roleOptions?: Role[];
 }
@@ -58,7 +60,7 @@ function EmployeeModalContent({
   onSave,
   employee,
   teams,
-  allUsers,
+  allUsers = [],
   restrictToTeamId,
   roleOptions,
 }: EmployeeModalContentProps) {
@@ -78,13 +80,17 @@ function EmployeeModalContent({
     joinDate: employee?.joinDate || new Date().toISOString().split('T')[0],
   });
 
+  // Query authorized team members for candidate SubLeaders:
+  const { data: teamUsers = [], isLoading: isTeamUsersLoading } = useTeamUsers(formData.teamId || '');
+
   // Filter options for SubLeader: role === 'SubLeader' AND teamId === current teamId AND id !== current employee id
   const subleaderOptions = useMemo(() => {
     if (!formData.teamId) return [];
-    return allUsers.filter(
+    const source = teamUsers.length > 0 ? teamUsers : allUsers;
+    return source.filter(
       (u) => u.role === 'SubLeader' && u.teamId === formData.teamId && u.id !== employee?.id
     );
-  }, [allUsers, formData.teamId, employee?.id]);
+  }, [teamUsers, allUsers, formData.teamId, employee?.id]);
 
   const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRole = e.target.value as Role;
@@ -125,7 +131,8 @@ function EmployeeModalContent({
       finalData.subleaderId = null;
     } else if (finalData.subleaderId) {
       // Validate client-side: subleader must belong to the same team
-      const selectedSubLeader = allUsers.find((u) => u.id === finalData.subleaderId);
+      const source = teamUsers.length > 0 ? teamUsers : allUsers;
+      const selectedSubLeader = source.find((u) => u.id === finalData.subleaderId);
       if (selectedSubLeader && selectedSubLeader.teamId !== finalData.teamId) {
         finalData.subleaderId = null;
       }
@@ -134,6 +141,7 @@ function EmployeeModalContent({
     onSave(finalData);
     onClose();
   };
+
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -256,10 +264,12 @@ function EmployeeModalContent({
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 bg-white disabled:bg-slate-100 disabled:text-slate-400"
                     value={formData.subleaderId || ''}
                     onChange={(e) => setFormData({ ...formData, subleaderId: e.target.value || null })}
-                    disabled={!formData.teamId}
+                    disabled={!formData.teamId || isTeamUsersLoading}
                   >
                     {!formData.teamId ? (
                       <option value="">Chọn team trước</option>
+                    ) : isTeamUsersLoading ? (
+                      <option value="">Đang tải danh sách SubLeader...</option>
                     ) : (
                       <>
                         <option value="">Chưa gán</option>
@@ -271,6 +281,7 @@ function EmployeeModalContent({
                       </>
                     )}
                   </select>
+
                 </div>
               )}
             </div>

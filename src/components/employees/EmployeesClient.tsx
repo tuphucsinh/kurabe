@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUsers, useTeams, useEvaluationSummaries, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { useTeams, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { getUsersBatchAction, getEvaluationSummariesBatchAction } from '@/actions/read';
+import { mergeUserBatches } from '@/lib/employee-batch-helpers';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/types';
+import { User, Evaluation } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, Check } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, Check, RefreshCw } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
@@ -17,7 +19,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import EmployeeModal from '@/components/modals/EmployeeModal';
-import { canHaveSubLeader, isManagementRole, roleLabel, ROLE_ORDER } from '@/lib/role-policy';
+import { canHaveSubLeader, isManagementRole, roleLabel } from '@/lib/role-policy';
 
 interface EmployeeTableItem extends User {
   teamName: string;
@@ -27,151 +29,238 @@ interface EmployeeTableItem extends User {
   previousRoundScores: Array<{ round: number; score: number }>;
   hasFinalResult: boolean;
   evaluationLoading: boolean;
+  evaluationError?: boolean;
 }
 
 export default function EmployeesClient() {
   const { user, currentPeriod } = useAuth();
-
-  const { data: users = [], isLoading: usersLoading } = useUsers(user);
-  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
-  // Chỉ tải summaries evaluations của kỳ đang chọn — không kéo toàn bộ scores/notes (P84.2)
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluationSummaries(currentPeriod?.id, user);
   const queryClient = useQueryClient();
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
   const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();
   const { toast } = useToast();
   const confirm = useConfirm();
 
+  // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+
+  // Batch state
+  const [users, setUsers] = useState<User[]>([]);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [userBatchError, setUserBatchError] = useState<string | null>(null);
+
+  // Evaluation summaries batch state (by employeeId)
+  const [evaluationsMap, setEvaluationsMap] = useState<Record<string, Evaluation>>({});
+  const [evalLoadingMap, setEvalLoadingMap] = useState<Record<string, boolean>>({});
+  const [evalErrorMap, setEvalErrorMap] = useState<Record<string, boolean>>({});
+
+  // Generation token to ignore stale async responses after filter/period changes
+  const generationRef = useRef<number>(0);
+
+  // Modal & permissions
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const canManageEmployees = user?.role === 'Manager' || user?.role === 'Leader';
   const canDeleteEmployees = user?.role === 'Manager';
   const isManager = user?.role === 'Manager';
   const isLeader = user?.role === 'Leader';
-  
+
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const currentPeriodId = currentPeriod?.id;
 
-  const isLoading = usersLoading || teamsLoading || !user;
+  // Fetch evaluations batch for a list of employee IDs
+  const fetchEvaluationsForIds = useCallback(async (ids: string[], periodId: string, gen: number) => {
+    if (!ids.length || !periodId) return;
+
+    setEvalLoadingMap((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = true;
+      return next;
+    });
+    setEvalErrorMap((prev) => {
+      const next = { ...prev };
+      for (const id of ids) delete next[id];
+      return next;
+    });
+
+    try {
+      const evals = await getEvaluationSummariesBatchAction(ids, periodId);
+      if (generationRef.current !== gen) return;
+
+      setEvaluationsMap((prev) => {
+        const next = { ...prev };
+        for (const ev of evals) {
+          if (ev.employeeId) {
+            next[ev.employeeId] = ev;
+          }
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error('Error fetching evaluation summaries batch:', err);
+      if (generationRef.current === gen) {
+        setEvalErrorMap((prev) => {
+          const next = { ...prev };
+          for (const id of ids) next[id] = true;
+          return next;
+        });
+      }
+    } finally {
+      if (generationRef.current === gen) {
+        setEvalLoadingMap((prev) => {
+          const next = { ...prev };
+          for (const id of ids) delete next[id];
+          return next;
+        });
+      }
+    }
+  }, []);
+
+  // Fetch initial batch (first 20 users)
+  const loadInitialBatch = useCallback(async () => {
+    if (!user) return;
+    generationRef.current += 1;
+    const currentGen = generationRef.current;
+
+    setIsInitialLoading(true);
+    setIsLoadingMore(false);
+    setUserBatchError(null);
+    setEvaluationsMap({});
+    setEvalLoadingMap({});
+    setEvalErrorMap({});
+
+    try {
+      const res = await getUsersBatchAction({
+        offset: 0,
+        limit: 20,
+        search: searchTerm,
+        teamId: teamFilter,
+        role: roleFilter,
+      });
+
+      if (generationRef.current !== currentGen) return;
+
+      setUsers(res.items);
+      setHasMore(res.hasMore);
+      setTotalCount(res.totalCount);
+
+      if (res.items.length > 0 && currentPeriodId) {
+        fetchEvaluationsForIds(res.items.map((u) => u.id), currentPeriodId, currentGen);
+      }
+    } catch (err) {
+      console.error('Error fetching initial users batch:', err);
+      if (generationRef.current === currentGen) {
+        setUserBatchError('Không thể tải danh sách nhân viên. Vui lòng thử lại.');
+      }
+    } finally {
+      if (generationRef.current === currentGen) {
+        setIsInitialLoading(false);
+      }
+    }
+  }, [user, searchTerm, teamFilter, roleFilter, currentPeriodId, fetchEvaluationsForIds]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    void Promise.resolve().then(() => {
+      if (!isCancelled) {
+        loadInitialBatch();
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [loadInitialBatch]);
+
+  // Load more users (next 20 users)
+  const handleLoadMore = async () => {
+    if (isLoadingMore || isInitialLoading || !hasMore || !user) return;
+    const currentGen = generationRef.current;
+
+    setIsLoadingMore(true);
+    setUserBatchError(null);
+
+    try {
+      const nextOffset = users.length;
+      const res = await getUsersBatchAction({
+        offset: nextOffset,
+        limit: 20,
+        search: searchTerm,
+        teamId: teamFilter,
+        role: roleFilter,
+      });
+
+      if (generationRef.current !== currentGen) return;
+
+      const merged = mergeUserBatches(users, res.items);
+      setUsers(merged);
+      setHasMore(res.hasMore);
+      setTotalCount(res.totalCount);
+
+      const newIds = res.items.map((u) => u.id).filter((id) => !evaluationsMap[id]);
+      if (newIds.length > 0 && currentPeriodId) {
+        fetchEvaluationsForIds(newIds, currentPeriodId, currentGen);
+      }
+    } catch (err) {
+      console.error('Error loading more users:', err);
+      if (generationRef.current === currentGen) {
+        setUserBatchError('Không thể tải thêm nhân viên. Vui lòng thử lại.');
+      }
+    } finally {
+      if (generationRef.current === currentGen) {
+        setIsLoadingMore(false);
+      }
+    }
+  };
+
+  // Retry evaluation fetch for an employee
+  const handleRetryEvaluation = (employeeId: string) => {
+    if (!currentPeriodId) return;
+    fetchEvaluationsForIds([employeeId], currentPeriodId, generationRef.current);
+  };
+
+  // Loading gate: only blocks on users/teams/user session, never on evaluations query
+  const isLoading = isInitialLoading || teamsLoading || !user;
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
-  // Computed data
-  const employeesData = useMemo(() => {
-    return users.map((user) => {
-      const team = teams.find((t) => t.id === user.teamId);
-      const userEvals = evaluations.filter((e) => e.employeeId === user.id);
-      const latestEval = userEvals.length > 0
-        ? [...userEvals].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
-        : null;
+  // Computed employee items
+  const employeesData: EmployeeTableItem[] = useMemo(() => {
+    return users.map((userItem) => {
+      const team = teams.find((t) => t.id === userItem.teamId);
+      const evalItem = evaluationsMap[userItem.id] || null;
+      const isEvalLoading = !!evalLoadingMap[userItem.id];
+      const isEvalError = !!evalErrorMap[userItem.id];
 
-      const latestScoredRound = latestEval?.rounds?.filter(
+      const latestScoredRound = evalItem?.rounds?.filter(
         (r) => r.status !== 'Draft' && r.status !== 'NotStarted' && (r.status === 'Submitted' || (r.status as string) === 'Reviewed' || (r.status as string) === 'Approved' || !!r.submittedAt)
       ) || [];
       const latestRound = latestScoredRound.length
         ? latestScoredRound.reduce((max, r) => r.round > max.round ? r : max, latestScoredRound[0])
         : null;
       const previousRoundScores = latestScoredRound
-        .filter(r => latestRound ? r.round !== latestRound.round : true)
+        .filter((r) => latestRound ? r.round !== latestRound.round : true)
         .sort((a, b) => b.round - a.round)
-        .map(r => ({ round: r.round, score: r.totalScore }));
+        .map((r) => ({ round: r.round, score: r.totalScore }));
 
       return {
-        ...user,
-        teamName: user.role === 'Manager' ? 'Toàn bộ bộ phận' : (team?.name || 'Chưa gán'),
-        grade: latestEval?.finalGrade ?? latestRound?.grade ?? '-',
-        score: latestEval?.finalScore ?? latestRound?.totalScore ?? 0,
+        ...userItem,
+        teamName: userItem.role === 'Manager' ? 'Toàn bộ bộ phận' : (team?.name || 'Chưa gán'),
+        grade: evalItem?.finalGrade ?? latestRound?.grade ?? '-',
+        score: evalItem?.finalScore ?? latestRound?.totalScore ?? 0,
         gradeRound: latestRound?.round ?? null,
         previousRoundScores,
-        hasFinalResult: !!latestEval?.finalGrade,
-        evaluationLoading: evalsLoading,
+        hasFinalResult: !!evalItem?.finalGrade,
+        evaluationLoading: isEvalLoading,
+        evaluationError: isEvalError,
       };
     });
-  }, [users, teams, evaluations, evalsLoading]);
-
-  // Filtered data
-  const filteredEmployees = useMemo(() => {
-    return employeesData.filter((emp) => {
-      const nameMatch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const codeMatch = emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSearch = nameMatch || codeMatch;
-      const matchesTeam = teamFilter === 'all' || emp.teamId === teamFilter;
-      const matchesRole = roleFilter === 'all' || emp.role === roleFilter;
-      return matchesSearch && matchesTeam && matchesRole;
-    });
-  }, [employeesData, searchTerm, teamFilter, roleFilter]);
-
-  // Sort state — mặc định theo Nhóm → Chức vụ (Leader > SubLeader > Employee) → Tên
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({
-    key: 'teamName',
-    direction: 'asc',
-  });
-
-  const sortedEmployees = useMemo(() => {
-    if (!sortConfig.direction) return filteredEmployees;
-    
-    return [...filteredEmployees].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-
-      if (sortConfig.key === 'subleaderId') {
-        aVal = a.subleaderId ? (userMap.get(a.subleaderId)?.name || '') : '';
-        bVal = b.subleaderId ? (userMap.get(b.subleaderId)?.name || '') : '';
-      } else {
-        aVal = (a[sortConfig.key as keyof EmployeeTableItem] ?? '') as string | number;
-        bVal = (b[sortConfig.key as keyof EmployeeTableItem] ?? '') as string | number;
-      }
-      
-      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-      
-      // Sort theo Nhóm: cùng nhóm → chức vụ → tên
-      if (sortConfig.key === 'teamName') {
-        if (aVal !== bVal) return sortConfig.direction === 'asc' ? (aVal < bVal ? -1 : 1) : (aVal > bVal ? -1 : 1);
-        // Cùng nhóm → theo chức vụ (Leader trước, SubLeader, rồi Employee)
-        const aRole = ROLE_ORDER[a.role] ?? 9;
-        const bRole = ROLE_ORDER[b.role] ?? 9;
-        if (aRole !== bRole) return sortConfig.direction === 'asc' ? aRole - bRole : bRole - aRole;
-        // Cùng chức vụ → theo tên để ổn định
-        const aName = (a.name || '').toLowerCase();
-        const bName = (b.name || '').toLowerCase();
-        if (aName < bName) return -1;
-        if (aName > bName) return 1;
-        return 0;
-      }
-      
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredEmployees, sortConfig, userMap]);
-
-  // Reset page when filters change — adjust state during render (pattern React khuyến nghị, không cần effect)
-  const [prevFilters, setPrevFilters] = useState({ searchTerm, teamFilter, roleFilter });
-  if (
-    searchTerm !== prevFilters.searchTerm ||
-    teamFilter !== prevFilters.teamFilter ||
-    roleFilter !== prevFilters.roleFilter
-  ) {
-    setPrevFilters({ searchTerm, teamFilter, roleFilter });
-    setCurrentPage(1);
-  }
-
-  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
-  
-  const paginatedEmployees = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedEmployees.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedEmployees, currentPage]);
-
-  const handleSort = (key: string, direction: 'asc' | 'desc' | null) => {
-    setSortConfig({ key, direction });
-  };
+  }, [users, teams, evaluationsMap, evalLoadingMap, evalErrorMap]);
 
   if (isLoading) {
     return (
@@ -215,24 +304,27 @@ export default function EmployeesClient() {
     setEditingEmployee(null);
     setIsModalOpen(true);
   };
-  
+
   const handleDelete = async (id: string, name: string) => {
     if (!canDeleteEmployees) {
       toast('Bạn không có quyền xóa nhân viên.', 'error');
       return;
     }
-    
+
     const confirmed = await confirm({
       title: 'Xóa nhân viên',
       message: `Bạn có chắc chắn muốn xóa nhân viên "${name}"? Thao tác này không thể hoàn tác.`,
       confirmText: 'Xóa ngay',
-      variant: 'danger'
+      variant: 'danger',
     });
 
     if (confirmed) {
       deleteUser(id, {
-        onSuccess: () => toast('Đã xóa nhân viên.', 'success'),
-        onError: () => toast('Lỗi khi xóa nhân viên.', 'error')
+        onSuccess: () => {
+          toast('Đã xóa nhân viên.', 'success');
+          loadInitialBatch();
+        },
+        onError: () => toast('Lỗi khi xóa nhân viên.', 'error'),
       });
     }
   };
@@ -247,7 +339,7 @@ export default function EmployeesClient() {
       title: 'Đặt lại mật khẩu',
       message: `Đặt lại mật khẩu của "${name}"? Mật khẩu sẽ chuyển về TRỐNG — nhân viên sẽ tự đặt mật khẩu mới từ Cài đặt → Tài khoản.`,
       confirmText: 'Đặt lại',
-      variant: 'warning'
+      variant: 'warning',
     });
 
     if (!confirmed) return;
@@ -284,27 +376,26 @@ export default function EmployeesClient() {
       }
     }
 
-    const payload = editingEmployee 
-      ? { ...editingEmployee, ...data } as User 
-      : { 
-          id: crypto.randomUUID(), 
+    const payload = editingEmployee
+      ? ({ ...editingEmployee, ...data } as User)
+      : ({
+          id: crypto.randomUUID(),
           ...data,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        } as User;
+          updatedAt: new Date().toISOString(),
+        } as User);
 
     if (isLeader && user?.teamId) {
       payload.teamId = user.teamId;
     }
-    
+
     try {
       const result = await upsertUserAction(payload);
       if (result.success) {
         toast('Cập nhật nhân viên thành công!', 'success');
-        queryClient.invalidateQueries({ queryKey: ['users'] });
         queryClient.invalidateQueries({ queryKey: ['teams'] });
-        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        // Audit CREATE_USER/UPDATE_USER đã ghi trong upsertUserAction (P70T01) — không ghi trùng ở UI
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+        loadInitialBatch();
       } else {
         toast(result.error || 'Lỗi khi cập nhật nhân viên.', 'error');
       }
@@ -332,17 +423,16 @@ export default function EmployeesClient() {
     setIsImporting(true);
     try {
       const result = await parseEmployeeExcel(file, teams);
-      
+
       if (result.errors.length > 0 && result.data.length === 0) {
         toast(`Lỗi import: ${result.errors[0]}`, 'error');
         setIsImporting(false);
         return;
       }
 
-      // Match with existing users
-      const codeMap = new Map(users.map(u => [u.employeeCode?.toLowerCase(), u.id]));
-      
-      const payloads: User[] = result.data.map(item => {
+      const codeMap = new Map(users.map((u) => [u.employeeCode?.toLowerCase(), u.id]));
+
+      const payloads: User[] = result.data.map((item) => {
         const existingId = codeMap.get((item.employeeCode ?? '').toLowerCase());
         return {
           ...item,
@@ -353,8 +443,9 @@ export default function EmployeesClient() {
       if (payloads.length > 0) {
         await batchUpsertUsers(payloads);
         toast(`Đã import thành công ${payloads.length} nhân viên.`, 'success');
+        loadInitialBatch();
       }
-      
+
       if (result.errors.length > 0) {
         console.error('Import errors:', result.errors);
         toast(`Có ${result.errors.length} dòng bị lỗi. Kiểm tra console để biết chi tiết.`, 'warning');
@@ -364,7 +455,7 @@ export default function EmployeesClient() {
       toast('Lỗi khi xử lý file import.', 'error');
     } finally {
       setIsImporting(false);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
     }
   };
 
@@ -372,7 +463,6 @@ export default function EmployeesClient() {
     {
       key: 'name',
       header: 'Nhân viên',
-      sortable: true,
       render: (item) => (
         <div className="flex items-center gap-3">
           <div>
@@ -392,7 +482,6 @@ export default function EmployeesClient() {
     {
       key: 'teamName',
       header: 'Nhóm',
-      sortable: true,
       hiddenOnMobile: true,
       render: (item) => (
         <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
@@ -403,15 +492,21 @@ export default function EmployeesClient() {
     {
       key: 'role',
       header: 'Chức vụ',
-      sortable: true,
       hiddenOnMobile: true,
       render: (item) => (
-        <span className={`text-xs font-medium ${
-          item.role === 'Manager' ? 'text-rose-600' : 
-          item.role === 'Leader' ? 'text-amber-600' : 
-          item.role === 'SubLeader' ? 'text-blue-600' :
-          item.role === 'Worker' ? 'text-emerald-600' : 'text-slate-500'
-        }`}>
+        <span
+          className={`text-xs font-medium ${
+            item.role === 'Manager'
+              ? 'text-rose-600'
+              : item.role === 'Leader'
+              ? 'text-amber-600'
+              : item.role === 'SubLeader'
+              ? 'text-blue-600'
+              : item.role === 'Worker'
+              ? 'text-emerald-600'
+              : 'text-slate-500'
+          }`}
+        >
           {roleLabel(item.role)}
         </span>
       ),
@@ -419,7 +514,6 @@ export default function EmployeesClient() {
     {
       key: 'subleaderId',
       header: 'SubLeader',
-      sortable: true,
       hiddenOnMobile: true,
       render: (item) => {
         if (!canHaveSubLeader(item.role)) {
@@ -427,9 +521,9 @@ export default function EmployeesClient() {
         }
         const subleader = item.subleaderId ? userMap.get(item.subleaderId) : null;
         return subleader ? (
-          <span className="text-xs font-medium text-slate-700">
-            {subleader.name}
-          </span>
+          <span className="text-xs font-medium text-slate-700">{subleader.name}</span>
+        ) : item.subleaderId ? (
+          <span className="text-xs font-medium text-slate-700">Đã gán</span>
         ) : (
           <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
             Chưa gán
@@ -440,19 +534,16 @@ export default function EmployeesClient() {
     {
       key: 'description',
       header: 'Chức danh',
-      sortable: true,
       hiddenOnMobile: true,
       render: (item) => (
         <span className="text-xs text-slate-600">
-          {/* Chỉ quản lý (Manager/Leader/SubLeader) mới có chức danh — Nhân viên/Công nhân bỏ */}
-          {isManagementRole(item.role) ? (item.description || '—') : '—'}
+          {isManagementRole(item.role) ? item.description || '—' : '—'}
         </span>
       ),
     },
     {
       key: 'grade',
       header: 'Xếp loại',
-      sortable: true,
       render: (item) => {
         if (item.evaluationLoading) {
           return (
@@ -466,14 +557,36 @@ export default function EmployeesClient() {
           );
         }
 
+        if (item.evaluationError) {
+          return (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-rose-500 font-medium">Lỗi tải</span>
+              <button
+                type="button"
+                onClick={() => handleRetryEvaluation(item.id)}
+                className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
+                title="Thử tải lại đánh giá"
+              >
+                <RefreshCw size={12} />
+                Thử lại
+              </button>
+            </div>
+          );
+        }
+
         return (
           <div className="flex items-center gap-2">
             <GradeBadge
               grade={item.grade}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${item.hasFinalResult ? 'ring-2 ring-emerald-500' : ''}`}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+                item.hasFinalResult ? 'ring-2 ring-emerald-500' : ''
+              }`}
             />
             {item.hasFinalResult && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0" title="Đã có kết quả cuối">
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0"
+                title="Đã có kết quả cuối"
+              >
                 <Check size={12} strokeWidth={3} />
               </span>
             )}
@@ -508,17 +621,21 @@ export default function EmployeesClient() {
           >
             <FileText size={18} />
           </Link>
-          {canManageEmployees && (!isLeader || (item.teamId === user?.teamId && item.role !== 'Manager' && item.role !== 'Leader')) && (
-            <button
-              onClick={() => handleEdit(item)}
-              className="p-2 text-outline hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
-              title="Sửa"
-            >
-              <Edit2 size={18} />
-            </button>
-          )}
+          {canManageEmployees &&
+            (!isLeader ||
+              (item.teamId === user?.teamId && item.role !== 'Manager' && item.role !== 'Leader')) && (
+              <button
+                type="button"
+                onClick={() => handleEdit(item)}
+                className="p-2 text-outline hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                title="Sửa"
+              >
+                <Edit2 size={18} />
+              </button>
+            )}
           {isManager && (
             <button
+              type="button"
               onClick={() => handleResetPassword(item.id, item.name)}
               className="p-2 text-outline hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
               title="Đặt lại mật khẩu (về trống)"
@@ -528,6 +645,7 @@ export default function EmployeesClient() {
           )}
           {canDeleteEmployees && (
             <button
+              type="button"
               onClick={() => handleDelete(item.id, item.name)}
               className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
               title="Xóa"
@@ -545,14 +663,19 @@ export default function EmployeesClient() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhân sự QAQC</h1>
-          <p className="text-on-surface-variant mt-1 text-sm md:text-base">Danh sách chi tiết nhân viên và kết quả đánh giá năng lực</p>
+          <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">
+            Quản lý Nhân sự QAQC
+          </h1>
+          <p className="text-on-surface-variant mt-1 text-sm md:text-base">
+            Danh sách chi tiết nhân viên và kết quả đánh giá năng lực
+          </p>
         </div>
         {canManageEmployees && (
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {isManager && (
               <>
-                <button 
+                <button
+                  type="button"
                   onClick={() => downloadSampleExcel(teams)}
                   className="px-4 py-3 bg-white text-slate-600 border border-outline-variant rounded-xl font-bold hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center gap-2"
                   title="Tải file mẫu"
@@ -560,14 +683,15 @@ export default function EmployeesClient() {
                   <Download size={20} />
                   <span className="hidden sm:inline">File mẫu</span>
                 </button>
-                <input 
+                <input
                   ref={fileInputRef}
-                  type="file" 
-                  className="hidden" 
+                  type="file"
+                  className="hidden"
                   accept=".xlsx, .xls"
                   onChange={handleFileChange}
                 />
-                <button 
+                <button
+                  type="button"
                   onClick={handleImportClick}
                   disabled={isImporting}
                   className="px-6 py-3 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
@@ -577,7 +701,8 @@ export default function EmployeesClient() {
                 </button>
               </>
             )}
-            <button 
+            <button
+              type="button"
               onClick={handleAdd}
               className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
             >
@@ -600,7 +725,7 @@ export default function EmployeesClient() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 lg:w-auto">
           <div className="relative w-full sm:w-[220px]">
             <select
@@ -609,7 +734,11 @@ export default function EmployeesClient() {
               onChange={(e) => setTeamFilter(e.target.value)}
             >
               <option value="all">Tất cả Nhóm</option>
-              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
             <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
@@ -640,81 +769,95 @@ export default function EmployeesClient() {
 
       {/* Table Section */}
       <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
-        {paginatedEmployees.length > 0 ? (
+        {employeesData.length > 0 ? (
           <>
-            <DataTable 
-              columns={columns} 
-              data={paginatedEmployees} 
-              sortKey={sortConfig.key}
-              sortDirection={sortConfig.direction}
-              onSort={handleSort}
+            <DataTable
+              columns={columns}
+              data={employeesData}
               className="border-none rounded-none flex-1"
             />
-            {totalPages > 1 && (
-              <div className="border-t border-outline-variant px-6 py-4 flex items-center justify-between bg-surface/50">
-                <span className="text-sm text-outline">
-                  Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, sortedEmployees.length)} trong {sortedEmployees.length} nhân viên
-                </span>
-                <div className="flex gap-2">
+
+            {/* Load More & Batch Status Controls */}
+            <div className="border-t border-outline-variant px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface/50">
+              <span className="text-sm text-outline">
+                Đã tải {employeesData.length} / {totalCount} nhân viên
+              </span>
+
+              {userBatchError ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-rose-600 font-medium">{userBatchError}</span>
                   <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 rounded-lg border border-outline-variant text-sm font-medium hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
+                    type="button"
+                    onClick={handleLoadMore}
+                    className="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-sm font-bold hover:bg-rose-100 transition-colors"
                   >
-                    Trước
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                      .map((p, i, arr) => (
-                        <React.Fragment key={p}>
-                          {i > 0 && arr[i - 1] !== p - 1 && <span className="px-2 text-outline">...</span>}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${
-                              currentPage === p 
-                                ? 'bg-primary text-white' 
-                                : 'hover:bg-white text-on-surface-variant'
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </React.Fragment>
-                      ))}
-                  </div>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 rounded-lg border border-outline-variant text-sm font-medium hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent transition-colors"
-                  >
-                    Sau
+                    Thử lại
                   </button>
                 </div>
-              </div>
-            )}
+              ) : hasMore ? (
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-95"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Đang tải thêm...</span>
+                    </>
+                  ) : (
+                    <span>Tải thêm (+20 nhân viên)</span>
+                  )}
+                </button>
+              ) : (
+                <span className="text-xs text-slate-400 font-medium">
+                  Đã hiển thị toàn bộ danh sách
+                </span>
+              )}
+            </div>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <EmptyState 
-              icon={Users}
-              title="Không tìm thấy nhân viên"
-              description={searchTerm || teamFilter !== 'all' || roleFilter !== 'all' 
-                ? "Không có nhân viên nào khớp với bộ lọc hiện tại. Thử thay đổi điều kiện tìm kiếm."
-                : "Chưa có nhân viên nào trong hệ thống. Hãy thêm nhân viên mới hoặc nhập từ Excel."
-              }
-              action={canManageEmployees ? {
-                label: "Thêm nhân viên",
-                onClick: handleAdd,
-                icon: Plus
-              } : undefined}
-            />
+            {userBatchError ? (
+              <div className="text-center py-12 px-4 space-y-4">
+                <p className="text-rose-600 font-medium">{userBatchError}</p>
+                <button
+                  type="button"
+                  onClick={() => loadInitialBatch()}
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all inline-flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Thử lại
+                </button>
+              </div>
+            ) : (
+              <EmptyState
+                icon={Users}
+                title="Không tìm thấy nhân viên"
+                description={
+                  searchTerm || teamFilter !== 'all' || roleFilter !== 'all'
+                    ? 'Không có nhân viên nào khớp với bộ lọc hiện tại. Thử thay đổi điều kiện tìm kiếm.'
+                    : 'Chưa có nhân viên nào trong hệ thống. Hãy thêm nhân viên mới hoặc nhập từ Excel.'
+                }
+                action={
+                  canManageEmployees
+                    ? {
+                        label: 'Thêm nhân viên',
+                        onClick: handleAdd,
+                        icon: Plus,
+                      }
+                    : undefined
+                }
+              />
+            )}
           </div>
         )}
       </div>
 
       <div className="mt-6 flex items-center justify-between px-2">
         <p className="text-sm text-outline font-medium">
-          Tổng số: <b className="text-on-surface">{users.length}</b> nhân viên trong hệ thống
+          Tổng số: <b className="text-on-surface">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
         </p>
       </div>
 
@@ -723,12 +866,14 @@ export default function EmployeesClient() {
         onClose={() => setIsModalOpen(false)}
         employee={editingEmployee}
         onSave={handleSaveEmployee}
-        restrictToTeamId={isLeader ? (user?.teamId || null) : null}
-        roleOptions={isLeader ? ['SubLeader', 'Employee', 'Worker'] : ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker']}
-        allUsers={users}
+        restrictToTeamId={isLeader ? user?.teamId || null : null}
+        roleOptions={
+          isLeader
+            ? ['SubLeader', 'Employee', 'Worker']
+            : ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker']
+        }
         teams={teams}
       />
     </div>
   );
 }
-

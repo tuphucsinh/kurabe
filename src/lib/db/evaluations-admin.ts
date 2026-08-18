@@ -6,6 +6,8 @@ import { DatabaseError } from '@/lib/errors';
 import { canViewEvaluation } from '@/data/workflow';
 import { mapEvaluationFromDb, filterEvaluationsForViewer } from '@/lib/db/evaluations';
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
+import { isIndividualRole } from '@/lib/role-policy';
+import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
 
 /** Context SubLeader cho canViewEvaluation: stub User {id, subleaderId} của các NV mình quản. */
 async function getSubLeaderViewContextAdmin(user: User): Promise<User[] | undefined> {
@@ -106,6 +108,9 @@ export async function getEvaluationsByPeriodAdmin(
 const EVALUATION_SUMMARY_SELECT =
   'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, return_note, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, submitted_at, created_at)';
 
+const EVALUATION_BATCH_SUMMARY_SELECT =
+  'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, submitted_at, created_at)';
+
 type DbRoundSummary = {
   id: string;
   evaluation_id: string;
@@ -131,6 +136,22 @@ type DbEvaluationSummary = {
   final_score: number | null;
   result_message: string | null;
   return_note: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  evaluation_rounds?: DbRoundSummary[] | null;
+};
+
+type DbEvaluationBatchSummary = {
+  id: string;
+  period_id: string;
+  employee_id: string;
+  employee_role: string;
+  team_id: string | null;
+  current_round: number | null;
+  status: string;
+  final_grade: string | null;
+  final_score: number | null;
+  result_message: string | null;
   created_at: string | null;
   updated_at: string | null;
   evaluation_rounds?: DbRoundSummary[] | null;
@@ -180,6 +201,27 @@ function mapEvaluationSummaryFromDb(db: DbEvaluationSummary): Evaluation {
     finalScore: db.final_score || undefined,
     resultMessage: db.result_message ?? null,
     returnNote: db.return_note || undefined,
+    createdAt: db.created_at || '',
+    updatedAt: db.updated_at || '',
+  };
+}
+
+function mapEvaluationBatchSummaryFromDb(db: DbEvaluationBatchSummary): Evaluation {
+  return {
+    id: db.id,
+    periodId: db.period_id || '',
+    employeeId: db.employee_id || '',
+    employeeRole: parseRole(db.employee_role),
+    teamId: db.team_id || '',
+    rounds: (db.evaluation_rounds || [])
+      .map(mapRoundSummaryFromDb)
+      .sort((a, b) => a.round - b.round),
+    currentRound: parseRoundNumber(db.current_round),
+    status: parseEvalStatus(db.status),
+    finalGrade: db.final_grade ? parseGrade(db.final_grade) : undefined,
+    finalScore: db.final_score || undefined,
+    resultMessage: db.result_message ?? null,
+    returnNote: undefined,
     createdAt: db.created_at || '',
     updatedAt: db.updated_at || '',
   };
@@ -271,6 +313,83 @@ export async function getEvaluationSummariesByPeriodAdmin(
     errorLabel: 'Error fetching evaluation summaries by period (admin)'
   });
 }
+
+/**
+ * Đọc danh sách evaluation summaries theo mảng employee IDs (1..20 UUIDs) trong một kỳ.
+ * - Phân quyền server-side chặt chẽ theo viewer (RBAC):
+ *   - Manager: được xem tất cả employeeIds được yêu cầu
+ *   - Leader: chỉ được xem các employee thuộc team của mình (thiếu teamId -> [])
+ *   - SubLeader: chỉ được xem chính mình + các NV mình phụ trách (subleader_id = user.id) thuộc team (thiếu teamId -> [])
+ *   - Employee / Worker: chỉ được xem chính mình
+ * - Dùng summary projection (EVALUATION_SUMMARY_SELECT) - không tải scores/notes/comment nặng.
+ */
+export async function getEvaluationSummariesByEmployeeIdsAdmin(
+  employeeIds: string[],
+  periodId?: string,
+  requester?: User | null
+): Promise<Evaluation[]> {
+  if (!requester) return [];
+  if (!periodId || typeof periodId !== 'string' || !periodId.trim()) return [];
+
+  const validIds = validateAndDedupeUuids(employeeIds);
+  if (validIds.length === 0) return [];
+
+  let authorizedIds: string[] = [];
+  let allUsers: User[] | undefined = undefined;
+
+  if (requester.role === 'Manager') {
+    authorizedIds = validIds;
+  } else if (requester.role === 'Leader') {
+    if (!requester.teamId) {
+      return [];
+    }
+    // Leader chỉ được xem các nhân viên thuộc team của mình
+    const { data: teamMembers, error: teamErr } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .in('id', validIds)
+      .eq('team_id', requester.teamId)
+      .eq('is_active', true);
+
+    if (teamErr || !teamMembers || teamMembers.length === 0) {
+      return [];
+    }
+    authorizedIds = teamMembers.map((u) => u.id);
+  } else if (requester.role === 'SubLeader') {
+    if (!requester.teamId) {
+      return [];
+    }
+    allUsers = await getSubLeaderViewContextAdmin(requester);
+    const subEmpIds = new Set((allUsers || []).map((u) => u.id));
+    // SubLeader được xem chính mình và các NV có subleader_id = requester.id
+    authorizedIds = validIds.filter((id) => id === requester.id || subEmpIds.has(id));
+    if (authorizedIds.length === 0) {
+      return [];
+    }
+  } else if (isIndividualRole(requester.role)) {
+    // Employee / Worker chỉ xem chính mình
+    authorizedIds = validIds.filter((id) => id === requester.id);
+    if (authorizedIds.length === 0) {
+      return [];
+    }
+  } else {
+    return [];
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('evaluations')
+    .select(EVALUATION_BATCH_SUMMARY_SELECT)
+    .eq('period_id', periodId.trim())
+    .in('employee_id', authorizedIds);
+
+  if (error) {
+    throw new DatabaseError('Error fetching evaluation summaries by employee IDs (admin)', error);
+  }
+
+  const evaluations = (data || []).map(mapEvaluationBatchSummaryFromDb);
+  return filterEvaluationsForViewer(evaluations, requester, allUsers);
+}
+
 
 export async function getEvaluationByIdAdmin(
   id: string,

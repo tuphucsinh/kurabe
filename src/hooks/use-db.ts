@@ -9,11 +9,15 @@ import {
   getEvaluationByIdAction, 
   getEvaluationByEmployeeAction,
   getUsersAction,
+  getUsersBatchAction,
   getUserByIdAction,
   getUsersByTeamAction,
   getTeamsAction,
-  getTeamByIdAction
+  getTeamByIdAction,
+  getEvaluationSummariesBatchAction
 } from '@/actions/read';
+import { UsersBatchOptions } from '@/lib/db/users-admin';
+
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
@@ -37,8 +41,15 @@ export const useUsers = (requester?: User | null, options?: { limit?: number; of
   // Chưa load xong user (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
   enabled: requester != null
 });
+export const useUsersBatch = (requester?: User | null, options?: UsersBatchOptions) => useQuery({
+  queryKey: ['users-batch', requester?.id, options?.offset, options?.limit, options?.search, options?.teamId, options?.role],
+  queryFn: () => getUsersBatchAction(options),
+  staleTime: 2 * 60 * 1000,
+  enabled: requester != null
+});
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserByIdAction(id), enabled: !!id });
 export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId });
+
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
@@ -142,6 +153,14 @@ export const useEvaluationSummaries = (periodId?: string, user?: User | null) =>
   staleTime: 2 * 60 * 1000,
   enabled: !!user
 });
+
+export const useEvaluationSummariesBatch = (employeeIds: string[], periodId?: string, user?: User | null) => useQuery({
+  queryKey: ['evaluations', 'summary-batch', periodId, user?.id, employeeIds.join(',')],
+  queryFn: () => getEvaluationSummariesBatchAction(employeeIds, periodId),
+  staleTime: 2 * 60 * 1000,
+  enabled: !!user && !!periodId && employeeIds.length > 0
+});
+
 
 export const useEvaluation = (id: string, user?: User | null) => useQuery({ 
   queryKey: ['evaluation', id, user?.id], 

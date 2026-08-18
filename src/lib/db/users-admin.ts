@@ -5,14 +5,110 @@ import { User } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
 import { isIndividualRole } from '@/lib/role-policy';
+import { normalizeBatchParams, computeBatchResult } from '@/lib/employee-batch-helpers';
+
+export interface UsersBatchOptions {
+  offset?: number;
+  limit?: number;
+  search?: string;
+  teamId?: string;
+  role?: string;
+}
+
+export interface UsersBatchResult {
+  items: User[];
+  hasMore: boolean;
+  totalCount: number;
+}
 
 /**
- * Đọc danh sách users bằng service_role (supabaseAdmin).
- * Phân quyền theo requester:
- * - Manager: xem tất cả
- * - Employee / Worker: xem chính mình
- * - Leader / SubLeader: xem thành viên trong team của mình
+ * Đọc danh sách users theo lô (batch) 20 dòng bằng service_role (supabaseAdmin).
+ * - Hard cap limit = 20, offset >= 0
+ * - Fixed sort: name ASC, id ASC
+ * - RBAC: Manager xem tất cả; Leader/SubLeader xem team mình; Employee/Worker xem chính mình; thiếu team fail-closed.
+ * - Search sanitized (max 50, stripped PostgREST metacharacters).
+ * - Trả về { items, hasMore, totalCount } dùng limit + 1.
  */
+export async function getUsersBatchAdmin(
+  requester?: User | null,
+  options?: UsersBatchOptions
+): Promise<UsersBatchResult> {
+  if (!requester) {
+    return { items: [], hasMore: false, totalCount: 0 };
+  }
+
+  const { offset, limit, search, teamId, role } = normalizeBatchParams(options);
+
+  // RBAC enforcement
+  if (requester.role !== 'Manager') {
+    if (isIndividualRole(requester.role)) {
+      // Employee / Worker can only view self
+      if (teamId && requester.teamId && teamId !== requester.teamId) {
+        return { items: [], hasMore: false, totalCount: 0 };
+      }
+      if (role && role !== requester.role) {
+        return { items: [], hasMore: false, totalCount: 0 };
+      }
+    } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
+      // Leader/SubLeader must have teamId
+      if (!requester.teamId) {
+        return { items: [], hasMore: false, totalCount: 0 };
+      }
+      // Cannot request a different team than their own
+      if (teamId && teamId !== requester.teamId) {
+        return { items: [], hasMore: false, totalCount: 0 };
+      }
+    }
+  }
+
+  let query = supabaseAdmin
+    .from('users')
+    .select(USER_SELECT, { count: 'exact' })
+    .eq('is_active', true);
+
+  if (requester.role !== 'Manager') {
+    if (isIndividualRole(requester.role)) {
+      query = query.eq('id', requester.id);
+    } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
+      query = query.eq('team_id', requester.teamId);
+    }
+  } else {
+    // Manager can filter by arbitrary teamId
+    if (teamId) {
+      query = query.eq('team_id', teamId);
+    }
+  }
+
+  if (role) {
+    query = query.eq('role', role);
+  }
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,employee_code.ilike.%${search}%`);
+  }
+
+  // Stable fixed sort: name ASC, id ASC
+  query = query.order('name', { ascending: true }).order('id', { ascending: true });
+
+  // Fetch limit + 1 rows to determine hasMore without a cursor
+  // Supabase range(start, end) is inclusive
+  query = query.range(offset, offset + limit);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw new DatabaseError('Error fetching users batch (admin)', error);
+  }
+
+  const { items, hasMore, totalCount } = computeBatchResult(data || [], limit, count, offset);
+
+  return {
+    items: items.map(mapUserFromDb),
+    hasMore,
+    totalCount,
+  };
+}
+
 export async function getUsersAdmin(
   requester?: User | null,
   options?: { limit?: number; offset?: number; search?: string }
