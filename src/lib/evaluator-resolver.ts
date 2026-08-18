@@ -4,6 +4,7 @@ import { Role } from '@/types';
 import { Database } from '@/types/database';
 import { EvaluatorSelector } from './evaluation-workflow';
 import { parseRole } from '@/lib/parsers';
+import { selectValidLeader, Candidate } from './team-validation';
 
 /**
  * Build map teamId → teams.leader_id cho resolveEvaluatorFromList (batch flows).
@@ -30,6 +31,7 @@ export interface EvaluationSubject {
   role: Role;
   teamId: string | null;
   subleaderId?: string | null;
+  isActive?: boolean;
 }
 
 /**
@@ -83,9 +85,10 @@ export async function resolveEvaluatorFromDb(
         .from('users')
         .select('id, role')
         .eq('id', team.leader_id)
+        .eq('team_id', subject.teamId)
         .eq('role', 'Leader')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (teamLeader) {
         return { id: teamLeader.id, role: parseRole(teamLeader.role) };
@@ -149,21 +152,15 @@ export function resolveEvaluatorFromList(
 
   if (selector === 'Leader') {
     if (!subject.teamId) return null;
-    // 1. Ưu tiên leader được chỉ định (teams.leader_id) — còn active + đúng role Leader
     const appointedId = teamLeaderIds?.[subject.teamId];
-    if (appointedId) {
-      const appointed = allUsers.find(u =>
-        u.id === appointedId && u.role === 'Leader'
-      );
-      if (appointed) {
-        return { id: appointed.id, role: appointed.role };
-      }
-    }
-    // 2. Fallback: user có role Leader trong team
-    const leader = allUsers.find(u =>
-      u.teamId === subject.teamId && u.role === 'Leader'
-    );
-    return leader ? { id: leader.id, role: leader.role } : null;
+    const candidates: Candidate[] = allUsers.map((u) => ({
+      id: u.id,
+      role: u.role,
+      isActive: u.isActive ?? true,
+      teamId: u.teamId,
+    }));
+    const leader = selectValidLeader(appointedId, subject.teamId, candidates);
+    return leader ? { id: leader.id, role: parseRole(leader.role) } : null;
   }
 
   if (selector === 'Manager') {

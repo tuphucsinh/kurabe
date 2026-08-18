@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { Team } from '@/types';
 import { toClientError } from '@/lib/errors';
+import { validateLeaderAssignment } from '@/lib/team-validation';
 
 function revalidateTeamPaths() {
   revalidateTag('dashboard-data', 'default');
@@ -23,22 +24,60 @@ export async function upsertTeamAction(
 
   try {
     let isNewTeam = true;
+    let existingTeam: { id: string; name: string } | null = null;
     if (team.id) {
-      const { data: existingTeam } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('teams')
-        .select('id')
+        .select('id, name')
         .eq('id', team.id)
         .maybeSingle();
-      if (existingTeam) {
+
+      if (error) {
+        return { success: false, error: toClientError(error, 'Lỗi khi kiểm tra thông tin nhóm hiện tại.') };
+      }
+
+      if (data) {
         isNewTeam = false;
+        existingTeam = data;
       }
     }
 
     const teamId = team.id || crypto.randomUUID();
+    const teamName = team.name || existingTeam?.name || '';
+    const leaderId = team.leaderId ? team.leaderId : null;
+
+    if (leaderId) {
+      const { data: leaderUser, error: leaderLookupError } = await supabaseAdmin
+        .from('users')
+        .select('id, role, is_active, team_id')
+        .eq('id', leaderId)
+        .maybeSingle();
+
+      if (leaderLookupError) {
+        return { success: false, error: toClientError(leaderLookupError, 'Lỗi khi kiểm tra thông tin trưởng nhóm.') };
+      }
+
+      const validation = validateLeaderAssignment(
+        leaderUser
+          ? {
+              id: leaderUser.id,
+              role: leaderUser.role,
+              isActive: leaderUser.is_active === true,
+              teamId: leaderUser.team_id,
+            }
+          : null,
+        teamId
+      );
+
+      if (!validation.ok) {
+        return { success: false, error: validation.error };
+      }
+    }
+
     const dbTeam = {
       id: teamId,
-      name: team.name || '',
-      leader_id: team.leaderId || null,
+      name: teamName,
+      leader_id: leaderId,
       is_active: true,
     };
 

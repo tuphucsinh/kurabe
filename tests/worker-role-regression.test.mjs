@@ -10,6 +10,35 @@ function readProjectFile(relPath) {
   return fs.readFileSync(fullPath, 'utf8');
 }
 
+function extractBetween(code, startDelimiter, endDelimiter) {
+  const startIndex = code.indexOf(startDelimiter);
+  assert.ok(startIndex !== -1, `Start delimiter not found: ${startDelimiter}`);
+  const searchFrom = startIndex + startDelimiter.length;
+  if (!endDelimiter) {
+    return code.slice(startIndex);
+  }
+  const endIndex = code.indexOf(endDelimiter, searchFrom);
+  assert.ok(endIndex !== -1, `End delimiter not found: ${endDelimiter}`);
+  return code.slice(startIndex, endIndex);
+}
+
+function extractFunction(code, functionName) {
+  const regex = new RegExp(`(?:export\\s+(?:async\\s+)?)?function\\s+${functionName}\\b`);
+  const match = code.match(regex);
+  assert.ok(match, `Function declaration not found: ${functionName}`);
+  const startIndex = match.index;
+  const fromStart = code.slice(startIndex);
+  const nextExportMatch = fromStart.slice(match[0].length).match(/\nexport\s+/);
+  if (nextExportMatch) {
+    return fromStart.slice(0, match[0].length + nextExportMatch.index);
+  }
+  return fromStart;
+}
+
+function stripComments(code) {
+  return code.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
 // 1. src/actions/evaluation.ts
 {
   const code = readProjectFile('src/actions/evaluation.ts');
@@ -152,6 +181,227 @@ function readProjectFile(relPath) {
   assert.ok(
     knowledge.includes('### Công nhân (Worker)'),
     'src/lib/chat-knowledge.md must include operational guide section for Công nhân (Worker)'
+  );
+}
+
+// 10. src/actions/teams.ts
+{
+  const code = readProjectFile('src/actions/teams.ts');
+  const upsertRegion = extractFunction(code, 'upsertTeamAction');
+
+  const upsertIdx = upsertRegion.indexOf(".from('teams')\n      .upsert") !== -1
+    ? upsertRegion.indexOf(".from('teams')\n      .upsert")
+    : upsertRegion.indexOf('.upsert(');
+  assert.ok(upsertIdx !== -1, 'upsertTeamAction must contain .upsert(');
+
+  // Existing team lookup must destructure { data, error } and handle error before upsert
+  const existingTeamLookupRegion = extractBetween(upsertRegion, 'if (team.id)', 'const teamId');
+  assert.ok(
+    existingTeamLookupRegion.includes('{ data, error }') || /\{\s*data\s*,\s*error\s*\}/.test(existingTeamLookupRegion),
+    'upsertTeamAction existing team lookup must destructure { data, error }'
+  );
+  const existingErrorIdx = upsertRegion.indexOf('if (error)');
+  assert.ok(
+    existingErrorIdx !== -1 && existingErrorIdx < upsertIdx,
+    'upsertTeamAction must handle existing team lookup error before .upsert('
+  );
+  assert.ok(
+    existingTeamLookupRegion.includes('return { success: false'),
+    'upsertTeamAction existing team lookup must return fail-closed error on query failure'
+  );
+
+  // Semantic leader lookup and validation region
+  const leaderValidationRegion = extractBetween(upsertRegion, 'if (leaderId)', 'const dbTeam');
+  assert.ok(
+    leaderValidationRegion.includes(".from('users')") && leaderValidationRegion.includes(".eq('id', leaderId)"),
+    'upsertTeamAction must perform semantic lookup of leaderId from users table'
+  );
+
+  // Leader lookup must destructure { data: leaderUser, error: leaderLookupError }
+  assert.ok(
+    leaderValidationRegion.includes('{ data: leaderUser, error: leaderLookupError }') ||
+      /\{\s*data\s*:\s*leaderUser\s*,\s*error\s*:\s*leaderLookupError\s*\}/.test(leaderValidationRegion),
+    'upsertTeamAction leader lookup must destructure { data: leaderUser, error: leaderLookupError }'
+  );
+
+  // Error and validation indices before upsert
+  const leaderLookupErrorIdx = upsertRegion.indexOf('if (leaderLookupError)');
+  assert.ok(
+    leaderLookupErrorIdx !== -1 && leaderLookupErrorIdx < upsertIdx,
+    'upsertTeamAction must handle leaderLookupError before .upsert('
+  );
+
+  // Validation helper call wiring before upsert
+  const validationCallIdx = upsertRegion.indexOf('validateLeaderAssignment(');
+  assert.ok(
+    validationCallIdx !== -1 && validationCallIdx < upsertIdx,
+    'upsertTeamAction must invoke validateLeaderAssignment helper before .upsert('
+  );
+
+  const validationOkIdx = upsertRegion.indexOf('if (!validation.ok)');
+  assert.ok(
+    validationOkIdx !== -1 && validationOkIdx < upsertIdx,
+    'upsertTeamAction must check !validation.ok before .upsert('
+  );
+
+  // Assert no false && in validation region and before upsert
+  assert.ok(
+    !leaderValidationRegion.includes('false &&'),
+    'Leader validation region must not contain false && bypass'
+  );
+  assert.ok(
+    !upsertRegion.slice(0, upsertIdx).includes('false &&'),
+    'upsertTeamAction pre-upsert region must not contain false &&'
+  );
+
+  // Active validation statements exist in non-comment code
+  const cleanValidationRegion = stripComments(leaderValidationRegion);
+  assert.ok(cleanValidationRegion.includes('if (leaderLookupError)'), 'leaderLookupError check must be active code');
+  assert.ok(cleanValidationRegion.includes('validateLeaderAssignment('), 'validateLeaderAssignment call must be active code');
+  assert.ok(cleanValidationRegion.includes('if (!validation.ok)'), '!validation.ok check must be active code');
+
+  // Explicit null clear handling
+  assert.ok(
+    upsertRegion.includes('leader_id: leaderId') || /leader_id:\s*.*\|\|\s*null/.test(upsertRegion),
+    'upsertTeamAction must pass leader_id into dbTeam payload'
+  );
+  assert.ok(
+    upsertRegion.includes('team.leaderId ? team.leaderId : null') || upsertRegion.includes('team.leaderId || null'),
+    'upsertTeamAction must normalize omitted/empty leaderId to null'
+  );
+  assert.ok(
+    upsertRegion.includes('leaderId: data.leader_id || null') || upsertRegion.includes('leaderId: data.leader_id ?? null'),
+    'upsertTeamAction must map savedTeam leaderId explicitly with data.leader_id || null'
+  );
+
+  // Existing name preservation
+  assert.ok(
+    upsertRegion.includes(".from('teams')") && upsertRegion.includes(".select('id, name')") && upsertRegion.includes(".eq('id', team.id)"),
+    'upsertTeamAction must read existing team name when team.id is provided'
+  );
+  assert.ok(
+    upsertRegion.includes('team.name || existingTeam?.name') || upsertRegion.includes('team.name || existingTeam.name'),
+    'upsertTeamAction must use existing team name when update name is omitted'
+  );
+  assert.ok(
+    !upsertRegion.includes('name: team.name || ""') && !upsertRegion.includes("name: team.name || ''"),
+    'upsertTeamAction must not unconditionally overwrite existing name with empty string'
+  );
+}
+
+// 11. src/lib/evaluator-resolver.ts
+{
+  const code = readProjectFile('src/lib/evaluator-resolver.ts');
+
+  // resolveEvaluatorFromDb
+  const dbResolverRegion = extractFunction(code, 'resolveEvaluatorFromDb');
+  const dbLeaderBranch = extractBetween(dbResolverRegion, "if (selector === 'Leader'", "if (selector === 'Manager')");
+
+  const dbFallbackSplit = dbLeaderBranch.split(/\/\/\s*2\.\s*Fallback/);
+  assert.strictEqual(
+    dbFallbackSplit.length,
+    2,
+    'resolveEvaluatorFromDb Leader branch must split cleanly into appointed block and fallback block at fallback comment'
+  );
+  const [appointedDbBlock, fallbackDbBlock] = dbFallbackSplit;
+
+  // Appointed leader query block in resolveEvaluatorFromDb
+  const cleanAppointedDb = stripComments(appointedDbBlock);
+  assert.ok(
+    cleanAppointedDb.includes(".from('teams')") &&
+      cleanAppointedDb.includes(".select('leader_id')") &&
+      cleanAppointedDb.includes(".eq('id', subject.teamId)"),
+    'resolveEvaluatorFromDb appointed block must query teams for subject.teamId in executable code'
+  );
+  assert.ok(
+    cleanAppointedDb.includes(".from('users')") &&
+      cleanAppointedDb.includes(".eq('id', team.leader_id)") &&
+      cleanAppointedDb.includes(".eq('team_id', subject.teamId)") &&
+      (cleanAppointedDb.includes(".eq('role', 'Leader')") || cleanAppointedDb.includes('.eq("role", "Leader")')) &&
+      cleanAppointedDb.includes(".eq('is_active', true)"),
+    'resolveEvaluatorFromDb appointed block must query users with team.leader_id, team_id equal subject.teamId, role Leader, and is_active true in executable code'
+  );
+
+  const teamIdAppointedIdx = appointedDbBlock.indexOf(".eq('team_id', subject.teamId)");
+  const returnAppointedIdx = appointedDbBlock.indexOf('return { id: teamLeader.id');
+  assert.ok(
+    teamIdAppointedIdx !== -1 && returnAppointedIdx !== -1 && teamIdAppointedIdx < returnAppointedIdx,
+    'resolveEvaluatorFromDb appointed block must filter .eq("team_id", subject.teamId) inside the appointed block before returning teamLeader'
+  );
+  assert.ok(
+    !appointedDbBlock.includes('false &&'),
+    'resolveEvaluatorFromDb appointed block must not contain false &&'
+  );
+
+  // Fallback query block in resolveEvaluatorFromDb
+  const cleanFallbackDb = stripComments(fallbackDbBlock);
+  assert.ok(
+    cleanFallbackDb.includes(".from('users')") &&
+      cleanFallbackDb.includes(".eq('team_id', subject.teamId)") &&
+      (cleanFallbackDb.includes(".eq('role', 'Leader')") || cleanFallbackDb.includes('.eq("role", "Leader")')) &&
+      cleanFallbackDb.includes(".eq('is_active', true)"),
+    'resolveEvaluatorFromDb fallback block must independently query users with team_id equal subject.teamId, role Leader, and is_active true in executable code'
+  );
+
+  const teamIdFallbackIdx = fallbackDbBlock.indexOf(".eq('team_id', subject.teamId)");
+  const returnFallbackIdx = fallbackDbBlock.indexOf('return { id: fallbackLeader.id');
+  assert.ok(
+    teamIdFallbackIdx !== -1 && returnFallbackIdx !== -1 && teamIdFallbackIdx < returnFallbackIdx,
+    'resolveEvaluatorFromDb fallback block must filter .eq("team_id", subject.teamId) inside fallback block before returning fallbackLeader'
+  );
+  assert.ok(
+    !fallbackDbBlock.includes('false &&'),
+    'resolveEvaluatorFromDb fallback block must not contain false &&'
+  );
+
+  // resolveEvaluatorFromList
+  const listResolverRegion = extractFunction(code, 'resolveEvaluatorFromList');
+  const listLeaderBranch = extractBetween(listResolverRegion, "if (selector === 'Leader')", "if (selector === 'Manager')");
+
+  assert.ok(
+    listLeaderBranch.includes('if (!subject.teamId) return null;'),
+    'resolveEvaluatorFromList must check !subject.teamId and return null before leader resolution'
+  );
+
+  const cleanListLeader = stripComments(listLeaderBranch);
+  assert.ok(
+    cleanListLeader.includes('selectValidLeader('),
+    'resolveEvaluatorFromList must delegate leader selection to selectValidLeader helper'
+  );
+  assert.ok(
+    cleanListLeader.includes('teamLeaderIds?.[subject.teamId]') || cleanListLeader.includes('teamLeaderIds[subject.teamId]'),
+    'resolveEvaluatorFromList must pass appointed leader ID from teamLeaderIds'
+  );
+  assert.ok(
+    !listLeaderBranch.includes('false &&'),
+    'resolveEvaluatorFromList must not contain false &&'
+  );
+
+  // Null fallback behavior
+  assert.ok(
+    listResolverRegion.includes('return null;'),
+    'resolveEvaluatorFromList must have null fallback return when selector has no match'
+  );
+}
+
+// 12. src/lib/team-validation.ts
+{
+  const code = readProjectFile('src/lib/team-validation.ts');
+  assert.ok(
+    !code.includes('import ') && !code.includes('import('),
+    'src/lib/team-validation.ts must have zero external imports'
+  );
+  assert.ok(
+    code.includes('export interface Candidate') || code.includes('export type Candidate'),
+    'src/lib/team-validation.ts must export Candidate interface'
+  );
+  assert.ok(
+    code.includes('export function validateLeaderAssignment') || code.includes('export const validateLeaderAssignment'),
+    'src/lib/team-validation.ts must export validateLeaderAssignment'
+  );
+  assert.ok(
+    code.includes('export function selectValidLeader') || code.includes('export const selectValidLeader'),
+    'src/lib/team-validation.ts must export selectValidLeader'
   );
 }
 
