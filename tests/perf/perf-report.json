@@ -1,0 +1,1099 @@
+{
+  "metadata": {
+    "timestamp": "2026-08-18T06:41:59.454Z",
+    "baseUrl": "https://lykiv.vercel.app",
+    "targetRoutes": [
+      "/dashboard",
+      "/employees",
+      "/reports"
+    ],
+    "sampleSizePerState": 10,
+    "browser": "google-chrome-stable (headless)",
+    "environment": "production-readonly"
+  },
+  "snapshot": {
+    "before": {
+      "sessionsCount": 366,
+      "loginAttemptsCount": 29
+    },
+    "after": {
+      "sessionsCount": 366,
+      "loginAttemptsCount": 29
+    },
+    "exactSessionDeleted": true
+  },
+  "summary": {
+    "/dashboard": {
+      "cold": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 35.1,
+          "max": 40.6,
+          "mean": 37.6,
+          "p50": 38.1,
+          "p95": 39.8,
+          "stdDev": 1.6
+        },
+        "fcp": {
+          "count": 10,
+          "min": 1440,
+          "max": 1736,
+          "mean": 1537.2,
+          "p50": 1472,
+          "p95": 1707.2,
+          "stdDev": 101.9
+        },
+        "lcp": {
+          "count": 10,
+          "min": 1768,
+          "max": 2408,
+          "mean": 2091.6,
+          "p50": 2090,
+          "p95": 2404.4,
+          "stdDev": 215.5
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 1624.5,
+          "max": 2305.9,
+          "mean": 1968.1,
+          "p50": 2002,
+          "p95": 2304.3,
+          "stdDev": 246.7
+        },
+        "load": {
+          "count": 10,
+          "min": 1640.5,
+          "max": 2307.7,
+          "mean": 1977.5,
+          "p50": 2002.5,
+          "p95": 2306,
+          "stdDev": 236.6
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 1963.1,
+          "max": 2729.4,
+          "mean": 2360.5,
+          "p50": 2384.3,
+          "p95": 2708.6,
+          "stdDev": 248
+        }
+      },
+      "warm": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 35.4,
+          "max": 41,
+          "mean": 37.6,
+          "p50": 37.4,
+          "p95": 40.4,
+          "stdDev": 1.7
+        },
+        "fcp": {
+          "count": 10,
+          "min": 1260,
+          "max": 2364,
+          "mean": 1456,
+          "p50": 1302,
+          "p95": 2113.8,
+          "stdDev": 339.1
+        },
+        "lcp": {
+          "count": 10,
+          "min": 1288,
+          "max": 2528,
+          "mean": 1616,
+          "p50": 1588,
+          "p95": 2204,
+          "stdDev": 360.8
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 1435.4,
+          "max": 2085,
+          "mean": 1652.2,
+          "p50": 1632.8,
+          "p95": 1895.3,
+          "stdDev": 158.5
+        },
+        "load": {
+          "count": 10,
+          "min": 1435.8,
+          "max": 2085.4,
+          "mean": 1653.4,
+          "p50": 1634.5,
+          "p95": 1896.2,
+          "stdDev": 158.4
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 1587.6,
+          "max": 2639.2,
+          "mean": 1854.7,
+          "p50": 1759.9,
+          "p95": 2385.1,
+          "stdDev": 287
+        }
+      }
+    },
+    "/employees": {
+      "cold": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 36.5,
+          "max": 44.6,
+          "mean": 38.7,
+          "p50": 38,
+          "p95": 42.7,
+          "stdDev": 2.2
+        },
+        "fcp": {
+          "count": 10,
+          "min": 1440,
+          "max": 1804,
+          "mean": 1500.8,
+          "p50": 1468,
+          "p95": 1663.6,
+          "stdDev": 102.7
+        },
+        "lcp": {
+          "count": 10,
+          "min": 1440,
+          "max": 1804,
+          "mean": 1500.8,
+          "p50": 1468,
+          "p95": 1663.6,
+          "stdDev": 102.7
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 725.4,
+          "max": 1200.6,
+          "mean": 962.9,
+          "p50": 992.6,
+          "p95": 1196.3,
+          "stdDev": 206.2
+        },
+        "load": {
+          "count": 10,
+          "min": 769.2,
+          "max": 1244.5,
+          "mean": 1007.2,
+          "p50": 1035.9,
+          "p95": 1243.6,
+          "stdDev": 206.7
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 4722.9,
+          "max": 5508.6,
+          "mean": 5122.8,
+          "p50": 5082.1,
+          "p95": 5443.5,
+          "stdDev": 220.4
+        }
+      },
+      "warm": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 37.4,
+          "max": 61.3,
+          "mean": 42.6,
+          "p50": 40.2,
+          "p95": 54.2,
+          "stdDev": 6.7
+        },
+        "fcp": {
+          "count": 10,
+          "min": 1268,
+          "max": 1732,
+          "mean": 1358.4,
+          "p50": 1312,
+          "p95": 1575.4,
+          "stdDev": 128.1
+        },
+        "lcp": {
+          "count": 10,
+          "min": 1268,
+          "max": 1732,
+          "mean": 1358.4,
+          "p50": 1312,
+          "p95": 1575.4,
+          "stdDev": 128.1
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 740.4,
+          "max": 1190,
+          "mean": 807.2,
+          "p50": 769.5,
+          "p95": 1005.9,
+          "stdDev": 128.3
+        },
+        "load": {
+          "count": 10,
+          "min": 740.8,
+          "max": 1190.2,
+          "mean": 807.9,
+          "p50": 770.4,
+          "p95": 1006.9,
+          "stdDev": 128.2
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 4628,
+          "max": 6080,
+          "mean": 5097,
+          "p50": 4905.8,
+          "p95": 5934.6,
+          "stdDev": 468.8
+        }
+      }
+    },
+    "/reports": {
+      "cold": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 37.2,
+          "max": 43.1,
+          "mean": 39.7,
+          "p50": 39.7,
+          "p95": 42.8,
+          "stdDev": 1.8
+        },
+        "fcp": {
+          "count": 7,
+          "min": 1416,
+          "max": 1676,
+          "mean": 1508,
+          "p50": 1492,
+          "p95": 1631.6,
+          "stdDev": 77.3
+        },
+        "lcp": {
+          "count": 7,
+          "min": 1448,
+          "max": 1748,
+          "mean": 1555.4,
+          "p50": 1516,
+          "p95": 1726.4,
+          "stdDev": 103.6
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 1383.7,
+          "max": 1886.4,
+          "mean": 1505.5,
+          "p50": 1428.9,
+          "p95": 1776.1,
+          "stdDev": 154.6
+        },
+        "load": {
+          "count": 10,
+          "min": 1427.8,
+          "max": 1926.3,
+          "mean": 1579.6,
+          "p50": 1514.5,
+          "p95": 1837.6,
+          "stdDev": 145
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 1542.2,
+          "max": 2002.2,
+          "mean": 1765.9,
+          "p50": 1771.3,
+          "p95": 1987.1,
+          "stdDev": 136.7
+        }
+      },
+      "warm": {
+        "sampleCount": 10,
+        "ttfb": {
+          "count": 10,
+          "min": 37.2,
+          "max": 41.4,
+          "mean": 39.4,
+          "p50": 39.4,
+          "p95": 41,
+          "stdDev": 1.3
+        },
+        "fcp": {
+          "count": 10,
+          "min": 1292,
+          "max": 2008,
+          "mean": 1417.2,
+          "p50": 1308,
+          "p95": 1819,
+          "stdDev": 215.6
+        },
+        "lcp": {
+          "count": 10,
+          "min": 1292,
+          "max": 2280,
+          "mean": 1444.4,
+          "p50": 1308,
+          "p95": 1968.6,
+          "stdDev": 292
+        },
+        "domContentLoaded": {
+          "count": 10,
+          "min": 1402.2,
+          "max": 2102.1,
+          "mean": 1573.7,
+          "p50": 1473.7,
+          "p95": 1993.2,
+          "stdDev": 221.7
+        },
+        "load": {
+          "count": 10,
+          "min": 1404.9,
+          "max": 2102.4,
+          "mean": 1577.3,
+          "p50": 1476.9,
+          "p95": 1994.3,
+          "stdDev": 220.5
+        },
+        "dataComplete": {
+          "count": 10,
+          "min": 1562.1,
+          "max": 2291.6,
+          "mean": 1730.2,
+          "p50": 1611.6,
+          "p95": 2124.6,
+          "stdDev": 224.7
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 36.1,
+      "fcp": 1736,
+      "lcp": 2408,
+      "domContentLoaded": 2305.9,
+      "load": 2307.7,
+      "dataComplete": 2729.4
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 38.1,
+      "fcp": 1456,
+      "lcp": 2200,
+      "domContentLoaded": 2100.2,
+      "load": 2101.8,
+      "dataComplete": 2492.6
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 38.5,
+      "fcp": 1556,
+      "lcp": 2036,
+      "domContentLoaded": 1942.7,
+      "load": 1943.2,
+      "dataComplete": 2331.4
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 40.6,
+      "fcp": 1672,
+      "lcp": 2228,
+      "domContentLoaded": 2129.5,
+      "load": 2131.1,
+      "dataComplete": 2508.2
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 35.9,
+      "fcp": 1640,
+      "lcp": 1928,
+      "domContentLoaded": 1624.5,
+      "load": 1704.8,
+      "dataComplete": 1963.1
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 38.9,
+      "fcp": 1472,
+      "lcp": 2400,
+      "domContentLoaded": 2302.3,
+      "load": 2303.9,
+      "dataComplete": 2683.1
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 38,
+      "fcp": 1440,
+      "lcp": 2024,
+      "domContentLoaded": 1927,
+      "load": 1928.7,
+      "dataComplete": 2321.2
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 36.1,
+      "fcp": 1472,
+      "lcp": 1768,
+      "domContentLoaded": 1638.6,
+      "load": 1640.5,
+      "dataComplete": 2062.4
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 38.4,
+      "fcp": 1468,
+      "lcp": 2144,
+      "domContentLoaded": 2061.2,
+      "load": 2061.8,
+      "dataComplete": 2437.2
+    },
+    {
+      "route": "/dashboard",
+      "state": "cold",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 35.1,
+      "fcp": 1460,
+      "lcp": 1780,
+      "domContentLoaded": 1649.5,
+      "load": 1651.2,
+      "dataComplete": 2076.3
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 36,
+      "fcp": 1304,
+      "lcp": 1764,
+      "domContentLoaded": 1663.4,
+      "load": 1665,
+      "dataComplete": 1801.4
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 39.7,
+      "fcp": 1300,
+      "lcp": 1300,
+      "domContentLoaded": 1629.9,
+      "load": 1631.6,
+      "dataComplete": 1753.6
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 36.1,
+      "fcp": 1312,
+      "lcp": 1312,
+      "domContentLoaded": 1659.3,
+      "load": 1660.9,
+      "dataComplete": 1776.1
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 36.6,
+      "fcp": 1288,
+      "lcp": 1288,
+      "domContentLoaded": 1627.1,
+      "load": 1629.4,
+      "dataComplete": 1752.7
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 41,
+      "fcp": 1296,
+      "lcp": 1688,
+      "domContentLoaded": 1606.5,
+      "load": 1608,
+      "dataComplete": 1731.1
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 37.5,
+      "fcp": 1808,
+      "lcp": 1808,
+      "domContentLoaded": 1641.9,
+      "load": 1642.5,
+      "dataComplete": 2074.6
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 38.2,
+      "fcp": 1260,
+      "lcp": 1552,
+      "domContentLoaded": 1435.4,
+      "load": 1435.8,
+      "dataComplete": 1587.6
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 38.7,
+      "fcp": 1332,
+      "lcp": 1624,
+      "domContentLoaded": 1537.3,
+      "load": 1537.7,
+      "dataComplete": 1664.9
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 35.4,
+      "fcp": 2364,
+      "lcp": 2528,
+      "domContentLoaded": 2085,
+      "load": 2085.4,
+      "dataComplete": 2639.2
+    },
+    {
+      "route": "/dashboard",
+      "state": "warm",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 37.2,
+      "fcp": 1296,
+      "lcp": 1296,
+      "domContentLoaded": 1635.7,
+      "load": 1637.4,
+      "dataComplete": 1766.1
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 37.2,
+      "fcp": 1472,
+      "lcp": 1472,
+      "domContentLoaded": 727.3,
+      "load": 773.9,
+      "dataComplete": 5137.1
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 38.2,
+      "fcp": 1440,
+      "lcp": 1440,
+      "domContentLoaded": 851.9,
+      "load": 894.8,
+      "dataComplete": 4984.6
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 36.5,
+      "fcp": 1444,
+      "lcp": 1444,
+      "domContentLoaded": 1200.6,
+      "load": 1244.5,
+      "dataComplete": 5241.2
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 44.6,
+      "fcp": 1464,
+      "lcp": 1464,
+      "domContentLoaded": 750,
+      "load": 794.7,
+      "dataComplete": 5027.1
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 40.3,
+      "fcp": 1804,
+      "lcp": 1804,
+      "domContentLoaded": 1191.1,
+      "load": 1242.6,
+      "dataComplete": 5508.6
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 39,
+      "fcp": 1492,
+      "lcp": 1492,
+      "domContentLoaded": 746.1,
+      "load": 787.4,
+      "dataComplete": 5011.7
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 37.5,
+      "fcp": 1492,
+      "lcp": 1492,
+      "domContentLoaded": 1145,
+      "load": 1186.1,
+      "dataComplete": 4722.9
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 37.8,
+      "fcp": 1464,
+      "lcp": 1464,
+      "domContentLoaded": 1133.2,
+      "load": 1176.9,
+      "dataComplete": 5364
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 37.4,
+      "fcp": 1488,
+      "lcp": 1488,
+      "domContentLoaded": 725.4,
+      "load": 769.2,
+      "dataComplete": 4936.9
+    },
+    {
+      "route": "/employees",
+      "state": "cold",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 38.9,
+      "fcp": 1448,
+      "lcp": 1448,
+      "domContentLoaded": 1158,
+      "load": 1201.5,
+      "dataComplete": 5294.4
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 40.2,
+      "fcp": 1340,
+      "lcp": 1340,
+      "domContentLoaded": 774,
+      "load": 774.4,
+      "dataComplete": 6080
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 37.6,
+      "fcp": 1268,
+      "lcp": 1268,
+      "domContentLoaded": 746.8,
+      "load": 747.1,
+      "dataComplete": 5756.9
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 61.3,
+      "fcp": 1340,
+      "lcp": 1340,
+      "domContentLoaded": 780,
+      "load": 782.8,
+      "dataComplete": 4631.3
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 37.4,
+      "fcp": 1384,
+      "lcp": 1384,
+      "domContentLoaded": 740.4,
+      "load": 740.8,
+      "dataComplete": 5270.1
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 40.2,
+      "fcp": 1304,
+      "lcp": 1304,
+      "domContentLoaded": 778.6,
+      "load": 778.7,
+      "dataComplete": 4771.2
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 43.5,
+      "fcp": 1296,
+      "lcp": 1296,
+      "domContentLoaded": 754.3,
+      "load": 754.7,
+      "dataComplete": 5263.2
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 39.3,
+      "fcp": 1316,
+      "lcp": 1316,
+      "domContentLoaded": 764.9,
+      "load": 766.4,
+      "dataComplete": 4757.4
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 38,
+      "fcp": 1732,
+      "lcp": 1732,
+      "domContentLoaded": 1190,
+      "load": 1190.2,
+      "dataComplete": 4966.5
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 45.5,
+      "fcp": 1296,
+      "lcp": 1296,
+      "domContentLoaded": 780.8,
+      "load": 781.1,
+      "dataComplete": 4845
+    },
+    {
+      "route": "/employees",
+      "state": "warm",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 42.5,
+      "fcp": 1308,
+      "lcp": 1308,
+      "domContentLoaded": 762,
+      "load": 762.3,
+      "dataComplete": 4628
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 40.3,
+      "fcp": 1528,
+      "lcp": 1528,
+      "domContentLoaded": 1400,
+      "load": 1539.3,
+      "dataComplete": 1803.9
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 37.2,
+      "fcp": null,
+      "lcp": null,
+      "domContentLoaded": 1446.1,
+      "load": 1488,
+      "dataComplete": 1606.8
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 39.5,
+      "fcp": 1516,
+      "lcp": 1516,
+      "domContentLoaded": 1886.4,
+      "load": 1926.3,
+      "dataComplete": 2002.2
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 43.1,
+      "fcp": 1480,
+      "lcp": 1480,
+      "domContentLoaded": 1626.5,
+      "load": 1675.3,
+      "dataComplete": 1784
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 40.4,
+      "fcp": 1676,
+      "lcp": 1676,
+      "domContentLoaded": 1641.2,
+      "load": 1729.3,
+      "dataComplete": 1968.7
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 38.8,
+      "fcp": 1416,
+      "lcp": 1748,
+      "domContentLoaded": 1402.2,
+      "load": 1513.8,
+      "dataComplete": 1754
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 37.7,
+      "fcp": 1448,
+      "lcp": 1448,
+      "domContentLoaded": 1436.7,
+      "load": 1515,
+      "dataComplete": 1767.6
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 38.1,
+      "fcp": 1492,
+      "lcp": 1492,
+      "domContentLoaded": 1410.7,
+      "load": 1514,
+      "dataComplete": 1774.9
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 39.8,
+      "fcp": null,
+      "lcp": null,
+      "domContentLoaded": 1383.7,
+      "load": 1427.8,
+      "dataComplete": 1542.2
+    },
+    {
+      "route": "/reports",
+      "state": "cold",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 42.5,
+      "fcp": null,
+      "lcp": null,
+      "domContentLoaded": 1421,
+      "load": 1467.4,
+      "dataComplete": 1654.3
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 1,
+      "status": 200,
+      "ttfb": 41.4,
+      "fcp": 1304,
+      "lcp": 1304,
+      "domContentLoaded": 1487.4,
+      "load": 1491.9,
+      "dataComplete": 1562.1
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 2,
+      "status": 200,
+      "ttfb": 40.3,
+      "fcp": 1428,
+      "lcp": 1428,
+      "domContentLoaded": 1499.9,
+      "load": 1515.7,
+      "dataComplete": 1657.7
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 3,
+      "status": 200,
+      "ttfb": 38.8,
+      "fcp": 2008,
+      "lcp": 2280,
+      "domContentLoaded": 2102.1,
+      "load": 2102.4,
+      "dataComplete": 2291.6
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 4,
+      "status": 200,
+      "ttfb": 37.6,
+      "fcp": 1312,
+      "lcp": 1312,
+      "domContentLoaded": 1409,
+      "load": 1411.3,
+      "dataComplete": 1587.8
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 5,
+      "status": 200,
+      "ttfb": 40.6,
+      "fcp": 1304,
+      "lcp": 1304,
+      "domContentLoaded": 1402.2,
+      "load": 1404.9,
+      "dataComplete": 1579.7
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 6,
+      "status": 200,
+      "ttfb": 39,
+      "fcp": 1300,
+      "lcp": 1300,
+      "domContentLoaded": 1442,
+      "load": 1444.9,
+      "dataComplete": 1584.9
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 7,
+      "status": 200,
+      "ttfb": 38.8,
+      "fcp": 1588,
+      "lcp": 1588,
+      "domContentLoaded": 1655.1,
+      "load": 1655.6,
+      "dataComplete": 1894.6
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 8,
+      "status": 200,
+      "ttfb": 37.2,
+      "fcp": 1292,
+      "lcp": 1292,
+      "domContentLoaded": 1419,
+      "load": 1421.8,
+      "dataComplete": 1589.7
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 9,
+      "status": 200,
+      "ttfb": 40.1,
+      "fcp": 1336,
+      "lcp": 1336,
+      "domContentLoaded": 1459.9,
+      "load": 1461.9,
+      "dataComplete": 1633.4
+    },
+    {
+      "route": "/reports",
+      "state": "warm",
+      "iteration": 10,
+      "status": 200,
+      "ttfb": 39.8,
+      "fcp": 1300,
+      "lcp": 1300,
+      "domContentLoaded": 1860,
+      "load": 1862.1,
+      "dataComplete": 1920.5
+    }
+  ],
+  "consoleErrors": [],
+  "failedResources": []
+}
