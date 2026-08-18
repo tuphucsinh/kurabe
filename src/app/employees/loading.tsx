@@ -2,26 +2,48 @@ import { Skeleton, TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function EmployeesLoading() {
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in w-full max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Đang tải danh sách nhân sự"
+      className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
+    >
+      <span className="sr-only">Đang tải danh sách nhân sự...</span>
+
+      {/* Header Skeleton */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-8 md:h-9 w-64 mb-2" />
+          <Skeleton className="h-4 w-96 max-w-full" />
         </div>
-        <Skeleton className="h-10 w-32 rounded-xl" />
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Skeleton className="h-11 w-full sm:w-28 rounded-xl" />
+          <Skeleton className="h-11 w-full sm:w-36 rounded-xl" />
+          <Skeleton className="h-11 w-full sm:w-40 rounded-xl" />
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
-        <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/50">
-          <Skeleton className="h-10 w-full md:w-64 rounded-xl" />
-          <div className="flex gap-2 w-full md:w-auto">
-            <Skeleton className="h-10 w-32 rounded-xl" />
-            <Skeleton className="h-10 w-24 rounded-xl" />
-          </div>
+      {/* Filters Section Skeleton */}
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="relative flex-1 min-w-[300px]">
+          <Skeleton className="h-12 w-full rounded-xl" />
         </div>
-        <div className="p-6">
-          <TableSkeleton rows={8} columns={5} />
+        <div className="flex flex-col sm:flex-row gap-4 lg:w-auto">
+          <Skeleton className="h-12 w-full sm:w-[220px] rounded-xl" />
+          <Skeleton className="h-12 w-full sm:w-[220px] rounded-xl" />
         </div>
+      </div>
+
+      {/* Table Section Skeleton */}
+      <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+        <div className="p-6 flex-1">
+          <TableSkeleton rows={8} columns={6} />
+        </div>
+      </div>
+
+      {/* Footer Info Skeleton */}
+      <div className="mt-6 flex items-center justify-between px-2">
+        <Skeleton className="h-4 w-56" />
       </div>
     </div>
   );
