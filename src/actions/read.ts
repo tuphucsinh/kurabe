@@ -6,6 +6,8 @@ import { Evaluation, Role, CriteriaGroup, User, Team } from '@/types';
 import { 
   getEvaluationsAdmin, 
   getEvaluationsByPeriodAdmin, 
+  getEvaluationSummariesAdmin,
+  getEvaluationSummariesByPeriodAdmin,
   getEvaluationByIdAdmin, 
   getEvaluationByEmployeeAdmin, 
   getEvaluationHistoryByEmployeeAdmin 
@@ -125,6 +127,26 @@ export async function getEvaluationsAction(
     return getEvaluationsByPeriodAdmin(periodId, auth.user, opts);
   }
   return getEvaluationsAdmin(auth.user, opts);
+}
+
+/**
+ * Đọc danh sách tóm tắt evaluations theo kỳ hoặc toàn bộ (phân quyền theo viewer).
+ * Dùng summary projection (không tải scores/notes nặng) để tối ưu danh sách nhân viên.
+ * Bắt buộc requireAuth() — chỉ trả evaluations viewer được phép xem.
+ */
+export async function getEvaluationSummariesAction(
+  periodId?: string,
+  opts?: { limit?: number }
+): Promise<Evaluation[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return [];
+  }
+
+  if (periodId) {
+    return getEvaluationSummariesByPeriodAdmin(periodId, auth.user, opts);
+  }
+  return getEvaluationSummariesAdmin(auth.user, opts);
 }
 
 /**

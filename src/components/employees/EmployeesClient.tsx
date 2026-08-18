@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUsers, useTeams, useEvaluations, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { useUsers, useTeams, useEvaluationSummaries, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,8 +33,8 @@ export default function EmployeesClient() {
 
   const { data: users = [], isLoading: usersLoading } = useUsers(user);
   const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
-  // Chỉ tải evaluations của kỳ đang chọn — không kéo toàn bộ lịch sử mọi kỳ (C3)
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(currentPeriod?.id, user);
+  // Chỉ tải summaries evaluations của kỳ đang chọn — không kéo toàn bộ scores/notes (P84.2)
+  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluationSummaries(currentPeriod?.id, user);
   const queryClient = useQueryClient();
   const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();

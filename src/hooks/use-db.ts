@@ -5,6 +5,7 @@ import {
 } from '@/lib/db/evaluations';
 import { 
   getEvaluationsAction, 
+  getEvaluationSummariesAction,
   getEvaluationByIdAction, 
   getEvaluationByEmployeeAction,
   getUsersAction,
@@ -131,6 +132,13 @@ export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], que
 export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
   queryKey: ['evaluations', periodId, user?.id],
   queryFn: () => getEvaluationsAction(periodId),
+  staleTime: 2 * 60 * 1000,
+  enabled: !!user
+});
+
+export const useEvaluationSummaries = (periodId?: string, user?: User | null) => useQuery({
+  queryKey: ['evaluations', 'summary', periodId, user?.id],
+  queryFn: () => getEvaluationSummariesAction(periodId),
   staleTime: 2 * 60 * 1000,
   enabled: !!user
 });
