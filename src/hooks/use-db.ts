@@ -20,7 +20,9 @@ import {
   getTeamsPageDataAction,
   TeamsPageData,
   getEvaluationPageDataAction,
-  EvaluationPageData
+  EvaluationPageData,
+  getEvaluationComparePageDataAction,
+  EvaluationComparePageData
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
@@ -212,6 +214,17 @@ export const useEvaluationPageData = (
 ) => useQuery<EvaluationPageData>({
   queryKey: ['evaluation-page-data', employeeId, periodId, user?.id],
   queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
+  staleTime: 2 * 60 * 1000,
+  enabled: !!employeeId && !!user,
+});
+
+export const useEvaluationComparePageData = (
+  employeeId: string,
+  periodId?: string,
+  user?: User | null
+) => useQuery<EvaluationComparePageData>({
+  queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id],
+  queryFn: () => getEvaluationComparePageDataAction(employeeId, periodId),
   staleTime: 2 * 60 * 1000,
   enabled: !!employeeId && !!user,
 });

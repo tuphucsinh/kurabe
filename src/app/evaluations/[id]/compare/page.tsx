@@ -2,13 +2,14 @@
 
 import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useUsers, useEvaluationByEmployee, useCriteria } from '@/hooks/use-db';
+import { useEvaluationComparePageData } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
 import { getGradeBandsSync } from '@/lib/grade-bands';
 import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { getEvaluationAccessState } from '@/data/workflow';
+import { CriteriaGroup, User } from '@/types';
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -26,15 +27,22 @@ interface ComparePageProps {
   params: Promise<{ id: string }>;
 }
 
+const EMPTY_USERS: User[] = [];
+const EMPTY_GROUPS: CriteriaGroup[] = [];
+
 export default function ComparePage({ params }: ComparePageProps) {
   const router = useRouter();
   const { id } = use(params);
   const { user } = useAuth();
   
-  const { data: employee, isLoading: loadingUser } = useUser(id);
-  const { data: evaluation, isLoading: loadingEval } = useEvaluationByEmployee(id, undefined, user);
-  const { data: users = [] } = useUsers(user);
-  const { data: groups = [], isLoading: loadingCriteria } = useCriteria();
+  const { data: pageData, isLoading } = useEvaluationComparePageData(id, undefined, user);
+  const employee = pageData?.employee;
+  const evaluation = pageData?.evaluation;
+  const users = pageData?.users ?? EMPTY_USERS;
+  const groups = pageData?.groups ?? EMPTY_GROUPS;
+  const loadingUser = isLoading;
+  const loadingEval = isLoading;
+  const loadingCriteria = isLoading;
 
   // Nạp thang điểm từ DB (load trang trực tiếp sẽ còn fallback hardcode nếu thiếu)
   const [gradeBands, setGradeBands] = useState(() => getGradeBandsSync());

@@ -25,7 +25,7 @@ import {
   getTeamsAdmin, 
   getTeamByIdAdmin 
 } from '@/lib/db/teams-admin';
-import { getCriteriaForRole } from '@/lib/db/criteria';
+import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 import { getActivePeriod, getPeriods } from '@/lib/db/evaluations';
 
@@ -363,6 +363,103 @@ export async function getEvaluationPageDataAction(
     usersError,
     periods,
     periodsError,
+  };
+}
+
+export type EvaluationComparePageData = {
+  employee: User | null;
+  employeeError: string | null;
+  evaluation: Evaluation | null;
+  evaluationError: string | null;
+  users: User[];
+  usersError: string | null;
+  groups: CriteriaGroup[];
+  groupsError: string | null;
+};
+
+/**
+ * Đọc dữ liệu tổng hợp cho trang /evaluations/[id]/compare trong 1 server action duy nhất:
+ * - employee (thông tin nhân viên theo ID)
+ * - evaluation (phiếu đánh giá theo kỳ hoặc kỳ active)
+ * - users (danh sách người dùng theo quyền viewer)
+ * - groups (danh sách nhóm tiêu chí)
+ *
+ * Bắt buộc requireAuth() duy nhất 1 lần.
+ * Trả về discriminated per-part error contract:
+ * { employee, employeeError, evaluation, evaluationError, users, usersError, groups, groupsError }
+ */
+export async function getEvaluationComparePageDataAction(
+  employeeId: string,
+  periodId?: string
+): Promise<EvaluationComparePageData> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    const err = auth.error ?? 'Chưa đăng nhập';
+    return {
+      employee: null,
+      employeeError: err,
+      evaluation: null,
+      evaluationError: err,
+      users: [],
+      usersError: err,
+      groups: [],
+      groupsError: err,
+    };
+  }
+
+  let employee: User | null = null;
+  let employeeError: string | null = null;
+  let evaluation: Evaluation | null = null;
+  let evaluationError: string | null = null;
+  let users: User[] = [];
+  let usersError: string | null = null;
+  let groups: CriteriaGroup[] = [];
+  let groupsError: string | null = null;
+
+  const [employeeRes, evalRes, usersRes, groupsRes] = await Promise.allSettled([
+    getUserByIdAdmin(employeeId, auth.user),
+    getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user),
+    getUsersAdmin(auth.user),
+    getAllCriteriaGroups(),
+  ]);
+
+  if (employeeRes.status === 'fulfilled') {
+    employee = employeeRes.value;
+  } else {
+    console.error('getEvaluationComparePageDataAction employee error:', employeeRes.reason);
+    employeeError = employeeRes.reason instanceof Error ? employeeRes.reason.message : 'Không thể tải thông tin nhân viên.';
+  }
+
+  if (evalRes.status === 'fulfilled') {
+    evaluation = evalRes.value;
+  } else {
+    console.error('getEvaluationComparePageDataAction evaluation error:', evalRes.reason);
+    evaluationError = evalRes.reason instanceof Error ? evalRes.reason.message : 'Không thể tải dữ liệu đánh giá.';
+  }
+
+  if (usersRes.status === 'fulfilled') {
+    users = usersRes.value;
+  } else {
+    console.error('getEvaluationComparePageDataAction users error:', usersRes.reason);
+    usersError = usersRes.reason instanceof Error ? usersRes.reason.message : 'Không thể tải danh sách nhân viên.';
+  }
+
+  if (groupsRes.status === 'fulfilled') {
+    groups = groupsRes.value;
+  } else {
+    console.error('getEvaluationComparePageDataAction groups error:', groupsRes.reason);
+    groupsError = groupsRes.reason instanceof Error ? groupsRes.reason.message : 'Không thể tải nhóm tiêu chí.';
+  }
+
+  return {
+    employee,
+    employeeError,
+    evaluation,
+    evaluationError,
+    users,
+    usersError,
+    groups,
+    groupsError,
   };
 }
 
