@@ -40,8 +40,8 @@ export default function ChatWidget() {
   const [confirmReport, setConfirmReport] = useState(false);
   const [reporting, setReporting] = useState(false);
 
-  // Chỉ hiển thị cho Manager/Leader/SubLeader/Worker
-  if (!user || !['Manager', 'Leader', 'SubLeader', 'Worker'].includes(user.role)) return null;
+  // Chỉ hiển thị cho Manager/Leader/SubLeader (Worker/Employee KHÔNG có chat widget)
+  if (!user || !['Manager', 'Leader', 'SubLeader'].includes(user.role)) return null;
 
   const visibleMessages = messages.filter((m) => m.pathname === pathname);
 

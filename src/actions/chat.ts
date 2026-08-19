@@ -339,7 +339,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
 }
 
 export async function chatGreetingAction(pathname: string): Promise<{ greeting?: string; error?: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { error: auth.error };
   const role = auth.user?.role ?? 'Employee';
   const addr = address(auth.user?.gender);
@@ -391,7 +391,7 @@ interface ChatPrepared {
 async function prepareChatContext(
   input: ChatAskInputBase
 ): Promise<{ ok: true; data: ChatPrepared } | { ok: false; error: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { ok: false, error: auth.error };
   const userId = auth.user?.id;
   const role = auth.user?.role ?? 'Employee';
@@ -489,7 +489,7 @@ export async function chatReportErrorAction(input: {
   pathname: string;
   history?: { role: 'user' | 'assistant'; text: string }[];
 }): Promise<{ reply?: string; error?: string }> {
-  const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
+  const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null) return { error: auth.error };
   const userId = auth.user?.id;
   if (!userId) return { error: 'Không xác định được tài khoản.' };
