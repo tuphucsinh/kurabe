@@ -16,7 +16,9 @@ import {
   getTeamByIdAction,
   getEvaluationSummariesBatchAction,
   getEmployeesPageDataAction,
-  EmployeesPageData
+  EmployeesPageData,
+  getTeamsPageDataAction,
+  TeamsPageData
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
@@ -120,6 +122,16 @@ export const useTeams = (requester?: User | null) => useQuery({
 });
 export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamByIdAction(id), enabled: !!id });
 
+export const useTeamsPageData = (
+  periodId?: string,
+  requester?: User | null
+) => useQuery<TeamsPageData>({
+  queryKey: ['teams-page-data', periodId],
+  queryFn: () => getTeamsPageDataAction(periodId),
+  staleTime: 2 * 60 * 1000,
+  enabled: requester !== undefined ? requester != null : true,
+});
+
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -131,6 +143,7 @@ export const useUpsertTeam = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
     },
   });
 };
@@ -146,6 +159,7 @@ export const useDeleteTeam = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
     },
   });
 };

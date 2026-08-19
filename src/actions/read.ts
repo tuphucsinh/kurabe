@@ -169,6 +169,106 @@ export async function getEmployeesPageDataAction(
   };
 }
 
+export type TeamsPageData = {
+  users: User[];
+  usersError: string | null;
+  teams: Team[];
+  teamsError: string | null;
+  evaluations: Evaluation[];
+  evalsError: string | null;
+};
+
+/**
+ * Đọc dữ liệu tổng hợp cho trang /teams trong 1 server action duy nhất:
+ * - users (danh sách người dùng theo quyền viewer)
+ * - teams (danh sách nhóm theo quyền viewer)
+ * - evaluations (danh sách đánh giá theo kỳ hiện tại nếu periodId được cung cấp)
+ *
+ * Bắt buộc requireAuth() duy nhất 1 lần.
+ * Trả về discriminated per-part error contract:
+ * { users, usersError, teams, teamsError, evaluations, evalsError }
+ */
+export async function getTeamsPageDataAction(
+  periodId?: string
+): Promise<TeamsPageData> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    const err = auth.error ?? 'Chưa đăng nhập';
+    return {
+      users: [],
+      usersError: err,
+      teams: [],
+      teamsError: err,
+      evaluations: [],
+      evalsError: err,
+    };
+  }
+
+  let users: User[] = [];
+  let usersError: string | null = null;
+  let teams: Team[] = [];
+  let teamsError: string | null = null;
+  let evaluations: Evaluation[] = [];
+  let evalsError: string | null = null;
+
+  if (periodId) {
+    const [usersRes, teamsRes, evalsRes] = await Promise.allSettled([
+      getUsersAdmin(auth.user),
+      getTeamsAdmin(auth.user),
+      getEvaluationsByPeriodAdmin(periodId, auth.user),
+    ]);
+
+    if (usersRes.status === 'fulfilled') {
+      users = usersRes.value;
+    } else {
+      console.error('getTeamsPageDataAction users error:', usersRes.reason);
+      usersError = usersRes.reason instanceof Error ? usersRes.reason.message : 'Không thể tải danh sách nhân viên.';
+    }
+
+    if (teamsRes.status === 'fulfilled') {
+      teams = teamsRes.value;
+    } else {
+      console.error('getTeamsPageDataAction teams error:', teamsRes.reason);
+      teamsError = teamsRes.reason instanceof Error ? teamsRes.reason.message : 'Không thể tải danh sách nhóm.';
+    }
+
+    if (evalsRes.status === 'fulfilled') {
+      evaluations = evalsRes.value;
+    } else {
+      console.error('getTeamsPageDataAction evaluations error:', evalsRes.reason);
+      evalsError = evalsRes.reason instanceof Error ? evalsRes.reason.message : 'Không thể tải danh sách đánh giá.';
+    }
+  } else {
+    const [usersRes, teamsRes] = await Promise.allSettled([
+      getUsersAdmin(auth.user),
+      getTeamsAdmin(auth.user),
+    ]);
+
+    if (usersRes.status === 'fulfilled') {
+      users = usersRes.value;
+    } else {
+      console.error('getTeamsPageDataAction users error:', usersRes.reason);
+      usersError = usersRes.reason instanceof Error ? usersRes.reason.message : 'Không thể tải danh sách nhân viên.';
+    }
+
+    if (teamsRes.status === 'fulfilled') {
+      teams = teamsRes.value;
+    } else {
+      console.error('getTeamsPageDataAction teams error:', teamsRes.reason);
+      teamsError = teamsRes.reason instanceof Error ? teamsRes.reason.message : 'Không thể tải danh sách nhóm.';
+    }
+  }
+
+  return {
+    users,
+    usersError,
+    teams,
+    teamsError,
+    evaluations,
+    evalsError,
+  };
+}
+
 
 /**
  * Đọc thông tin user theo ID.

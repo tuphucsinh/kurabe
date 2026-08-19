@@ -1,6 +1,6 @@
 'use client';
 
-import { useUsers, useTeams, useEvaluations, useUpsertTeam, useDeleteTeam } from '@/hooks/use-db';
+import { useTeamsPageData, useUpsertTeam, useDeleteTeam } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { Team } from '@/types';
 import {
@@ -28,16 +28,20 @@ export default function TeamsClient() {
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
   const { user, currentPeriod } = useAuth();
-  const { data: users = [], isLoading: usersLoading, isError: usersError } = useUsers(user);
-  const { data: teams = [], isLoading: teamsLoading, isError: teamsError } = useTeams(user);
-  // Chỉ tải evaluations của kỳ đang chọn (C3)
-  const { data: evaluations = [], isLoading: evalsLoading, isError: evalsError } = useEvaluations(currentPeriod?.id, user);
+  const { data, isLoading, isError } = useTeamsPageData(currentPeriod?.id, user);
+  const users = data?.users ?? [];
+  const teams = data?.teams ?? [];
+  const evaluations = data?.evaluations ?? [];
+  const usersError = Boolean(data?.usersError || isError);
+  const teamsError = Boolean(data?.teamsError || isError);
+  const evalsError = Boolean(data?.evalsError || isError);
+  const evalsLoading = isLoading;
   const upsertTeam = useUpsertTeam();
   const { mutate: deleteTeam } = useDeleteTeam();
   const { toast } = useToast();
   const confirm = useConfirm();
 
-  const isLightLoading = (!user && user === undefined) || usersLoading || teamsLoading;
+  const isLightLoading = (!user && user === undefined) || isLoading;
   const isLightError = teamsError || usersError;
   const isManager = user?.role === 'Manager';
 
