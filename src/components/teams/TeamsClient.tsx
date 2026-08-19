@@ -17,10 +17,11 @@ import { useState } from 'react';
 import TeamModal from '@/components/modals/TeamModal';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import TeamsShell from '@/components/teams/TeamsShell';
 import TeamEvaluationCell from '@/components/teams/TeamEvaluationCell';
+import TeamCardSkeleton from '@/components/teams/TeamCardSkeleton';
 
 export default function TeamsClient() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -190,12 +191,14 @@ export default function TeamsClient() {
       {/* Team Cards / Light Layer */}
       {isLightLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6" data-load-layer="light">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
+          <TeamCardSkeleton />
         </div>
       ) : isLightError ? (
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-8 text-center" data-load-layer="light">
