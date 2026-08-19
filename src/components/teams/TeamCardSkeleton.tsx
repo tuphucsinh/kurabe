@@ -15,10 +15,10 @@ export default function TeamCardSkeleton() {
         <div className="mb-1.5 h-7 flex items-center">
           <Skeleton variant="text" width={140} height={20} className="rounded" />
         </div>
-        <p className="text-sm text-outline flex items-center gap-1.5">
+        <div className="text-sm text-outline flex items-center gap-1.5">
           <UserIcon size={14} />
           Leader: <Skeleton variant="text" width={80} height={16} className="rounded inline-block" />
-        </p>
+        </div>
       </div>
 
       {/* Card Body */}
