@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Evaluation } from '@/types';
+import { Evaluation, Role } from '@/types';
 import { FileText, Pencil } from 'lucide-react';
 
 export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -26,9 +26,29 @@ export function getStatusBadge(status: string, latestRound?: number | null): { l
   return STATUS_BADGE[status] || STATUS_BADGE.NotStarted;
 }
 
+export function getTargetRoundNumbers(evaluation?: Evaluation | null, roleProp?: Role | string): number[] {
+  const role = roleProp || evaluation?.employeeRole;
+  if (role) {
+    const normalized = role.toLowerCase().replace(/\s+/g, '');
+    if (normalized === 'leader' || normalized === 'subleader') {
+      return [1, 2];
+    }
+    if (normalized === 'worker' || normalized === 'employee' || normalized === 'staff') {
+      return [1, 2, 3];
+    }
+  }
+  if (evaluation?.rounds && evaluation.rounds.length > 0) {
+    const maxSeen = Math.max(...evaluation.rounds.map((r) => r.round || 0));
+    if (maxSeen >= 3) return [1, 2, 3];
+    if (maxSeen === 2) return [1, 2];
+  }
+  return [1, 2, 3];
+}
+
 export interface TeamDetailMemberCellProps {
   memberId: string;
   evaluation?: Evaluation | null;
+  role?: Role | string;
   isLoading?: boolean;
   isError?: boolean;
   mode?: 'desktop' | 'mobile' | 'action';
@@ -38,10 +58,12 @@ export interface TeamDetailMemberCellProps {
 
 export function TeamDetailMemberEvaluationDesktop({
   evaluation,
+  role,
   isLoading = false,
   isError = false,
 }: {
   evaluation?: Evaluation | null;
+  role?: Role | string;
   isLoading?: boolean;
   isError?: boolean;
 }) {
@@ -74,12 +96,16 @@ export function TeamDetailMemberEvaluationDesktop({
   const status = evaluation ? evaluation.status : 'NotStarted';
   const badge = getStatusBadge(status, latestSubmittedRound);
   const grade = evaluation?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
-  const gradeRound = submittedRounds[0]?.round ?? null;
-  const score = submittedRounds[0]?.totalScore ?? null;
-  const previousRounds = submittedRounds
-    .filter((r) => (gradeRound != null ? r.round !== gradeRound : true))
-    .sort((a, b) => a.round - b.round)
-    .map((r) => ({ round: r.round, score: r.totalScore }));
+
+  const targetRounds = getTargetRoundNumbers(evaluation, role);
+  const roundsMap = new Map<number, number | null>();
+  if (evaluation?.rounds) {
+    for (const r of evaluation.rounds) {
+      if (r.status === 'Submitted' || r.submittedAt) {
+        roundsMap.set(r.round, r.totalScore ?? null);
+      }
+    }
+  }
 
   return (
     <div className="contents" data-load-layer="heavy">
@@ -90,18 +116,31 @@ export function TeamDetailMemberEvaluationDesktop({
       )}
       {grade && grade !== 'Pending' ? (
         <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
-          {previousRounds.map((roundData) => (
-            <div key={`prev-${roundData.round}`} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
-              <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-              <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-            </div>
-          ))}
-          {gradeRound != null && (
-            <div className="w-12 flex flex-col items-center leading-none">
-              <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
-              <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
-            </div>
-          )}
+          {targetRounds.map((roundNum) => {
+            const scoreVal = roundsMap.get(roundNum);
+            const hasScore = scoreVal != null;
+            const isLatest = roundNum === latestSubmittedRound;
+
+            if (isLatest) {
+              return (
+                <div key={`round-${roundNum}`} className="w-12 flex flex-col items-center leading-none">
+                  <span className="text-xs text-slate-700 font-bold">L{roundNum}</span>
+                  <span className="text-base text-slate-800 font-bold mt-1">
+                    {hasScore ? scoreVal : '-'}
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <div key={`round-${roundNum}`} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
+                <span className="text-xs text-slate-500 font-medium">L{roundNum}</span>
+                <span className="text-sm text-slate-500 font-medium mt-1">
+                  {hasScore ? scoreVal : '-'}
+                </span>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <span className="w-[104px]" />
@@ -168,10 +207,12 @@ export function TeamDetailMemberAction({
 
 export function TeamDetailMemberEvaluationMobile({
   evaluation,
+  role,
   isLoading = false,
   isError = false,
 }: {
   evaluation?: Evaluation | null;
+  role?: Role | string;
   isLoading?: boolean;
   isError?: boolean;
 }) {
@@ -194,14 +235,38 @@ export function TeamDetailMemberEvaluationMobile({
   const submittedRounds = evaluation?.rounds
     ? [...evaluation.rounds].filter((r) => r.status === 'Submitted' || r.submittedAt).sort((a, b) => b.round - a.round)
     : [];
+  const latestSubmittedRound = submittedRounds[0]?.round ?? evaluation?.currentRound ?? null;
   const grade = evaluation?.finalGrade || (submittedRounds.length ? submittedRounds[0].grade : null);
-  const gradeRound = submittedRounds[0]?.round ?? null;
-  const score = submittedRounds[0]?.totalScore ?? null;
 
-  if (score != null && gradeRound != null && grade && grade !== 'Pending') {
+  if (grade && grade !== 'Pending') {
+    const targetRounds = getTargetRoundNumbers(evaluation, role);
+    const roundsMap = new Map<number, number | null>();
+    if (evaluation?.rounds) {
+      for (const r of evaluation.rounds) {
+        if (r.status === 'Submitted' || r.submittedAt) {
+          roundsMap.set(r.round, r.totalScore ?? null);
+        }
+      }
+    }
+
     return (
       <p className="text-xs text-slate-600 mt-1" data-load-layer="heavy">
-        Xếp loại: {grade} · Vòng L{gradeRound} · <span className="font-bold text-slate-800">{score} điểm</span>
+        Xếp loại: {grade}
+        {targetRounds.map((roundNum) => {
+          const scoreVal = roundsMap.get(roundNum);
+          const hasScore = scoreVal != null;
+          const isLatest = roundNum === latestSubmittedRound;
+          const scoreText = hasScore ? scoreVal : '-';
+
+          return (
+            <span key={`mobile-round-${roundNum}`}>
+              {' · '}
+              <span className={isLatest ? 'font-bold text-slate-800' : 'text-slate-500 opacity-60'}>
+                L{roundNum}: {scoreText}
+              </span>
+            </span>
+          );
+        })}
       </p>
     );
   }
@@ -212,6 +277,7 @@ export function TeamDetailMemberEvaluationMobile({
 export default function TeamDetailMemberCell({
   memberId,
   evaluation,
+  role,
   isLoading = false,
   isError = false,
   mode = 'desktop',
@@ -219,7 +285,7 @@ export default function TeamDetailMemberCell({
   onEdit,
 }: TeamDetailMemberCellProps) {
   if (mode === 'mobile') {
-    return <TeamDetailMemberEvaluationMobile evaluation={evaluation} isLoading={isLoading} isError={isError} />;
+    return <TeamDetailMemberEvaluationMobile evaluation={evaluation} role={role} isLoading={isLoading} isError={isError} />;
   }
   if (mode === 'action') {
     return (
@@ -232,5 +298,5 @@ export default function TeamDetailMemberCell({
       />
     );
   }
-  return <TeamDetailMemberEvaluationDesktop evaluation={evaluation} isLoading={isLoading} isError={isError} />;
+  return <TeamDetailMemberEvaluationDesktop evaluation={evaluation} role={role} isLoading={isLoading} isError={isError} />;
 }
