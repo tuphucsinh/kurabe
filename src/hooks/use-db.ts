@@ -14,7 +14,9 @@ import {
   getUsersByTeamAction,
   getTeamsAction,
   getTeamByIdAction,
-  getEvaluationSummariesBatchAction
+  getEvaluationSummariesBatchAction,
+  getEmployeesPageDataAction,
+  EmployeesPageData
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
@@ -50,6 +52,16 @@ export const useUsersBatch = (requester?: User | null, options?: UsersBatchOptio
 export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserByIdAction(id), enabled: !!id });
 export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId });
 
+export const useEmployeesPageData = (
+  periodId?: string,
+  options?: UsersBatchOptions,
+  requester?: User | null
+) => useQuery<EmployeesPageData>({
+  queryKey: ['employees-page-data', periodId, options?.offset, options?.limit, options?.search, options?.teamId, options?.role],
+  queryFn: () => getEmployeesPageDataAction(periodId, options),
+  staleTime: 2 * 60 * 1000,
+  enabled: requester !== undefined ? requester != null : true,
+});
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
@@ -64,6 +76,7 @@ export const useUpsertUser = () => {
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
     },
   });
 };
@@ -81,6 +94,7 @@ export const useBatchUpsertUsers = () => {
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
     },
   });
 };
@@ -91,6 +105,7 @@ export const useDeleteUser = () => {
     mutationFn: deleteUserAction,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
     },
   });
 };

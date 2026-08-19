@@ -79,6 +79,96 @@ export async function getUsersBatchAction(options?: UsersBatchOptions): Promise<
   return getUsersBatchAdmin(auth.user, options);
 }
 
+export type EmployeesPageData = {
+  teams: Team[];
+  teamsError: string | null;
+  users: UsersBatchResult;
+  usersError: string | null;
+  summaries: Record<string, Evaluation>;
+  summariesError: string | null;
+};
+
+/**
+ * Đọc dữ liệu tổng hợp cho trang /employees trong 1 server action duy nhất:
+ * - teams (danh sách nhóm theo quyền viewer)
+ * - users (danh sách nhân viên theo phân trang & bộ lọc)
+ * - summaries (tóm tắt đánh giá theo kỳ của các nhân viên trong lô)
+ *
+ * Bắt buộc requireAuth() duy nhất 1 lần.
+ * Trả về discriminated per-part error contract:
+ * { teams, teamsError, users, usersError, summaries, summariesError }
+ */
+export async function getEmployeesPageDataAction(
+  periodId?: string,
+  options?: UsersBatchOptions
+): Promise<EmployeesPageData> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    const err = auth.error ?? 'Chưa đăng nhập';
+    return {
+      teams: [],
+      teamsError: err,
+      users: { items: [], hasMore: false, totalCount: 0 },
+      usersError: err,
+      summaries: {},
+      summariesError: err,
+    };
+  }
+
+  let teams: Team[] = [];
+  let teamsError: string | null = null;
+  let users: UsersBatchResult = { items: [], hasMore: false, totalCount: 0 };
+  let usersError: string | null = null;
+  const summaries: Record<string, Evaluation> = {};
+  let summariesError: string | null = null;
+
+  const [teamsRes, usersRes] = await Promise.allSettled([
+    getTeamsAdmin(auth.user),
+    getUsersBatchAdmin(auth.user, options),
+  ]);
+
+  if (teamsRes.status === 'fulfilled') {
+    teams = teamsRes.value;
+  } else {
+    console.error('getEmployeesPageDataAction teams error:', teamsRes.reason);
+    teamsError = teamsRes.reason instanceof Error ? teamsRes.reason.message : 'Không thể tải danh sách nhóm.';
+  }
+
+  if (usersRes.status === 'fulfilled') {
+    users = usersRes.value;
+  } else {
+    console.error('getEmployeesPageDataAction users error:', usersRes.reason);
+    usersError = usersRes.reason instanceof Error ? usersRes.reason.message : 'Không thể tải danh sách nhân viên.';
+  }
+
+  if (periodId && users.items.length > 0) {
+    try {
+      const summaryList = await getEvaluationSummariesByEmployeeIdsAdmin(
+        users.items.map((u) => u.id),
+        periodId,
+        auth.user
+      );
+      for (const ev of summaryList) {
+        if (ev.employeeId) {
+          summaries[ev.employeeId] = ev;
+        }
+      }
+    } catch (err) {
+      console.error('getEmployeesPageDataAction summaries error:', err);
+      summariesError = err instanceof Error ? err.message : 'Không thể tải kết quả đánh giá.';
+    }
+  }
+
+  return {
+    teams,
+    teamsError,
+    users,
+    usersError,
+    summaries,
+    summariesError,
+  };
+}
+
 
 /**
  * Đọc thông tin user theo ID.
