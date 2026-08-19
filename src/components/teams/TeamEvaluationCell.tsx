@@ -3,22 +3,61 @@
 import { Skeleton } from '@/components/ui/Skeleton';
 
 interface TeamEvaluationCellProps {
-  membersCount: number;
+  membersCount?: number;
   completedCount?: number;
   progress?: number;
-  isLoading: boolean;
+  isLoading?: boolean;
   isError?: boolean;
+  skeleton?: boolean;
 }
 
 export default function TeamEvaluationCell({
-  membersCount,
+  membersCount = 0,
   completedCount = 0,
   progress = 0,
-  isLoading,
+  isLoading = false,
   isError = false,
+  skeleton = false,
 }: TeamEvaluationCellProps) {
   const waitingCount = Math.max(0, membersCount - completedCount);
   const progressColor = progress === 100 ? 'bg-green-500' : 'bg-primary';
+
+  if (skeleton) {
+    return (
+      <div className="space-y-5" data-load-layer="heavy">
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="text-center p-3 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Nhân sự</p>
+            <div className="h-7 flex items-center justify-center">
+              <Skeleton variant="text" width={24} height={20} className="rounded" />
+            </div>
+          </div>
+          <div className="text-center p-3 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Xong</p>
+            <div className="h-7 flex items-center justify-center">
+              <Skeleton variant="text" width={24} height={20} className="rounded" />
+            </div>
+          </div>
+          <div className="text-center p-3 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-1">Chờ</p>
+            <div className="h-7 flex items-center justify-center">
+              <Skeleton variant="text" width={24} height={20} className="rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
+            <Skeleton variant="text" width={32} height={16} className="rounded" />
+          </div>
+          <div className="h-2 w-full bg-surface rounded-full overflow-hidden" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5" data-load-layer="heavy">
