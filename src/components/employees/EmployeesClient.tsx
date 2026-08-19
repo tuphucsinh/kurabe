@@ -439,7 +439,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         evaluationError: isEvalError,
       };
     });
-  }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId]);
+  }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId, userMap]);
 
   const handleEdit = (employee: User) => {
     if (!canManageEmployees) {
