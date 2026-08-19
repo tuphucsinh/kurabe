@@ -8,8 +8,12 @@ import { Menu, Home, Users, Layout, Settings, Bell, FileText, HelpCircle } from 
 import Link from 'next/link';
 import { isIndividualRole } from '@/lib/role-policy';
 
+import dynamic from 'next/dynamic';
 import PageTransition from '@/components/layout/PageTransition';
-import ChatWidget from '@/components/chat/ChatWidget';
+
+const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), {
+  ssr: false,
+});
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();

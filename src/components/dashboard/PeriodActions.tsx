@@ -4,8 +4,12 @@ import React, { useState } from 'react';
 import { Plus, Lock, Trash2, FileDown } from 'lucide-react';
 import { exportEvaluationsToExcel } from '@/lib/export';
 import { useAuth } from '@/contexts/AuthContext';
-import { PeriodModal } from '@/components/modals/PeriodModal';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+
+const PeriodModal = dynamic(() =>
+  import('@/components/modals/PeriodModal').then((mod) => mod.PeriodModal)
+);
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { closeEvaluationPeriod, deleteEvaluationPeriod } from '@/actions/period';

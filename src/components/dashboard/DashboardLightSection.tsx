@@ -3,7 +3,7 @@
 import React from 'react';
 import { Users, TrendingUp, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { GradeDistribution } from '@/components/charts/GradeDistribution';
+import ClientGradeDistribution from '@/components/charts/ClientGradeDistribution';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DashboardLightData } from '@/actions/dashboard';
 
@@ -159,7 +159,7 @@ export default function DashboardLightSection({
             {/* Grade Distribution */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 mb-4">Phân bổ xếp loại</h3>
-              <GradeDistribution data={data.gradeDistribution} />
+              <ClientGradeDistribution data={data.gradeDistribution} />
             </div>
           </div>
         </>

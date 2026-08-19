@@ -2,18 +2,20 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Users, Target, TrendingUp, Clock, AlertTriangle, RotateCcw } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { User } from '@/types';
 import { getReportAggregation, ReportAggregationData } from '@/actions/reports';
 import PageHeader from '@/components/layout/PageHeader';
 import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
-import BatchResultMessageModal from '@/components/reports/BatchResultMessageModal';
-import PeriodMinutesModal from '@/components/reports/PeriodMinutesModal';
 import AiSummaryCard from '@/components/reports/AiSummaryCard';
-import { GradeDistribution } from '@/components/charts/GradeDistribution';
-import TeamComparison from '@/components/reports/TeamComparison';
-import CriteriaHeatmap from '@/components/reports/CriteriaHeatmap';
+import ClientGradeDistribution from '@/components/charts/ClientGradeDistribution';
+import ClientTeamComparison from '@/components/charts/ClientTeamComparison';
+import ClientCriteriaHeatmap from '@/components/charts/ClientCriteriaHeatmap';
 import TopPerformers from '@/components/reports/TopPerformers';
+
+const BatchResultMessageModal = dynamic(() => import('@/components/reports/BatchResultMessageModal'));
+const PeriodMinutesModal = dynamic(() => import('@/components/reports/PeriodMinutesModal'));
 
 export interface ReportsDataLayerProps {
   viewer: User;
@@ -279,13 +281,13 @@ export default function ReportsDataLayer({
         <div className="space-y-6">
           {/* Grade Distribution */}
           <div data-load-layer="heavy">
-            <GradeDistribution data={reportData.gradeDistribution} />
+            <ClientGradeDistribution data={reportData.gradeDistribution} />
           </div>
 
           {/* Grid: TeamComparison & CriteriaHeatmap */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TeamComparison teams={reportData.teamStats} />
-            <CriteriaHeatmap data={reportData.criteriaAnalysis} />
+            <ClientTeamComparison teams={reportData.teamStats} />
+            <ClientCriteriaHeatmap data={reportData.criteriaAnalysis} />
           </div>
 
           {/* Grid: TopPerformers & AiSummaryCard */}

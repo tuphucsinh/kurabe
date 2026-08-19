@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import TeamModal from '@/components/modals/TeamModal';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/components/ui/Toast';
+
+const TeamModal = dynamic(() => import('@/components/modals/TeamModal'));
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';

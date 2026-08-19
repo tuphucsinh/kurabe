@@ -14,12 +14,30 @@ import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Uplo
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import EmployeeModal from '@/components/modals/EmployeeModal';
 import { canHaveSubLeader, isManagementRole, roleLabel } from '@/lib/role-policy';
+
+const EmployeeModal = dynamic(() => import('@/components/modals/EmployeeModal'));
+
+function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delayMs]);
+
+  return debouncedValue;
+}
 
 interface EmployeesClientProps {
   initialViewer: User;
@@ -54,6 +72,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
@@ -211,7 +230,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       const pageData = await getEmployeesPageDataAction(currentPeriodId, {
         offset: 0,
         limit: 20,
-        search: searchTerm,
+        search: debouncedSearchTerm,
         teamId: teamFilter,
         role: roleFilter,
       });
@@ -262,7 +281,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setTeamsLoading(false);
       }
     }
-  }, [viewerId, viewerScopeKey, searchTerm, teamFilter, roleFilter, currentPeriodId]);
+  }, [viewerId, viewerScopeKey, debouncedSearchTerm, teamFilter, roleFilter, currentPeriodId]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -289,7 +308,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       const res = await getUsersBatchAction({
         offset: nextOffset,
         limit: 20,
-        search: searchTerm,
+        search: debouncedSearchTerm,
         teamId: teamFilter,
         role: roleFilter,
       });
@@ -953,7 +972,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                 icon={Users}
                 title="Không tìm thấy nhân viên"
                 description={
-                  searchTerm || teamFilter !== 'all' || roleFilter !== 'all'
+                  debouncedSearchTerm || teamFilter !== 'all' || roleFilter !== 'all'
                     ? 'Không có nhân viên nào khớp với bộ lọc hiện tại. Thử thay đổi điều kiện tìm kiếm.'
                     : 'Chưa có nhân viên nào trong hệ thống. Hãy thêm nhân viên mới hoặc nhập từ Excel.'
                 }
