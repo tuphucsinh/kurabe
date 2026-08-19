@@ -158,10 +158,12 @@ export default function TeamDetailPage() {
     <TeamDetailShell>
       {/* Back Link & Header (Static Shell & Light/Heavy Frames) */}
       <div>
-        <Link prefetch={false} href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-outline hover:text-primary transition-colors mb-4">
-          <ArrowLeft size={16} />
-          Quay lại danh sách nhóm
-        </Link>
+        {user?.role !== 'Leader' && user?.role !== 'SubLeader' ? (
+          <Link prefetch={false} href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-outline hover:text-primary transition-colors mb-4">
+            <ArrowLeft size={16} />
+            Quay lại danh sách nhóm
+          </Link>
+        ) : null}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
           <div>
             {isLightLoading ? (
@@ -246,11 +248,11 @@ export default function TeamDetailPage() {
             icon={Users}
             title="Nhóm không tồn tại"
             description="Nhóm này không có trong hệ thống hoặc đã bị xóa."
-            action={{
-              label: 'Quay lại danh sách nhóm',
-              onClick: () => { router.push('/teams'); },
-              icon: ArrowLeft,
-            }}
+            action={
+              user?.role !== 'Leader' && user?.role !== 'SubLeader'
+                ? { label: 'Quay lại danh sách nhóm', onClick: () => { router.push('/teams'); }, icon: ArrowLeft }
+                : undefined
+            }
           />
         </div>
       ) : (

@@ -992,7 +992,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       </div>
 
       <div className="mt-6 flex items-center justify-between px-2">
-        <p className="text-sm text-outline font-medium">
+        <div className="text-sm text-outline font-medium">
           {isInitialLoading ? (
             <Skeleton className="h-5 w-64 rounded inline-block" />
           ) : (
@@ -1000,7 +1000,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               Tổng số: <b className="text-on-surface">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
             </>
           )}
-        </p>
+        </div>
       </div>
 
       <EmployeeModal
