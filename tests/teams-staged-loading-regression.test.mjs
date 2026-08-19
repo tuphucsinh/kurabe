@@ -166,10 +166,10 @@ function normalizeWhitespace(code) {
     'TeamsClient must render data-load-layer="heavy" on heavy KPI/evaluation sections'
   );
 
-  // 4.4 Single evaluation data source
+  // 4.4 Single data source — aggregated hook (P88); action lives inside useTeamsPageData
   assert.ok(
-    normClient.includes('useEvaluations(currentPeriod?.id, user)'),
-    'TeamsClient must use useEvaluations as single evaluation source'
+    normClient.includes('useTeamsPageData'),
+    'TeamsClient must use useTeamsPageData (aggregate) as single evaluation/data source'
   );
   assert.ok(
     !normClient.includes('supabaseAdmin.from('),

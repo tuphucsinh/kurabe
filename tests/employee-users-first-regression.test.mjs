@@ -118,14 +118,14 @@ function extractInterface(code, interfaceName) {
     'EmployeesClient must define bootstrap-only effectiveViewer (inactive after auth resolves)'
   );
 
-  // Must call useTeams with effectiveViewer
+  // Mount must use the aggregated employees page-data action (P88); load-more/retry still use per-action fetches
   assert.ok(
-    /useTeams\s*\(\s*effectiveViewer\s*\)/.test(normFn),
-    'EmployeesClient must call useTeams(effectiveViewer)'
+    normFn.includes('getEmployeesPageDataAction'),
+    'EmployeesClient must call getEmployeesPageDataAction (aggregate) on initial mount'
   );
   assert.ok(
     normFn.includes('getUsersBatchAction'),
-    'EmployeesClient must call getUsersBatchAction for users batch'
+    'EmployeesClient must call getUsersBatchAction for users load-more'
   );
   assert.ok(
     normFn.includes('getEvaluationSummariesBatchAction'),
