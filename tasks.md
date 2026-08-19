@@ -1131,3 +1131,7 @@
 **Definition of Done**: /teams mount giảm request; verify + đo.
 
 **Status**: `[x]` — DONE 19-08 (commit gom trong T04): `getTeamsPageDataAction` (1 requireAuth, Promise.allSettled users+teams[+evals], per-part error) + `useTeamsPageData` (key `['teams-page-data', periodId]`) + TeamsClient thay 3 hooks bằng 1; `getEvaluationsByPeriodAdmin` (đúng admin cũ, scope giữ nguyên); invalidate trong useUpsertTeam/useDeleteTeam. **/teams mount 3→1** (verified: useUsers/useTeams/useEvaluations bỏ khỏi mount). tsc/lint/build PASS (Mika verify).
+
+### [#P88T05] [src/actions/read.ts + src/hooks/use-db.ts + src/app/evaluations/[id]/page.tsx] Evaluation detail 4→1
+
+**Status**: `[x]` — DONE 19-08: `getEvaluationPageDataAction` (1 requireAuth, Promise.allSettled userById+evaluationByEmployee+users+periods, per-part error; **fail-closed giữ nguyên** — `getEvaluationByEmployeeAdmin` trả null khi không quyền → `evaluation=null` (error vẫn null) → accessState null → denied; không success giả) + `useEvaluationPageData` (key `['evaluation-page-data', employeeId, periodId, user?.id]`, staleTime 2m) + page.tsx thay 4 hooks→1 (accessState/getEvaluationAccessState + gates L111-164 giữ nguyên vẹn). Invalidate `['evaluation-page-data',...]` ở save round/return/save draft. **/evaluations/[id] mount 4→1**. Mika verify: tsc 0 · lint 0 · build PASS · eval-read regression ALL PASS.
