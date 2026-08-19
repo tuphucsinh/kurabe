@@ -1129,3 +1129,5 @@
 **Concrete changes**: tương tự T01-T03 cho TeamsClient.
 
 **Definition of Done**: /teams mount giảm request; verify + đo.
+
+**Status**: `[x]` — DONE 19-08 (commit gom trong T04): `getTeamsPageDataAction` (1 requireAuth, Promise.allSettled users+teams[+evals], per-part error) + `useTeamsPageData` (key `['teams-page-data', periodId]`) + TeamsClient thay 3 hooks bằng 1; `getEvaluationsByPeriodAdmin` (đúng admin cũ, scope giữ nguyên); invalidate trong useUpsertTeam/useDeleteTeam. **/teams mount 3→1** (verified: useUsers/useTeams/useEvaluations bỏ khỏi mount). tsc/lint/build PASS (Mika verify).
