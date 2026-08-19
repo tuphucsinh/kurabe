@@ -89,6 +89,7 @@ export default function CriteriaPage() {
 
   const gradingLeader = getGradeBandsSync().leader;
   const gradingStaff = getGradeBandsSync().staff;
+  const gradingWorker = getGradeBandsSync().worker;
 
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();
@@ -536,6 +537,37 @@ export default function CriteriaPage() {
                     <h4 className="text-xs font-bold text-outline uppercase mb-4 tracking-wider">Nhân viên (Staff)</h4>
                     <div className="space-y-3">
                       {gradingStaff.map((g) => (
+                        <div key={g.grade} className="flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <div className={`
+                              w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg transition-transform group-hover:scale-110
+                              ${g.grade === 'S' ? 'bg-amber-100 text-amber-700' :
+                                g.grade === 'A' || g.grade === 'AB' ? 'bg-blue-100 text-blue-700' :
+                                g.grade === 'B' ? 'bg-green-100 text-green-700' :
+                                'bg-surface text-outline'}
+                            `}>
+                              {g.grade}
+                            </div>
+                            <span className="font-semibold text-on-surface">Hạng {g.grade}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-medium text-outline">
+                              {g.minScore && g.maxScore
+                                ? `${g.minScore} - ${g.maxScore}`
+                                : g.minScore
+                                ? `Trên ${g.minScore}`
+                                : `Dưới ${g.maxScore}`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-outline-variant">
+                    <h4 className="text-xs font-bold text-outline uppercase mb-4 tracking-wider">Công nhân (Worker)</h4>
+                    <div className="space-y-3">
+                      {gradingWorker.map((g) => (
                         <div key={g.grade} className="flex items-center justify-between group">
                           <div className="flex items-center gap-3">
                             <div className={`
