@@ -31,11 +31,8 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
   if (evaluationLoading) {
     return (
       <div data-load-layer="heavy" className="flex items-center gap-2">
-        <Skeleton className="w-8 h-8 rounded-lg" />
-        <div className="w-12 flex flex-col items-center gap-1">
-          <Skeleton className="h-3 w-6 rounded" />
-          <Skeleton className="h-4 w-8 rounded" />
-        </div>
+        <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+        <Skeleton className="h-4 w-20 rounded shrink-0" />
       </div>
     );
   }
@@ -57,11 +54,24 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
     );
   }
 
+  const roundsMap = new Map<number, number>();
+  if (gradeRound != null) {
+    roundsMap.set(gradeRound, score);
+  }
+  if (previousRoundScores) {
+    for (const roundData of previousRoundScores) {
+      roundsMap.set(roundData.round, roundData.score);
+    }
+  }
+
+  const maxRound = roundsMap.size > 0 ? Math.max(...Array.from(roundsMap.keys())) : 0;
+  const roundNumbers = maxRound > 0 ? Array.from({ length: maxRound }, (_, i) => i + 1) : [];
+
   return (
     <div data-load-layer="heavy" className="flex items-center gap-2">
       <GradeBadge
         grade={grade}
-        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black ${
+        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black shrink-0 ${
           hasFinalResult ? 'ring-2 ring-emerald-500' : ''
         }`}
       />
@@ -73,22 +83,32 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
           <Check size={12} strokeWidth={3} />
         </span>
       )}
-      <div className="flex items-end gap-2 tabular-nums">
-        {gradeRound != null && (
-          <div className="w-12 flex flex-col items-center leading-none">
-            <span className="text-xs text-slate-700 font-bold">L{gradeRound}</span>
-            <span className="text-base text-slate-800 font-bold mt-1">{score}</span>
-          </div>
-        )}
-        {previousRoundScores.map((roundData) => (
-          <div key={roundData.round} className="w-12 flex flex-col items-center leading-none opacity-55">
-            <span className="text-xs text-slate-500 font-medium">L{roundData.round}</span>
-            <span className="text-sm text-slate-500 font-medium mt-1">{roundData.score}</span>
-          </div>
-        ))}
-      </div>
+      {roundNumbers.length > 0 && (
+        <div className="flex items-center gap-2 tabular-nums text-xs whitespace-nowrap shrink-0">
+          {roundNumbers.map((roundNum) => {
+            const scoreVal = roundsMap.get(roundNum);
+            const hasScore = scoreVal != null;
+            const isLatest = roundNum === gradeRound;
+            const scoreText = hasScore ? scoreVal : '-';
+
+            return (
+              <span
+                key={`round-${roundNum}`}
+                className={
+                  isLatest
+                    ? 'font-bold text-slate-800'
+                    : 'font-medium text-slate-500 opacity-60'
+                }
+              >
+                L{roundNum}: {scoreText}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 });
 
 export default EmployeeEvaluationCell;
+
