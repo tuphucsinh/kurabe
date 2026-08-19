@@ -1135,3 +1135,8 @@
 ### [#P88T05] [src/actions/read.ts + src/hooks/use-db.ts + src/app/evaluations/[id]/page.tsx] Evaluation detail 4→1
 
 **Status**: `[x]` — DONE 19-08: `getEvaluationPageDataAction` (1 requireAuth, Promise.allSettled userById+evaluationByEmployee+users+periods, per-part error; **fail-closed giữ nguyên** — `getEvaluationByEmployeeAdmin` trả null khi không quyền → `evaluation=null` (error vẫn null) → accessState null → denied; không success giả) + `useEvaluationPageData` (key `['evaluation-page-data', employeeId, periodId, user?.id]`, staleTime 2m) + page.tsx thay 4 hooks→1 (accessState/getEvaluationAccessState + gates L111-164 giữ nguyên vẹn). Invalidate `['evaluation-page-data',...]` ở save round/return/save draft. **/evaluations/[id] mount 4→1**. Mika verify: tsc 0 · lint 0 · build PASS · eval-read regression ALL PASS.
+
+
+## Phase 89: Prefetch phân tầng theo role
+
+**Status**: `[x]` — DONE 19-08: Sidebar desktop hover prefetch (debounce 150ms, cancelQueries exact key, isMobile guard, role gate: Manager/Leader prefetch /teams ['teams-page-data']; individual prefetch phiếu mình ['evaluation-page-data', user.id]; KHÔNG prefetch /employees data (imperative) / trang cấm). Reviewer R1->R2 PASS (gemini-3.1-pro-high). tsc/lint/build PASS (Mika).
