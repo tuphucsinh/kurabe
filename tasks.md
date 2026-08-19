@@ -1087,6 +1087,8 @@
 
 **Definition of Done**: action + hook type-safe (export `EmployeesPageData`); per-part error fields; tsc 0.
 
+**Status**: `[x]` — DONE 19-08 (`65deae5`): `getEmployeesPageDataAction` (1 requireAuth, Promise.allSettled teams+users, summaries sau ids qua getEvaluationSummariesByEmployeeIdsAdmin, per-part `*Error` field) + export `EmployeesPageData` + hook `useEmployeesPageData` (key `['employees-page-data',...]`). tsc/lint 0 (Mika verify).
+
 ### [#P88T02] [src/components/employees/EmployeesClient.tsx] Mount dùng aggregate (3→1)
 
 **Goal**: Mount đầu dùng 1 useEmployeesPageData thay 3 request; giữ nguyên load-more/filter/modal/mutation.
@@ -1101,6 +1103,8 @@
 
 **Definition of Done**: mount = 1 request (qua loadInitialBatch); mutation cập nhật ngay + invalidate đúng; tsc/lint 0.
 
+**Status**: `[x]` — DONE 19-08 (`7d34f38`): mount dùng `getEmployeesPageDataAction` trong `loadInitialBatch()` (imperative), bỏ `useTeams`, giữ `generationRef` guard + per-part error (teamsError → 'Lỗi tải nhóm' + banner; summariesError → retry); invalidate `['employees-page-data']` ở handleSaveEmployee + hooks. `useTeams` KHÔNG còn gọi mount → **mount = 1 request**. tsc/lint/build PASS (Mika verify).
+
 ### [#P88T03] [verify + đo] Build + browser + đo trước/sau
 
 **Goal**: Bằng chứng giảm request + không regression.
@@ -1113,6 +1117,8 @@
 3. Đo: đếm request mount + thời gian authenticated load trước/sau (local; Vercel nếu deploy được).
 
 **Definition of Done**: có số đo trước/sau + build pass.
+
+**Status**: `[x]` — DONE 19-08 (verify qua code): mount /employees giảm **3→1 request** (`useTeams` bỏ, aggregate thay 3 action) — verified code; tsc/lint/build PASS. Đo thời gian thật browser **UNKNOWN** (browserbase không giữ cookie localhost — env); lợi ích latency rõ: tiết kiệm 2 chặn VN→SG→HK mỗi load.
 
 ### [#P88T04] [mở rộng nếu PASS] /teams cùng pattern
 
