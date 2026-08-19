@@ -3,8 +3,8 @@
 
 import { useState, use, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useUsers, useEvaluationByEmployee } from '@/hooks/use-db';
-import { User, EvaluationRound, RoundNumber } from '@/types';
+import { useEvaluationPageData } from '@/hooks/use-db';
+import { User, EvaluationRound, RoundNumber, EvaluationPeriod } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
@@ -39,7 +39,6 @@ import {
 } from '@/lib/evaluation-workflow';
 import { useToast } from '@/components/ui/Toast';
 import { suggestCommentAction, draftResultMessageAction, saveResultMessageAction } from '@/actions/ai';
-import { usePeriods } from '@/hooks/use-db';
 import { isIndividualRole, roleLabel } from '@/lib/role-policy';
 
 interface EvaluationPageProps {
@@ -54,16 +53,22 @@ const ROLE_RANK: Record<User['role'], number> = {
   Manager: 4,
 };
 
+const EMPTY_USERS: User[] = [];
+const EMPTY_PERIODS: EvaluationPeriod[] = [];
+
 export default function EvaluationPage({ params }: EvaluationPageProps) {
   const router = useRouter();
   const { id } = use(params);
 
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: employee = null, isLoading: isLoadingUser } = useUser(id);
-  const { data: evaluation = null, isLoading: isLoadingEval } = useEvaluationByEmployee(id, undefined, user);
-  const { data: users = [] } = useUsers(user);
-  const { data: periods = [] } = usePeriods();
+  const { data: pageData, isLoading } = useEvaluationPageData(id, undefined, user);
+  const employee = pageData?.employee ?? null;
+  const evaluation = pageData?.evaluation ?? null;
+  const users = pageData?.users ?? EMPTY_USERS;
+  const periods = pageData?.periods ?? EMPTY_PERIODS;
+  const isLoadingUser = isLoading;
+  const isLoadingEval = isLoading;
 
   const isEmployeeOwner = isIndividualRole(user?.role) && evaluation?.employeeId === user?.id;
   const [isSavingDraftMessage, setIsSavingDraftMessage] = useState(false);
@@ -221,6 +226,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
       if (res.success) {
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);
@@ -264,6 +270,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       if (res.success) {
         toast('Đã trả lại đánh giá.', 'success');
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);
@@ -410,6 +417,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
       if (res.ok) {
         toast('Đã lưu thông báo kết quả vào phiếu!', 'success');
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);

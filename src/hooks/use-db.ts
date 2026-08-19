@@ -18,7 +18,9 @@ import {
   getEmployeesPageDataAction,
   EmployeesPageData,
   getTeamsPageDataAction,
-  TeamsPageData
+  TeamsPageData,
+  getEvaluationPageDataAction,
+  EvaluationPageData
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
@@ -201,6 +203,17 @@ export const useEvaluationByEmployee = (employeeId: string, periodId?: string, u
   queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id], 
   queryFn: () => getEvaluationByEmployeeAction(employeeId, periodId), 
   enabled: !!employeeId && !!user 
+});
+
+export const useEvaluationPageData = (
+  employeeId: string,
+  periodId?: string,
+  user?: User | null
+) => useQuery<EvaluationPageData>({
+  queryKey: ['evaluation-page-data', employeeId, periodId, user?.id],
+  queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
+  staleTime: 2 * 60 * 1000,
+  enabled: !!employeeId && !!user,
 });
 
 // Criteria
