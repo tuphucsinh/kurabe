@@ -4,6 +4,32 @@ import React from 'react';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Check, RefreshCw } from 'lucide-react';
+import { Role } from '@/types';
+
+export function getTargetRoundNumbers(
+  role?: Role | string | null,
+  maxRoundSeen: number = 0
+): number[] {
+  let count = 0;
+  if (role) {
+    const normalized = role.toLowerCase().replace(/\s+/g, '');
+    if (normalized === 'leader' || normalized === 'subleader') {
+      count = Math.max(2, maxRoundSeen);
+    } else if (normalized === 'worker' || normalized === 'employee' || normalized === 'staff') {
+      count = Math.max(3, maxRoundSeen);
+    }
+  }
+
+  if (count === 0) {
+    count = maxRoundSeen;
+  }
+
+  if (count <= 0) {
+    return [];
+  }
+
+  return Array.from({ length: count }, (_, i) => count - i);
+}
 
 export interface EmployeeEvaluationCellProps {
   grade: string;
@@ -14,6 +40,7 @@ export interface EmployeeEvaluationCellProps {
   evaluationLoading: boolean;
   evaluationError?: boolean;
   employeeId: string;
+  role?: Role | string;
   onRetry?: (employeeId: string) => void;
 }
 
@@ -26,6 +53,7 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
   evaluationLoading,
   evaluationError,
   employeeId,
+  role,
   onRetry,
 }: EmployeeEvaluationCellProps) {
   if (evaluationLoading) {
@@ -64,8 +92,8 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
     }
   }
 
-  const maxRound = roundsMap.size > 0 ? Math.max(...Array.from(roundsMap.keys())) : 0;
-  const roundNumbers = maxRound > 0 ? Array.from({ length: maxRound }, (_, i) => i + 1) : [];
+  const maxRoundSeen = roundsMap.size > 0 ? Math.max(...Array.from(roundsMap.keys())) : 0;
+  const roundNumbers = getTargetRoundNumbers(role, maxRoundSeen);
 
   return (
     <div data-load-layer="heavy" className="flex items-center gap-2">

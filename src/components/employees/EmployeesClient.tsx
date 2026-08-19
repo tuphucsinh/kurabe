@@ -667,6 +667,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           evaluationLoading={item.evaluationLoading}
           evaluationError={item.evaluationError}
           employeeId={item.id}
+          role={item.role}
           onRetry={handleRetryEvaluation}
         />
       ),
