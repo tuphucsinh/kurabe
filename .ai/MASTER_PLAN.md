@@ -1049,3 +1049,9 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - **buildEmployeeContext → union**: `found` (cùng nhóm||Manager: tên+chức vụ+chức danh+nhóm+leader) / `multiple` (liệt kê + hỏi) / `different_team` (non-Manager, người khác nhóm → báo không cùng nhóm, không lộ info) / `not_found` (generic).
 - **Quy tắc chung**: rule 1 xưng hô động (anh/chị theo giới tính); thêm rule: khi trả lời KHÔNG lặp lại giới tính/chức danh/chức vụ nếu không cần thiết; quy tắc xử lý hỏi người khác (cùng nhóm/khác nhóm/trùng tên/không có).
 - **chat-knowledge.md**: Sequential Thinking rà soát vs code, cập nhật lệch (xưng hô chị→anh/chị; chức danh=description; cập nhật mô tả màn hình/flow theo thay đổi app).
+
+**KẾT QUẢ TEST ĐA CASE + FIX (19-08, sau deploy)**: test trên lykiv.vercel.app bằng browser thật (login KIV158 Manager, KIV8707 Leader).
+- Case verified: hướng dẫn chung / found Manager (Ly Sa, Mai Thị Hòa) / multiple "Nhi" (liệt kê + hỏi) / different_team (Leader hỏi người khác nhóm → từ chối, không lộ info) / Leader cùng nhóm / xưng hô theo giới tính — ALL PASS.
+- **FIX 1** `06421b0`: match ưu tiên hậu tố tên DÀI NHẤT (tên đầy đủ thắng tên cuối) — tránh "Mai Thị Hòa" bị hiểu nhầm thành trùng tên với các Hòa khác.
+- **FIX 2** `6606188`: match theo RANH GIỚI TỪ (hasPhrase) — tránh "anh" lọt trong "đánh"(danh), "hoa" trong "hoang".
+- **FIX 3** (UI): render markdown bold `**...**` trong bubble chat an toàn (BoldText, KHÔNG dangerouslySetInnerHTML — chống XSS).

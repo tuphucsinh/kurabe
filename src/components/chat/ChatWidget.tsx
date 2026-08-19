@@ -12,6 +12,22 @@ interface Msg {
   pathname: string; // trang sinh ra tin nhắn
 }
 
+/** Render tin nhắn an toàn: chuyển **bold** thành <strong>; phần còn lại là text thuần (React tự escape — an toàn XSS). */
+function BoldText({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="font-semibold">{p}</strong>
+        ) : (
+          <span key={i}>{p}</span>
+        )
+      )}
+    </>
+  );
+}
+
 export default function ChatWidget() {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -142,7 +158,7 @@ export default function ChatWidget() {
                     ? 'bg-primary text-white rounded-br-sm'
                     : 'bg-white border border-outline-variant rounded-bl-sm'
                 }`}>
-                  {m.text}
+                  <BoldText text={m.text} />
                 </div>
               </div>
             ))}
