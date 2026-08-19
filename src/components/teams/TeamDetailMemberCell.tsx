@@ -82,7 +82,7 @@ export function TeamDetailMemberEvaluationDesktop({
       <div className="contents" data-load-layer="heavy">
         <span className="w-8" />
         <span className="w-[104px] text-center text-xs text-slate-400">-</span>
-        <span className="col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-slate-100 text-slate-400">
+        <span className="col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-slate-100 text-slate-400 inline-flex items-center justify-center">
           Chưa tải được
         </span>
       </div>
@@ -115,37 +115,31 @@ export function TeamDetailMemberEvaluationDesktop({
         <span className="w-8" />
       )}
       {grade && grade !== 'Pending' ? (
-        <div className="flex items-end gap-2 tabular-nums min-w-[104px]">
+        <div className="flex items-center gap-2.5 tabular-nums text-xs whitespace-nowrap min-w-[104px]">
           {targetRounds.map((roundNum) => {
             const scoreVal = roundsMap.get(roundNum);
             const hasScore = scoreVal != null;
             const isLatest = roundNum === latestSubmittedRound;
-
-            if (isLatest) {
-              return (
-                <div key={`round-${roundNum}`} className="w-12 flex flex-col items-center leading-none">
-                  <span className="text-xs text-slate-700 font-bold">L{roundNum}</span>
-                  <span className="text-base text-slate-800 font-bold mt-1">
-                    {hasScore ? scoreVal : '-'}
-                  </span>
-                </div>
-              );
-            }
+            const scoreText = hasScore ? scoreVal : '-';
 
             return (
-              <div key={`round-${roundNum}`} className="max-md:hidden w-12 flex flex-col items-center leading-none opacity-55">
-                <span className="text-xs text-slate-500 font-medium">L{roundNum}</span>
-                <span className="text-sm text-slate-500 font-medium mt-1">
-                  {hasScore ? scoreVal : '-'}
-                </span>
-              </div>
+              <span
+                key={`round-${roundNum}`}
+                className={
+                  isLatest
+                    ? 'font-bold text-slate-800'
+                    : 'font-medium text-slate-500 opacity-60'
+                }
+              >
+                L{roundNum}: {scoreText}
+              </span>
             );
           })}
         </div>
       ) : (
         <span className="w-[104px]" />
       )}
-      <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${badge.className}`}>
+      <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 inline-flex items-center justify-center ${badge.className}`}>
         {badge.label}
       </span>
     </div>
