@@ -174,18 +174,18 @@ export default function ReportsDataLayer({
       {isLoading ? (
         <div className="space-y-6">
           {/* Skeleton GradeDistribution */}
-          <div data-load-layer="heavy" className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60 animate-pulse space-y-3">
+          <div data-load-layer="heavy" className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="h-4 w-32 bg-slate-200 rounded" />
-              <div className="h-3 w-20 bg-slate-100 rounded" />
+              <h3 className="text-sm font-bold text-on-surface">Phân bổ Xếp loại</h3>
+              <div className="h-3 w-20 bg-slate-100 animate-pulse rounded" />
             </div>
             <div className="space-y-2.5 pt-1">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="w-10 h-3 bg-slate-200 rounded" />
+                  <div className="w-10 h-3 bg-slate-200 animate-pulse rounded" />
                   <div className="flex-1 h-2.5 bg-slate-100 rounded-full" />
-                  <div className="w-8 h-3 bg-slate-100 rounded" />
-                  <div className="w-10 h-3 bg-slate-100 rounded" />
+                  <div className="w-8 h-3 bg-slate-100 animate-pulse rounded" />
+                  <div className="w-10 h-3 bg-slate-100 animate-pulse rounded" />
                 </div>
               ))}
             </div>
@@ -193,25 +193,30 @@ export default function ReportsDataLayer({
 
           {/* Skeleton Grid: TeamComparison + CriteriaHeatmap */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm animate-pulse space-y-4 min-h-[300px]">
-              <div className="h-5 w-32 bg-slate-200 rounded" />
+            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[300px]">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-on-surface">So sánh nhóm</h3>
+                <span className="text-xs font-medium text-outline bg-surface-container px-2 py-1 rounded-full uppercase tracking-wider">
+                  Average Score
+                </span>
+              </div>
               <div className="space-y-4 pt-2">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between">
-                      <div className="h-4 w-28 bg-slate-200 rounded" />
-                      <div className="h-4 w-12 bg-slate-200 rounded" />
+                      <div className="h-4 w-28 bg-slate-200 animate-pulse rounded" />
+                      <div className="h-4 w-12 bg-slate-200 animate-pulse rounded" />
                     </div>
                     <div className="h-2.5 bg-slate-100 rounded-full" />
                   </div>
                 ))}
               </div>
             </div>
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm animate-pulse space-y-4 min-h-[300px]">
-              <div className="h-5 w-48 bg-slate-200 rounded" />
+            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[300px]">
+              <h3 className="text-lg font-bold text-on-surface">Phân tích nhóm tiêu chuẩn</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
+                  <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl" />
                 ))}
               </div>
             </div>
@@ -219,20 +224,20 @@ export default function ReportsDataLayer({
 
           {/* Skeleton Grid: TopPerformers + AiSummaryCard */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm animate-pulse space-y-4 min-h-[260px]">
-              <div className="h-5 w-36 bg-slate-200 rounded" />
+            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[260px]">
+              <h3 className="text-lg font-bold text-on-surface">Top Performers</h3>
               <div className="space-y-3 pt-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-10 bg-slate-100 rounded-xl" />
+                  <div key={i} className="h-10 bg-slate-100 animate-pulse rounded-xl" />
                 ))}
               </div>
             </div>
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm animate-pulse space-y-4 min-h-[260px]">
-              <div className="h-5 w-40 bg-slate-200 rounded" />
+            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[260px]">
+              <h4 className="text-base font-bold text-slate-800">Tóm tắt kỳ bằng AI</h4>
               <div className="space-y-3 pt-2">
-                <div className="h-4 w-3/4 bg-slate-100 rounded" />
-                <div className="h-4 w-full bg-slate-100 rounded" />
-                <div className="h-4 w-2/3 bg-slate-100 rounded" />
+                <div className="h-4 w-3/4 bg-slate-100 animate-pulse rounded" />
+                <div className="h-4 w-full bg-slate-100 animate-pulse rounded" />
+                <div className="h-4 w-2/3 bg-slate-100 animate-pulse rounded" />
               </div>
             </div>
           </div>
