@@ -1,3 +1,16 @@
+# HANDOFF — Kurabe QAQC (cập nhật 2026-08-19 cuối phiên)
+
+## Phiên 19-08 (Chat AI tinh chỉnh chat widget)
+- **Chìa khóa đầu kỳ: khóa AI cũ hết hạn tháng (429 GoUsage)** — production/local trả fail-soft "chưa trả lời được". Fix: set AI_API_KEY mới (opencode) lên Vercel env + redeploy (Vercel đổi env CHỈ áp deployment build MỚI; redeploy deployment hiện tại để lấy env mới). Vercel DB 12MB.
+- **Phase 91**: Chat AI context — chức vụ + nhóm + chức danh (chức danh = cột `description`; Employee/Worker không hiển thị), user-prompt đủ thông tin, không mã NV. `vi-text.ts` (normalizeVi + match tên), `ai-context.ts` (buildEmployeeContext union found/multiple/different_team/not_found).
+- **Phase 91.1**: tinh chỉnh theo anh — different_team KHÔNG giới hạn Manager; bỏ mã NV; xưng hô anh/chị theo giới tính; từ chối off-topic mọi role; **Worker/Employee KHÔNG có chat widget** (bỏ khỏi ChatWidget display + requireRole chat); khôuu lặp giới tính/chức danh nếu không cần; cập nhật chat-knowledge.md qua Sequential Thinking.
+- **Phase 91.2**: buildEvaluationStatus — kỳ + vòng L1/L2/L3 thật của người hỏi + người được nhắc (scoped).
+- **Fix match (phát hiện qua test đa case)**: ưu tiên hậu tố tên DÀI nhất (tên đầy đủ thắng tên cuối — 'Mai Thị Hòa' không bị nhầm trùng); match theo RANH GIỚI TỪ ('anh' không lọt trong 'đánh'); render markdown bold an toàn (BoldText, chống XSS).
+- **Test 20+ case trên production thật** (browser login Manager KIV158/Leader KIV8707): found/multiple/different_team/not_found/off-topic/dashboard số liệu thật/tính năng/hướng dẫn/báo lỗi [CẦN_DEV]/câu cụt/kỳ+vòng.
+- **Skill**: extend `chat-widget-ai-assistant` — phân biệt website (sangwebsite, Edge Function + tool-calling) vs webapp (Kurabe, server actions + RBAC); contexte engine; `references/sangwebsite-concierge.md`.
+- **Commits**: ac827f7 (P91), 06421b0+6606188 (fix match), 09cd413 (markdown + doc), f0ed940 (Worker no chat), 1936729 (P91.2) — tất cả push, production deploy đủ.
+- **Lưu ý mở**: MASTER_PLAN/tasks.md được cả subagent/sibling sửa song song — đọc lại TRƯỚC khi patch. markdown ** đã fix; test render đẹp trên production.
+
 # HANDOFF — Kurabe QAQC (cập nhật 2026-08-16 cuối phiên)
 
 ## Trạng thái

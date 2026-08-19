@@ -1055,3 +1055,13 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - **FIX 1** `06421b0`: match ưu tiên hậu tố tên DÀI NHẤT (tên đầy đủ thắng tên cuối) — tránh "Mai Thị Hòa" bị hiểu nhầm thành trùng tên với các Hòa khác.
 - **FIX 2** `6606188`: match theo RANH GIỚI TỪ (hasPhrase) — tránh "anh" lọt trong "đánh"(danh), "hoa" trong "hoang".
 - **FIX 3** (UI): render markdown bold `**...**` trong bubble chat an toàn (BoldText, KHÔNG dangerouslySetInnerHTML — chống XSS).
+
+
+---
+
+## Phase 91.2: Chat AI — kéo thêm KỲ + VÒNG đánh giá thật của người hỏi và người được nhắc ✅ DONE (2026-08-19)
+
+> Nối tiếp 91/91.1. Anh yêu cầu: ngoài chức vụ/nhóm/chức danh, đưa thêm thông tin vòng + kỳ đánh giá để tư vấn cụ thể, chính xác.
+> `buildEvaluationStatus(employeeId, requester)` (ai-context.ts): kỳ hiện tại (getActivePeriod) + từng vòng L1/L2/L3 (chưa nộp/nháp/đã nộp+điểm) + vòng đang mở L{currentRound} — scoped qua getEvaluationByEmployeeAdmin(emp, period, requester). Fail-soft ''.
+> Đưa cho BOTH: người được nhắc (nhánh found của buildEmployeeContext) + chính người hỏi (user-prompt chat.ts). Commit `1936729` → deploy `kurabe-2rabhpvvq`.
+> VERIFY production (Leader KIV8707): Q "sao không đánh giá được yến nhi" → A "…vì L1 của Nhi chưa được nộp. Vòng L2 chỉ mở sau khi SubLeader gửi L1…" — nói đúng trạng thái THẬT (trước chỉ generic). Rate-limit KIV158 15/2h chặn đúng (khi thử Manager).

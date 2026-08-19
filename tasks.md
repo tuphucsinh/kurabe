@@ -1215,7 +1215,7 @@
 
 ## Phase 91.1: Chat AI tinh chỉnh (chức danh=description, khác nhóm, xưng hô động, knowledge) 🟡 (2026-08-19)
 
-> Plan: MASTER_PLAN Phase 91.1 (ST đã verify thiết kế). CONTROLLED. 1 task = 1 commit `[#P911Tzz]`. Check local + internet sau cùng.
+> Plan: MASTER_P**Status**: `[x]` — DONE 19-08 (verify): unit PASS·tsc 0·lint 0. TEST LOCAL (restart dev, KIV158): Q "sao sửa chức danh của Ly Sa..." → A "Phạm Thị Ly Sa đang có chức vụ Nhân viên, nên chức danh không hiển thị...". TEST INTERNET (lykiv.vercel.app, ac827f7): trả lời ĐÚNG tương tự. (nit: markdown ** chưa render — mục riêng). — DONE 19-08: ST rà soát chat-knowledge.md: xưng hô anh/chị; chức danh=trường Chức danh(description); cột Chức danh/Giới tính; Soạn thông báo hàng loạt + Biên bản kết thúc kỳ; tìm kiếm ngữ nghĩa.T đã verify th**Status**: `**Status**: `[x]` — DONE 19-08: baseRules rule 9 (không lặp giới tính/chức danh nếu không cần) + rule 10 (xử lý Người được nhắc); role rules đánh số 11.: user-prompt đủ (tên, giới tính, chức vụ, chức danh=description, nhóm, trang), bỏ mã NV; nối empContext.text.ED. 1 task = 1 commit**Status**: `[x]` — DONE 19-08: vi-text.ts `matchEmployeeFromQuestion` → `matchEmployeeCandidates` trả MẢNG; unit**Status**: `[x]` — DONE 19-08: buildEmployeeContext union {found,multiple,different_team,not_found}; getAllUsersAdmin (users-admin) phát hiện khác nhóm (non-Manager); chức danh=description; BỎ mã NV. tsc 0.sc 0.eck local + internet sau cùng.
 
 ### [#P911T01] [src/lib/vi-text.ts] `matchEmployeeFromQuestion → matchEmployeeCandidates` trả mảng
 
