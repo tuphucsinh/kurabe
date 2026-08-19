@@ -1,6 +1,6 @@
 # Kiến thức hệ thống KURABE — cho Chat Widget hỗ trợ
 
-> Tài liệu tham khảo của trợ lý chat. Mô tả chức năng + quy trình (KHÔNG chứa dữ liệu nhân sự thật). Mọi câu trả lời phải dựa trên nội dung này, gọi khách là "chị", xưng "em", không dùng emoji.
+> Tài liệu tham khảo của trợ lý chat. Mô tả chức năng + quy trình (KHÔNG chứa dữ liệu nhân sự thật). Mọi câu trả lời phải dựa trên nội dung này, gọi khách là "anh" hoặc "chị" (theo giới tính người dùng), xưng "em", không dùng emoji.
 
 ## 1. Tổng quan
 
@@ -46,7 +46,7 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 8. Theo dõi tiến độ (Dashboard + Nhân viên + trang chi tiết nhóm): badge trạng thái Chưa bắt đầu / Đã nộp vòng X / Đã có KQĐG. Ở trang Nhân viên/chi tiết nhóm, ô xếp loại có viền xanh lá + dấu ✓ = đã có kết quả cuối; bấm tên nhân viên cũng mở được phiếu.
 9. Chấm vòng cuối (vòng 3) khi Leader đã nộp vòng 2: mở phiếu, xem điểm/nhận xét vòng trước, chấm theo tiêu chuẩn, ghi nhận xét (có thể Gợi ý nhận xét AI), Gửi.
 10. Trả lại đánh giá khi cần chỉnh: bấm Trả lại đánh giá, nhập lý do bắt buộc; người giữ lượt thấy banner vàng, sửa lại và nộp lại.
-11. Dùng AI (Manager): Gợi ý nhận xét khi chấm; Soạn thông báo kết quả (AI) trên phiếu đã chốt; Giải thích bất thường khi điểm chênh lệch ≥20 giữa 2 vòng; Tạo tóm tắt AI trên Báo cáo.
+11. Dùng AI (Manager): Gợi ý nhận xét khi chấm; Soạn thông báo kết quả (AI) trên phiếu đã chốt hoặc Soạn thông báo hàng loạt ở trang Báo cáo (AI tự viết riêng cho từng nhân viên); Giải thích bất thường khi điểm chênh lệch ≥20 giữa 2 vòng; Tạo tóm tắt AI và Soạn Biên bản kết thúc kỳ trên Báo cáo; hỏi trợ lý chat số liệu/tình hình theo trang (tìm kiếm ngữ nghĩa).
 12. Xem báo cáo (Dashboard + Báo cáo): KPI, tiến độ nhóm, phân bổ xếp loại, radar năng lực, Top Performers, tóm tắt AI.
 13. Đóng kỳ (Cài đặt → Kỳ đánh giá) khi mọi nhân viên đã có kết quả vòng cuối; kỳ đóng khóa thao tác, dữ liệu vẫn xem được.
 
@@ -91,10 +91,10 @@ Nguyên tắc tuần tự: **vòng sau chỉ mở khi vòng trước đã nộp*
 
 - **Bảng điều khiển (Dashboard)**: KPI, tiến độ từng nhóm, phân bổ xếp loại, cảnh báo bất thường, hoạt động gần đây.
 - **Nhóm**: danh sách nhóm; chi tiết nhóm hiển thị thẻ Leader (đầu danh sách) + các SubLeader + nhân viên trực thuộc, kèm kết quả đánh giá từng người + nút Thêm nhân viên (Manager/Leader) + nút Xem đánh giá.
-- **Nhân viên**: bảng toàn bộ nhân sự, tìm kiếm theo tên/mã, lọc theo Nhóm/Chức vụ, cột Xếp loại gần nhất, nút Thêm nhân viên / Nhập từ Excel / File mẫu, thao tác xem/sửa/đặt lại mật khẩu/xóa.
-- **Chức danh**: chỉ Manager/Leader/SubLeader mới có chức danh (vd Kakarichou, Shunin, Sub Leader); Nhân viên và Công nhân không hiển thị chức danh.
+- **Nhân viên**: bảng toàn bộ nhân sự, tìm kiếm theo tên/mã, lọc theo Nhóm/Chức vụ, cột Chức vụ / Chức danh / Giới tính / Xếp loại gần nhất, nút Thêm nhân viên / Nhập từ Excel / File mẫu, thao tác xem/sửa/đặt lại mật khẩu/xóa.
+- **Chức danh**: là trường "Chức danh" trong hồ sơ nhân viên (nhập khi thêm/sửa nhân viên), hiển thị ở cột Chức danh (vd Shusa, Shunin, Sub-Leader, Kakarichou...). Chỉ role quản lý (Manager/Leader/SubLeader) mới hiển thị chức danh; Nhân viên và Công nhân không hiển thị chức danh, dù có nhập.
 - **Giới tính**: mỗi nhân viên có giới tính Nam/Nữ (khi thêm/sửa nhân viên chọn giới tính; mặc định Nữ).
-- **Báo cáo**: radar năng lực, khoảng cách so mục tiêu, biến động điểm qua vòng, Top Performers, tóm tắt AI (Manager).
+- **Báo cáo**: radar năng lực, khoảng cách so mục tiêu, biến động điểm qua vòng, Top Performers, tóm tắt AI; nút Soạn thông báo kết quả (AI, hàng loạt) và Soạn Biên bản kết thúc kỳ (Manager).
 - **Tiêu chuẩn**: nhóm tiêu chí A-F, thêm/sửa/xóa tiêu chí, mức điểm, mức mặc định.
 - **Cài đặt**: tab Tài khoản (đổi/đặt mật khẩu), Kỳ đánh giá (tạo/đóng), Thang điểm, Nhóm & Quyền, Nhật ký, Mục tiêu.
 - **Hướng dẫn**: hướng dẫn theo chức vụ + sơ đồ quy trình 3 vòng + FAQ + in A4 (nút "In Hướng Dẫn A4" mở bản in theo chức vụ).

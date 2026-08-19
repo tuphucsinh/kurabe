@@ -109,6 +109,20 @@ export async function getUsersBatchAdmin(
   };
 }
 
+/** Danh sách users TOÀN HỆ THỐNG (service_role, KHÔNG scope) — CHỈ dùng để phát hiện 'khác nhóm' trong Chat AI.
+ * KHÔNG đưa thông tin nhạy cảm của người ngoài phạm vi vào prompt. */
+export async function getAllUsersAdmin(): Promise<User[]> {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select(USER_SELECT)
+    .eq('is_active', true)
+    .order('name');
+  if (error) {
+    throw new DatabaseError('Error fetching all users (admin)', error);
+  }
+  return (data || []).map(mapUserFromDb);
+}
+
 export async function getUsersAdmin(
   requester?: User | null,
   options?: { limit?: number; offset?: number; search?: string }

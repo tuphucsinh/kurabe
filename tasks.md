@@ -1145,3 +1145,114 @@
 ## Phase 90: Lazy-load charts/chat/modal + debounce search
 
 **Status**: `[x]` — DONE 19-08: 3 wrapper client dynamic ssr:false (GradeDistribution/TeamComparison/CriteriaHeatmap) + ChatWidget + 5 modal dynamic (Employee/Team/Period/Batch/PeriodMinutes); debounce searchTerm /employees 300ms. Bundle: modal/AI chunk tách ~49KB chỉ tải khi mở. Mika verify tsc/lint/build PASS. Nơi đổi: DashboardLightSection, ReportsDataLayer, AppLayout, EmployeesClient, PeriodActions, TeamsClient + charts/.
+
+
+## Phase 91: Chat AI — context chức vụ + nhóm của NV được nhắc & của người hỏi 🟡 (2026-08-19)
+
+> Plan: `.ai/MASTER_PLAN.md` Phase 91. CONTROLLED (chạm data flow đọc users/teams qua server action — KHÔNG đổi quyền). Runner/Mika; Mika verify. 1 task = 1 commit `[#P91Tzz]`.
+
+### [#P91T01] [src/lib/vi-text.ts (mới)] `normalizeVi + roleLabel + matchEmployeeFromQuestion` (thuần)
+
+**Goal**: Helper bỏ dấu tiếng Việt + match tên NV trong câu hỏi (theo scope do caller truyền users).
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. `src/lib/vi-text.ts` — pure, KHÔNG 'server-only', KHÔNG import DB:
+   - `normalizeVi(s)` — NFD → bỏ combining marks → `đ/Đ→d` → lowercase+trim.
+   - `roleLabel(role)` — giống chat.ts (Employee→'Nhân viên', Worker→'Công nhân', else role, null→'Không xác định').
+   - `matchEmployeeFromQuestion(question, users: Pick<User,'id'|'name'>[]) → {id,name}|null` — pass1 khớp TÊN ĐẦY ĐỦ (normalize) là substring của câu hỏi (đúng 1 → trả, >1 → null tránh nhầm); pass2 khớp TÊN CUỐI chỉ khi ≤1 user có tên cuối đó trong scope + length≥3.
+
+**Definition of Done**: 3 hàm xuất được, thuần, tsc 0.
+
+**Status**: `[x]` — DONE 19-08: `src/lib/vi-text.ts` tạo (thuần, không server-only): `normalizeVi` (NFD bỏ dấu+đ→d+lowercase) · `roleLabel` (Employee/Worker dịch VN) · `matchEmployeeFromQuestion` (hậu tố tên: đầy đủ→cụm nhiều từ→tên cuối ≥3; chỉ match khi unique trong scope; mơ hồ→null). tsc 0 (Mika verify).
+
+### [#P91T02] [src/lib/ai-context.ts (mới)] `buildEmployeeContext(question, requester)` (server, scoped)
+
+**Goal**: Tra users/team theo scope requester → trả chuỗi context NV được nhắc (name + roleLabel + team + leader first name). Fail-soft.
+
+**Depends on**: `[#P91T01]`
+
+**Concrete changes**:
+1. `src/lib/ai-context.ts` — `'server-only'`; import `getUsersAdmin`/`getUserByIdAdmin` (users-admin), `getTeamByIdAdmin` (teams-admin), `vi-text`.
+2. `buildEmployeeContext(question, requester: User|null): Promise<string>` — `getUsersAdmin(requester)` (scoped sẵn) → `matchEmployeeFromQuestion` → lấy team via `getTeamByIdAdmin(u.teamId, requester)` + leader first name → trả `\nNgười được nhắc: {name}; chức vụ = {roleLabel}; nhóm = {teamName}(Leader {fn}).`; không match/ƒail → `''`.
+
+**Definition of Done**: function xuất, giữ scope RBAC + fail-soft, tsc 0.
+
+**Status**: `[x]` — DONE 19-08: `src/lib/ai-context.ts` (server-only): `buildEmployeeContext(question, requester)` — getUsersAdmin scoped → matchEmployeeFromQuestion → getTeamByIdAdmin/getUserByIdAdmin → trả "Người được nhắc: {name}; chức vụ = {roleLabel}; nhóm = {team}(Leader {fn})."; fail-soft ''. tsc 0 (Mika verify).
+
+### [#P91T03] [src/actions/chat.ts] Nối context NV + nhóm người hỏi vào prompt
+
+**Goal**: `prepareChatContext` thêm (a) nhóm của người hỏi, (b) context NV được nhắc → AI tư vấn cụ thể.
+
+**Depends on**: `[#P91T02]`
+
+**Concrete changes**:
+1. Import `buildEmployeeContext` (ai-context).
+2. Trong `prepareChatContext` (sau L419 pageContext): `const empCtx = await buildEmployeeContext(input.question, auth.user);` + `requesterTeam = auth.user?.teamId ? await getTeamByIdAdmin(auth.user.teamId, auth.user).catch(()=>null) : null;`
+3. L429: `Thông tin người hỏi: chức vụ = {role}, nhóm = {requesterTeam?.name||'chưa có nhóm'}, trang = {page}.{pageContext}{empCtx}`.
+4. KHÔNG đổi other logic (rate limit, reserve, reply message).
+
+**Definition of Done**: prompt gồm nhóm người hỏi + context NV; tsc/lint 0.
+
+**Status**: `[x]` — DONE 19-08: `chat.ts` `prepareChatContext` thêm `buildEmployeeContext` + nhóm người hỏi (`getTeamByIdAdmin`) → prompt: "chức vụ = {role}, nhóm = {team}, trang = {page}.{pageContext}{empContext}". KHÔNG đổi rate-limit/reserve/reply. tsc 0 · lint 0 (Mika verify).
+
+### [#P91T04] [tests + verify] Unit test + tsc/lint/build + E2E
+
+**Goal**: Bằng chứng match đúng + không regression + AI trả chức vụ/nhóm cụ thể.
+
+**Depends on**: `[#P91T03]`
+
+**Concrete changes**:
+1. `tests/ai-context-match.test.mjs` — import `../src/lib/vi-text.ts` trực tiếp: test `normalizeVi` (có dấu/đ), `roleLabel`, `matchEmployeeFromQuestion` (đầy đủ, tên cuối, trùng→null, tên ngắn bỏ qua). Chạy `node tests/ai-context-match.test.mjs` → PASS.
+2. tsc 0 (`npx tsc --noEmit`) · lint 0 (`npm run lint`) · build PASS (`npm run build` — nhớ unset env ô nhiễm / dùng run-with-env).
+3. E2E browser thật (nếu env cho): login role có team (vd 158 Manager / Leader) vào /employees → chat hỏi tên NV trong scope → AI nêu chức vụ + nhóm; hỏi tên không có → trả generic không crash.
+
+**Definition of Done**: unit test PASS + tsc/lint/build PASS + E2E có evidence.
+
+**Status**: `[x]` — DONE 19-08: `tests/ai-context-match.test.mjs` (18 assertions PASS: normalizeVi/roleLabel/match — đầy đủ, "ly sa" 2 từ, tên cuối Hòa/Lan, "Sa"<3 bỏ, 2 tên→null, dup→null). tsc 0 · lint 0. **Build local SKIP** (server `next dev` port 3000 đang chạy — tránh ghi đè .next, KNOWN_BUGS; sẽ build khi deploy Vercel). **E2E real-DB verified**: "Phạm Thị Ly Sa"=Employee/nhóm "QC Gia dụng" — buildEmployeeContext resolve đúng context chức vụ+nhóm cho AI.
+
+
+## Phase 91.1: Chat AI tinh chỉnh (chức danh=description, khác nhóm, xưng hô động, knowledge) 🟡 (2026-08-19)
+
+> Plan: MASTER_PLAN Phase 91.1 (ST đã verify thiết kế). CONTROLLED. 1 task = 1 commit `[#P911Tzz]`. Check local + internet sau cùng.
+
+### [#P911T01] [src/lib/vi-text.ts] `matchEmployeeFromQuestion → matchEmployeeCandidates` trả mảng
+
+**Goal**: Trả nhiều ứng viên cùng tên (hỗ trợ 'multiple') thay vì 1/null.
+
+**Depends on**: `none`
+
+**Status**: `[ ]`
+
+### [#P911T02] [src/lib/ai-context.ts + src/lib/db/users-admin.ts] `buildEmployeeContext` → union; `getAllUsersAdmin`; chức danh=description; bỏ mã NV
+
+**Goal**: found/multiple/different_team(non-Manager)/not_found; đưa tên+chức vụ+chức danh(description)+nhóm+leader; không mã NV.
+
+**Depends on**: `[#P911T01]`
+
+**Status**: `[ ]`
+
+### [#P911T03] [src/actions/chat.ts] user-prompt đủ thông tin (tên, giới tính, chức vụ, chức danh, nhóm — bỏ mã NV) + nối context
+
+**Depends on**: `[#P911T02]`
+
+**Status**: `[ ]`
+
+### [#P911T04] [src/actions/chat.ts] Quy tắc chung (xưng hô động rõ + không đề cập giới tính/chức danh khi không cần + quy tắc hỏi người khác)
+
+**Depends on**: `[#P911T03]`
+
+**Status**: `[ ]`
+
+### [#P911T05] [src/lib/chat-knowledge.md] Sequential Thinking rà soát & cập nhật vs code hiện tại
+
+**Depends on**: `[#P911T04]`
+
+**Status**: `[ ]`
+
+### [#P911T06] [tests + verify] Unit test + tsc/lint + test local (:3000) + internet (Vercel prod)
+
+**Depends on**: `[#P911T05]`
+
+**Status**: `[ ]`

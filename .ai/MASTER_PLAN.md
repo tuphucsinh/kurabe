@@ -1002,3 +1002,50 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 > - **T4 verify:** tsc 0 + lint 0 + build PASS + browser (nếu được) + đo bundle trước/sau (kích thước .next chunk). Rollback: revert commits.
 > Lưu ý: chart/chat `ssr:false` tránh hydration mismatch; modal dynamic khi mở. UI thuần, không đụng auth/data.
 **KẾT QUẢ THỰC THI (19-08)**: 4/4 task DONE — commits `91b5ed4`: 3 wrapper client `dynamic ssr:false` (GradeDistribution/TeamComparison/CriteriaHeatmap) + ChatWidget + 5 modal dynamic (Employee/Team/Period/Batch/PeriodMinutes) + debounce searchTerm 300ms (/employees, dùng debounced value cho fetch/filter). Bundle: modal/AI chunk tách riêng (~49KB) chỉ tải khi mở. Mika verify: tsc 0 · lint 0 · build PASS; scope đúng (chỉ charts + 6 file; không đụng auth/data). UI thuần — không cần Reviewer (theo AGENTS.md static nhỏ). **Phase 90: DONE** ✅ (2026-08-19).
+
+
+---
+
+## Phase 91: Chat AI — context chức vụ + nhóm của NV được nhắc đến & của người hỏi 🟡 (2026-08-19, plan)
+
+> Anh yêu cầu: hiện AI tư vấn generic (chỉ biết role người hỏi + đếm theo trang) → không tư vấn cụ thể theo **chức vụ + nhóm** của nhân viên được nhắc trong câu hỏi. Mục tiêu: AI trả lời cá nhân hóa (VD hỏi "sao sửa chức danh của Ly Sa không hiển thị" → AI biết Ly Sa là chức vụ gì, nhóm nào để trả lời đúng).
+
+### 1. Goal & ranh giới
+- **Goal (user-visible)**: chat AI khi hỏi về một nhân viên (theo tên) sẽ nói được chức vụ + nhóm của NV đó; đồng thời AI biết cả nhóm của chính người hỏi → tư vấn cụ thể hơn, không chỉ quy tắc chung.
+- **In-scope**: đưa vào prompt (a) role + nhóm + leader của NV được nhắc trong câu hỏi; (b) nhóm của chính người hỏi. Giữ RBAC scope + fail-soft.
+- **Out-of-scope**: KHÔNG đổi giao diện chat; KHÔNG đổi/duỗi quyền (RBAC giữ nguyên); KHÔNG sửa render markdown `**` (mục riêng nếu anh muốn); KHÔNG thêm ngôn ngữ/model.
+- **Ranh giới bảo mật**: chỉ đưa `name + role(chức vụ tiếng Việt) + team name + leader(first name)` — KHÔNG đưa employee_code, email, description, subleader_id raw. Chỉ đọc trong scope của requester (tái dùng hàm admin đã scoped).
+
+### 2. Thiết kế & map tích hợp
+- **Hiện tại**: `src/actions/chat.ts` `prepareChatContext` (L429) chỉ nối `chức vụ = ${roleLabel(role)}, trang = ${page}.${pageContext}`; `buildPageContext` (L261) chỉ gộp count/context trang, không tìm NV theo tên.
+- **Chọn**: thêm hàm `buildEmployeeContext(question, user)` gọi TRONG `prepareChatContext` (bên cạnh buildPageContext), trả chuỗi context → nối vào prompt L429.
+  - Match tên: `getUsersAdmin(user)` (scoped sẵn: Manager=all, Leader/SubLeader=team, Employee/Worker=self) → tìm user khớp câu hỏi: ưu tiên **tên đầy đủ bỏ dấu** xuất hiện trong câu hỏi, fallback **tên cuối (lastname) bỏ dấu**; giới hạn tránh false-positive (tên ≤2 từ, >1 kết quả khớp → chọn chính xác nhất hoặc bỏ qua).
+  - Team name: `getTeamByIdAdmin(user.teamId, user)` (scoped) → name; leader: tra `getUserByIdAdmin(team.leaderId, user)`.
+- **Loại bỏ**: không cần parser NLP phức tạp; match tên đơn giản + bỏ dấu là đủ cho câu hỏi thực tế.
+- **Tái dùng**: `getUsersAdmin` (users-admin.ts L112), `getTeamByIdAdmin` (teams-admin), `getUserByIdAdmin`, `roleLabel` (chat.ts L55), helper bỏ dấu mới (vietnamese diacritics).
+- **Rollback**: revert 1-2 commit (thuần thêm vào prompt, an toàn).
+
+### 3. Task đề xuất (WBS → tasks.md sau khi anh duyệt)
+- **T1** [src/lib/vi-text.ts (mới) + src/lib/ai-context.ts (mới)] Helper thuần: `normalizeVi(s)` (bỏ dấu tiếng Việt, lowercase) + `matchEmployeeFromQuestion(question, users) → User|null` (đầy đủ → lastname; bỏ qua nếu trùng/không rõ). Unit test cho bỏ dấu + match.
+- **T2** [src/lib/ai-context.ts] `buildEmployeeContext(question, user) → string` — gọi getUsersAdmin scoped → match → getTeamByIdAdmin/getUserByIdAdmin → trả chuỗi "Người được nhắc: {name}, chức vụ = {roleLabel}, nhóm = {teamName}(leader {firstName});". (fail-soft: không match → '').
+- **T3** [src/actions/chat.ts] Nối kết quả T2 + nhóm của người hỏi vào prompt (L429), giữ nguyên phần role/trang/pageContext. Cập nhật `Thông tin người hỏi` thêm nhóm.
+- **T4** [verify] tsc 0 + lint 0 + build PASS + E2E thật: login role (vd 158/Leader có team) vào /employees → hỏi "sao không sửa được chức danh của Ly Sa" → AI nêu chức vụ + nhóm cụ thể của Ly Sa (nếu trong scope). Test fail-soft: hỏi tên không tồn tại → trả generic không crash.
+
+### 4. Verification & rủi ro
+- Checks: tsc 0 · lint 0 · build PASS · E2E browser thật (nếu env cho) · đo prompt context.
+- Rủi ro: match tên trùng/false-positive → giới hạn + ưu tiên tên đầy đủ; PII → chỉ role/team/tên, nhớ keep scope; anon-read đã khóa users SELECT nhưng server action dùng service_role + RBAC vẫn đọc được (không đổi quyền).
+- Gates: **CONTROLLED** — chạm data flow (đọc users/teams trong server action) → cần gated Reviewer ở gate verify (test-data thật, không cần Reviewer vòng plan). Anh duyệt commit/push như thường lệ (không đẩy Vercel trừ khi anh yêu cầu).
+
+
+---
+
+## Phase 91.1: Chat AI — tinh chỉnh theo anh (chức danh=description, bỏ mã NV, khác nhóm, xưng hô động, knowledge update) 🟡 (2026-08-19)
+
+> Nối tiếp Phase 91. Anh chốt: (1) different_team KHÔNG giới hạn Manager; (2) KHÔNG đưa mã NV; (3) chức danh = cột `description` (verified EmployeesClient L703 / EmployeeModal L225); (4) AI không đề cập giới tính/chức danh nếu không cần thiết; (5) dùng Sequential Thinking cập nhật chat-knowledge.md; (6) test local + internet.
+> CONTROLLED (chạm data flow) — homestay scoped; setup Reader ở gate verify.
+
+### Chốt thiết kế (ST đã verify)
+- **User-prompt** (prepareChatContext): `tên = {name}, giới tính = {Nam/Nữ}, chức vụ = {role}, chức danh = {description||'chưa có'}, nhóm = {team||'Chưa có nhóm'}, trang = {page}` — BỎ mã NV.
+- **buildEmployeeContext → union**: `found` (cùng nhóm||Manager: tên+chức vụ+chức danh+nhóm+leader) / `multiple` (liệt kê + hỏi) / `different_team` (non-Manager, người khác nhóm → báo không cùng nhóm, không lộ info) / `not_found` (generic).
+- **Quy tắc chung**: rule 1 xưng hô động (anh/chị theo giới tính); thêm rule: khi trả lời KHÔNG lặp lại giới tính/chức danh/chức vụ nếu không cần thiết; quy tắc xử lý hỏi người khác (cùng nhóm/khác nhóm/trùng tên/không có).
+- **chat-knowledge.md**: Sequential Thinking rà soát vs code, cập nhật lệch (xưng hô chị→anh/chị; chức danh=description; cập nhật mô tả màn hình/flow theo thay đổi app).
