@@ -24,6 +24,20 @@ export function normalizeVi(s?: string | null): string {
     .trim();
 }
 
+/** Kiểm tra 'phrase' xuất hiện trong 'q' (đã normalize) với RANH GIỚI TỪ — tránh match lọt
+ *  "anh" trong "đánh" (danh), "hoa" trong "hoang", tích hợp cuối chữ. */
+function hasPhrase(q: string, phrase: string): boolean {
+  let idx = q.indexOf(phrase);
+  const isLetter = (c?: string) => !!c && /[a-z0-9]/.test(c);
+  while (idx !== -1) {
+    const before = idx === 0 ? '' : q[idx - 1];
+    const after = idx + phrase.length < q.length ? q[idx + phrase.length] : '';
+    if (!isLetter(before) && !isLetter(after)) return true;
+    idx = q.indexOf(phrase, idx + 1);
+  }
+  return false;
+}
+
 /** Nhãn tiếng Việt cho chức vụ (đồng bộ logic chat.ts) — Employee/Worker dịch, còn lại giữ mã. */
 export function roleLabel(role?: string | null): string {
   if (role === 'Employee') return 'Nhân viên';
@@ -76,7 +90,7 @@ export function matchEmployeeCandidates(
   for (const u of users) {
     let best: string | null = null;
     for (const s of nameSuffixKeys(u.name)) {
-      if (q.includes(s) && (!best || s.length > best.length)) best = s;
+      if (hasPhrase(q, s) && (!best || s.length > best.length)) best = s;
     }
     if (best) {
       const owners = owner.get(best) || [];

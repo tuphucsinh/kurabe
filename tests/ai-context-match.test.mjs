@@ -39,6 +39,15 @@ assert.equal(mult[0].bestLen, 3);
 const dup = [{ id: 'a', name: 'Nguyễn Hòa' }, { id: 'b', name: 'Trần Hòa' }];
 assert.deepEqual(ids(matchEmployeeCandidates('Hòa đâu rồi', dup)), ['a', 'b']);
 
+// RANH GIỚI TỪ: "anh" trong "đánh" (danh) KHÔNG match người tên cuối "Anh"
+const anhUsers = [
+  { id: 'a1', name: 'Lê Nhi' },
+  { id: 'a2', name: 'Bùi Thị Tuyết Nhi' },
+  { id: 'a3', name: 'Đoàn Thị Quỳnh Anh' },
+  { id: 'a4', name: 'Võ Thị Ngọc Anh' },
+];
+assert.deepEqual(ids(matchEmployeeCandidates('Nhi được đánh giá thế nào?', anhUsers)), ['a1', 'a2']);
+
 // HẬU TỐ DÀI NHẤT ưu tiên: "Mai Thị Hòa" phải đứng đầu + bestLen lớn hơn "Hòa" cuối
 const hoa = [{ id: 'm', name: 'Mai Thị Hòa' }, { id: 'h', name: 'Trần Văn Hòa' }];
 const c = matchEmployeeCandidates('Mai Thị Hòa thuộc nhóm nào, chức danh gì?', hoa);
