@@ -1140,3 +1140,8 @@
 ## Phase 89: Prefetch phân tầng theo role
 
 **Status**: `[x]` — DONE 19-08: Sidebar desktop hover prefetch (debounce 150ms, cancelQueries exact key, isMobile guard, role gate: Manager/Leader prefetch /teams ['teams-page-data']; individual prefetch phiếu mình ['evaluation-page-data', user.id]; KHÔNG prefetch /employees data (imperative) / trang cấm). Reviewer R1->R2 PASS (gemini-3.1-pro-high). tsc/lint/build PASS (Mika).
+
+
+## Phase 90: Lazy-load charts/chat/modal + debounce search
+
+**Status**: `[x]` — DONE 19-08: 3 wrapper client dynamic ssr:false (GradeDistribution/TeamComparison/CriteriaHeatmap) + ChatWidget + 5 modal dynamic (Employee/Team/Period/Batch/PeriodMinutes); debounce searchTerm /employees 300ms. Bundle: modal/AI chunk tách ~49KB chỉ tải khi mở. Mika verify tsc/lint/build PASS. Nơi đổi: DashboardLightSection, ReportsDataLayer, AppLayout, EmployeesClient, PeriodActions, TeamsClient + charts/.
