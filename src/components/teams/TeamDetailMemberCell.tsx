@@ -4,7 +4,7 @@ import Link from 'next/link';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Evaluation } from '@/types';
-import { FileText } from 'lucide-react';
+import { FileText, Pencil } from 'lucide-react';
 
 export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   Approved: { label: 'Đã có KQĐG', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
@@ -32,6 +32,8 @@ export interface TeamDetailMemberCellProps {
   isLoading?: boolean;
   isError?: boolean;
   mode?: 'desktop' | 'mobile' | 'action';
+  canEdit?: boolean;
+  onEdit?: () => void;
 }
 
 export function TeamDetailMemberEvaluationDesktop({
@@ -115,36 +117,52 @@ export function TeamDetailMemberAction({
   memberId,
   evaluation,
   isLoading = false,
+  canEdit = false,
+  onEdit,
 }: {
   memberId: string;
   evaluation?: Evaluation | null;
   isLoading?: boolean;
+  canEdit?: boolean;
+  onEdit?: () => void;
 }) {
-  if (isLoading) {
-    return (
-      <span
-        className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-slate-300 rounded-lg shrink-0"
-        data-load-layer="heavy"
-      >
-        <FileText size={18} />
-      </span>
-    );
-  }
-
-  if (!evaluation) {
+  const hasEvalContent = isLoading || Boolean(evaluation);
+  if (!hasEvalContent && !canEdit) {
     return null;
   }
 
   return (
-    <Link
-      prefetch={false}
-      href={`/evaluations/${memberId}`}
-      className="max-md:hidden p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
-      title="Xem đánh giá"
-      data-load-layer="heavy"
-    >
-      <FileText size={18} />
-    </Link>
+    <div className="flex items-center gap-1 shrink-0">
+      {isLoading ? (
+        <span
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-slate-300 rounded-lg shrink-0"
+          data-load-layer="heavy"
+        >
+          <FileText size={18} />
+        </span>
+      ) : evaluation ? (
+        <Link
+          prefetch={false}
+          href={`/evaluations/${memberId}`}
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+          title="Xem đánh giá"
+          data-load-layer="heavy"
+        >
+          <FileText size={18} />
+        </Link>
+      ) : null}
+
+      {canEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0 cursor-pointer"
+          title="Chỉnh sửa nhân viên"
+        >
+          <Pencil size={18} />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -197,12 +215,22 @@ export default function TeamDetailMemberCell({
   isLoading = false,
   isError = false,
   mode = 'desktop',
+  canEdit = false,
+  onEdit,
 }: TeamDetailMemberCellProps) {
   if (mode === 'mobile') {
     return <TeamDetailMemberEvaluationMobile evaluation={evaluation} isLoading={isLoading} isError={isError} />;
   }
   if (mode === 'action') {
-    return <TeamDetailMemberAction memberId={memberId} evaluation={evaluation} isLoading={isLoading} />;
+    return (
+      <TeamDetailMemberAction
+        memberId={memberId}
+        evaluation={evaluation}
+        isLoading={isLoading}
+        canEdit={canEdit}
+        onEdit={onEdit}
+      />
+    );
   }
   return <TeamDetailMemberEvaluationDesktop evaluation={evaluation} isLoading={isLoading} isError={isError} />;
 }

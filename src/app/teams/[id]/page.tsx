@@ -48,6 +48,7 @@ export default function TeamDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [, setIsSaving] = useState(false);
 
   const isManager = user?.role === 'Manager';
@@ -133,22 +134,37 @@ export default function TeamDetailPage() {
 
   const pendingCount = Math.max(0, members.length - completedCount);
 
+  const handleEditEmployee = (emp: User) => {
+    if (!canAddEmployee) {
+      toast('Bạn không có quyền chỉnh sửa nhân viên.', 'error');
+      return;
+    }
+    setEditingEmployee(emp);
+    setIsAddModalOpen(true);
+  };
+
   const handleSaveEmployee = async (employee: Partial<User>) => {
+    if (!canAddEmployee) {
+      toast('Bạn không có quyền lưu thay đổi nhân viên.', 'error');
+      return;
+    }
     setIsSaving(true);
     try {
-      const payload = { ...employee, teamId };
+      const payload = editingEmployee
+        ? ({ ...editingEmployee, ...employee, teamId } as User)
+        : ({ ...employee, teamId } as User);
       const result = await upsertUserAction(payload);
       if (result.success) {
-        toast('Thêm nhân viên thành công!', 'success');
+        toast(editingEmployee ? 'Cập nhật nhân viên thành công!' : 'Thêm nhân viên thành công!', 'success');
         queryClient.invalidateQueries({ queryKey: ['users'] });
         queryClient.invalidateQueries({ queryKey: ['teams'] });
         queryClient.invalidateQueries({ queryKey: ['evaluations'] });
         queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
       } else {
-        toast(result.error || 'Lỗi khi thêm nhân viên.', 'error');
+        toast(result.error || (editingEmployee ? 'Lỗi khi cập nhật nhân viên.' : 'Lỗi khi thêm nhân viên.'), 'error');
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Lỗi khi thêm nhân viên.', 'error');
+      toast(err instanceof Error ? err.message : (editingEmployee ? 'Lỗi khi cập nhật nhân viên.' : 'Lỗi khi thêm nhân viên.'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -220,7 +236,10 @@ export default function TeamDetailPage() {
             {canAddEmployee && (
               <button
                 type="button"
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditingEmployee(null);
+                  setIsAddModalOpen(true);
+                }}
                 className="inline-flex items-center gap-2 rounded-xl bg-[#07384d] px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#052b3b] active:scale-95 cursor-pointer"
               >
                 <UserPlus size={18} />
@@ -291,6 +310,8 @@ export default function TeamDetailPage() {
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="desktop"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(leader)}
                       />
                     </div>
                     <TeamDetailMemberCell
@@ -299,6 +320,8 @@ export default function TeamDetailPage() {
                       isLoading={evalsLoading}
                       isError={evalsError}
                       mode="action"
+                      canEdit={canAddEmployee}
+                      onEdit={() => handleEditEmployee(leader)}
                     />
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
@@ -310,6 +333,8 @@ export default function TeamDetailPage() {
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="mobile"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(leader)}
                       />
                     </div>
                   </div>
@@ -341,6 +366,8 @@ export default function TeamDetailPage() {
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="desktop"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(sl)}
                       />
                     </div>
                     <TeamDetailMemberCell
@@ -349,6 +376,8 @@ export default function TeamDetailPage() {
                       isLoading={evalsLoading}
                       isError={evalsError}
                       mode="action"
+                      canEdit={canAddEmployee}
+                      onEdit={() => handleEditEmployee(sl)}
                     />
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
@@ -360,6 +389,8 @@ export default function TeamDetailPage() {
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="mobile"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(sl)}
                       />
                     </div>
                   </div>
@@ -397,6 +428,8 @@ export default function TeamDetailPage() {
                               isLoading={evalsLoading}
                               isError={evalsError}
                               mode="desktop"
+                              canEdit={canAddEmployee}
+                              onEdit={() => handleEditEmployee(member)}
                             />
                           </div>
                           <TeamDetailMemberCell
@@ -405,6 +438,8 @@ export default function TeamDetailPage() {
                             isLoading={evalsLoading}
                             isError={evalsError}
                             mode="action"
+                            canEdit={canAddEmployee}
+                            onEdit={() => handleEditEmployee(member)}
                           />
                           {/* Mobile */}
                           <div className="md:hidden min-w-0 flex-1">
@@ -416,6 +451,8 @@ export default function TeamDetailPage() {
                               isLoading={evalsLoading}
                               isError={evalsError}
                               mode="mobile"
+                              canEdit={canAddEmployee}
+                              onEdit={() => handleEditEmployee(member)}
                             />
                           </div>
                         </div>
@@ -472,6 +509,8 @@ export default function TeamDetailPage() {
                             isLoading={evalsLoading}
                             isError={evalsError}
                             mode="desktop"
+                            canEdit={canAddEmployee}
+                            onEdit={() => handleEditEmployee(member)}
                           />
                         </div>
                         <TeamDetailMemberCell
@@ -480,6 +519,8 @@ export default function TeamDetailPage() {
                           isLoading={evalsLoading}
                           isError={evalsError}
                           mode="action"
+                          canEdit={canAddEmployee}
+                          onEdit={() => handleEditEmployee(member)}
                         />
                         {/* Mobile */}
                         <div className="md:hidden min-w-0 flex-1">
@@ -491,6 +532,8 @@ export default function TeamDetailPage() {
                             isLoading={evalsLoading}
                             isError={evalsError}
                             mode="mobile"
+                            canEdit={canAddEmployee}
+                            onEdit={() => handleEditEmployee(member)}
                           />
                         </div>
                       </div>
@@ -511,7 +554,11 @@ export default function TeamDetailPage() {
 
       <EmployeeModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingEmployee(null);
+        }}
+        employee={editingEmployee}
         onSave={handleSaveEmployee}
         restrictToTeamId={teamId}
         roleOptions={isManager ? ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'] : ['SubLeader', 'Employee', 'Worker']}
