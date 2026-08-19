@@ -31,18 +31,18 @@ export function getTargetRoundNumbers(evaluation?: Evaluation | null, roleProp?:
   if (role) {
     const normalized = role.toLowerCase().replace(/\s+/g, '');
     if (normalized === 'leader' || normalized === 'subleader') {
-      return [1, 2];
+      return [2, 1]; // giảm dần: L2 -> L1
     }
     if (normalized === 'worker' || normalized === 'employee' || normalized === 'staff') {
-      return [1, 2, 3];
+      return [3, 2, 1]; // giảm dần: L3 -> L2 -> L1
     }
   }
   if (evaluation?.rounds && evaluation.rounds.length > 0) {
     const maxSeen = Math.max(...evaluation.rounds.map((r) => r.round || 0));
-    if (maxSeen >= 3) return [1, 2, 3];
-    if (maxSeen === 2) return [1, 2];
+    if (maxSeen >= 3) return [3, 2, 1];
+    if (maxSeen === 2) return [2, 1];
   }
-  return [1, 2, 3];
+  return [3, 2, 1];
 }
 
 export interface TeamDetailMemberCellProps {
