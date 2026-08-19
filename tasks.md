@@ -957,3 +957,59 @@
 **Definition of Done**: shell giàu verified + data thật verified + build/lint pass + không regression.
 
 **Status**: `[x]` — DONE 19-08: Mika verify độc lập tsc 0 + lint 0 + build PASS + diff từng dòng đúng plan; regression Gemini 14/14. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code); dev server + session thật chạy OK. → Phase 85 DONE.
+
+---
+
+## Phase 86: Static-first shells — Dashboard & Reports 🟡 (2026-08-19)
+
+> Plan: `.ai/MASTER_PLAN.md` Phase 86. UI thuần, không fake value. Runner Gemini 3.7 Flash High. 1 task = 1 commit `[#P86Tzz]`.
+
+### [#P86T01] [src/components/dashboard/DashboardLightSection.tsx] Skeleton giàu: KPI icon+label static + section titles + track trống
+
+**Goal**: Thay khối xám generic trong nhánh `isLoading` bằng skeleton giàu (icon + label + tiêu đề section + track trống) — không hiện số/giá trị ảo.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. Nhánh `isLoading` (L24-41): thay 4 ô KPI xám generic → 4 ô, mỗi ô icon (Users/TrendingUp/CheckCircle2/Clock — khớp loaded L66/71/76/83) + label static (nhân sự/tiến độ/đã đánh giá/chưa xong) + `<Skeleton>` value (không số ảo).
+2. Grid (L37-40): thay 2 khối xám to → 2 section với **title static** "Trạng thái theo nhóm"/"Phân bổ xếp loại" (khớp loaded L95/118) + bên trong skeleton rows + track progress **rỗng** (không fill) / chart placeholder.
+3. KHÔNG đụng nhánh loaded/error/empty; giữ `data-load-layer="light"`; tránh `<p>` chứa `<div>`.
+
+**Definition of Done**: loading hiện icon+label+title+track trống (không value ảo); loaded giữ nguyên; tsc/lint 0.
+
+**Status**: `[x]` — DONE 19-08 (`5fa31c1`): KPI 4 ô icon+label static (nhân sự/tiến độ/đã đánh giá/chưa xong) + `<Skeleton>` value; section titles "Trạng thái theo nhóm"/"Phân bổ xếp loại" + skeleton rows + track trống (không fill); loaded giữ nguyên; không `<p>` chứa Skeleton. tsc/lint 0.
+
+### [#P86T02] [src/components/reports/ReportsDataLayer.tsx] Heavy skeleton: thêm static section titles (đủ 5 khối)
+
+**Goal**: Heavy skeleton (L174-...) thêm tiêu đề section static (bỏ gạch xám chung đầu khối), giữ skeleton bars; không đụng light KPI.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. Trong các khối `data-load-layer="heavy"` skeleton, thay dòng gạch xám tiêu đề (vd `h-4 w-32 bg-slate-200`) bằng **text static đúng tên section thật** (đối chiếu loaded):
+   - GradeDistribution → **"Phân bổ Xếp loại"** (charts/GradeDistribution.tsx:20)
+   - TeamComparison → **"So sánh nhóm"** (TeamComparison.tsx:24)
+   - CriteriaHeatmap → **"Phân tích nhóm tiêu chuẩn"** (CriteriaHeatmap.tsx:41) — KHÔNG phải "Heatmap tiêu chí" (reviewer blocker)
+   - TopPerformers → **"Top Performers"** (TopPerformers.tsx:86)
+   - AiSummaryCard → **"Tóm tắt kỳ bằng AI"** (AiSummaryCard.tsx:90)
+   Cover ĐỦ cả 5 khối skeleton (reviewer non-blocking 1), không bỏ sót.
+2. Giữ skeleton bars bên trong làm value placeholder.
+3. KHÔNG đụng light KPI pill (đã có label); giữ `data-load-layer`; tránh `<p>` chứa `<div>` (Skeleton render `<div>`).
+
+**Definition of Done**: 5 khối heavy skeleton hiện title static đúng tên + bars; loaded giữ nguyên; tsc/lint 0.
+
+**Status**: `[x]` — DONE 19-08 (`3961860`): 5 khối heavy skeleton có title static đúng tên loaded (Phân bổ Xếp loại / So sánh nhóm + pill Average Score / Phân tích nhóm tiêu chuẩn / Top Performers / Tóm tắt kỳ bằng AI); skeleton bars giữ animate-pulse; light KPI không đụng. tsc/lint 0.
+
+### [#P86T03] [verify] tsc + lint + build + browser thật
+
+**Goal**: Chứng minh Dashboard + Reports shell hiện static-first, data thật sau, không regression.
+
+**Depends on**: `[#P86T02]`
+
+**Concrete changes**:
+1. `unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY` (tường minh — `NEXT_PUBLIC_*` không glob trong bash); `npx tsc --noEmit`; `npm run lint`; `npm run build` (kill PID 3000 trước).
+2. Browser thật `/dashboard` + `/reports` (dev): loading → icon+label+title+track trống (không value ảo); sau load → giá trị thật; mobile/desktop không vỡ; console sạch (không `<p> chứa <div>`).
+
+**Definition of Done**: static-first verified + data thật verified + build/lint pass + không regression.
+
+**Status**: `[x]` — DONE 19-08: Mika verify độc lập tsc 0 + lint 0 + build PASS + diff từng dòng đúng plan (title đúng tên loaded, no fake value, no `<p>` chứa Skeleton). Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code). → Phase 86 DONE.

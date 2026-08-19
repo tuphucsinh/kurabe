@@ -897,3 +897,28 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **KẾT QUẢ THỰC THI (19-08)**: 3/3 task DONE — commits `dd33644` (T01) + `6e9d555` (T02) + `d9abd0d` (T03, 8 khung). Runner **Gemini 3.7 Flash High** (theo anh chỉ định). Mika verify độc lập: diff từng dòng đúng plan (T01 skeleton branch guard ô Nhân sự bằng `<Skeleton>`, track rỗng `w-full bg-surface rounded-full` không fill, bỏ `w-1/3 animate-pulse` value ảo; `membersCount?`/`isLoading?` default 0/false; T02 card giàu icon Users + tên placeholder + `Leader:` + body `<TeamEvaluationCell skeleton/>`, không 'use client'; T03 thay 6 CardSkeleton → **8** TeamCardSkeleton (theo anh), giữ `data-load-layer="light"` trên grid container, bỏ import cũ, KHÔNG div trùng). **tsc 0 · lint 0 · build PASS** (Mika tự chạy). Regression Gemini báo 14/14 PASS. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — lỗi môi trường, không phải code); dev server log xác nhận app + session thật đang chạy OK.
 
 **Phase 85: DONE** ✅ (2026-08-19).
+
+---
+
+## Phase 86: Static-first shells — Dashboard & Reports 🟡 (2026-08-19)
+
+> Yêu cầu anh (19-08): áp nguyên tắc "cái gì static hiện trước hết" cho **Dashboard** và **Reports** (như Teams P85). Khảo sát (read-only): **Dashboard** light skeleton đang là khối xám generic (thiếu icon/label/tiêu đề section — chỗ yếu nhất); **Reports** light KPI **đã có icon+label static** (giữ), chỉ heavy skeleton còn gạch xám chung thiếu tiêu đề section. **Không fake value** — track rỗng, không số/%, không tên thật.
+
+**Thiết kế (UI thuần — 2 task code + 1 verify)**:
+- **T1 [`src/components/dashboard/DashboardLightSection.tsx`]** nhánh `isLoading` (L24-41) → thay khối xám generic bằng skeleton giàu:
+  - KPI: 4 ô, mỗi ô icon + **label static** (nhân sự / tiến độ / đã đánh giá / chưa xong — khớp nhánh loaded L64-89) + `<Skeleton>` value (không số ảo).
+  - Grid: section titles static "Trạng thái theo nhóm" / "Phân bổ xếp loại" (khớp loaded L95/118) + skeleton rows + track trống (không fill) / chart placeholder.
+- **T2 [`src/components/reports/ReportsDataLayer.tsx`]** heavy skeleton (L174-…) → **đủ 5 khối** thêm **static section titles đúng tên thật** (GradeDistribution "Phân bổ Xếp loại" / TeamComparison "So sánh nhóm" / CriteriaHeatmap "Phân tích nhóm tiêu chuẩn" / TopPerformers "Top Performers" / AiSummaryCard "Tóm tắt kỳ bằng AI") thay gạch xám đầu khối; giữ skeleton bars bên trong. **Không đụng light KPI** (đã có label).
+- **T3 [verify]** tsc 0 + lint 0 + build PASS; browser thật (dev): khi loading thấy icon+label+tiêu đề section + track trống (không value ảo); sau load data thật đầy đủ; mobile/desktop không vỡ; console sạch (không warning `<p> chứa <div>`).
+
+**Acceptance**: Dashboard + Reports shell hiện đủ static icon/label/tiêu đề section/track trống trước khi data; sau load đủ value thật; tsc/lint/build pass; không regression.
+
+**Non-goals**: KHÔNG đổi logic/query; KHÔNG đụng auth/DB; KHÔNG đổi desktop layout; KHÔNG thêm cache/index.
+
+**Rủi ro**: UI thuần, thấp. Lưu ý: giữ props/interface hiện tại (không phá caller); tránh `<p>` chứa `<div>` (bài học P85); skeleton props mặc định không đổi hành vi loaded sẵn có.
+
+**Reviewer plan**: R1 **CHANGES_REQUIRED** (Sonnet 4.6) — blocker: T2 title "Heatmap tiêu chí" sai → "Phân tích nhóm tiêu chuẩn" (CriteriaHeatmap.tsx:41); non-blocking: cover đủ 5 khối (Top Performers "Top Performers", AiSummaryCard "Tóm tắt kỳ bằng AI") + T3 glob `NEXT_PUBLIC_*` không expand. → đã fix cả 3 → **R2 PASS** (conf CAO, no blocker).
+
+**KẾT QUẢ THỰC THI (19-08)**: 2/2 task DONE — commits `5fa31c1` (T01 Dashboard) + `3961860` (T02 Reports). Runner **Gemini 3.7 Flash High**. Mika verify độc lập: diff từng dòng đúng plan (T01 KPI icon+label static + section titles + track trống không fill; T02 5 khối heavy title static đúng tên loaded, light KPI không đụng); **tsc 0 · lint 0 · build PASS** (Mika tự chạy); không `<p>` chứa Skeleton. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code).
+
+**Phase 86: DONE** ✅ (2026-08-19).
