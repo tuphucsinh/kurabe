@@ -410,8 +410,9 @@ export default function TeamDetailPage() {
                           {/* Desktop */}
                           <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
                             <div>
-                              <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
                                 <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
+                                <span className="text-xs text-outline-variant font-medium">Mã: {member.employeeCode}</span>
                                 {member.role !== 'Employee' && ROLE_BADGE[member.role] && (
                                   <span
                                     className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_BADGE[member.role].className}`}
@@ -420,7 +421,6 @@ export default function TeamDetailPage() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-outline-variant mt-0.5">Mã: {member.employeeCode}</p>
                             </div>
                             <TeamDetailMemberCell
                               memberId={member.id}

@@ -71,8 +71,8 @@ export function TeamDetailMemberEvaluationDesktop({
     return (
       <div className="contents" data-load-layer="heavy">
         <Skeleton variant="rectangular" width={32} height={32} className="rounded-lg" />
-        <Skeleton variant="text" width={64} height={20} className="rounded mx-auto" />
-        <Skeleton variant="rectangular" width={110} height={24} className="rounded-full mx-auto" />
+        <Skeleton variant="text" width={80} height={20} className="rounded mx-auto shrink-0" />
+        <Skeleton variant="rectangular" width={100} height={24} className="rounded-full mx-auto shrink-0" />
       </div>
     );
   }
@@ -81,8 +81,8 @@ export function TeamDetailMemberEvaluationDesktop({
     return (
       <div className="contents" data-load-layer="heavy">
         <span className="w-8" />
-        <span className="w-[104px] text-center text-xs text-slate-400">-</span>
-        <span className="col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 bg-slate-100 text-slate-400 inline-flex items-center justify-center">
+        <span className="text-center text-xs text-slate-400 shrink-0">-</span>
+        <span className="text-center text-xs font-bold px-3 py-1 rounded-full shrink-0 bg-slate-100 text-slate-400 inline-flex items-center justify-center whitespace-nowrap">
           Chưa tải được
         </span>
       </div>
@@ -110,12 +110,12 @@ export function TeamDetailMemberEvaluationDesktop({
   return (
     <div className="contents" data-load-layer="heavy">
       {grade && grade !== 'Pending' ? (
-        <GradeBadge grade={grade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black" />
+        <GradeBadge grade={grade} className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-black shrink-0" />
       ) : (
-        <span className="w-8" />
+        <span className="w-8 shrink-0" />
       )}
       {grade && grade !== 'Pending' ? (
-        <div className="flex items-center gap-2.5 tabular-nums text-xs whitespace-nowrap min-w-[104px]">
+        <div className="flex items-center gap-2 tabular-nums text-xs whitespace-nowrap shrink-0">
           {targetRounds.map((roundNum) => {
             const scoreVal = roundsMap.get(roundNum);
             const hasScore = scoreVal != null;
@@ -137,9 +137,9 @@ export function TeamDetailMemberEvaluationDesktop({
           })}
         </div>
       ) : (
-        <span className="w-[104px]" />
+        <span className="shrink-0" />
       )}
-      <span className={`col-span-3 sm:col-span-1 w-full max-md:hidden w-36 text-center text-xs font-bold px-2.5 py-1 rounded-full shrink-0 inline-flex items-center justify-center ${badge.className}`}>
+      <span className={`text-center text-xs font-bold px-3 py-1 rounded-full shrink-0 inline-flex items-center justify-center whitespace-nowrap ${badge.className}`}>
         {badge.label}
       </span>
     </div>
