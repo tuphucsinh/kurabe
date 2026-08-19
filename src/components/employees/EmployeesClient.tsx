@@ -206,6 +206,26 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     }
   }, []);
 
+  // Prefetch next employee batch in background
+  const prefetchNextBatch = useCallback(
+    (nextOffset: number) => {
+      if (!effectiveViewer) return;
+      void queryClient.prefetchQuery({
+        queryKey: ['employee-batch', nextOffset, debouncedSearchTerm, teamFilter, roleFilter],
+        queryFn: () =>
+          getUsersBatchAction({
+            offset: nextOffset,
+            limit: 20,
+            search: debouncedSearchTerm,
+            teamId: teamFilter,
+            role: roleFilter,
+          }),
+        staleTime: 5 * 60 * 1000,
+      });
+    },
+    [effectiveViewer, queryClient, debouncedSearchTerm, teamFilter, roleFilter]
+  );
+
   // Fetch initial batch (teams + first 20 users + summaries) using effective viewer
   const loadInitialBatch = useCallback(async () => {
     if (!viewerId || !viewerScopeKey) {
@@ -256,6 +276,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setHasMore(pageData.users.hasMore);
         setTotalCount(pageData.users.totalCount);
         setUserBatchError(null);
+        if (pageData.users.hasMore) {
+          prefetchNextBatch(pageData.users.items.length);
+        }
       }
 
       // Handle summaries
@@ -281,7 +304,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setTeamsLoading(false);
       }
     }
-  }, [viewerId, viewerScopeKey, debouncedSearchTerm, teamFilter, roleFilter, currentPeriodId]);
+  }, [viewerId, viewerScopeKey, debouncedSearchTerm, teamFilter, roleFilter, currentPeriodId, prefetchNextBatch]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -305,13 +328,23 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     try {
       const nextOffset = users.length;
-      const res = await getUsersBatchAction({
-        offset: nextOffset,
-        limit: 20,
-        search: debouncedSearchTerm,
-        teamId: teamFilter,
-        role: roleFilter,
-      });
+      const cached = queryClient.getQueryData<Awaited<ReturnType<typeof getUsersBatchAction>>>([
+        'employee-batch',
+        nextOffset,
+        debouncedSearchTerm,
+        teamFilter,
+        roleFilter,
+      ]);
+
+      const res = cached?.items
+        ? cached
+        : await getUsersBatchAction({
+            offset: nextOffset,
+            limit: 20,
+            search: debouncedSearchTerm,
+            teamId: teamFilter,
+            role: roleFilter,
+          });
 
       if (generationRef.current !== currentGen) return;
 
@@ -323,6 +356,10 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       const newIds = res.items.map((u) => u.id).filter((id) => !evaluationsMap[id]);
       if (newIds.length > 0 && currentPeriodId) {
         fetchEvaluationsForIds(newIds, currentPeriodId, currentGen);
+      }
+
+      if (res.hasMore) {
+        prefetchNextBatch(merged.length);
       }
     } catch (err) {
       console.error('Error loading more users:', err);
@@ -441,6 +478,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       deleteUser(id, {
         onSuccess: () => {
           toast('Đã xóa nhân viên.', 'success');
+          queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
           loadInitialBatch();
         },
         onError: () => toast('Lỗi khi xóa nhân viên.', 'error'),
@@ -515,6 +553,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         queryClient.invalidateQueries({ queryKey: ['teams'] });
         queryClient.invalidateQueries({ queryKey: ['users'] });
         queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
+        queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
         loadInitialBatch();
       } else {
         toast(result.error || 'Lỗi khi cập nhật nhân viên.', 'error');
@@ -563,6 +602,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       if (payloads.length > 0) {
         await batchUpsertUsers(payloads);
         toast(`Đã import thành công ${payloads.length} nhân viên.`, 'success');
+        queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
         loadInitialBatch();
       }
 
