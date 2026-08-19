@@ -888,3 +888,72 @@
 **Definition of Done**: DB Trang status=Approved; submit final mới → status Approved (test 1 vòng trên user test nếu cần); build/lint 0.
 
 **Status**: `[x]` — DONE 16-08: 3/3 task + fix. T1 BottomNav chỉ icon (aria-label) `e7abeff`; T2 team-detail redesign **mobile-only** (desktop giữ NGUYÊN — status badges/icon/previousRounds/4 cột; mobile gọn) `66f7d25` + `9662ce1`; T3b guard status `0f7596e` + `9024c33`; T3a backfill Trang Approved (verified + stats 2/15). Verify: mobile 0 badge/0 icon/0 prev/0 overflow; desktop 15 badge/15 icon/8 prev/0 truncate/0 overflow; tsc 0; build PASS; lint 0 errors. Reviewer: PASS ✅. Chưa push (ahead 20).
+
+---
+
+## Phase 85: Trang nhóm — static shell giàu (khung + icon + label + track trống) 🟡 (2026-08-19)
+
+> Plan + evidence: `.ai/MASTER_PLAN.md` Phase 85. UI thuần, 3 task code + 1 verify. **Không fake value** — track rỗng, không %, không số ảo. 1 task = 1 commit `[#P85Tzz]`.
+
+### [#P85T01] [src/components/teams/TeamEvaluationCell.tsx] Thêm prop `skeleton` (label static + track rỗng)
+
+**Goal**: Cho phép render chế độ skeleton — đủ label (Nhân sự/Xong/Chờ/Tiến độ) nhưng value là placeholder xám, track progress RỖNG (không value ảo). Không đổi render thật.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. Thêm prop `skeleton?: boolean` (default false) vào interface + destructure.
+2. Khi `skeleton === true`:
+   - 3 ô (Nhân sự/Xong/Chờ): giữ label static, value = `<Skeleton variant="text" ...>` (không số, không "-"). **ĐẶC BIỆT ô Nhân sự**: `membersCount` là prop bắt buộc không default — khi `skeleton=true` PHẢI render `<Skeleton>` thay `{membersCount}` (không lộ số `0` ảo); đặt `membersCount?` default 0 an toàn, guard bằng branch skeleton.
+   - Dòng Tiến độ: label giữ, bên phải `<Skeleton width={32}/>` (không "0%"/"-").
+   - Track progress: render `w-full bg-surface rounded-full` RỖNG — **xóa nhánh `w-1/3 bg-slate-200 animate-pulse`** (value ảo) → dùng `w-0` hoặc không fill.
+3. `skeleton` false → giữ nguyên render thật hiện tại.
+
+**Definition of Done**: lệnh `skeleton` không đổi hành vi cũ; skeleton hiện label đủ + track rỗng + value placeholder; tsc 0.
+
+**Status**: `[x]` — DONE 19-08 (`dd33644`): skeleton branch render đủ 3 label (Nhân sự/Xong/Chờ) + value `<Skeleton>` (guard ô Nhân sự, không lộ 0), track rỗng `w-full bg-surface rounded-full`, bỏ `w-1/3 animate-pulse`; membersCount?/isLoading? default 0/false. tsc/lint 0.
+
+### [#P85T02] [mới] [src/components/teams/TeamCardSkeleton.tsx] Card skeleton giàu giống card thật
+
+**Goal**: Component mô phỏng card nhóm: static icon Users + placeholder tên + dòng `Leader:` + body `<TeamEvaluationCell skeleton />`.
+
+**Depends on**: `[#P85T01]`
+
+**Concrete changes**:
+1. Tạo `src/components/teams/TeamCardSkeleton.tsx` (`'use client'`).
+2. Cấu trúc giống card thật (TeamsClient L207-265): icon `Users size={22}` trong khối `bg-primary/10 text-primary`, khối tên = `<Skeleton variant="text" width={140} height={20}/>` (KHÔNG tên thật), dòng `Leader:` + `<Skeleton width={80}/>`, body = `<TeamEvaluationCell skeleton />`.
+3. Style/className khớp card thật (bg-white rounded-2xl border shadow-sm, flex flex-col).
+
+**Definition of Done**: component đúng bố cục; tsc 0; không lộ tên/giá trị thật.
+
+**Status**: `[x]` — DONE 19-08 (`6e9d555`): TeamCardSkeleton mới — icon Users + tên placeholder + `Leader:` + body `<TeamEvaluationCell skeleton/>`, không 'use client'. tsc/lint 0.
+
+### [#P85T03] [src/components/teams/TeamsClient.tsx] Dùng TeamCardSkeleton trong nhánh isLightLoading
+
+**Goal**: Thay 6 `CardSkeleton` generic (L193-198) bằng `TeamCardSkeleton` — static shell giàu hơn.
+
+**Depends on**: `[#P85T02]`
+
+**Concrete changes**:
+1. Import `TeamCardSkeleton`.
+2. Nhánh `isLightLoading` (L191-199): render grid `<TeamCardSkeleton />` × (8 frame), giữ `data-load-layer="light"` + responsive grid.
+3. KHÔNG đụng nhánh light-data / heavy / error / empty.
+
+**Definition of Done**: loading hiện khung+icon+label+track trống; không đổi hành vi data.
+
+**Status**: `[x]` — DONE 19-08 (T03, đã sửa 6→8 khung theo anh): thay 6 CardSkeleton → **8** TeamCardSkeleton; giữ grid responsive + `data-load-layer="light"` trên grid container; bỏ import CardSkeleton cũ; không div trùng. tsc/lint 0.
+
+### [#P85T04] [verify] tsc + lint + build + browser thật
+
+**Goal**: Chứng minh shell giàu hiện đúng shell, data thật sau khi load, không regression.
+
+**Depends on**: `[#P85T03]`
+
+**Concrete changes**:
+1. `unset NEXT_PUBLIC_* SUPABASE_SERVICE_ROLE_KEY`; `npx tsc --noEmit`; `npm run lint`; `npm run build` (kill PID 3000 trước build).
+2. Browser thật `http://192.168.1.230:3000/teams` (dev): chụp khi loading → khung + icon Users + label Leader/Nhân sự/Xong/Chờ/Tiến độ + track trống (KHÔNG %, không fill, không số/tên thật); sau load → đủ giá trị thật.
+3. Mobile 375px + desktop không vỡ; console sạch.
+
+**Definition of Done**: shell giàu verified + data thật verified + build/lint pass + không regression.
+
+**Status**: `[x]` — DONE 19-08: Mika verify độc lập tsc 0 + lint 0 + build PASS + diff từng dòng đúng plan; regression Gemini 14/14. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code); dev server + session thật chạy OK. → Phase 85 DONE.

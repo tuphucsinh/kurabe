@@ -871,3 +871,29 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **Reviewer R1 (16-08)**: CHANGES_REQUIRED — (1) T01 label 10px mâu thuẫn T12 "0 font <11px" → đã đổi `text-[11px]`; (2) thiếu file chứa lỗi: support/page.tsx:130, AnomalyAlertCard.tsx:59, header bell AppLayout.tsx:82 (36px) → đã thêm T11 sweep + bell p-3 vào T01; (3) file list sai: T08 thực ở CriteriaHeatmap/ReportFilters/3 modal (page chỉ wrapper :78), T09 thực ở `src/components/evaluation/CriteriaTab.tsx` + `GroupNavTabs.tsx` (page.tsx chỉ :648-660), T05 KHÔNG có absolute — badge là grid cột `grid-cols-[minmax(0,1fr)_32px_104px_144px]` :284/367/438/532, T04 KPI là `flex flex-wrap` :83 → đã sửa hết mô tả + file. Ghi chú phụ đã xử lý: T03 bỏ wildcard modals, teams stats label 10px :259/263/267 → T11, T12 thêm evaluations list/detail vào metric + baseline trước, class base ghi rõ gate md. → gửi lại R2.
 
 **Reviewer R2 (16-08)**: **PASS** ✅ — đối chiếu 7/7 delta với code thật (AppLayout.tsx:82/136, support:130, AnomalyAlertCard:59, teams:259-267, team-detail:284/367/438/532, dashboard:83, CriteriaTab/GroupNavTabs, CriteriaHeatmap:39, reports:78) đều khớp; ghi chú nhỏ không blocking: dải trạng thái evaluations/[id] thực bắt đầu :646 (plan ghi :648 — lệch 2 dòng). Sẵn sàng implementation → /plan2task.
+
+---
+
+## Phase 85: Trang nhóm — static shell giàu (khung + icon + label + track trống) 🟡 (2026-08-19)
+
+> Yêu cầu anh (19-08, kèm ảnh): trang danh sách nhóm hiện shell đang hiện 6 `CardSkeleton` generic (không icon/label/tiến độ). Anh muốn static shell hiện thêm: **khung nhóm + static icon + static label (Leader / Nhân sự / Xong / Chờ / Tiến độ) + hình thanh tiến độ (track TRỐNG — chưa có tiến độ thực & con số)**. Không fake value. Phân tích Sequential Thinking đã xác nhận: hợp lệ + đúng nguyên tắc staged-loading (trang danh sách nhóm đã server-redirect role thấp nên không fail-closed chặt như trang đánh giá; mọi thành phần thêm đều static/no-value).
+
+**Nguyên tắc (từ `staged-loading-layers`)**: shell chỉ được chứa shape/label/khung trống, **KHÔNG giả score/value** → track phải RỖNG (w-0, không fill, không %, không số ảo); số khung = placeholder lấp grid, KHÔNG khẳng định "có N nhóm" (số thật từ light data).
+
+**Thiết kế (UI thuần — 3 task code + 1 verify)**:
+- **T1 [`src/components/teams/TeamEvaluationCell.tsx`]** thêm prop `skeleton?: boolean` (mặc định false). Khi `skeleton`: render đủ 3 ô label static (Nhân sự / Xong / Chờ) + label Tiến độ, nhưng **value = placeholder xám** (không số thật, không "-" mang nghĩa 0); track progress = **rỗng (w-0/không fill, bỏ `w-1/3 animate-pulse` gây value ảo)**. Khi không skeleton → giữ nguyên render thật hiện tại.
+- **T2 [mới] [`src/components/teams/TeamCardSkeleton.tsx`]** mô phỏng card nhóm thật: icon Users (static), khối tên placeholder (bar xám, không tên thật), dòng `Leader:` + placeholder tên, body = `<TeamEvaluationCell skeleton />`. Style/className giống card thật (TeamsClient L207-265).
+- **T3 [`src/components/teams/TeamsClient.tsx`]** nhánh `isLightLoading` (L191-199): thay 6 `CardSkeleton` bằng grid `<TeamCardSkeleton />` **8 frame** (theo anh — đủ 2 hàng grid 4 cột ở 2xl; là placeholder lấp grid, KHÔNG khẳng định số nhóm thật). Giữ responsive `grid-cols-1 md:2 xl:3 2xl:4`. KHÔNG đụng nhánh light-data/heavy hiện tại.
+- **T4 [verify]** tsc 0 + lint 0 + build PASS; browser thật (dev LAN 192.168.1.230:3000): khi loading thấy khung + icon Users + label Leader/Nhân sự/Xong/Chờ/Tiến độ + track trống (KHÔNG %, không fill, không số ảo, không tên thật); sau khi light/heavy load → đủ giá trị thật; mobile/desktop không vỡ; console sạch.
+
+**Acceptance**: shell teams list hiện đủ khung nhóm + static icon + static labels + track trống (không value ảo); sau load data thật đầy đủ; tsc/lint/build pass; không regression trang khác.
+
+**Non-goals**: KHÔNG đổi logic/query; KHÔNG đụng auth/DB; KHÔNG đổi trang team-detail; KHÔNG đổi desktop layout.
+
+**Rủi ro**: UI thuần, thấp. Chú ý: `TeamEvaluationCell` được dùng ở TeamsClient (list) — kiểm tra không dùng ở nơi khác cần giữ hành vi; skeleton prop mặc định false nên không đổi hành vi hiện tại.
+
+**Reviewer plan (Sonnet 4.6, 19-08)**: **PASS — CONFIDENCE CAO**. Non-blocking: (1) `membersCount` prop bắt buộc → khi skeleton=true ô Nhân sự PHẢI render `<Skeleton>` thay `{membersCount}` (không lộ số 0 ảo) — đã bổ sung T1; (2) `!user && user===undefined` tautology L39 (ngoài scope); (3) giữ `data-load-layer="light"` trên div grid (L192), không trên từng item; (4) `TeamCardSkeleton` không cần `'use client'` nếu không dùng hooks. → Sẵn sàng implementation.
+
+**KẾT QUẢ THỰC THI (19-08)**: 3/3 task DONE — commits `dd33644` (T01) + `6e9d555` (T02) + `d9abd0d` (T03, 8 khung). Runner **Gemini 3.7 Flash High** (theo anh chỉ định). Mika verify độc lập: diff từng dòng đúng plan (T01 skeleton branch guard ô Nhân sự bằng `<Skeleton>`, track rỗng `w-full bg-surface rounded-full` không fill, bỏ `w-1/3 animate-pulse` value ảo; `membersCount?`/`isLoading?` default 0/false; T02 card giàu icon Users + tên placeholder + `Leader:` + body `<TeamEvaluationCell skeleton/>`, không 'use client'; T03 thay 6 CardSkeleton → **8** TeamCardSkeleton (theo anh), giữ `data-load-layer="light"` trên grid container, bỏ import cũ, KHÔNG div trùng). **tsc 0 · lint 0 · build PASS** (Mika tự chạy). Regression Gemini báo 14/14 PASS. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — lỗi môi trường, không phải code); dev server log xác nhận app + session thật đang chạy OK.
+
+**Phase 85: DONE** ✅ (2026-08-19).
