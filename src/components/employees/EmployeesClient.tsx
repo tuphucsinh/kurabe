@@ -346,7 +346,14 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
   // Computed employee items — teamsLoading does not block row display
   const employeesData: EmployeeTableItem[] = useMemo(() => {
-    return users.map((userItem) => {
+    return [...users]
+      .sort((a, b) => {
+        const order: Record<string, number> = { Manager: 0, Leader: 1, SubLeader: 2, Employee: 3, Worker: 4 };
+        const rank = (r?: string) => (r ? order[r] ?? 99 : 99);
+        const d = rank(a.role) - rank(b.role);
+        return d !== 0 ? d : a.name.localeCompare(b.name, 'vi');
+      })
+      .map((userItem) => {
       const team = teams.find((t) => t.id === userItem.teamId);
       const rawEval = evaluationsMap[userItem.id] || null;
       const evalItem =
