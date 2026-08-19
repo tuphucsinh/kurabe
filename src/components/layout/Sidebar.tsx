@@ -1,8 +1,10 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +20,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import { isIndividualRole, roleLabel } from '@/lib/role-policy';
+import { getTeamsPageDataAction, getEvaluationPageDataAction } from '@/actions/read';
 
 import PeriodSelector from './PeriodSelector';
 
@@ -114,7 +117,94 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
-  const { logout } = useAuth();
+  const { logout, currentPeriod } = useAuth();
+  const queryClient = useQueryClient();
+  const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activePrefetchKeyRef = useRef<readonly unknown[] | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (prefetchTimerRef.current) {
+        clearTimeout(prefetchTimerRef.current);
+      }
+      if (activePrefetchKeyRef.current) {
+        queryClient.cancelQueries({ queryKey: activePrefetchKeyRef.current, exact: true });
+      }
+    };
+  }, [queryClient]);
+
+  const handleMouseEnter = (href: string) => {
+    if (isMobile) return;
+
+    if (prefetchTimerRef.current) {
+      clearTimeout(prefetchTimerRef.current);
+      prefetchTimerRef.current = null;
+    }
+
+    if (activePrefetchKeyRef.current) {
+      queryClient.cancelQueries({ queryKey: activePrefetchKeyRef.current, exact: true });
+      activePrefetchKeyRef.current = null;
+    }
+
+    if (!user) return;
+
+    let targetQueryKey: readonly unknown[] | null = null;
+    let targetQueryFn: (() => Promise<unknown>) | null = null;
+    let targetStaleTime = 2 * 60 * 1000;
+
+    if (isIndividualRole(user.role)) {
+      if (href === `/evaluations/${user.id}`) {
+        targetQueryKey = ['evaluation-page-data', user.id, undefined, user.id];
+        targetQueryFn = () => getEvaluationPageDataAction(user.id, undefined);
+        targetStaleTime = 2 * 60 * 1000;
+      }
+    } else {
+      if (href === '/teams') {
+        targetQueryKey = ['teams-page-data', currentPeriod?.id];
+        targetQueryFn = () => getTeamsPageDataAction(currentPeriod?.id);
+        targetStaleTime = 2 * 60 * 1000;
+      }
+    }
+
+    if (!targetQueryKey || !targetQueryFn) return;
+
+    const queryKey = targetQueryKey;
+    const queryFn = targetQueryFn;
+    const staleTime = targetStaleTime;
+
+    prefetchTimerRef.current = setTimeout(async () => {
+      prefetchTimerRef.current = null;
+      activePrefetchKeyRef.current = queryKey;
+      try {
+        await queryClient.prefetchQuery({
+          queryKey,
+          queryFn,
+          staleTime,
+        });
+      } catch {
+        // Safe catch for cancelled/aborted prefetch queries
+      } finally {
+        if (activePrefetchKeyRef.current === queryKey) {
+          activePrefetchKeyRef.current = null;
+        }
+      }
+    }, 150);
+  };
+
+  const handleMouseLeave = () => {
+    if (isMobile) return;
+
+    if (prefetchTimerRef.current) {
+      clearTimeout(prefetchTimerRef.current);
+      prefetchTimerRef.current = null;
+    }
+
+    if (activePrefetchKeyRef.current) {
+      queryClient.cancelQueries({ queryKey: activePrefetchKeyRef.current, exact: true });
+      activePrefetchKeyRef.current = null;
+    }
+  };
+
   return (
     <>
       {/* Logo & Close Button */}
@@ -147,6 +237,8 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
               href={link.href}
               prefetch={false}
               onClick={onClose}
+              onMouseEnter={() => handleMouseEnter(link.href)}
+              onMouseLeave={handleMouseLeave}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 active
                   ? 'bg-white/15 text-white shadow-lg'
