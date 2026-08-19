@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Users, TrendingUp, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { GradeDistribution } from '@/components/charts/GradeDistribution';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DashboardLightData } from '@/actions/dashboard';
@@ -25,18 +26,60 @@ export default function DashboardLightSection({
         <>
           {/* Skeleton KPI Compact */}
           <div className="grid grid-cols-2 gap-3 md:flex md:items-center md:gap-4 md:flex-wrap">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl border border-outline-variant shadow-sm px-4 py-3 h-12 w-36 animate-pulse bg-slate-100/80"
-              />
-            ))}
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <Users size={18} className="text-primary shrink-0" />
+              <Skeleton variant="text" className="w-8 h-5" />
+              <span className="text-sm text-slate-500">nhân sự</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <TrendingUp size={18} className="text-emerald-600 shrink-0" />
+              <Skeleton variant="text" className="w-8 h-5" />
+              <span className="text-sm text-slate-500">tiến độ</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-green-600 shrink-0" />
+              <Skeleton variant="text" className="w-10 h-5" />
+              <span className="text-sm text-slate-500">đã đánh giá</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-outline-variant shadow-sm px-3 py-3 md:px-4 md:py-2.5 flex items-center gap-2">
+              <Clock size={18} className="text-amber-600 shrink-0" />
+              <Skeleton variant="text" className="w-8 h-5" />
+              <span className="text-sm text-slate-500">chưa xong</span>
+            </div>
           </div>
 
           {/* Skeleton Grid: TeamStatus | GradeDistribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-64 animate-pulse bg-slate-50/80" />
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 h-64 animate-pulse bg-slate-50/80" />
+            {/* Team Status */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col lg:col-span-1">
+              <h3 className="text-lg font-semibold text-slate-800 mb-6">Trạng thái theo nhóm</h3>
+              <div className="space-y-6 flex-1">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <Skeleton variant="text" className="w-24 h-4" />
+                      <Skeleton variant="text" className="w-28 h-4" />
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grade Distribution */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 mb-4">Phân bổ xếp loại</h3>
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton variant="text" className="w-6 h-3.5" />
+                    <div className="flex-1 h-2.5 bg-slate-100 rounded-full" />
+                    <Skeleton variant="text" className="w-6 h-3.5" />
+                    <Skeleton variant="text" className="w-8 h-3.5" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </>
       ) : error ? (
