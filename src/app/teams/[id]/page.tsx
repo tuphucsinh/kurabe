@@ -294,7 +294,7 @@ export default function TeamDetailPage() {
                 <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
                   <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex items-center gap-3">
                     {/* Desktop */}
-                    <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                    <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{leader.name}</Link>
@@ -350,7 +350,7 @@ export default function TeamDetailPage() {
                   {/* Block Header */}
                   <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center gap-3">
                     {/* Desktop */}
-                    <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                    <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm md:text-base hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{sl.name}</Link>
@@ -408,7 +408,7 @@ export default function TeamDetailPage() {
                           className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                         >
                           {/* Desktop */}
-                          <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                          <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                             <div>
                               <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
                                 <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
@@ -489,7 +489,7 @@ export default function TeamDetailPage() {
                         className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
                       >
                         {/* Desktop */}
-                        <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_104px] md:grid-cols-[minmax(0,1fr)_32px_104px_144px] items-center gap-3">
+                        <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate hover:text-primary hover:underline truncate md:overflow-visible md:whitespace-normal" title="Đánh giá">{member.name}</Link>
