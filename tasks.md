@@ -1065,3 +1065,61 @@
 **Definition of Done**: có số đo trước/sau (hoặc UNKNOWN rõ ràng) + quyết định ghi rõ; docs đầy đủ.
 
 **Status**: `[x]` — DONE 19-08 (PIVOT): PPR benefit **UNKNOWN → PIVOT** (build fail là bằng chứng quyết định — cacheComponents toàn app không khả thi cho pilot 1 trang). Ghi quyết định #18 DECISIONS_LOG; hướng còn lại: giảm roundtrip server actions (chờ anh duyệt).
+
+---
+
+## Phase 88: Giảm roundtrip server actions — gom 3→1 cho /employees 🟡 (2026-08-19)
+
+> Plan: `.ai/MASTER_PLAN.md` Phase 88. CONTROLLED (chạm data flow). Runner Gemini; Mika verify + đo. 1 task = 1 commit `[#P88Tzz]`.
+
+### [#P88T01] [src/actions/read.ts + src/hooks/use-db.ts] Aggregate action getEmployeesPageDataAction + hook
+
+**Goal**: Gom 3 request mount /employees thành 1 (1 requireAuth + gom query nội bộ), giữ scope/fail-closed.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. `src/actions/read.ts`: thêm `getEmployeesPageDataAction(periodId, options?: {limit, offset})` — 1 `requireAuth()`; `Promise.all` teams+users (tái dùng getTeamsAdmin/getUsersBatchAdmin); summaries batch sau khi có ids (getEvaluationSummariesBatchAdmin).
+   - **Return contract (reviewer B1) — discriminated error per-part:**
+     `{ teams, teamsError, users, usersError, summaries, summariesError }` — mỗi field `null` nếu OK, string error nếu phần đó fail. KHÔNG silent-empty (tránh "Chưa gán" giả khi teams fail).
+   - **Export `type EmployeesPageData`** (gồm per-part error fields) — dùng cho hook + client (reviewer N2).
+2. `src/hooks/use-db.ts`: `useEmployeesPageData(periodId, options)` — key `['employees-page-data', periodId, offset]`, nhận `EmployeesPageData` type.
+
+**Definition of Done**: action + hook type-safe (export `EmployeesPageData`); per-part error fields; tsc 0.
+
+### [#P88T02] [src/components/employees/EmployeesClient.tsx] Mount dùng aggregate (3→1)
+
+**Goal**: Mount đầu dùng 1 useEmployeesPageData thay 3 request; giữ nguyên load-more/filter/modal/mutation.
+
+**Depends on**: `[#P88T01]`
+
+**Concrete changes**:
+1. **GIỮ `loadInitialBatch()` imperative (reviewer B2)** — KHÔNG dùng hook declarative `onSuccess` setUsers/setTeams/setEvaluationsMap (sẽ bypass `generationRef` guard). Gọi `getEmployeesPageDataAction` bên TRONG `loadInitialBatch()`, bảo toàn generation capture + stale-response guard hiện có; merge từng field + set per-part error.
+2. Mount đầu: `loadInitialBatch()` (đã có) gọi aggregate thay 3 request; `useTeams` cho teams mount có thể thay bằng teams từ aggregate (đồng bộ qua generationRef) hoặc giữ useTeams — chọn 1 cách nhất quán.
+3. **Invalidation (reviewer N1)**: liệt kê chính xác — `useDeleteUser` + `useUpsertUser` invalidate `['employees-page-data']` (thêm vào invalidateQueries hiện có, không bỏ invalidate cũ).
+4. KHÔNG đổi filter/load-more/modal/mutation logic.
+
+**Definition of Done**: mount = 1 request (qua loadInitialBatch); mutation cập nhật ngay + invalidate đúng; tsc/lint 0.
+
+### [#P88T03] [verify + đo] Build + browser + đo trước/sau
+
+**Goal**: Bằng chứng giảm request + không regression.
+
+**Depends on**: `[#P88T02]`
+
+**Concrete changes**:
+1. tsc 0 + lint 0 + build PASS.
+2. Browser thật (login 158): /employees load đủ + mutation OK.
+3. Đo: đếm request mount + thời gian authenticated load trước/sau (local; Vercel nếu deploy được).
+
+**Definition of Done**: có số đo trước/sau + build pass.
+
+### [#P88T04] [mở rộng nếu PASS] /teams cùng pattern
+
+**Goal**: PASS pilot → gom useUsers+useTeams+useEvaluations thành getTeamsPageDataAction.
+
+**Depends on**: `[#P88T03]`
+
+**Concrete changes**: tương tự T01-T03 cho TeamsClient.
+
+**Definition of Done**: /teams mount giảm request; verify + đo.

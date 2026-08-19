@@ -956,3 +956,26 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **KẾT QUẢ THỰC THI (19-08) — PIVOT**: Runner Gemini làm T01 nhưng (1) **scope creep** — tự bật PPR ở 4 file ngoài task (layout/evaluations×2/teams-detail) → Mika revert; (2) làm SAI API Next 16: ban đầu `cacheComponents: true` rồi đổi `experimental.ppr` + `experimental_ppr` segment — thực tế **Next 16 REMOVE `experimental_ppr`** (LSP error) + deprecate `experimental.ppr`, PPR gộp vào **`cacheComponents` (flag TOÀN APP)**. Mika sửa đúng API 16 → **build FAIL**: `/evaluations/[id]/compare` "Uncached data was accessed outside of Suspense" (AppLayout useAuth/providers ngoài Suspense) → cacheComponents ép toàn app phải bọc Suspense/use cache — đòi restructure layout toàn app, không phải pilot 1 trang. → **PIVOT (quyết định #18 DECISIONS_LOG)**: revert sạch PPR (next.config + page + xóa EmployeesSkeleton), build PASS trở lại; static shell đã cache qua JS bundle immutable + route config đã static; unstable_cache từng fail (Fix A); hướng còn lại có giá trị = **giảm roundtrip server actions** (chờ anh duyệt).
 
 **Phase 87: DONE** ✅ (PIVOT — 2026-08-19).
+
+---
+
+## Phase 88: Giảm roundtrip server actions — gom 3→1 cho /employees 🟡 (2026-08-19)
+
+> Yêu cầu anh (19-08): dùng Sequential Thinking giảm roundtrip — gom `getUsersBatch` + `getEvaluationSummariesBatch` + `getTeamsAction` thành ít request hơn (bottleneck chậm Vercel: mỗi action = 1 chặn VN→SG edge + SG→Supabase HK ~120ms). Khảo sát: `/employees` mount gọi **3 request** riêng (useTeams + getUsersBatchAction + getEvaluationSummariesBatchAction — mỗi action requireAuth riêng, gọi admin function).
+
+**Thiết kế (P1 pilot /employees — 4 task)**:
+- **T1 [`src/actions/read.ts` + `src/hooks/use-db.ts`]** Thêm `getEmployeesPageDataAction(periodId, options: {limit, offset})` → `{ teams: Team[], users: UsersBatchResult, summaries: Record<string, Evaluation> }`:
+  - 1 lần `requireAuth()` chung; `Promise.all` nội bộ cho teams + users batch; summaries batch sau khi có ids (tuần tự nội bộ — vẫn 1 roundtrip client).
+  - Fail-soft per-part (1 phần lỗi → trả phần đó rỗng, không chặn cả trang); giữ nguyên scope/authorization từng phần (Manager/Leader/SubLeader — tái dùng getTeamsAdmin/getUsersBatchAdmin/getEvaluationSummariesBatchAdmin).
+  - Hook mới `useEmployeesPageData(periodId, options)` — react-query key `['employees-page-data', periodId, offset]`.
+- **T2 [`src/components/employees/EmployeesClient.tsx`]** Mount đầu: thay `useTeams` + fetch batch thủ công (3 request) → 1 `useEmployeesPageData`. **GIỮ NGUYÊN** load-more/filter/modal/mutation (khi đổi filter/load-more vẫn gọi getUsersBatchAction riêng hoặc gọi lại aggregate). Mutations (upsert/delete user) invalidate `['employees-page-data']` + giữ invalidate teams/users cũ (không phá revalidateTag).
+- **T3 [verify]** tsc 0 + lint 0 + build PASS + browser thật (login 158: /employees load đủ + mutation cập nhật ngay) + **đo trước/sau**: đếm request + thời gian authenticated load (devtools/curl, local + Vercel nếu deploy).
+- **T4 [mở rộng nếu PASS]** `/teams` cùng pattern (`useUsers` + `useTeams` + `useEvaluations` → `getTeamsPageDataAction`).
+
+**Acceptance**: mount /employees = 1 request (thay 3); data đúng scope; mutation invalidate đúng; build/lint pass; có số đo trước/sau; không regression trang khác.
+
+**Non-goals**: KHÔNG đổi auth/scope/data contract; KHÔNG cache (đã pivot); KHÔNG đụng logic chấm điểm.
+
+**Rủi ro**: merge 3 state source trong EmployeesClient (952 dòng) — test kỹ; đổi react-query key phải invalidate đúng sau mutation; summaries phụ thuộc ids batch → tuần tự nội bộ (tăng nhẹ thời gian server nhưng giảm mạnh roundtrip client).
+
+**Reviewer plan**: R1 **CHANGES_REQUIRED** (Sonnet 4.6): B1 — action phải trả **discriminated per-part error** `{teams,teamsError,users,usersError,summaries,summariesError}` (không silent-empty → tránh "Chưa gán" giả khi teams fail); B2 — GIỮ `loadInitialBatch()` imperative gọi aggregate (KHÔNG hook declarative onSuccess setUsers → bypass `generationRef`, viewer đổi identity mid-flight leak data); N1 — invalidate `useDeleteUser`+`useUpsertUser` → `['employees-page-data']`; N2 — export `type EmployeesPageData` per-part error. → đã fix cả vào tasks T01/T02 → **R2 PASS** (conf CAO). Lưu ý runner từ R2: (1) T01 `summaries` shape khớp action cũ (tsc catch); (2) T02 useTeams vs aggregate-teams runner chọn; (3) **`handleSaveEmployee` gọi `upsertUserAction` trực tiếp** → thêm invalidate `['employees-page-data']` ở đó luôn (không chỉ hook).
