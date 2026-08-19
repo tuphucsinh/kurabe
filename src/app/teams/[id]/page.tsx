@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUsers, useTeams, useEvaluations } from '@/hooks/use-db';
+import { useTeamsPageData } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { upsertUserAction } from '@/actions/users';
@@ -54,10 +54,16 @@ export default function TeamDetailPage() {
   const isLeaderOwnTeam = user?.role === 'Leader' && user.teamId === teamId;
   const canAddEmployee = isManager || isLeaderOwnTeam;
 
-  const { data: users = [], isLoading: usersLoading, isError: usersError } = useUsers(user);
-  const { data: teams = [], isLoading: teamsLoading, isError: teamsError } = useTeams(user);
-  // Single evaluation source: chỉ tải evaluations của kỳ đang chọn
-  const { data: evaluations = [], isLoading: evalsLoading, isError: evalsError } = useEvaluations(currentPeriod?.id, user);
+  const { data: pg, isLoading, isError } = useTeamsPageData(currentPeriod?.id, user);
+  const users = useMemo(() => pg?.users ?? [], [pg?.users]);
+  const usersError = Boolean(pg?.usersError || isError);
+  const usersLoading = isLoading;
+  const teams = useMemo(() => pg?.teams ?? [], [pg?.teams]);
+  const teamsError = Boolean(pg?.teamsError || isError);
+  const teamsLoading = isLoading;
+  const evaluations = useMemo(() => pg?.evaluations ?? [], [pg?.evaluations]);
+  const evalsError = Boolean(pg?.evalsError || isError);
+  const evalsLoading = isLoading;
 
   const isLightLoading = (!user && user === undefined) || usersLoading || teamsLoading;
   const isLightError = teamsError || usersError;
@@ -137,6 +143,7 @@ export default function TeamDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['users'] });
         queryClient.invalidateQueries({ queryKey: ['teams'] });
         queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
       } else {
         toast(result.error || 'Lỗi khi thêm nhân viên.', 'error');
       }
