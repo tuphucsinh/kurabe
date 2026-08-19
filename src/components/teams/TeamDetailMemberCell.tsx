@@ -4,6 +4,7 @@ import Link from 'next/link';
 import GradeBadge from '@/components/ui/GradeBadge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Evaluation, Role } from '@/types';
+import { getMaxEvaluationRound } from '@/lib/evaluation-workflow';
 import { FileText, Pencil } from 'lucide-react';
 
 export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -29,12 +30,10 @@ export function getStatusBadge(status: string, latestRound?: number | null): { l
 export function getTargetRoundNumbers(evaluation?: Evaluation | null, roleProp?: Role | string): number[] {
   const role = roleProp || evaluation?.employeeRole;
   if (role) {
-    const normalized = role.toLowerCase().replace(/\s+/g, '');
-    if (normalized === 'leader' || normalized === 'subleader') {
-      return [2, 1]; // giảm dần: L2 -> L1
-    }
-    if (normalized === 'worker' || normalized === 'employee' || normalized === 'staff') {
-      return [3, 2, 1]; // giảm dần: L3 -> L2 -> L1
+    const maxRound = getMaxEvaluationRound(role as Role);
+    if (typeof maxRound === 'number' && maxRound >= 1) {
+      // giảm dần: [maxRound, ..., 1] — Leader 2 vòng -> [2,1], SubLeader/Worker 3 vòng -> [3,2,1]
+      return Array.from({ length: maxRound }, (_, i) => maxRound - i);
     }
   }
   if (evaluation?.rounds && evaluation.rounds.length > 0) {

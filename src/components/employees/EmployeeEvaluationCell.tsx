@@ -5,6 +5,7 @@ import GradeBadge from '@/components/ui/GradeBadge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Check, RefreshCw } from 'lucide-react';
 import { Role } from '@/types';
+import { getMaxEvaluationRound } from '@/lib/evaluation-workflow';
 
 export function getTargetRoundNumbers(
   role?: Role | string | null,
@@ -12,12 +13,8 @@ export function getTargetRoundNumbers(
 ): number[] {
   let count = 0;
   if (role) {
-    const normalized = role.toLowerCase().replace(/\s+/g, '');
-    if (normalized === 'leader' || normalized === 'subleader') {
-      count = Math.max(2, maxRoundSeen);
-    } else if (normalized === 'worker' || normalized === 'employee' || normalized === 'staff') {
-      count = Math.max(3, maxRoundSeen);
-    }
+    const maxRound = getMaxEvaluationRound(role as Role);
+    count = Math.max(typeof maxRound === 'number' ? maxRound : 0, maxRoundSeen);
   }
 
   if (count === 0) {
