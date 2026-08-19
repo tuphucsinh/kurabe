@@ -991,3 +991,14 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 > - **T3** implement → tsc/lint/build → browser (nếu được) → đo trước/sau. **Rollback**: revert 1 commit (an toàn).
 > Reviewer: R1 **CHANGES_REQUIRED** (gemini-3.1-pro-high) — B1 nhắm sai `AppLayout` (mobile) bỏ sót `Sidebar.tsx`; B2 WBS chung chung; N1 debounce 150ms. → đã fix (target Sidebar + debounce + mapping + rollback). **Chờ R2**.
 **Reviewer plan**: R1 **CHANGES_REQUIRED** (gemini-3.1-pro-high) → **R2 PASS** (conf HIGH). Non-blocking: `queryClient.cancelQueries` phải nhắm đúng queryKey cần prefetch (không cancel data fetch khác).
+
+---
+
+## Phase 90: Lazy-load charts/chat/modal + debounce search 🟡 (2026-08-19)
+> Anh yêu cầu làm. UI-only, giảm bundle + giảm request thừa.
+> - **T1 Lazy-load charts (recharts):** GradeDistribution + TeamComparison + CriteriaHeatmap → `next/dynamic(ssr:false)` wrapper (pattern ClientSkillGapRadar). Sửa nơi import: DashboardLightSection, ReportsDataLayer. SkillGapRadar đã lazy.
+> - **T2 Lazy-load ChatWidget + modals:** ChatWidget (AppLayout L105) + EmployeeModal/TeamModal/PeriodModal/BatchResultMessageModal/PeriodMinutesModal → `next/dynamic` (render khi mở). Giảm bundle chính.
+> - **T3 Debounce search/filter:** `/employees` searchTerm → debounce ~250-300ms; kiểm tra các filter khác (reports) nếu có input/search.
+> - **T4 verify:** tsc 0 + lint 0 + build PASS + browser (nếu được) + đo bundle trước/sau (kích thước .next chunk). Rollback: revert commits.
+> Lưu ý: chart/chat `ssr:false` tránh hydration mismatch; modal dynamic khi mở. UI thuần, không đụng auth/data.
+**Reviewer plan**: (chưa review — UI thuần, Mika verify; nếu cần sẽ review)
