@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
 import { isIndividualRole, roleLabel } from '@/lib/role-policy';
+import { useToast } from '@/components/ui/Toast';
 import { getTeamsPageDataAction, getEvaluationPageDataAction } from '@/actions/read';
 
 import PeriodSelector from './PeriodSelector';
@@ -33,13 +34,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
+  const isLeaderOrSubLeader = (user?.role === 'Leader' || user?.role === 'SubLeader') && !!user?.teamId;
+  const teamsHref = isLeaderOrSubLeader ? `/teams/${user.teamId}` : '/teams';
+
   const mainLinks = isIndividualRole(user?.role)
     ? [
         { href: `/evaluations/${user?.id || ''}`, label: 'Phiếu đánh giá của tôi', icon: FileText },
       ]
     : [
         { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
-        { href: '/teams', label: 'Nhóm', icon: UsersRound },
+        { href: teamsHref, label: 'Nhóm', icon: UsersRound },
         { href: '/employees', label: 'Nhân viên', icon: Users },
         { href: '/reports', label: 'Báo cáo', icon: BarChart3 },
         { href: '/criteria', label: 'Tiêu chuẩn', icon: Scale },
@@ -117,6 +121,7 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
+  const { toast } = useToast();
   const { logout, currentPeriod } = useAuth();
   const queryClient = useQueryClient();
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,7 +164,13 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         targetStaleTime = 2 * 60 * 1000;
       }
     } else {
-      if (href === '/teams') {
+      const isLeaderOrSubLeader = user.role === 'Leader' || user.role === 'SubLeader';
+      const isManager = user.role === 'Manager';
+
+      if (
+        (isManager && href === '/teams') ||
+        (isLeaderOrSubLeader && user.teamId && href === `/teams/${user.teamId}`)
+      ) {
         targetQueryKey = ['teams-page-data', currentPeriod?.id];
         targetQueryFn = () => getTeamsPageDataAction(currentPeriod?.id);
         targetStaleTime = 2 * 60 * 1000;
@@ -236,7 +247,17 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
               key={link.href}
               href={link.href}
               prefetch={false}
-              onClick={onClose}
+              onClick={(e) => {
+                const noTeam = (user?.role === 'Leader' || user?.role === 'SubLeader') && !user?.teamId;
+                if (noTeam && (link.href === '/teams' || link.href.startsWith('/teams/'))) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toast('Chưa thuộc nhóm nào', 'error');
+                  onClose?.();
+                  return;
+                }
+                onClose?.();
+              }}
               onMouseEnter={() => handleMouseEnter(link.href)}
               onMouseLeave={handleMouseLeave}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
