@@ -4,6 +4,9 @@ import { User } from '@/types';
 import { getUsersAdmin, getUserByIdAdmin, getAllUsersAdmin } from '@/lib/db/users-admin';
 import { getTeamByIdAdmin } from '@/lib/db/teams-admin';
 import { matchEmployeeCandidates, roleLabel } from '@/lib/vi-text';
+import { getActivePeriod } from '@/lib/db/evaluations';
+import { getEvaluationByEmployeeAdmin } from '@/lib/db/evaluations-admin';
+import { EvaluationRound } from '@/types';
 
 function firstName(name?: string | null): string {
   const n = (name || '').trim();
@@ -12,6 +15,31 @@ function firstName(name?: string | null): string {
 
 function addrOf(gender?: string | null): string {
   return gender === 'Nam' ? 'anh' : 'chị';
+}
+
+function roundStatusLabel(r: EvaluationRound): string {
+  if (r.status === 'Submitted') return r.totalScore > 0 ? `đã nộp (${r.totalScore}đ)` : 'đã nộp';
+  if (r.status === 'Draft') return 'đang nháp';
+  return 'chưa nộp';
+}
+
+/** Trạng thái kỳ + từng vòng đánh giá của 1 nhân viên (scoped theo viewer) — Phase 91.2. Fail-soft → ''. */
+export async function buildEvaluationStatus(employeeId: string, requester?: User | null): Promise<string> {
+  try {
+    if (!requester || !employeeId) return '';
+    const period = await getActivePeriod();
+    if (!period) return '';
+    const ev = await getEvaluationByEmployeeAdmin(employeeId, period.id, requester);
+    if (!ev || !Array.isArray(ev.rounds) || ev.rounds.length === 0) return '';
+    const rounds = [...ev.rounds]
+      .sort((a, b) => Number(a.round) - Number(b.round))
+      .map((r) => `L${r.round}: ${roundStatusLabel(r)}`)
+      .join('; ');
+    const cur = ev.currentRound ? `vòng đang mở L${ev.currentRound}` : '';
+    return `kỳ ${period.name || 'hiện tại'} (${period.status}); ${cur ? `${cur}; ` : ''}${rounds}.`;
+  } catch {
+    return '';
+  }
 }
 
 export type EmployeeContextResult = { kind: 'found' | 'multiple' | 'different_team' | 'not_found'; text: string };
@@ -50,9 +78,10 @@ export async function buildEmployeeContext(
           if (leader) leaderFirst = firstName(leader.name);
         }
         const title = (u.description || '').trim() || 'chưa có';
+        const evStatus = await buildEvaluationStatus(u.id, requester);
         return {
           kind: 'found',
-          text: `\nNgười được nhắc: ${u.name}; chức vụ = ${roleLabel(u.role)}; chức danh = ${title}; nhóm = ${team?.name || 'Chưa có nhóm'}${leaderFirst ? ` (Leader ${leaderFirst})` : ''}.`,
+          text: `\nNgười được nhắc: ${u.name}; chức vụ = ${roleLabel(u.role)}; chức danh = ${title}; nhóm = ${team?.name || 'Chưa có nhóm'}${leaderFirst ? ` (Leader ${leaderFirst})` : ''}.${evStatus ? `\nTrạng thái đánh giá (của ${firstName(u.name)}): ${evStatus}` : ''}`,
         };
       }
 

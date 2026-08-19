@@ -9,7 +9,7 @@ import { getDashboardData } from '@/actions/dashboard';
 import { getUsersAdmin, getUserByIdAdmin } from '@/lib/db/users-admin';
 import { getTeamByIdAdmin, getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
-import { buildEmployeeContext } from '@/lib/ai-context';
+import { buildEmployeeContext, buildEvaluationStatus } from '@/lib/ai-context';
 import { User } from '@/types';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -424,6 +424,7 @@ async function prepareChatContext(
   const requesterTeam = auth.user?.teamId
     ? await getTeamByIdAdmin(auth.user.teamId, auth.user).catch(() => null)
     : null;
+  const requesterEval = await buildEvaluationStatus(auth.user?.id || '', auth.user);
 
   const history = (input.history || []).slice(-12);
   let prompt = `Câu hỏi mới của ${addr}:\n${question}`;
@@ -433,7 +434,7 @@ async function prepareChatContext(
       .join('\n');
     prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\n${prompt}`;
   }
-  prompt = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}, trang đang mở = ${page}.${pageContext}${empContext.text}\n\n${prompt}`;
+  prompt = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}${requesterEval ? `, trạng thái đánh giá của ${addr}: ${requesterEval}` : ''}; trang đang mở = ${page}.${pageContext}${empContext.text}\n\n${prompt}`;
 
   return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
 }
