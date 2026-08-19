@@ -387,8 +387,16 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       .sort((a, b) => {
         const order: Record<string, number> = { Manager: 0, Leader: 1, SubLeader: 2, Employee: 3, Worker: 4 };
         const rank = (r?: string) => (r ? order[r] ?? 99 : 99);
-        const d = rank(a.role) - rank(b.role);
-        return d !== 0 ? d : a.name.localeCompare(b.name, 'vi');
+        const dRole = rank(a.role) - rank(b.role);
+        if (dRole !== 0) return dRole;
+        const teamNameOf = (u: User) =>
+          u.role === 'Manager' ? 'Toàn bộ bộ phận' : teams.find((t) => t.id === u.teamId)?.name ?? '';
+        const dTeam = teamNameOf(a).localeCompare(teamNameOf(b), 'vi');
+        if (dTeam !== 0) return dTeam;
+        const subNameOf = (u: User) => (u.subleaderId ? userMap.get(u.subleaderId)?.name ?? '' : '');
+        const dSub = subNameOf(a).localeCompare(subNameOf(b), 'vi');
+        if (dSub !== 0) return dSub;
+        return a.name.localeCompare(b.name, 'vi');
       })
       .map((userItem) => {
       const team = teams.find((t) => t.id === userItem.teamId);
