@@ -2,13 +2,13 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTeams, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
-import { getUsersBatchAction, getEvaluationSummariesBatchAction } from '@/actions/read';
+import { useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { getUsersBatchAction, getEvaluationSummariesBatchAction, getEmployeesPageDataAction } from '@/actions/read';
 import { mergeUserBatches } from '@/lib/employee-batch-helpers';
 import EmployeeEvaluationCell from '@/components/employees/EmployeeEvaluationCell';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Evaluation } from '@/types';
+import { User, Evaluation, Team } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
 import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
@@ -44,7 +44,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   const effectiveViewer = authLoading ? (contextUser ?? initialViewer) : contextUser;
 
   const queryClient = useQueryClient();
-  const { data: teams = [], isLoading: teamsLoading } = useTeams(effectiveViewer);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState<boolean>(true);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
   const { mutateAsync: batchUpsertUsers } = useBatchUpsertUsers();
   const { mutate: deleteUser } = useDeleteUser();
   const { toast } = useToast();
@@ -113,6 +115,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         if (isCancelled || generationRef.current !== currentGen) return;
 
         setUsers([]);
+        setTeams([]);
+        setTeamsLoading(true);
+        setTeamsError(null);
         setEvaluationsMap({});
         setEvalLoadingMap({});
         setEvalErrorMap({});
@@ -124,6 +129,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
         if (!effectiveViewer) {
           setIsInitialLoading(false);
+          setTeamsLoading(false);
         }
       });
     }
@@ -181,10 +187,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     }
   }, []);
 
-  // Fetch initial batch (first 20 users) using effective viewer
+  // Fetch initial batch (teams + first 20 users + summaries) using effective viewer
   const loadInitialBatch = useCallback(async () => {
     if (!viewerId || !viewerScopeKey) {
       setIsInitialLoading(false);
+      setTeamsLoading(false);
       return;
     }
     const currentScopeKey = viewerScopeKey;
@@ -192,14 +199,16 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     const currentGen = generationRef.current;
 
     setIsInitialLoading(true);
+    setTeamsLoading(true);
     setIsLoadingMore(false);
     setUserBatchError(null);
+    setTeamsError(null);
     setEvaluationsMap({});
     setEvalLoadingMap({});
     setEvalErrorMap({});
 
     try {
-      const res = await getUsersBatchAction({
+      const pageData = await getEmployeesPageDataAction(currentPeriodId, {
         offset: 0,
         limit: 20,
         search: searchTerm,
@@ -209,24 +218,51 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
       if (generationRef.current !== currentGen || viewerScopeKey !== currentScopeKey) return;
 
-      setUsers(res.items);
-      setHasMore(res.hasMore);
-      setTotalCount(res.totalCount);
+      // Handle teams
+      if (pageData.teamsError) {
+        setTeamsError(pageData.teamsError);
+      } else {
+        setTeams(pageData.teams);
+        setTeamsError(null);
+      }
 
-      if (res.items.length > 0 && currentPeriodId) {
-        fetchEvaluationsForIds(res.items.map((u) => u.id), currentPeriodId, currentGen);
+      // Handle users
+      if (pageData.usersError) {
+        setUserBatchError(pageData.usersError);
+        setUsers([]);
+        setHasMore(false);
+        setTotalCount(0);
+      } else {
+        setUsers(pageData.users.items);
+        setHasMore(pageData.users.hasMore);
+        setTotalCount(pageData.users.totalCount);
+        setUserBatchError(null);
+      }
+
+      // Handle summaries
+      if (pageData.summariesError) {
+        if (pageData.users.items.length > 0) {
+          setEvalErrorMap((prev) => {
+            const next = { ...prev };
+            for (const u of pageData.users.items) next[u.id] = true;
+            return next;
+          });
+        }
+      } else {
+        setEvaluationsMap(pageData.summaries || {});
       }
     } catch (err) {
-      console.error('Error fetching initial users batch:', err);
+      console.error('Error fetching initial employees page data:', err);
       if (generationRef.current === currentGen) {
         setUserBatchError('Không thể tải danh sách nhân viên. Vui lòng thử lại.');
       }
     } finally {
       if (generationRef.current === currentGen) {
         setIsInitialLoading(false);
+        setTeamsLoading(false);
       }
     }
-  }, [viewerId, viewerScopeKey, searchTerm, teamFilter, roleFilter, currentPeriodId, fetchEvaluationsForIds]);
+  }, [viewerId, viewerScopeKey, searchTerm, teamFilter, roleFilter, currentPeriodId]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -318,6 +354,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           ? 'Toàn bộ bộ phận'
           : team
           ? team.name
+          : teamsError
+          ? 'Lỗi tải nhóm'
           : teamsLoading
           ? 'Đang tải...'
           : 'Chưa gán',
@@ -330,7 +368,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         evaluationError: isEvalError,
       };
     });
-  }, [users, teams, teamsLoading, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId]);
+  }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId]);
 
   const handleEdit = (employee: User) => {
     if (!canManageEmployees) {
@@ -450,6 +488,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         toast('Cập nhật nhân viên thành công!', 'success');
         queryClient.invalidateQueries({ queryKey: ['teams'] });
         queryClient.invalidateQueries({ queryKey: ['users'] });
+        queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
         loadInitialBatch();
       } else {
         toast(result.error || 'Lỗi khi cập nhật nhân viên.', 'error');
@@ -740,7 +779,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               disabled={teamsLoading && teams.length === 0}
             >
               <option value="all">
-                {teamsLoading && teams.length === 0 ? 'Đang tải nhóm...' : 'Tất cả Nhóm'}
+                {teamsError
+                  ? 'Lỗi tải nhóm'
+                  : teamsLoading && teams.length === 0
+                  ? 'Đang tải nhóm...'
+                  : 'Tất cả Nhóm'}
               </option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -774,6 +817,13 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           </div>
         </div>
       </div>
+
+      {/* Notice on teams error */}
+      {teamsError && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center justify-between">
+          <span>Không thể tải danh sách nhóm: {teamsError}</span>
+        </div>
+      )}
 
       {/* Table Section */}
       <div data-load-layer="light" className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
