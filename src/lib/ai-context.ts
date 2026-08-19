@@ -35,25 +35,29 @@ export async function buildEmployeeContext(
     const scoped = await getUsersAdmin(requester);
     const cs = matchEmployeeCandidates(question, scoped);
 
-    if (cs.length === 1) {
-      const u = scoped.find((x) => x.id === cs[0].id);
-      if (!u) return { kind: 'not_found', text: '' };
-      const team = u.teamId ? await getTeamByIdAdmin(u.teamId, requester).catch(() => null) : null;
-      let leaderFirst = '';
-      if (team?.leaderId) {
-        const leader = await getUserByIdAdmin(team.leaderId, requester).catch(() => null);
-        if (leader) leaderFirst = firstName(leader.name);
-      }
-      const title = (u.description || '').trim() || 'chưa có';
-      return {
-        kind: 'found',
-        text: `\nNgười được nhắc: ${u.name}; chức vụ = ${roleLabel(u.role)}; chức danh = ${title}; nhóm = ${team?.name || 'Chưa có nhóm'}${leaderFirst ? ` (Leader ${leaderFirst})` : ''}.`,
-      };
-    }
+    if (cs.length > 0) {
+      // Ưu tiên nhóm hậu tố DÀI nhất (đặc thù nhất) — chỉ 'trùng tên' khi 2+ người cùng dài nhất
+      const maxLen = Math.max(...cs.map((c) => c.bestLen));
+      const tight = cs.filter((c) => c.bestLen === maxLen);
 
-    if (cs.length > 1) {
+      if (tight.length === 1) {
+        const u = scoped.find((x) => x.id === tight[0].id);
+        if (!u) return { kind: 'not_found', text: '' };
+        const team = u.teamId ? await getTeamByIdAdmin(u.teamId, requester).catch(() => null) : null;
+        let leaderFirst = '';
+        if (team?.leaderId) {
+          const leader = await getUserByIdAdmin(team.leaderId, requester).catch(() => null);
+          if (leader) leaderFirst = firstName(leader.name);
+        }
+        const title = (u.description || '').trim() || 'chưa có';
+        return {
+          kind: 'found',
+          text: `\nNgười được nhắc: ${u.name}; chức vụ = ${roleLabel(u.role)}; chức danh = ${title}; nhóm = ${team?.name || 'Chưa có nhóm'}${leaderFirst ? ` (Leader ${leaderFirst})` : ''}.`,
+        };
+      }
+
       const listed: string[] = [];
-      for (const c of cs) {
+      for (const c of tight) {
         const u = scoped.find((x) => x.id === c.id);
         if (!u) continue;
         const team = u.teamId ? await getTeamByIdAdmin(u.teamId, requester).catch(() => null) : null;

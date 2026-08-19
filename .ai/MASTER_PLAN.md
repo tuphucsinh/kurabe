@@ -1039,7 +1039,7 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 
 ---
 
-## Phase 91.1: Chat AI — tinh chỉnh theo anh (chức danh=description, bỏ mã NV, khác nhóm, xưng hô động, knowledge update) 🟡 (2026-08-19)
+## Phase 91.1: Chat AI — tinh chỉnh theo anh (chức danh=description, bỏ mã NV, khác nhóm, xưng hô động, knowledge update) ✅ DONE (2026-08-19)
 
 > Nối tiếp Phase 91. Anh chốt: (1) different_team KHÔNG giới hạn Manager; (2) KHÔNG đưa mã NV; (3) chức danh = cột `description` (verified EmployeesClient L703 / EmployeeModal L225); (4) AI không đề cập giới tính/chức danh nếu không cần thiết; (5) dùng Sequential Thinking cập nhật chat-knowledge.md; (6) test local + internet.
 > CONTROLLED (chạm data flow) — homestay scoped; setup Reader ở gate verify.

@@ -8,6 +8,11 @@ export interface NameRef {
   name: string;
 }
 
+/** Kết quả match kèm độ dài hậu tố phân biệt dài nhất xuất hiện trong câu hỏi. */
+export interface NameCandidate extends NameRef {
+  bestLen: number;
+}
+
 /** Bỏ dấu tiếng Việt + lowercase + trim — phục vụ khớp tên nhân viên trong câu hỏi chat. */
 export function normalizeVi(s?: string | null): string {
   return (s || '')
@@ -53,7 +58,7 @@ function nameSuffixKeys(name: string): string[] {
 export function matchEmployeeCandidates(
   question?: string | null,
   users?: NameRef[] | null
-): NameRef[] {
+): NameCandidate[] {
   const q = normalizeVi(question);
   if (!q || !users || users.length === 0) return [];
 
@@ -66,20 +71,26 @@ export function matchEmployeeCandidates(
     }
   }
 
-  interface Cand { u: NameRef; s: string; owners: string[] }
-  const cands: Cand[] = [];
+  // Mỗi user: hậu tố dài nhất xuất hiện trong câu hỏi (bestLen) + có phải 'unique' (1 chủ sở hữu) không
+  const cands: { u: NameRef; s: string; owners: string[]; bestLen: number; unique: boolean }[] = [];
   for (const u of users) {
     let best: string | null = null;
     for (const s of nameSuffixKeys(u.name)) {
       if (q.includes(s) && (!best || s.length > best.length)) best = s;
     }
-    if (best) cands.push({ u, s: best, owners: owner.get(best) || [] });
+    if (best) {
+      const owners = owner.get(best) || [];
+      cands.push({ u, s: best, owners, bestLen: best.length, unique: owners.length === 1 });
+    }
   }
 
-  const uniqueFirst = [...cands]
-    .sort((a, b) => (a.owners.length === 1 ? -1 : 1) - (b.owners.length === 1 ? -1 : 1))
-    .map((c) => c.u);
+  // Sắp: ưu tiên hậu tố DÀI nhất (đặc thù/đầy đủ nhất) → sau đó unique.
+  cands.sort((a, b) => (b.bestLen - a.bestLen) || (Number(b.unique) - Number(a.unique)));
 
   const seen = new Set<string>();
-  return uniqueFirst.filter((u) => !seen.has(u.id) && seen.add(u.id));
+  const out: NameCandidate[] = [];
+  for (const c of cands) {
+    if (!seen.has(c.u.id)) { seen.add(c.u.id); out.push({ id: c.u.id, name: c.u.name, bestLen: c.bestLen }); }
+  }
+  return out;
 }
