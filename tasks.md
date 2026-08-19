@@ -1034,6 +1034,8 @@
 
 **Definition of Done**: build PASS với `/employees` thành static shell (●/ƒ đúng); tsc/lint 0.
 
+**Status**: `[x]` — DONE 19-08 (PIVOT — REVERTED): Gemini làm xong nhưng scope creep (4 file ngoài) + sai API Next 16. Mika sửa đúng (`cacheComponents: true` — Next 16 gộp PPR) → **build FAIL** ("Uncached data outside Suspense" ở AppLayout/providers). → Revert sạch PPR (next.config + page + xóa EmployeesSkeleton). Xem quyết định #18 DECISIONS_LOG.
+
 ### [#P87T02] [verify] Build + browser thật
 
 **Goal**: Chứng minh shell prerendered hiện nhanh, data stream đúng, không lộ cross-user, auth/redirect không vỡ.
@@ -1045,6 +1047,8 @@
 2. Browser thật: login 158 → /employees shell hiện ngay + data đúng; logout/role redirect OK; console sạch.
 
 **Definition of Done**: build PASS + browser verified (hoặc ghi env blocker như các phase trước).
+
+**Status**: `[x]` — DONE 19-08 (PIVOT): build với `cacheComponents: true` **FAIL** (Uncached data outside Suspense) → không có gì để browser verify; sau revert build PASS trở lại (evidence pivot).
 
 ### [#P87T03] [measure + decide] Đo trước/sau + quyết định pivot
 
@@ -1059,3 +1063,5 @@
 4. Docs + Reviewer + push (nếu anh duyệt). Rollback: `git revert HEAD~3` (3 commits — reviewer non-blocking 1).
 
 **Definition of Done**: có số đo trước/sau (hoặc UNKNOWN rõ ràng) + quyết định ghi rõ; docs đầy đủ.
+
+**Status**: `[x]` — DONE 19-08 (PIVOT): PPR benefit **UNKNOWN → PIVOT** (build fail là bằng chứng quyết định — cacheComponents toàn app không khả thi cho pilot 1 trang). Ghi quyết định #18 DECISIONS_LOG; hướng còn lại: giảm roundtrip server actions (chờ anh duyệt).
