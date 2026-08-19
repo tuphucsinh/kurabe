@@ -1001,4 +1001,4 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 > - **T3 Debounce search/filter:** `/employees` searchTerm → debounce ~250-300ms; kiểm tra các filter khác (reports) nếu có input/search.
 > - **T4 verify:** tsc 0 + lint 0 + build PASS + browser (nếu được) + đo bundle trước/sau (kích thước .next chunk). Rollback: revert commits.
 > Lưu ý: chart/chat `ssr:false` tránh hydration mismatch; modal dynamic khi mở. UI thuần, không đụng auth/data.
-**Reviewer plan**: (chưa review — UI thuần, Mika verify; nếu cần sẽ review)
+**KẾT QUẢ THỰC THI (19-08)**: 4/4 task DONE — commits `91b5ed4`: 3 wrapper client `dynamic ssr:false` (GradeDistribution/TeamComparison/CriteriaHeatmap) + ChatWidget + 5 modal dynamic (Employee/Team/Period/Batch/PeriodMinutes) + debounce searchTerm 300ms (/employees, dùng debounced value cho fetch/filter). Bundle: modal/AI chunk tách riêng (~49KB) chỉ tải khi mở. Mika verify: tsc 0 · lint 0 · build PASS; scope đúng (chỉ charts + 6 file; không đụng auth/data). UI thuần — không cần Reviewer (theo AGENTS.md static nhỏ). **Phase 90: DONE** ✅ (2026-08-19).
