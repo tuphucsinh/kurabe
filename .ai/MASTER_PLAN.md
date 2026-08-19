@@ -922,3 +922,33 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 **KẾT QUẢ THỰC THI (19-08)**: 2/2 task DONE — commits `5fa31c1` (T01 Dashboard) + `3961860` (T02 Reports). Runner **Gemini 3.7 Flash High**. Mika verify độc lập: diff từng dòng đúng plan (T01 KPI icon+label static + section titles + track trống không fill; T02 5 khối heavy title static đúng tên loaded, light KPI không đụng); **tsc 0 · lint 0 · build PASS** (Mika tự chạy); không `<p>` chứa Skeleton. Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code).
 
 **Phase 86: DONE** ✅ (2026-08-19).
+
+---
+
+## Phase 87: Cache tối ưu — PPR pilot /employees (static shell cache hẳn) 🟡 (2026-08-19)
+
+> Yêu cầu anh (19-08): lập kế hoạch cache tối ưu nhất; câu hỏi "static shell/text cache hẳn được không (không đổi, không lộ data)". Qua Sequential Thinking + survey:
+> - **unstable_cache ĐÃ THẤT BẠI** ở dự án này (P61 → Fix A `f4109b2` 16-08: gây lag Vercel + trang trắng + treo NEXT_REDIRECT) → **KHÔNG dùng lại**.
+> - **Static shell cache hẳn = PPR (Partial Prerendering)**: prerender phần shell tĩnh tại build → CDN serve ngay; phần data theo user stream sau qua Suspense. KHÔNG dùng page-revalidate thường (cache cả HTML → lộ cross-user).
+> - JS bundle client components đã immutable cache CDN (_next/static) — tầng cache thứ nhất có sẵn.
+> - Pilot evidence-first: làm 1 trang (/employees), đo trước/sau; PASS mới mở rộng, FAIL → pivot giảm roundtrip.
+
+**Thiết kế (P1 pilot — 3 task)**:
+- **T1 [config + src/app/employees/page.tsx]** Bật PPR:
+  1. `next.config.ts`: `experimental: { ppr: 'incremental' }`.
+  2. Segment `/employees`: `export const experimental_ppr = true`.
+  3. Restructure (đặc tả shell CỤ THỂ — reviewer blocker 1): page hiện chỉ `getSessionUser + redirect + EmployeesClient` (không static content). Tạo shell thật NGOÀI Suspense:
+     - `<PageHeader title="Quản lý nhân sự" description=... />` (đối chiếu header hiện trong EmployeesClient — tách/truyền để KHÔNG trùng, hoặc giữ header client + Suspense fallback là skeleton khớp layout);
+     - `<Suspense fallback={<EmployeesSkeleton />}>` → bên trong: `getSessionUser()` + redirect role + `<EmployeesClient initialViewer>` (dynamic stream).
+     - Mục tiêu PPR: serve **HTML shell đầu tiên (header + bố cục)** từ CDN trước khi auth+data stream — lợi ích là perceived first-paint, KHÔNG phải data (data vẫn qua server actions).
+  4. KHÔNG đổi logic data/EmployeesClient. Lưu ý middleware **middleware.ts** (KHÔNG phải proxy.ts — reviewer) bảo vệ /employees → shell prerendered không serve cho unauth.
+- **T2 [verify]** build (route symbol ●/ƒ) + tsc + lint + browser thật (login 158: shell trước + data sau + redirect đúng). Nếu browser bị chặn cookie (env) → **bắt buộc có curl TTFB test thay thế** (reviewer non-blocking 3 — phase experimental không được bỏ verify).
+- **T3 [measure + decide]** Đo trước/sau **trên Vercel production là chính** (PPR benefit CHỈ có trên Vercel Edge — reviewer blocker 2): deploy pilot, đo `/employees` authenticated TTFB shell + p50/p75 trước/sau. Local KHÔNG phân biệt PPR vs Suspense thường → chỉ tham khảo. Nếu anh chưa duyệt deploy → ghi **PPR benefit UNKNOWN** (không claim), quyết định để sau. Rollback: `git revert HEAD~3` (3 commits — reviewer non-blocking 1).
+
+**Acceptance**: build PASS với shell prerendered; browser: shell CDN nhanh + data đúng + không lộ data + auth OK; có số đo trước/sau; quyết định pivot ghi rõ.
+
+**Non-goals**: KHÔNG unstable_cache; KHÔNG page-revalidate cho trang auth; KHÔNG đổi logic data.
+
+**Rủi ro**: PPR experimental — test build từng bước, rollback 1 commit. Lưu ý: restructure page có thể đổi hành vi redirect — verify kỹ login/logout + role redirect.
+
+**Reviewer plan**: R1 **CHANGES_REQUIRED** (Sonnet 4.6) — blocker: (1) T1 thiếu đặc tả shell content (page không có static content); (2) PPR benefit chỉ có trên Vercel Edge, local/Cloudflare không phân biệt → cần xác nhận deploy state. Non-blocking: rollback 3 commits; middleware.ts naming; T2 curl fallback. → đã fix cả → **R2 PASS** (conf CAO). Lưu ý runner từ R2: PageHeader 'use client' hợp lệ ngoài Suspense nhưng KHÔNG import dynamic API (cookies/headers) trong shell; EmployeesClient có h1 riêng "Quản lý Nhân sự QAQC" (L671-672) → **dedup h1** (verify no duplicate h1); tasks.md T02 nhẹ hơn nhưng MASTER_PLAN (curl fallback) là nguồn chính.

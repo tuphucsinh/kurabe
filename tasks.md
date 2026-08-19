@@ -1013,3 +1013,49 @@
 **Definition of Done**: static-first verified + data thật verified + build/lint pass + không regression.
 
 **Status**: `[x]` — DONE 19-08: Mika verify độc lập tsc 0 + lint 0 + build PASS + diff từng dòng đúng plan (title đúng tên loaded, no fake value, no `<p>` chứa Skeleton). Browser thật bị chặn login (browserbase không giữ httpOnly cookie localhost — env, không code). → Phase 86 DONE.
+
+---
+
+## Phase 87: Cache tối ưu — PPR pilot /employees 🟡 (2026-08-19)
+
+> Plan: `.ai/MASTER_PLAN.md` Phase 87. CONTROLLED (chạm render experimental). Runner Gemini; Mika verify + đo + quyết định pivot. 1 task = 1 commit `[#P87Tzz]`.
+
+### [#P87T01] [next.config.ts + src/app/employees/page.tsx] Bật PPR + restructure shell/Suspense
+
+**Goal**: PPR prerender static shell /employees tại build (CDN serve ngay), auth+data stream sau — cache hẳn shell, không lộ data.
+
+**Depends on**: `none`
+
+**Concrete changes**:
+1. `next.config.ts`: thêm `experimental: { ppr: 'incremental' }`.
+2. `src/app/employees/page.tsx`: thêm `export const experimental_ppr = true`.
+3. Restructure (shell CỤ THỂ — reviewer): tạo shell thật NGOÀI Suspense — `<PageHeader title="Quản lý nhân sự" description=.../>` (đối chiếu header trong EmployeesClient, tránh trùng) + `<Suspense fallback={<EmployeesSkeleton/>}>` chứa `getSessionUser()` + redirect role + `<EmployeesClient initialViewer>`. Middleware **middleware.ts** (không phải proxy.ts) bảo vệ /employees.
+4. KHÔNG đổi logic data/EmployeesClient.
+
+**Definition of Done**: build PASS với `/employees` thành static shell (●/ƒ đúng); tsc/lint 0.
+
+### [#P87T02] [verify] Build + browser thật
+
+**Goal**: Chứng minh shell prerendered hiện nhanh, data stream đúng, không lộ cross-user, auth/redirect không vỡ.
+
+**Depends on**: `[#P87T01]`
+
+**Concrete changes**:
+1. `npm run build` (xem route symbol ●/ƒ) + tsc + lint.
+2. Browser thật: login 158 → /employees shell hiện ngay + data đúng; logout/role redirect OK; console sạch.
+
+**Definition of Done**: build PASS + browser verified (hoặc ghi env blocker như các phase trước).
+
+### [#P87T03] [measure + decide] Đo trước/sau + quyết định pivot
+
+**Goal**: Bằng chứng PPR giúp hay không → quyết định mở rộng/pivot.
+
+**Depends on**: `[#P87T02]`
+
+**Concrete changes**:
+1. Đo `/employees` authenticated latency TRƯỚC/SAU **trên Vercel production là chính** (PPR benefit chỉ có trên Vercel Edge — reviewer): TTFB shell + p50/p75 (nếu anh duyệt deploy pilot). Local chỉ tham khảo (không phân biệt PPR vs Suspense thường).
+2. Nếu chưa duyệt deploy → ghi **PPR benefit UNKNOWN** (không claim), quyết định để sau.
+3. Quyết định: PPR giúp rõ → plan mở rộng dashboard/reports/teams; không giúp → pivot giảm roundtrip server actions (ghi DECISIONS_LOG).
+4. Docs + Reviewer + push (nếu anh duyệt). Rollback: `git revert HEAD~3` (3 commits — reviewer non-blocking 1).
+
+**Definition of Done**: có số đo trước/sau (hoặc UNKNOWN rõ ràng) + quyết định ghi rõ; docs đầy đủ.
