@@ -78,6 +78,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
   // Batch state
   const [users, setUsers] = useState<User[]>([]);
+  const [subleaderMap, setSubleaderMap] = useState<Record<string, string>>({});
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
@@ -134,6 +135,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         if (isCancelled || generationRef.current !== currentGen) return;
 
         setUsers([]);
+        setSubleaderMap({});
         setTeams([]);
         setTeamsLoading(true);
         setTeamsError(null);
@@ -269,10 +271,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       if (pageData.usersError) {
         setUserBatchError(pageData.usersError);
         setUsers([]);
+        setSubleaderMap({});
         setHasMore(false);
         setTotalCount(0);
       } else {
         setUsers(pageData.users.items);
+        setSubleaderMap(pageData.users.subleaderMap || {});
         setHasMore(pageData.users.hasMore);
         setTotalCount(pageData.users.totalCount);
         setUserBatchError(null);
@@ -350,6 +354,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
       const merged = mergeUserBatches(users, res.items);
       setUsers(merged);
+      if (res.subleaderMap) {
+        setSubleaderMap((prev) => ({ ...prev, ...res.subleaderMap }));
+      }
       setHasMore(res.hasMore);
       setTotalCount(res.totalCount);
 
@@ -393,7 +400,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           u.role === 'Manager' ? 'Toàn bộ bộ phận' : teams.find((t) => t.id === u.teamId)?.name ?? '';
         const dTeam = teamNameOf(a).localeCompare(teamNameOf(b), 'vi');
         if (dTeam !== 0) return dTeam;
-        const subNameOf = (u: User) => (u.subleaderId ? userMap.get(u.subleaderId)?.name ?? '' : '');
+        const subNameOf = (u: User) =>
+          u.subleaderId ? subleaderMap[u.subleaderId] ?? userMap.get(u.subleaderId)?.name ?? '' : '';
         const dSub = subNameOf(a).localeCompare(subNameOf(b), 'vi');
         if (dSub !== 0) return dSub;
         return a.name.localeCompare(b.name, 'vi');
@@ -439,7 +447,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         evaluationError: isEvalError,
       };
     });
-  }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId, userMap]);
+  }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId, userMap, subleaderMap]);
 
   const handleEdit = (employee: User) => {
     if (!canManageEmployees) {
@@ -687,9 +695,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         if (!canHaveSubLeader(item.role)) {
           return <span className="text-xs text-slate-400 font-medium">—</span>;
         }
-        const subleader = item.subleaderId ? userMap.get(item.subleaderId) : null;
-        return subleader ? (
-          <span className="text-xs font-medium text-slate-700">{subleader.name}</span>
+        const subleaderName = item.subleaderId
+          ? subleaderMap[item.subleaderId] || userMap.get(item.subleaderId)?.name
+          : null;
+        return subleaderName ? (
+          <span className="text-xs font-medium text-slate-700">{subleaderName}</span>
         ) : item.subleaderId ? (
           <span className="text-xs font-medium text-slate-700">Đã gán</span>
         ) : (

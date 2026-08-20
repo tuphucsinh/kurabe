@@ -19,6 +19,7 @@ export interface UsersBatchResult {
   items: User[];
   hasMore: boolean;
   totalCount: number;
+  subleaderMap: Record<string, string>;
 }
 
 /**
@@ -27,14 +28,14 @@ export interface UsersBatchResult {
  * - Fixed sort: name ASC, id ASC
  * - RBAC: Manager xem tất cả; Leader/SubLeader xem team mình; Employee/Worker xem chính mình; thiếu team fail-closed.
  * - Search sanitized (max 50, stripped PostgREST metacharacters).
- * - Trả về { items, hasMore, totalCount } dùng limit + 1.
+ * - Trả về { items, hasMore, totalCount, subleaderMap } dùng limit + 1.
  */
 export async function getUsersBatchAdmin(
   requester?: User | null,
   options?: UsersBatchOptions
 ): Promise<UsersBatchResult> {
   if (!requester) {
-    return { items: [], hasMore: false, totalCount: 0 };
+    return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
   }
 
   const { offset, limit, search, teamId, role } = normalizeBatchParams(options);
@@ -44,19 +45,19 @@ export async function getUsersBatchAdmin(
     if (isIndividualRole(requester.role)) {
       // Employee / Worker can only view self
       if (teamId && requester.teamId && teamId !== requester.teamId) {
-        return { items: [], hasMore: false, totalCount: 0 };
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
       if (role && role !== requester.role) {
-        return { items: [], hasMore: false, totalCount: 0 };
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
     } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
       // Leader/SubLeader must have teamId
       if (!requester.teamId) {
-        return { items: [], hasMore: false, totalCount: 0 };
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
       // Cannot request a different team than their own
       if (teamId && teamId !== requester.teamId) {
-        return { items: [], hasMore: false, totalCount: 0 };
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
     }
   }
@@ -101,11 +102,39 @@ export async function getUsersBatchAdmin(
   }
 
   const { items, hasMore, totalCount } = computeBatchResult(data || [], limit, count, offset);
+  const mappedUsers = items.map(mapUserFromDb);
+
+  const subleaderIds = Array.from(
+    new Set(
+      mappedUsers
+        .map((u) => u.subleaderId)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  const subleaderMap: Record<string, string> = {};
+  if (subleaderIds.length > 0) {
+    const { data: subleaders, error: subErr } = await supabaseAdmin
+      .from('users')
+      .select('id, name')
+      .in('id', subleaderIds);
+
+    if (subErr) {
+      console.error('Error fetching subleaders batch (admin):', subErr);
+    } else if (subleaders) {
+      for (const s of subleaders) {
+        if (s.id && s.name) {
+          subleaderMap[s.id] = s.name;
+        }
+      }
+    }
+  }
 
   return {
-    items: items.map(mapUserFromDb),
+    items: mappedUsers,
     hasMore,
     totalCount,
+    subleaderMap,
   };
 }
 

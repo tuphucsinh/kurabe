@@ -74,7 +74,7 @@ export async function getUsersAction(options?: {
 export async function getUsersBatchAction(options?: UsersBatchOptions): Promise<UsersBatchResult> {
   const auth = await requireAuth();
   if (auth.error !== null || !auth.user) {
-    return { items: [], hasMore: false, totalCount: 0 };
+    return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
   }
   return getUsersBatchAdmin(auth.user, options);
 }
@@ -108,7 +108,7 @@ export async function getEmployeesPageDataAction(
     return {
       teams: [],
       teamsError: err,
-      users: { items: [], hasMore: false, totalCount: 0 },
+      users: { items: [], hasMore: false, totalCount: 0, subleaderMap: {} },
       usersError: err,
       summaries: {},
       summariesError: err,
@@ -117,7 +117,7 @@ export async function getEmployeesPageDataAction(
 
   let teams: Team[] = [];
   let teamsError: string | null = null;
-  let users: UsersBatchResult = { items: [], hasMore: false, totalCount: 0 };
+  let users: UsersBatchResult = { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
   let usersError: string | null = null;
   const summaries: Record<string, Evaluation> = {};
   let summariesError: string | null = null;
