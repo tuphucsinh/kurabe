@@ -42,12 +42,17 @@ export async function fetchEvaluationsForViewerAdmin(
   let allUsers: User[] | undefined = undefined;
 
   if (user.role !== 'Manager') {
-    // Evaluations mà viewer là người chấm (mọi vòng)
-    const { data: rounds } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .select('evaluation_id')
-      .eq('evaluator_id', user.id);
-    const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
+    // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
+    const [roundsRes, subUsers] = await Promise.all([
+      supabaseAdmin
+        .from('evaluation_rounds')
+        .select('evaluation_id')
+        .eq('evaluator_id', user.id),
+      user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
+    ]);
+
+    allUsers = subUsers;
+    const assignedIds = (roundsRes.data || []).map(r => r.evaluation_id).filter(Boolean);
 
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
@@ -59,7 +64,6 @@ export async function fetchEvaluationsForViewerAdmin(
 
     // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
     if (user.role === 'SubLeader') {
-      allUsers = await getSubLeaderViewContextAdmin(user);
       const subEmpIds = (allUsers || []).map(u => u.id).filter(Boolean);
       if (subEmpIds.length > 0) {
         orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
@@ -251,12 +255,17 @@ export async function fetchEvaluationSummariesForViewerAdmin(
   let allUsers: User[] | undefined = undefined;
 
   if (user.role !== 'Manager') {
-    // Evaluations mà viewer là người chấm (mọi vòng)
-    const { data: rounds } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .select('evaluation_id')
-      .eq('evaluator_id', user.id);
-    const assignedIds = (rounds || []).map(r => r.evaluation_id).filter(Boolean);
+    // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
+    const [roundsRes, subUsers] = await Promise.all([
+      supabaseAdmin
+        .from('evaluation_rounds')
+        .select('evaluation_id')
+        .eq('evaluator_id', user.id),
+      user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
+    ]);
+
+    allUsers = subUsers;
+    const assignedIds = (roundsRes.data || []).map(r => r.evaluation_id).filter(Boolean);
 
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
@@ -268,7 +277,6 @@ export async function fetchEvaluationSummariesForViewerAdmin(
 
     // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
     if (user.role === 'SubLeader') {
-      allUsers = await getSubLeaderViewContextAdmin(user);
       const subEmpIds = (allUsers || []).map(u => u.id).filter(Boolean);
       if (subEmpIds.length > 0) {
         orFilters.push(`employee_id.in.(${subEmpIds.join(',')})`);
