@@ -38,15 +38,50 @@ export default function DashboardDataLayer({
 
   const reqIdRef = useRef(0);
 
+  const fetchLight = useCallback(
+    async (targetPeriodId: string, currentReqId: number) => {
+      if (!targetPeriodId) {
+        setLightState({ isLoading: false, error: null, data: null });
+        return;
+      }
+      setLightState((prev) => ({ ...prev, isLoading: true, error: null }));
+      try {
+        const result = await getDashboardLightData(targetPeriodId);
+        if (currentReqId !== reqIdRef.current) return;
+        if (!result) {
+          setLightState({
+            isLoading: false,
+            error: 'Không thể tải dữ liệu tổng quan',
+            data: null,
+          });
+        } else {
+          setLightState({
+            isLoading: false,
+            error: null,
+            data: result,
+          });
+        }
+      } catch (err) {
+        if (currentReqId !== reqIdRef.current) return;
+        setLightState({
+          isLoading: false,
+          error: err instanceof Error ? err.message : 'Lỗi kết nối máy chủ',
+          data: null,
+        });
+      }
+    },
+    []
+  );
+
   const fetchHeavy = useCallback(
-    async (targetPeriodId: string, currentReqId: number, nameMap?: Record<string, string>) => {
+    async (targetPeriodId: string, currentReqId: number) => {
       if (!targetPeriodId) {
         setHeavyState({ isLoading: false, error: null, data: null });
         return;
       }
       setHeavyState((prev) => ({ ...prev, isLoading: true, error: null }));
       try {
-        const result = await getDashboardHeavyData(targetPeriodId, nameMap);
+        const result = await getDashboardHeavyData(targetPeriodId);
         if (currentReqId !== reqIdRef.current) return;
         if (!result) {
           setHeavyState({
@@ -74,44 +109,13 @@ export default function DashboardDataLayer({
   );
 
   const fetchLightAndHeavy = useCallback(
-    async (targetPeriodId: string, currentReqId: number) => {
-      if (!targetPeriodId) {
-        setLightState({ isLoading: false, error: null, data: null });
-        setHeavyState({ isLoading: false, error: null, data: null });
-        return;
-      }
-      setLightState((prev) => ({ ...prev, isLoading: true, error: null }));
-      setHeavyState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-      let lightResult: DashboardLightData | null = null;
-      try {
-        lightResult = await getDashboardLightData(targetPeriodId);
-        if (currentReqId !== reqIdRef.current) return;
-        if (!lightResult) {
-          setLightState({
-            isLoading: false,
-            error: 'Không thể tải dữ liệu tổng quan',
-            data: null,
-          });
-        } else {
-          setLightState({
-            isLoading: false,
-            error: null,
-            data: lightResult,
-          });
-        }
-      } catch (err) {
-        if (currentReqId !== reqIdRef.current) return;
-        setLightState({
-          isLoading: false,
-          error: err instanceof Error ? err.message : 'Lỗi kết nối máy chủ',
-          data: null,
-        });
-      }
-
-      await fetchHeavy(targetPeriodId, currentReqId, lightResult?.userNameById);
+    (targetPeriodId: string, currentReqId: number) => {
+      Promise.all([
+        fetchLight(targetPeriodId, currentReqId),
+        fetchHeavy(targetPeriodId, currentReqId),
+      ]);
     },
-    [fetchHeavy]
+    [fetchLight, fetchHeavy]
   );
 
   useEffect(() => {
@@ -120,16 +124,15 @@ export default function DashboardDataLayer({
   }, [periodId, fetchLightAndHeavy]);
 
   const handleRetryLight = useCallback(() => {
-    const currentReqId = ++reqIdRef.current;
-    fetchLightAndHeavy(periodId, currentReqId);
-  }, [fetchLightAndHeavy, periodId]);
+    fetchLight(periodId, reqIdRef.current);
+  }, [fetchLight, periodId]);
 
   const handleRetryHeavy = useCallback(() => {
-    fetchHeavy(periodId, reqIdRef.current, lightState.data?.userNameById);
-  }, [fetchHeavy, periodId, lightState.data?.userNameById]);
+    fetchHeavy(periodId, reqIdRef.current);
+  }, [fetchHeavy, periodId]);
 
-  // userNameById from light data if available
-  const userNameById = lightState.data?.userNameById || {};
+  // userNameById from heavy data (independent of light data)
+  const userNameById = heavyState.data?.userNameById || {};
 
   // If light data has finished loading and total === 0, empty state is displayed by LightSection
   const isZeroTotal = !lightState.isLoading && lightState.data && lightState.data.stats.total === 0;

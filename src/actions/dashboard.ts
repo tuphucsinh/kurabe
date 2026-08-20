@@ -52,6 +52,7 @@ export interface DashboardHeavyData {
   recentActivities: DashboardRecentActivityItem[];
   rawEvaluations: Evaluation[];
   rawCriteriaGroups: CriteriaGroup[];
+  userNameById: Record<string, string>;
 }
 
 export interface DashboardData extends DashboardLightData, DashboardHeavyData {}
@@ -168,32 +169,31 @@ export async function getDashboardLightData(periodId: string): Promise<Dashboard
 
 /**
  * Server action: Lấy dữ liệu nặng cho Dashboard (Pending reviews, Anomaly alerts, Radar chart, Recent activities).
- * Tải evaluations đầy đủ và criteriaGroups, thực hiện độc lập sau khi shell/light đã render.
- * Nhận userNameById (từ light data) để render tên recent activities mà không cần query lại users.
+ * Tải evaluations đầy đủ, criteriaGroups và users độc lập để chạy song song với light data.
  */
 export async function getDashboardHeavyData(
-  periodId: string,
-  userNameById?: Record<string, string>
+  periodId: string
 ): Promise<DashboardHeavyData | null> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null || !periodId) return null;
 
   try {
-    const [evaluations, criteriaGroups] = await Promise.all([
+    const [evaluations, criteriaGroups, users] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, auth.user),
       getAllCriteriaGroups(),
+      getUsersAdmin(auth.user),
     ]);
 
-    const nameMap = userNameById || {};
+    const userNameById = Object.fromEntries(users.map((u) => [u.id, u.name]));
 
     const recentActivities: DashboardRecentActivityItem[] = evaluations
       .map((evaluation) => {
-        const employeeName = nameMap[evaluation.employeeId];
+        const employeeName = userNameById[evaluation.employeeId];
         const submittedRounds = evaluation.rounds && evaluation.rounds.length > 0
           ? [...evaluation.rounds].filter((r): r is EvaluationRound & { submittedAt: string } => !!r.submittedAt).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
           : [];
         const latestRound = submittedRounds[0] || (evaluation.rounds && evaluation.rounds.length > 0 ? evaluation.rounds[evaluation.rounds.length - 1] : undefined);
-        const evaluatorName = latestRound ? nameMap[latestRound.evaluatorId] : undefined;
+        const evaluatorName = latestRound ? userNameById[latestRound.evaluatorId] : undefined;
         const activityDate = submittedRounds[0]?.submittedAt || evaluation.updatedAt || evaluation.createdAt;
 
         return {
@@ -212,6 +212,7 @@ export async function getDashboardHeavyData(
       recentActivities,
       rawEvaluations: evaluations,
       rawCriteriaGroups: criteriaGroups,
+      userNameById,
     };
   } catch (error) {
     console.error('Error in getDashboardHeavyData:', error);
