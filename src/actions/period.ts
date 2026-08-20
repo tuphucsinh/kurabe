@@ -1,7 +1,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
@@ -17,6 +17,16 @@ import { parseRole } from '@/lib/parsers';
 
 type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
 type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
+
+function revalidatePeriodPaths() {
+  revalidateTag('dashboard-data', 'default');
+  revalidateTag('report-aggregation', 'default');
+  revalidatePath('/admin/periods');
+  revalidatePath('/dashboard');
+  revalidatePath('/reports');
+  revalidatePath('/employees');
+  revalidatePath('/settings');
+}
 
 
 
@@ -146,7 +156,7 @@ export async function createEvaluationPeriod(year: number) {
       return { success: false, error: toClientError(rError, 'Lỗi tạo các vòng đánh giá. Vui lòng thử lại.') };
     }
 
-    revalidatePath('/admin/periods');
+    revalidatePeriodPaths();
     await logAudit(auth.user, 'CREATE_PERIOD', 'period', period.id, { year });
     return { success: true, periodId: period.id };
   } catch (err: unknown) {
@@ -172,7 +182,7 @@ export async function closeEvaluationPeriod(periodId: string) {
 
     if (error) return { success: false, error: toClientError(error, 'Lỗi đóng kỳ đánh giá. Vui lòng thử lại.') };
 
-    revalidatePath('/admin/periods');
+    revalidatePeriodPaths();
     await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
@@ -220,8 +230,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
 
     if (error) return { success: false, error: toClientError(error, 'Lỗi xóa kỳ đánh giá. Vui lòng thử lại.') };
 
-    revalidatePath('/admin/periods');
-    revalidatePath('/dashboard');
+    revalidatePeriodPaths();
     await logAudit(auth.user, 'DELETE_PERIOD', 'period', periodId);
     return { success: true };
   } catch (err: unknown) {
@@ -257,8 +266,7 @@ export async function savePeriodTarget(
 
     if (error) return { success: false, error: toClientError(error, 'Lỗi lưu mục tiêu. Vui lòng thử lại.') };
 
-    revalidatePath('/settings');
-    revalidatePath('/reports');
+    revalidatePeriodPaths();
     await logAudit(auth.user, 'UPDATE_PERIOD_TARGET', 'period', periodId, { rate, grade });
     return { success: true };
   } catch (err: unknown) {
