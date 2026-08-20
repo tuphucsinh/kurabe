@@ -1,6 +1,7 @@
 # Known Bugs & Notes - Kurabe QAQC Evaluation
 
 ## Technical Debt
+- [ ] **Reports ~2.9s** (20-08): bottleneck chủ yếu CLIENT render chart (recharts) + AI summary — data rất nhỏ (~44KB full org evaluation). Hướng: lazy/code-split chart (không đụng data/staging). Noted từ điều tra hiệu năng "evaluation heavy".
 - [x] **Data Persistence**: Đã chuyển sang dùng Supabase thay thế localStorage.
 - [ ] **Formula Validation**: Các công thức tính điểm (nhóm E, F) cần được kiểm thử kỹ hơn với các trường hợp biên (tất cả 5, tất cả 1, hoặc có tiêu chí âm).
 - [x] **Type Safety**: Refactored `src/lib/db/*.ts` to use Supabase generated types, removed most `as any` casts.

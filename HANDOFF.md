@@ -1,3 +1,16 @@
+# HANDOFF — Kurabe QAQC (cập nhật 2026-08-20 cuối phiên)
+
+## Phiên 20-08 (Điều tra & tối ưu hiệu năng evaluation → dashboard/employees/reports)
+- **Điều tra "evaluation heavy"**: DB KHÔNG nặng (52 NV active, 69 rounds — full projection cả org ~44KB, summary ~9KB). Gốc rễ = NHIỀU round-trip server action (~120-500ms mỗi action, Supabase cloud HK) + refetch lại mỗi trang. `evaluation_responses` = 0 (điểm/note nằm trong `evaluation_rounds` JSONB). **Phát hiện quan trọng**: Reports vốn ĐÃ gộp 1 action `getReportAggregation` (server Promise.all evaluations+users+teams+criteria); 6 round-trip đo được gồm periods lặp + AI summary + auth. Có N+1 non-Manager trong `fetchEvaluations(Summaries)ForViewerAdmin`.
+- **Fix (3 commit, đã push + deploy production)**:
+  - `cb75663` Dashboard light+heavy SONG SONG (heavy tự fetch userMap qua getUsersAdmin) — cắt 1 round-trip. gemini `gemini-3.7-flash-high` làm · Mika lint 0 + build PASS · sonnet `claude-sonnet-4-6` review PASS.
+  - `ff411d7` Fix N+1 non-Manager (song song rounds + sub-employees query; `getSubLeaderViewContextAdmin` chạy 1 lần; bảo toàn RBAC) — leader/subleader đỡ 1 Supabase round-trip.
+  - `0f380d6` Period actions: `revalidatePeriodPaths()` revalidate /dashboard~/reports~/employees~/settings theo pattern users/teams/evaluation (tag dashboard-data/report-aggregation là no-op nhất quán toàn repo).
+- **Push + deploy**: 3 commit push main → Vercel auto-deploy `kurabe-bqwusxo8b…` Ready (40s) → alias `lykiv.vercel.app` = bản mới (HTTP 200 verify). Commit author `tuphucsinh` (đúng — tránh lỗi Vercel mapping).
+- **Benchmark local (prod build, warm)**: dashboard ~0.5s (4 action song song), employees ~1.7s (4 action), reports ~2.9s — **Reports bottleneck chủ yếu CLIENT render chart (recharts) + AI summary, KHÔNG phải data** → hướng mở: lazy/code-split chart.
+- **Bài học vận hành**: Sequential Thinking phát hiện tối ưu full→summary projection chỉ ~35KB (không đáng) → loại. **agy headless chặn tool permission** (git diff/lint) → runner & reviewer print cần `--dangerously-skip-permissions` (kèm `--mode plan` = read-only an toàn).
+- **Còn mở**: lazy/code-split chart Reports (đang Reports ~2.9s); docs đợt này đã commit (phiên 20-08).
+
 # HANDOFF — Kurabe QAQC (cập nhật 2026-08-19 cuối phiên)
 
 ## Phiên 19-08 (Chat AI tinh chỉnh chat widget)
