@@ -482,9 +482,9 @@ BEGIN
   -- 3. Lock and authorize target evaluation_round
   SELECT id, status, submitted_at, evaluator_id
   INTO v_round
-  FROM public.evaluation_rounds
-  WHERE evaluation_id = p_evaluation_id
-    AND round = p_round
+  FROM public.evaluation_rounds AS target_round
+  WHERE target_round.evaluation_id = p_evaluation_id
+    AND target_round.round = p_round
   FOR UPDATE;
 
   IF NOT FOUND THEN
@@ -530,9 +530,9 @@ BEGIN
     IF p_is_final IS FALSE THEN
       -- Check if next round already exists to prevent conflict/overwriting
       SELECT id INTO v_existing_next_round_id
-      FROM public.evaluation_rounds
-      WHERE evaluation_id = p_evaluation_id
-        AND round = p_next_round
+      FROM public.evaluation_rounds AS next_round
+      WHERE next_round.evaluation_id = p_evaluation_id
+        AND next_round.round = p_next_round
       FOR UPDATE;
 
       IF v_existing_next_round_id IS NOT NULL THEN
