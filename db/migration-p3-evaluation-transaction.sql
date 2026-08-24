@@ -4,6 +4,8 @@
 -- DO NOT EXECUTE DIRECTLY WITHOUT EXPLICIT MIGRATION APPROVAL
 -- ============================================================
 
+BEGIN;
+
 -- ------------------------------------------------------------
 -- 1. PREFLIGHT DUPLICATE CHECKS
 -- Fail closed with clear exceptions if duplicates already exist
@@ -42,110 +44,340 @@ BEGIN
 END $$;
 
 -- ------------------------------------------------------------
--- 2. SCHEMA CONSTRAINTS & INDEXES (Idempotent, Named)
+-- 2. SCHEMA CONSTRAINTS & INDEXES (Fail-Closed Provenance Ownership)
 -- ------------------------------------------------------------
 
 -- 2.1 Unique (period_id, employee_id) on evaluations
 DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'uq_evaluations_period_employee'
-  ) THEN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'uq_evaluations_period_employee'
+    AND conrelid = to_regclass('public.evaluations');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:uq_evaluations_period_employee' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint uq_evaluations_period_employee on public.evaluations already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:uq_evaluations_period_employee". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint uq_evaluations_period_employee on public.evaluations already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluations
       ADD CONSTRAINT uq_evaluations_period_employee UNIQUE (period_id, employee_id);
+    COMMENT ON CONSTRAINT uq_evaluations_period_employee ON public.evaluations
+      IS 'kurabe:p3:candidate:v1:constraint:uq_evaluations_period_employee';
+    RAISE NOTICE 'CREATED: Constraint uq_evaluations_period_employee on public.evaluations';
   END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS idx_evaluations_period_employee
-  ON public.evaluations (period_id, employee_id);
-
--- 2.2 Unique (evaluation_id, round) on evaluation_rounds
+-- 2.2 Explicit Index idx_evaluations_period_employee
 DO $$
+DECLARE
+  v_idx_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'uq_evaluation_rounds_eval_round'
-  ) THEN
+  SELECT c.oid INTO v_idx_oid
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'idx_evaluations_period_employee'
+    AND c.relkind = 'i';
+
+  IF v_idx_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_idx_oid AND classoid = 'pg_class'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:index:idx_evaluations_period_employee' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Index public.idx_evaluations_period_employee already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:index:idx_evaluations_period_employee". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Index public.idx_evaluations_period_employee already exists with valid provenance marker. Skipping.';
+  ELSE
+    CREATE INDEX idx_evaluations_period_employee
+      ON public.evaluations (period_id, employee_id);
+    COMMENT ON INDEX public.idx_evaluations_period_employee
+      IS 'kurabe:p3:candidate:v1:index:idx_evaluations_period_employee';
+    RAISE NOTICE 'CREATED: Index public.idx_evaluations_period_employee';
+  END IF;
+END $$;
+
+-- 2.3 Unique (evaluation_id, round) on evaluation_rounds
+DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
+BEGIN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'uq_evaluation_rounds_eval_round'
+    AND conrelid = to_regclass('public.evaluation_rounds');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:uq_evaluation_rounds_eval_round' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint uq_evaluation_rounds_eval_round on public.evaluation_rounds already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:uq_evaluation_rounds_eval_round". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint uq_evaluation_rounds_eval_round on public.evaluation_rounds already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluation_rounds
       ADD CONSTRAINT uq_evaluation_rounds_eval_round UNIQUE (evaluation_id, round);
+    COMMENT ON CONSTRAINT uq_evaluation_rounds_eval_round ON public.evaluation_rounds
+      IS 'kurabe:p3:candidate:v1:constraint:uq_evaluation_rounds_eval_round';
+    RAISE NOTICE 'CREATED: Constraint uq_evaluation_rounds_eval_round on public.evaluation_rounds';
   END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS idx_evaluation_rounds_eval_round
-  ON public.evaluation_rounds (evaluation_id, round);
-
--- 2.3 Round range check (1..3) on evaluation_rounds
+-- 2.4 Explicit Index idx_evaluation_rounds_eval_round
 DO $$
+DECLARE
+  v_idx_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluation_rounds_round_range'
-  ) THEN
+  SELECT c.oid INTO v_idx_oid
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'idx_evaluation_rounds_eval_round'
+    AND c.relkind = 'i';
+
+  IF v_idx_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_idx_oid AND classoid = 'pg_class'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:index:idx_evaluation_rounds_eval_round' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Index public.idx_evaluation_rounds_eval_round already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:index:idx_evaluation_rounds_eval_round". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Index public.idx_evaluation_rounds_eval_round already exists with valid provenance marker. Skipping.';
+  ELSE
+    CREATE INDEX idx_evaluation_rounds_eval_round
+      ON public.evaluation_rounds (evaluation_id, round);
+    COMMENT ON INDEX public.idx_evaluation_rounds_eval_round
+      IS 'kurabe:p3:candidate:v1:index:idx_evaluation_rounds_eval_round';
+    RAISE NOTICE 'CREATED: Index public.idx_evaluation_rounds_eval_round';
+  END IF;
+END $$;
+
+-- 2.5 Round range check (1..3) on evaluation_rounds
+DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
+BEGIN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluation_rounds_round_range'
+    AND conrelid = to_regclass('public.evaluation_rounds');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_round_range' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluation_rounds_round_range on public.evaluation_rounds already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_round_range". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluation_rounds_round_range on public.evaluation_rounds already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluation_rounds
       ADD CONSTRAINT chk_evaluation_rounds_round_range CHECK (round BETWEEN 1 AND 3);
+    COMMENT ON CONSTRAINT chk_evaluation_rounds_round_range ON public.evaluation_rounds
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_round_range';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluation_rounds_round_range on public.evaluation_rounds';
   END IF;
 END $$;
 
--- 2.4 Current round range check (1..3) on evaluations
+-- 2.6 Current round range check (1..3) on evaluations
 DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluations_current_round_range'
-  ) THEN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluations_current_round_range'
+    AND conrelid = to_regclass('public.evaluations');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluations_current_round_range' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluations_current_round_range on public.evaluations already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluations_current_round_range". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluations_current_round_range on public.evaluations already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluations
       ADD CONSTRAINT chk_evaluations_current_round_range CHECK (current_round IS NULL OR current_round BETWEEN 1 AND 3);
+    COMMENT ON CONSTRAINT chk_evaluations_current_round_range ON public.evaluations
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluations_current_round_range';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluations_current_round_range on public.evaluations';
   END IF;
 END $$;
 
--- 2.5 Valid status check on evaluations matching verified source types
+-- 2.7 Valid status check on evaluations matching verified source types
 -- Source: 'NotStarted' | 'Draft' | 'Submitted' | 'Reviewed' | 'Approved'
 DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluations_status_valid'
-  ) THEN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluations_status_valid'
+    AND conrelid = to_regclass('public.evaluations');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluations_status_valid' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluations_status_valid on public.evaluations already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluations_status_valid". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluations_status_valid on public.evaluations already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluations
       ADD CONSTRAINT chk_evaluations_status_valid
       CHECK (status IN ('NotStarted', 'Draft', 'Submitted', 'Reviewed', 'Approved'));
+    COMMENT ON CONSTRAINT chk_evaluations_status_valid ON public.evaluations
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluations_status_valid';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluations_status_valid on public.evaluations';
   END IF;
 END $$;
 
--- 2.6 Valid status check on evaluation_rounds matching verified source types
+-- 2.8 Valid status check on evaluation_rounds matching verified source types
 -- Source: 'NotStarted' | 'Draft' | 'Submitted'
 DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluation_rounds_status_valid'
-  ) THEN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluation_rounds_status_valid'
+    AND conrelid = to_regclass('public.evaluation_rounds');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_status_valid' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluation_rounds_status_valid on public.evaluation_rounds already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_status_valid". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluation_rounds_status_valid on public.evaluation_rounds already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluation_rounds
       ADD CONSTRAINT chk_evaluation_rounds_status_valid
       CHECK (status IN ('NotStarted', 'Draft', 'Submitted'));
+    COMMENT ON CONSTRAINT chk_evaluation_rounds_status_valid ON public.evaluation_rounds
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_status_valid';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluation_rounds_status_valid on public.evaluation_rounds';
   END IF;
 END $$;
 
--- 2.7 Total score and final score non-negative checks
+-- 2.9 Total score non-negative check on evaluation_rounds
 DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluation_rounds_total_score_non_negative'
-  ) THEN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluation_rounds_total_score_non_negative'
+    AND conrelid = to_regclass('public.evaluation_rounds');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_total_score_non_negative' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluation_rounds_total_score_non_negative on public.evaluation_rounds already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_total_score_non_negative". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluation_rounds_total_score_non_negative on public.evaluation_rounds already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluation_rounds
       ADD CONSTRAINT chk_evaluation_rounds_total_score_non_negative
       CHECK (total_score IS NULL OR total_score >= 0);
+    COMMENT ON CONSTRAINT chk_evaluation_rounds_total_score_non_negative ON public.evaluation_rounds
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluation_rounds_total_score_non_negative';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluation_rounds_total_score_non_negative on public.evaluation_rounds';
   END IF;
+END $$;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'chk_evaluations_final_score_non_negative'
-  ) THEN
+-- 2.10 Final score non-negative check on evaluations
+DO $$
+DECLARE
+  v_con_oid oid;
+  v_comment text;
+BEGIN
+  SELECT oid INTO v_con_oid
+  FROM pg_constraint
+  WHERE conname = 'chk_evaluations_final_score_non_negative'
+    AND conrelid = to_regclass('public.evaluations');
+
+  IF v_con_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_con_oid AND classoid = 'pg_constraint'::regclass AND objsubid = 0;
+
+    IF v_comment IS DISTINCT FROM 'kurabe:p3:candidate:v1:constraint:chk_evaluations_final_score_non_negative' THEN
+      RAISE EXCEPTION 'PROVENANCE_MISMATCH: Constraint chk_evaluations_final_score_non_negative on public.evaluations already exists but comment "%" does not match expected marker "kurabe:p3:candidate:v1:constraint:chk_evaluations_final_score_non_negative". Aborting.', v_comment;
+    END IF;
+    RAISE NOTICE 'Constraint chk_evaluations_final_score_non_negative on public.evaluations already exists with valid provenance marker. Skipping.';
+  ELSE
     ALTER TABLE public.evaluations
       ADD CONSTRAINT chk_evaluations_final_score_non_negative
       CHECK (final_score IS NULL OR final_score >= 0);
+    COMMENT ON CONSTRAINT chk_evaluations_final_score_non_negative ON public.evaluations
+      IS 'kurabe:p3:candidate:v1:constraint:chk_evaluations_final_score_non_negative';
+    RAISE NOTICE 'CREATED: Constraint chk_evaluations_final_score_non_negative on public.evaluations';
   END IF;
 END $$;
 
 -- ------------------------------------------------------------
 -- 3. ATOMIC EVALUATION ROUND TRANSACTION RPC FUNCTION
+-- (Fail-Closed One-Shot Creation: Refuses replacement of existing functions)
 -- ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION public.save_evaluation_round_transaction(
+DO $$
+DECLARE
+  v_proc_oid oid;
+  v_comment text;
+BEGIN
+  SELECT p.oid INTO v_proc_oid
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.relnamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'save_evaluation_round_transaction'
+    AND pg_get_function_identity_arguments(p.oid) = 'p_evaluation_id uuid, p_round integer, p_actor_id uuid, p_scores jsonb, p_notes jsonb, p_comment text, p_total_score numeric, p_grade text, p_is_submit boolean, p_submitted_at timestamp with time zone, p_next_round integer, p_next_evaluator_id uuid, p_next_evaluator_role text, p_next_status text, p_is_final boolean';
+
+  IF v_proc_oid IS NULL THEN
+    v_proc_oid := to_regprocedure('public.save_evaluation_round_transaction(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean)')::oid;
+  END IF;
+
+  IF v_proc_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_proc_oid AND classoid = 'pg_proc'::regclass AND objsubid = 0;
+
+    RAISE EXCEPTION 'COLLISION: Function public.save_evaluation_round_transaction already exists (comment: "%"). Migration is one-shot; aborting to prevent unowned replacement.', v_comment;
+  END IF;
+END $$;
+
+CREATE FUNCTION public.save_evaluation_round_transaction(
   p_evaluation_id uuid,
   p_round integer,
   p_actor_id uuid,
@@ -372,6 +604,10 @@ $$;
 -- ------------------------------------------------------------
 -- 4. SECURITY & PERMISSIONS
 -- ------------------------------------------------------------
+COMMENT ON FUNCTION public.save_evaluation_round_transaction(
+  uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean
+) IS 'kurabe:p3:candidate:v1:function:save_evaluation_round_transaction';
+
 REVOKE EXECUTE ON FUNCTION public.save_evaluation_round_transaction(
   uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean
 ) FROM PUBLIC, anon, authenticated;
@@ -379,3 +615,5 @@ REVOKE EXECUTE ON FUNCTION public.save_evaluation_round_transaction(
 GRANT EXECUTE ON FUNCTION public.save_evaluation_round_transaction(
   uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean
 ) TO service_role;
+
+COMMIT;

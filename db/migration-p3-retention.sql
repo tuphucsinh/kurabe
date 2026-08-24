@@ -4,6 +4,8 @@
 -- DO NOT EXECUTE DIRECTLY WITHOUT EXPLICIT MIGRATION & PRIVACY POLICY APPROVAL
 -- ============================================================
 
+BEGIN;
+
 -- ------------------------------------------------------------
 -- RETENTION POLICY SPECIFICATION (Constants & Boundaries)
 -- ------------------------------------------------------------
@@ -33,8 +35,35 @@
 -- - public.grade_bands
 -- - public.ai_summaries
 -- ------------------------------------------------------------
+-- PURGE ROUTINE (Fail-Closed One-Shot Creation: Refuses replacement of existing functions)
+-- ------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION public.purge_kurabe_retention(
+DO $$
+DECLARE
+  v_proc_oid oid;
+  v_comment text;
+BEGIN
+  SELECT p.oid INTO v_proc_oid
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.relnamespace
+  WHERE n.nspname = 'public'
+    AND p.proname = 'purge_kurabe_retention'
+    AND pg_get_function_identity_arguments(p.oid) = 'p_as_of timestamp with time zone';
+
+  IF v_proc_oid IS NULL THEN
+    v_proc_oid := to_regprocedure('public.purge_kurabe_retention(timestamptz)')::oid;
+  END IF;
+
+  IF v_proc_oid IS NOT NULL THEN
+    SELECT description INTO v_comment
+    FROM pg_description
+    WHERE objoid = v_proc_oid AND classoid = 'pg_proc'::regclass AND objsubid = 0;
+
+    RAISE EXCEPTION 'COLLISION: Function public.purge_kurabe_retention already exists (comment: "%"). Migration is one-shot; aborting to prevent unowned replacement.', v_comment;
+  END IF;
+END $$;
+
+CREATE FUNCTION public.purge_kurabe_retention(
   p_as_of timestamptz DEFAULT now()
 )
 RETURNS TABLE (
@@ -127,5 +156,10 @@ $$;
 -- ------------------------------------------------------------
 -- SECURITY & PERMISSIONS
 -- ------------------------------------------------------------
+COMMENT ON FUNCTION public.purge_kurabe_retention(timestamptz)
+  IS 'kurabe:p3:candidate:v1:function:purge_kurabe_retention';
+
 REVOKE EXECUTE ON FUNCTION public.purge_kurabe_retention(timestamptz) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purge_kurabe_retention(timestamptz) TO service_role;
+
+COMMIT;
