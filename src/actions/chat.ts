@@ -437,6 +437,16 @@ async function prepareChatContext(
     : null;
   const requesterEval = await buildEvaluationStatus(auth.user?.id || '', auth.user);
 
+  let statusPriorityInstruction = '';
+  if (empContext.kind === 'found' && empContext.text.includes('Trạng thái đánh giá')) {
+    statusPriorityInstruction = `Chỉ dẫn ưu tiên trạng thái đánh giá:
+1. Câu đầu tiên phải nêu trực tiếp vòng đánh giá hiện tại và trạng thái L1/L2/L3 tương ứng của nhân viên được nhắc từ ngữ cảnh đã cung cấp.
+2. Nếu câu hỏi thắc mắc vì sao chưa chấm được hoặc chưa mở vòng, phải nêu rõ vòng trước đó đang chặn và ai cần nộp trước khi giải thích quy trình chung.
+3. Không bắt đầu bằng hướng dẫn quy trình chung hoặc điều hướng menu chung.
+4. Không hỏi lại tên nhân viên hay trạng thái đánh giá đã có sẵn trong ngữ cảnh.
+5. Không tự suy luận vòng đã sẵn sàng/mở chỉ từ trường "vòng đang mở"; phải căn cứ vào trạng thái thực tế của từng vòng L1/L2/L3.`;
+  }
+
   const history = sanitizeAIHistory(input.history);
   const userInfo = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}${requesterEval ? `, trạng thái đánh giá của ${addr}: ${requesterEval}` : ''}; trang đang mở = ${page}.${pageContext}${empContext.text}`;
 
@@ -448,7 +458,10 @@ async function prepareChatContext(
     historySection = `\n\nLịch sử hội thoại (12 lượt gần nhất):\n${historyText}`;
   }
 
-  const prompt = `Câu hỏi mới của ${addr}:\n${question}\n\n${userInfo}${historySection}`;
+  const basePrompt = `Câu hỏi mới của ${addr}:\n${question}\n\n${userInfo}${historySection}`;
+  const prompt = statusPriorityInstruction
+    ? `${statusPriorityInstruction}\n\n${basePrompt}`
+    : basePrompt;
 
   return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
 }
