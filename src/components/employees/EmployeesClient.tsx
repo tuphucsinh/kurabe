@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import { getUsersBatchAction, getEvaluationSummariesBatchAction, getEmployeesPageDataAction } from '@/actions/read';
 import { mergeUserBatches } from '@/lib/employee-batch-helpers';
+import { projectEmployeeTableItems, type EmployeeTableItem } from '@/lib/employee-table-projection';
 import EmployeeEvaluationCell from '@/components/employees/EmployeeEvaluationCell';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,17 +42,6 @@ function useDebouncedValue<T>(value: T, delayMs: number = 300): T {
 
 interface EmployeesClientProps {
   initialViewer: User;
-}
-
-interface EmployeeTableItem extends User {
-  teamName: string;
-  grade: string;
-  score: number;
-  gradeRound: number | null;
-  previousRoundScores: Array<{ round: number; score: number }>;
-  hasFinalResult: boolean;
-  evaluationLoading: boolean;
-  evaluationError?: boolean;
 }
 
 export default function EmployeesClient({ initialViewer }: EmployeesClientProps) {
@@ -390,62 +380,17 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
   // Computed employee items — teamsLoading does not block row display
   const employeesData: EmployeeTableItem[] = useMemo(() => {
-    return [...users]
-      .sort((a, b) => {
-        const order: Record<string, number> = { Manager: 0, Leader: 1, SubLeader: 2, Employee: 3, Worker: 4 };
-        const rank = (r?: string) => (r ? order[r] ?? 99 : 99);
-        const dRole = rank(a.role) - rank(b.role);
-        if (dRole !== 0) return dRole;
-        const teamNameOf = (u: User) =>
-          u.role === 'Manager' ? 'Toàn bộ bộ phận' : teams.find((t) => t.id === u.teamId)?.name ?? '';
-        const dTeam = teamNameOf(a).localeCompare(teamNameOf(b), 'vi');
-        if (dTeam !== 0) return dTeam;
-        const subNameOf = (u: User) =>
-          u.subleaderId ? subleaderMap[u.subleaderId] ?? userMap.get(u.subleaderId)?.name ?? '' : '';
-        const dSub = subNameOf(a).localeCompare(subNameOf(b), 'vi');
-        if (dSub !== 0) return dSub;
-        return a.name.localeCompare(b.name, 'vi');
-      })
-      .map((userItem) => {
-      const team = teams.find((t) => t.id === userItem.teamId);
-      const rawEval = evaluationsMap[userItem.id] || null;
-      const evalItem =
-        rawEval && (!currentPeriodId || !rawEval.periodId || rawEval.periodId === currentPeriodId)
-          ? rawEval
-          : null;
-      const isEvalLoading = !!evalLoadingMap[userItem.id];
-      const isEvalError = !!evalErrorMap[userItem.id];
-
-      const latestScoredRound = evalItem?.rounds?.filter(
-        (r) => r.status !== 'Draft' && r.status !== 'NotStarted' && (r.status === 'Submitted' || (r.status as string) === 'Reviewed' || (r.status as string) === 'Approved' || !!r.submittedAt)
-      ) || [];
-      const latestRound = latestScoredRound.length
-        ? latestScoredRound.reduce((max, r) => r.round > max.round ? r : max, latestScoredRound[0])
-        : null;
-      const previousRoundScores = latestScoredRound
-        .filter((r) => latestRound ? r.round !== latestRound.round : true)
-        .sort((a, b) => b.round - a.round)
-        .map((r) => ({ round: r.round, score: r.totalScore }));
-
-      return {
-        ...userItem,
-        teamName: userItem.role === 'Manager'
-          ? 'Toàn bộ bộ phận'
-          : team
-          ? team.name
-          : teamsError
-          ? 'Lỗi tải nhóm'
-          : teamsLoading
-          ? 'Đang tải...'
-          : 'Chưa gán',
-        grade: evalItem?.finalGrade ?? latestRound?.grade ?? '-',
-        score: evalItem?.finalScore ?? latestRound?.totalScore ?? 0,
-        gradeRound: latestRound?.round ?? null,
-        previousRoundScores,
-        hasFinalResult: !!evalItem?.finalGrade,
-        evaluationLoading: isEvalLoading,
-        evaluationError: isEvalError,
-      };
+    return projectEmployeeTableItems({
+      users,
+      teams,
+      teamsLoading,
+      teamsError,
+      evaluationsMap,
+      evalLoadingMap,
+      evalErrorMap,
+      currentPeriodId,
+      subleaderMap,
+      userMap,
     });
   }, [users, teams, teamsLoading, teamsError, evaluationsMap, evalLoadingMap, evalErrorMap, currentPeriodId, userMap, subleaderMap]);
 

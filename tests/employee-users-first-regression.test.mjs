@@ -91,6 +91,9 @@ function extractInterface(code, interfaceName) {
 {
   const code = readProjectFile('src/components/employees/EmployeesClient.tsx');
   const cleanCode = stripComments(code);
+  const projectionCode = readProjectFile('src/lib/employee-table-projection.ts');
+  const projectionClean = stripComments(projectionCode);
+  const normProjection = normalizeWhitespace(projectionClean);
 
   // 2.1 Interface EmployeesClientProps must declare initialViewer: User
   const propsInterface = extractInterface(code, 'EmployeesClientProps');
@@ -101,7 +104,7 @@ function extractInterface(code, interfaceName) {
   );
 
   // 2.2 Interface EmployeeTableItem must include evaluationLoading
-  const interfaceCode = extractInterface(code, 'EmployeeTableItem');
+  const interfaceCode = extractInterface(projectionCode, 'EmployeeTableItem');
   const interfaceBody = normalizeWhitespace(interfaceCode);
   assert.ok(
     interfaceBody.includes('evaluationLoading: boolean'),
@@ -140,7 +143,8 @@ function extractInterface(code, interfaceName) {
 
   // 2.5 teamsLoading and currentPeriod must not block shell or user rows
   assert.ok(
-    normFn.includes("teamsLoading ? 'Đang tải...' : 'Chưa gán'"),
+    normProjection.includes("teamsLoading ? 'Đang tải...' : 'Chưa gán'") &&
+      normProjection.includes("teamsError ? 'Lỗi tải nhóm'"),
     'teamsLoading must gracefully show placeholder team name without blocking rows'
   );
 
@@ -156,10 +160,10 @@ function extractInterface(code, interfaceName) {
     'EmployeesClient must clear users, evaluationsMap, evalLoadingMap, evalErrorMap, counts/hasMore on viewer logout/mismatch'
   );
 
-  // 2.7 employeesData useMemo must populate evaluationLoading
+  // 2.7 projection helper must populate evaluationLoading
   assert.ok(
-    /evaluationLoading\s*:\s*isEvalLoading/.test(normFn) || /evaluationLoading\s*:/.test(normFn),
-    'employeesData map must set evaluationLoading'
+    /evaluationLoading\s*:\s*isEvalLoading/.test(normProjection) || /evaluationLoading\s*:/.test(normProjection),
+    'projection helper must set evaluationLoading'
   );
 
   // 2.8 Evaluation column render must delegate to EmployeeEvaluationCell with proper props
