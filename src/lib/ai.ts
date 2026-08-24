@@ -15,9 +15,75 @@ import {
  * KHÔNG BAO GIỜ import vào client component (key là bí mật).
  */
 
-// gpt-5.6-luna: trả content ổn định qua opencode.ai/zen/go/v1 (deepseek-v4-flash reasoning
+// gpt-5.6-luna: trả content ổn định qua opencode.ai/zen/go/v1 — theo OpenCode Go docs model này
+// chỉ nhận Responses API (${base}/responses); /chat/completions trả HTTP 500 (deepseek-v4-flash reasoning
 // ngốn hết max_tokens → content rỗng với prompt dài).
 const DEFAULT_MODEL = 'gpt-5.6-luna';
+
+/**
+ * Parse phản hồi chat/completions (OpenAI-compatible): choices[0].message.content.
+ */
+function parseChatCompletionsOutput(data: unknown): { content: string | null; finishReason: string | null } {
+  const d = data as {
+    choices?: Array<{ message?: { content?: unknown }; finish_reason?: unknown }>;
+  } | null;
+  const choice = d?.choices?.[0];
+  const text = choice?.message?.content;
+  const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
+  const content = typeof text === 'string' && text.trim() ? text.trim() : null;
+  return { content, finishReason };
+}
+
+/**
+ * Parse phản hồi Responses API (gpt-5.6-luna qua ${base}/responses):
+ * ưu tiên data.output_text; nếu thiếu/rỗng, dò output[].content[].{output_text|text}.
+ * Content thiếu/blank → null. status "incomplete" do max_output_tokens → finishReason "length"
+ * để tái sử dụng hành vi retry chung (không vỡ parsing chat/completions).
+ */
+function parseResponsesOutput(data: unknown): { content: string | null; finishReason: string | null } {
+  const d = data as {
+    output_text?: unknown;
+    output?: unknown;
+    status?: unknown;
+    incomplete_details?: { reason?: unknown };
+  } | null;
+  if (!d || typeof d !== 'object') {
+    return { content: null, finishReason: null };
+  }
+
+  let content: string | null = null;
+  const topLevelText = d.output_text;
+  if (typeof topLevelText === 'string' && topLevelText.trim()) {
+    content = topLevelText.trim();
+  } else {
+    const outputs = Array.isArray(d.output) ? (d.output as Array<{ type?: unknown; content?: unknown }>) : [];
+    for (const item of outputs) {
+      if (!item || typeof item !== 'object') continue;
+      if (item.type !== 'message') continue;
+      const parts = Array.isArray(item.content) ? (item.content as Array<{ type?: unknown; text?: unknown }>) : [];
+      for (const part of parts) {
+        if (!part || typeof part !== 'object') continue;
+        if (part.type !== 'output_text' && part.type !== 'text') continue;
+        const text = part.text;
+        if (typeof text === 'string' && text.trim()) {
+          content = text.trim();
+          break;
+        }
+      }
+      if (content !== null) break;
+    }
+  }
+
+  let finishReason: string | null = null;
+  if (typeof d.status === 'string') {
+    if (d.status === 'incomplete') {
+      finishReason = d.incomplete_details?.reason === 'max_output_tokens' ? 'length' : 'incomplete';
+    } else {
+      finishReason = d.status;
+    }
+  }
+  return { content, finishReason };
+}
 
 export function isAIConfigured(): boolean {
   return Boolean(process.env.AI_API_KEY);
@@ -42,6 +108,9 @@ export async function callAI(
 
   const baseUrl = rawBaseUrl.replace(/\/$/, '');
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
+  // gpt-5.6-luna (OpenCode Go) chỉ nhận Responses API — chat/completions trả HTTP 500.
+  // Các model chat-completions khác và callAIVision giữ nguyên endpoint cũ.
+  const useResponses = model === 'gpt-5.6-luna';
   const boundedPrompt = boundAIText(prompt, MAX_AI_PROMPT_CHARS);
   const baseSystem =
     opts.system ||
@@ -52,32 +121,40 @@ export async function callAI(
     maxTokens: number,
     extraSystem: string
   ): Promise<{ content: string | null; finishReason: string | null } | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45000);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 45000);
       const systemContent = boundAIText(boundedSystem + extraSystem, MAX_AI_SYSTEM_CHARS);
 
-      const res = await fetch(`${baseUrl}/chat/completions`, {
+      const endpoint = useResponses ? `${baseUrl}/responses` : `${baseUrl}/chat/completions`;
+      const rawBody = useResponses
+        ? {
+            model,
+            input: [
+              { role: 'system', content: [{ type: 'input_text', text: systemContent }] },
+              { role: 'user', content: [{ type: 'input_text', text: boundedPrompt }] },
+            ],
+            max_output_tokens: maxTokens,
+          }
+        : {
+            model,
+            messages: [
+              { role: 'system', content: systemContent },
+              { role: 'user', content: boundedPrompt },
+            ],
+            max_tokens: maxTokens,
+            temperature: opts.temperature ?? 0.3,
+          };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: systemContent,
-            },
-            { role: 'user', content: boundedPrompt },
-          ],
-          max_tokens: maxTokens,
-          temperature: opts.temperature ?? 0.3,
-        }),
+        body: JSON.stringify(rawBody),
         signal: controller.signal,
       });
-      clearTimeout(timer);
 
       if (!res.ok) {
         console.error('callAI HTTP error:', {
@@ -89,17 +166,15 @@ export async function callAI(
       }
 
       const data = await res.json();
-      const choice = data?.choices?.[0];
-      const text = choice?.message?.content;
-      const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
-      const content = typeof text === 'string' && text.trim() ? text.trim() : null;
-      return { content, finishReason };
+      return useResponses ? parseResponsesOutput(data) : parseChatCompletionsOutput(data);
     } catch {
       console.error('callAI request error:', {
         hostname: providerCheck.hostname,
         model,
       });
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   };
 
@@ -155,9 +230,9 @@ export async function callAIVision(
     maxTokens: number,
     extraSystem: string
   ): Promise<{ content: string | null; finishReason: string | null } | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60000);
       // Vision endpoint chỉ nhận message 'user' — retry extraSystem và system rules ghép vào đầu text content
       const textContent = [extraSystem, boundedSystem, boundedPrompt].filter(Boolean).join('\n\n');
       const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -179,7 +254,6 @@ export async function callAIVision(
         }),
         signal: controller.signal,
       });
-      clearTimeout(timer);
       if (!res.ok) {
         console.error('callAIVision HTTP error:', {
           status: res.status,
@@ -200,6 +274,8 @@ export async function callAIVision(
         model,
       });
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   };
 
@@ -218,4 +294,3 @@ export async function callAIVision(
   }
   return null;
 }
-
