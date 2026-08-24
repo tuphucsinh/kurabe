@@ -223,20 +223,6 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
                     <p className="mt-1 text-[8.5pt] text-[#334155] leading-relaxed whitespace-pre-line text-justify">
                       {step.body}
                     </p>
-
-                    {step.screenshotPath && (
-                      <figure className="figure-img-container mt-2 text-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={step.screenshotPath}
-                          alt={step.title}
-                          className="mx-auto w-full max-w-[170mm] rounded border border-[#e2e8f0]"
-                        />
-                        <figcaption className="mt-1 text-[7.5pt] text-[#64748b]">
-                          Minh họa: {step.title}
-                        </figcaption>
-                      </figure>
-                    )}
                   </div>
                 </div>
               ))}

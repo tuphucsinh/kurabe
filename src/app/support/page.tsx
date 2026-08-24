@@ -210,20 +210,6 @@ export default function SupportPage() {
                       <h3 className="text-sm font-black text-slate-900 md:text-base">{step.title}</h3>
                       <p className="mt-2 text-sm leading-7 text-slate-600 whitespace-pre-line">{step.body}</p>
                     </div>
-                    {step.screenshotPath && (
-                      <figure className="rounded-[16px] border border-slate-200 bg-white p-2.5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={step.screenshotPath}
-                          alt={step.title}
-                          className="w-full rounded-xl border border-slate-100"
-                          loading="lazy"
-                        />
-                        <figcaption className="mt-1.5 px-1 text-xs text-slate-500">
-                          Minh họa: {step.title}
-                        </figcaption>
-                      </figure>
-                    )}
                   </div>
                 </div>
               ))}
