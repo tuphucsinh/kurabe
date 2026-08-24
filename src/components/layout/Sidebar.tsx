@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
@@ -122,7 +122,8 @@ interface SidebarContentProps {
 
 function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
   const { toast } = useToast();
-  const { logout, currentPeriod } = useAuth();
+  const { logout, currentPeriod, isLoggingOut } = useAuth();
+  const [isLogoutStarted, setIsLogoutStarted] = useState(false);
   const queryClient = useQueryClient();
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activePrefetchKeyRef = useRef<readonly unknown[] | null>(null);
@@ -300,12 +301,16 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         {/* Logout */}
         <button
           onClick={async () => {
+            if (isLogoutStarted || isLoggingOut) return;
+            setIsLogoutStarted(true);
             onClose?.();
             // P69T01: cookie auth_session giờ httpOnly — KHÔNG xóa được bằng document.cookie.
             // Phải qua logoutAction (server action xóa cookie) rồi full reload sang /login.
             await logout();
-            window.location.href = '/login';
+            window.location.replace('/login');
           }}
+          disabled={isLogoutStarted || isLoggingOut}
+          aria-busy={isLogoutStarted || isLoggingOut}
           className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/8 hover:text-red-400 transition-all duration-200 w-full text-left group"
         >
           <LogOut size={20} strokeWidth={1.5} className="group-hover:-translate-x-1 transition-transform" />

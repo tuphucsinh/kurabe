@@ -10,6 +10,7 @@ import { getCurrentUserAction } from '@/actions/read';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isLoggingOut: boolean;
   login: (employeeCode: string, password?: string) => Promise<User>;
   logout: () => void | Promise<void>;
   isManager: boolean;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentPeriod, setCurrentPeriodState] = useState<EvaluationPeriod | null>(null);
   const [allPeriods, setAllPeriods] = useState<EvaluationPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -102,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    setIsLoggingOut(true);
     try {
       await logoutAction();
     } catch {}
@@ -117,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       isLoading, 
+      isLoggingOut,
       login, 
       logout,
       isManager,

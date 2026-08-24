@@ -16,13 +16,13 @@ const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), {
 });
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggingOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isLoggingOut) return;
 
     if (!user && pathname !== '/login') {
       router.push('/login');
@@ -39,7 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         router.push('/dashboard');
       }
     }
-  }, [user, isLoading, pathname, router]);
+  }, [user, isLoading, isLoggingOut, pathname, router]);
 
   // Đóng sidebar khi đổi route — adjust state during render (không cần effect)
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -55,6 +55,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 w-full">
         <PageTransition>{children}</PageTransition>
       </main>
+    );
+  }
+
+  if (isLoggingOut) {
+    return (
+      <div className="min-h-screen bg-[#003449] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
     );
   }
 
