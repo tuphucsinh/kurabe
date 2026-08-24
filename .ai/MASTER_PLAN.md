@@ -1065,3 +1065,14 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 > `buildEvaluationStatus(employeeId, requester)` (ai-context.ts): kỳ hiện tại (getActivePeriod) + từng vòng L1/L2/L3 (chưa nộp/nháp/đã nộp+điểm) + vòng đang mở L{currentRound} — scoped qua getEvaluationByEmployeeAdmin(emp, period, requester). Fail-soft ''.
 > Đưa cho BOTH: người được nhắc (nhánh found của buildEmployeeContext) + chính người hỏi (user-prompt chat.ts). Commit `1936729` → deploy `kurabe-2rabhpvvq`.
 > VERIFY production (Leader KIV8707): Q "sao không đánh giá được yến nhi" → A "…vì L1 của Nhi chưa được nộp. Vòng L2 chỉ mở sau khi SubLeader gửi L1…" — nói đúng trạng thái THẬT (trước chỉ generic). Rate-limit KIV158 15/2h chặn đúng (khi thử Manager).
+
+---
+
+## Phase 92: Transactional evaluation RPC production hardening ✅ DONE (2026-08-24)
+
+- Sửa lỗi PostgreSQL `42702 evaluation_id ambiguous` bằng alias qualification trong đúng 2 predicate; repair có provenance guard, giữ nguyên signature, privileges và rollback safety.
+- Production canary đầy đủ qua UI: SubLeader → Leader → Manager; final `Approved`; mỗi vòng 36/36 criteria; không duplicate round.
+- Failure-path FK `23503` rollback PASS; snapshot restore exact về `Draft`, 1 round, không còn audit canary.
+- Local gates: `npm test 24/24`, typecheck, build, diff-check PASS; lint 0 error + 1 warning cũ. Flag transactional ON; production login HTTP 200.
+- Reviewer độc lập PASS/HIGH. Commit `a56fba7`; branch `audit-hardening-p0-p3-20260824` đã push GitHub và remote SHA khớp local.
+- Retention/purge/cron không thực hiện; passwordless test login và CSP Report-Only vẫn là residual risk đã ghi nhận.

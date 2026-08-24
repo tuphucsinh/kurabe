@@ -1,62 +1,12 @@
-# HANDOFF — Kurabe QAQC (cập nhật 2026-08-20 cuối phiên)
+# HANDOFF — Kurabe QAQC
 
-## Phiên 20-08 (Điều tra & tối ưu hiệu năng evaluation → dashboard/employees/reports)
-- **Điều tra "evaluation heavy"**: DB KHÔNG nặng (52 NV active, 69 rounds — full projection cả org ~44KB, summary ~9KB). Gốc rễ = NHIỀU round-trip server action (~120-500ms mỗi action, Supabase cloud HK) + refetch lại mỗi trang. `evaluation_responses` = 0 (điểm/note nằm trong `evaluation_rounds` JSONB). **Phát hiện quan trọng**: Reports vốn ĐÃ gộp 1 action `getReportAggregation` (server Promise.all evaluations+users+teams+criteria); 6 round-trip đo được gồm periods lặp + AI summary + auth. Có N+1 non-Manager trong `fetchEvaluations(Summaries)ForViewerAdmin`.
-- **Fix (3 commit, đã push + deploy production)**:
-  - `cb75663` Dashboard light+heavy SONG SONG (heavy tự fetch userMap qua getUsersAdmin) — cắt 1 round-trip. gemini `gemini-3.7-flash-high` làm · Mika lint 0 + build PASS · sonnet `claude-sonnet-4-6` review PASS.
-  - `ff411d7` Fix N+1 non-Manager (song song rounds + sub-employees query; `getSubLeaderViewContextAdmin` chạy 1 lần; bảo toàn RBAC) — leader/subleader đỡ 1 Supabase round-trip.
-  - `0f380d6` Period actions: `revalidatePeriodPaths()` revalidate /dashboard~/reports~/employees~/settings theo pattern users/teams/evaluation (tag dashboard-data/report-aggregation là no-op nhất quán toàn repo).
-- **Push + deploy**: 3 commit push main → Vercel auto-deploy `kurabe-bqwusxo8b…` Ready (40s) → alias `lykiv.vercel.app` = bản mới (HTTP 200 verify). Commit author `tuphucsinh` (đúng — tránh lỗi Vercel mapping).
-- **Benchmark local (prod build, warm)**: dashboard ~0.5s (4 action song song), employees ~1.7s (4 action), reports ~2.9s — **Reports bottleneck chủ yếu CLIENT render chart (recharts) + AI summary, KHÔNG phải data** → hướng mở: lazy/code-split chart.
-- **Bài học vận hành**: Sequential Thinking phát hiện tối ưu full→summary projection chỉ ~35KB (không đáng) → loại. **agy headless chặn tool permission** (git diff/lint) → runner & reviewer print cần `--dangerously-skip-permissions` (kèm `--mode plan` = read-only an toàn).
-- **Còn mở**: lazy/code-split chart Reports (đang Reports ~2.9s); docs đợt này đã commit (phiên 20-08).
-
-# HANDOFF — Kurabe QAQC (cập nhật 2026-08-19 cuối phiên)
-
-## Phiên 19-08 (Chat AI tinh chỉnh chat widget)
-- **Chìa khóa đầu kỳ: khóa AI cũ hết hạn tháng (429 GoUsage)** — production/local trả fail-soft "chưa trả lời được". Fix: set AI_API_KEY mới (opencode) lên Vercel env + redeploy (Vercel đổi env CHỈ áp deployment build MỚI; redeploy deployment hiện tại để lấy env mới). Vercel DB 12MB.
-- **Phase 91**: Chat AI context — chức vụ + nhóm + chức danh (chức danh = cột `description`; Employee/Worker không hiển thị), user-prompt đủ thông tin, không mã NV. `vi-text.ts` (normalizeVi + match tên), `ai-context.ts` (buildEmployeeContext union found/multiple/different_team/not_found).
-- **Phase 91.1**: tinh chỉnh theo anh — different_team KHÔNG giới hạn Manager; bỏ mã NV; xưng hô anh/chị theo giới tính; từ chối off-topic mọi role; **Worker/Employee KHÔNG có chat widget** (bỏ khỏi ChatWidget display + requireRole chat); khôuu lặp giới tính/chức danh nếu không cần; cập nhật chat-knowledge.md qua Sequential Thinking.
-- **Phase 91.2**: buildEvaluationStatus — kỳ + vòng L1/L2/L3 thật của người hỏi + người được nhắc (scoped).
-- **Fix match (phát hiện qua test đa case)**: ưu tiên hậu tố tên DÀI nhất (tên đầy đủ thắng tên cuối — 'Mai Thị Hòa' không bị nhầm trùng); match theo RANH GIỚI TỪ ('anh' không lọt trong 'đánh'); render markdown bold an toàn (BoldText, chống XSS).
-- **Test 20+ case trên production thật** (browser login Manager KIV158/Leader KIV8707): found/multiple/different_team/not_found/off-topic/dashboard số liệu thật/tính năng/hướng dẫn/báo lỗi [CẦN_DEV]/câu cụt/kỳ+vòng.
-- **Skill**: extend `chat-widget-ai-assistant` — phân biệt website (sangwebsite, Edge Function + tool-calling) vs webapp (Kurabe, server actions + RBAC); contexte engine; `references/sangwebsite-concierge.md`.
-- **Commits**: ac827f7 (P91), 06421b0+6606188 (fix match), 09cd413 (markdown + doc), f0ed940 (Worker no chat), 1936729 (P91.2) — tất cả push, production deploy đủ.
-- **Lưu ý mở**: MASTER_PLAN/tasks.md được cả subagent/sibling sửa song song — đọc lại TRƯỚC khi patch. markdown ** đã fix; test render đẹp trên production.
-
-# HANDOFF — Kurabe QAQC (cập nhật 2026-08-16 cuối phiên)
-
-## Trạng thái
-- **Đợt refactor 1-2 + anon-read bước 1+2 (16-08, phiên chính)**: DONE ✅ — ĐÃ PUSH (main == origin/main, 25 commits mới).
-  - Đợt 1 `740bc62`: bug + hiệu năng + gọn nhẹ (47 files +735/−2192; dashboard 880→415ms, transfer −51%; xóa data/criteria.ts; xlsx 0.20.3 CDN; SSR-ify employees/teams; tách evaluation page).
-  - Đợt 2 `b62b26d`: session thật (token 256-bit sha256, soft-migration UUID) + rate-limit login 5/15ph + gộp lỗi + REVOKE anon write (k1/k2 + chat_reports) + AI limit fail-close + security headers + audit whitelist — Reviewer Opus PASS (2 minor đã fix).
-  - Bước 1 anon-read `63c7b2d`: REVOKE anon SELECT 6 bảng nhạy cảm (evaluations/rounds/responses/ai_summaries/audit_logs/chat_reports — K3, bỏ grant cột theo Reviewer) + server actions read (requireAuth + canViewEvaluation). Anon dump BLOCKED verified + browser Manager/Employee OK.
-  - Bước 2 anon-read `bc207cd`: REVOKE anon users/teams (K4, bỏ cả column-grant cũ) + server actions users/teams (requireAuth + phân quyền scope) — fix 2 lỗ hổng review lần 1 (ByID/ByTeam thiếu scope, Leader teamId null bypass) + fix review lần 2 (dashboard/reports thiếu viewer, **unstable_cache keyParts rỗng → cache cross-user** — pre-existing, đã fix keyParts gồm periodId/viewer.id/team).
-  - **Vercel production: lykiv.vercel.app ĐÃ deploy tới bc207cd** (Ready ~40s, login thật 158 → dashboard OK).
-- **Phase 79 (BottomNav chỉ icon + Redesign team-detail + Fix status kẹt, 16-08)**: DONE ✅ — đã nằm trong 25 commits push (efa4b29..bc207cd).
-- **Phase 78 (Tối ưu giao diện Mobile, 16-08)**: DONE ✅ — Reviewer plan R1→R2 PASS; thực thi 12/12 task (11 commits `98bc154..c6e310f`, chưa push) + Reviewer toàn bộ CHANGES_REQUIRED → fix → PASS. Mobile đạt chuẩn: 0 tap <40px, 0 font <11px, 0 overflow, content cuối không bị FAB/nav che (pb-44); desktop regression 0. Chi tiết MASTER_PLAN Phase 78 + evidence /tmp/kurabe-p78-verify/ /tmp/kurabe-p78-desktop/.
-- **Phase 71 (Hướng dẫn 4 vai trò + sidebar "Hướng dẫn" + in theo vai trò)**: DONE ✅ — Reviewer R1→R2 PASS (plan). `guide-content.ts` 1 nguồn data 4 role (Manager 16 bước/Leader 8/SubLeader 6/Employee 4 + FAQ); **32/32 screenshot thật annotate khoanh vùng đỏ** (login 158/663/432/16735); sidebar "Hỗ trợ"→"Hướng dẫn"; `/support` render guide theo role đang login + selector (Manager 4 role); print `/support/print?role=` A4. E2E 4 role ALL PASS + lint 0 + build PASS.
-- **Phase 72 (Tinh gọn trang Hướng dẫn)**: DONE ✅ — Reviewer R1→R2 PASS (plan). page.tsx **738→208 dòng**: xóa 6 section cũ + 7 hằng data + quickLinks + dọn import. Trang chỉ còn: header gọn + block "Hướng dẫn theo vai trò của bạn" + cột phải "Nguyên tắc quyền truy cập". Build PASS + E2E 4 role ALL PASS + visual verified.
-- **Phase 73 (Nút "THÊM NHÂN VIÊN" ở trang chi tiết nhóm)**: DONE ✅ — Reviewer R1→R5 (4 vòng: dead-code modal → 2 lỗ bảo mật → 3 lỗ quyền → PASS thực thi). EmployeeModal **shared** (extract từ employees inline, dùng chung 2 nơi). Nút "Thêm nhân viên" ở `/teams/[id]` (Manager mọi nhóm / Leader nhóm mình; SubLeader/Employee không thấy) + `restrictToTeamId` (nhóm mặc định = nhóm đang mở, select disabled). **Nới quyền upsertUserAction: Leader được thêm/sửa Employee/SubLeader trong nhóm mình** (ép teamId server-side + chặn hạ chức + 3 check EDIT). E2E thật PASS: Manager/Leader thêm NV OK, SubLeader không thấy nút. NV tạm đã xóa mềm.
-- **Phase 74 (Thẻ Leader riêng ở trang chi tiết nhóm)**: DONE ✅ — FAST route (UI render thuần, không chạm auth/DB). Leader Block đầu danh sách (trước SubLeader blocks): avatar + tên + mã + badge Leader + kết quả đánh giá (grade/score L{round}/status) + nút Xem đánh giá như nhân viên. Verified: team "QC Gia dụng" Leader Mai Thị Hòa 8707 AB–L2–147 "Đã có KẾT QUẢ". Commit `7817898` đã push.
-- **Phase 75.1 (Nâng cấp chat AI)**: DONE ✅ — Reviewer R1→R3 PASS (plan). (1) **Context vai trò + trang** vào prompt mỗi lượt (AI khỏi hỏi lại role); (2) **Chẩn đoán cụ thể**: đang ở /evaluations/{id} → fetch context thật qua getEvaluationByEmployee + getActivePeriod (ẩn danh, không gửi tên/notes) → AI trả lời đúng vòng nào chưa nộp/khóa; (3) **callAIVision**: gpt-5.6-luna KHÔNG nhận ảnh (HTTP 400 — đã verify) → dùng `AI_VISION_MODEL` = qwen3.7-plus (hoạt động); (4) **Nút gửi ảnh màn hình**: modern-screenshot (html2canvas fail do Tailwind v4 oklch) → AI phân tích ảnh; cap 900KB base64 + PII warning. E2E thật PASS: hỏi "sao không đánh giá được" ở phiếu Lê Nhi → AI nêu đúng "Nhân viên mới nộp Vòng 1, Vòng 2 phải Leader chấm" ✓; chụp ảnh → AI nhận diện đúng "phiếu Lê Nhi, QAQC Line 1" ✓. Commit `9ad2e42` đã push.
-- **Phase 76 (Data context DB theo trang + Giới tính + AI anh/chị)**: DONE ✅ — Reviewer R1→R3 PASS (plan, sau Sequential Thinking 6 bước). (1) **Gender**: migration `gender default 'Nữ'` + GRANT cột anon (R1 HIGH) + backfill 25/25 user = Nữ; modal radio Nam/Nữ; Excel an toàn. (2) **AI anh/chị**: helper address(gender) whitelist ~15 chỗ — test "Chào anh Ly" ✓. (3) **Data context theo trang**: /dashboard /reports CHỈ Manager (số liệu thật 22 NV/9% — không chụp); employees/teams/criteria scope; /evaluations tên cụ thể (Leader Hòa). (4) Tối ưu: pageContext screenshot + greeting theo trang + vision retry + knowledge.md bỏ trùng. Commit `9292591`...`a7a22e1`.
-- **Phase 76.1 (Tự động điều tra lỗi)**: DONE ✅ — **WEBHOOK TỨC THÌ** (bỏ hẳn cron poll 15-08): chatReportErrorAction POST → Hermes webhook `kurabe-bao-loi` (http://localhost:8644/webhooks/kurabe-bao-loi, HMAC V2 — subscription secret riêng, KHÔNG global) → Mika điều tra + plan MASTER_PLAN + Telegram chờ duyệt. Verified: HMAC sai → 401 ✓, đúng → 202 accepted ✓ (agent trigger). Cron `kurabe-bao-loi-dieu-tra` + script monitor ĐÃ XÓA. Bảng `chat_reports` vẫn lưu log (service-only RLS). ⚠️ KURABE prod Vercel chưa reach Pi5 LAN (chưa bật tailscale funnel) — khi chuyển deploy trên Pi5 (đúng định hướng anh) webhook hoạt động tự nhiên localhost.
-- **⚠️ CHUẨN BỊ DEPLOY PI5 (anh lưu ý 15-08)**: sau này production có thể deploy TRÊN Pi5 (không Vercel) — webhook URL đã thiết kế linh hoạt (localhost khi cùng máy Pi5); khi chuyển Pi5 chỉ cần set `KURABE_WEBHOOK_URL` local + bỏ Vercel; không phụ thuộc tailscale. KURABE chạy Pi5 = Next server trên Pi5 (đã quen — port 3000).
-- Git: main, Phase 71-76 — commits cục bộ `...9292591`, **CHƯA PUSH (ahead 4)** — chờ anh yêu cầu push (quy tắc 15-08). Server local chạy port 3000.
-- ⚠️ **MÔI TRƯỜNG**: shell env bị ô nhiễm `NEXT_PUBLIC_SUPABASE_URL=https://iloaeaoojxdovedjtowt...` (sangwebsite — SAI project) → build/start KURABE phải `unset NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY` trước (Next ưu tiên env có sẵn > .env.local; NEXT_PUBLIC inline lúc build). Đã phát hiện khi E2E login fail "Mã nhân viên không hợp lệ".
-
-## Còn mở
-1. Nút "Giải thích bằng AI" (explainAnomalyAction — dashboard anomaly card): code+wire đủ, **chưa E2E verify** (cần anomaly thật để card hiện). Nút "Soạn thông báo" ĐÃ VERIFIED (P77 T2g).
-2. Anon-read đã đóng 8/13 bảng (PII + nhân sự). Còn mở anon-read (chấp nhận — data cấu hình): criteria, criterion_levels, criteria_groups, grade_bands, evaluation_periods. Nếu sau này thêm cột nhạy cảm vào users → bắt buộc tách/đóng (xem skill anon-read hardening).
-3. Xóa nhánh soft-migration UUID cũ sau 2-4 tuần deploy (đã ghi REFACTOR_PLAN).
-4. [THẤP] deleteEvaluationPeriod hard-delete không check dòng (actions/period.ts:182).
-5. [THẤP] Zod validation, phân trang audit/evaluation khi data lớn.
-6. Webhook báo lỗi: production Vercel chưa reach Pi5 LAN (chưa bật tailscale funnel) — khi chuyển deploy Pi5 sẽ hoạt động tự nhiên localhost.
-
-## Việc tiếp theo gợi ý
-- Theo dõi production vài ngày (login/logout/đủ role trên lykiv.vercel.app) — anon-read vừa siết nên kiểm tra mọi trang vẫn load đủ role.
-- Verify nút "Giải thích bằng AI" E2E (tạo anomaly tạm, click, dọn).
-- Audit anon-read baseline cho các dự án Supabase khác (affvn, sangwebsite) — cùng mô hình anon key trong client.
-- Nếu cần gì chạm DB mới: migration PHẢI theo pattern k1-k4 (code trước, REVOKE sau, rollback sẵn, apply từng câu qua Management API).
-
+## Trạng thái cuối phiên — 2026-08-24
+- Production transactional evaluation RPC: **PASS**, flag đang ON.
+- Full UI canary: SubLeader → Leader → Manager → Approved; 36/36 criteria mỗi vòng.
+- Failure-path FK rollback `23503`: PASS; fixture đã restore exact về Draft, 1 round, không audit canary.
+- RPC repair commit: `a56fba7`; branch `audit-hardening-p0-p3-20260824` đã push GitHub, remote SHA khớp local.
+- Local gates: test 24/24, typecheck, build, diff-check PASS; lint 0 error + 1 warning cũ.
+- Worktree sạch; production login HTTP 200.
+- Retention/purge/cron chưa thực hiện.
+- Residual: passwordless test login, CSP Report-Only, chưa stress concurrency/restore drill đầy đủ.
+- Next: theo dõi production; chỉ xử lý retention/security residual khi anh duyệt riêng.
