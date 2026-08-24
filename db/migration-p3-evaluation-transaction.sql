@@ -359,7 +359,7 @@ DECLARE
 BEGIN
   SELECT p.oid INTO v_proc_oid
   FROM pg_proc p
-  JOIN pg_namespace n ON n.oid = p.relnamespace
+  JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public'
     AND p.proname = 'save_evaluation_round_transaction'
     AND pg_get_function_identity_arguments(p.oid) = 'p_evaluation_id uuid, p_round integer, p_actor_id uuid, p_scores jsonb, p_notes jsonb, p_comment text, p_total_score numeric, p_grade text, p_is_submit boolean, p_submitted_at timestamp with time zone, p_next_round integer, p_next_evaluator_id uuid, p_next_evaluator_role text, p_next_status text, p_is_final boolean';
