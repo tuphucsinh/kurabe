@@ -20,6 +20,33 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Development
+
+### Verification
+
+To verify the codebase locally or in CI, run the standard suite of verification commands:
+
+```bash
+# 1. Install exact dependencies
+npm ci
+
+# 2. Code style & static linting
+npm run lint
+
+# 3. Static type-checking (clean incremental state)
+npm run typecheck
+
+# 4. Automated unit and regression test suite
+npm test
+
+# 5. Production build
+npm run build
+```
+
+- **Test Runner (`npm test`)**: Invokes `scripts/run-tests.mjs` to automatically discover and run all `*.test.mjs` and `*.test.ts` test files under `tests/` in isolated child processes.
+- **Excluded Test Artifacts**: Default test discovery explicitly excludes performance benchmarks and reporting artifacts (`tests/perf/**`, `benchmark-harness.mjs`, `perf-report.json`) to keep regular verification fast and deterministic.
+- **Lint Status**: `npm run lint` enforces ESLint rules (0 errors required). If any non-blocking warning occurs, it must not conceal real errors or test failures.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

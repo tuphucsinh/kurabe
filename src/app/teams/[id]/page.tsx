@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTeamsPageData } from '@/hooks/use-db';
+import { useTeamsPageData, useEvaluations } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { upsertUserAction } from '@/actions/users';
@@ -55,16 +55,16 @@ export default function TeamDetailPage() {
   const isLeaderOwnTeam = user?.role === 'Leader' && user.teamId === teamId;
   const canAddEmployee = isManager || isLeaderOwnTeam;
 
-  const { data: pg, isLoading, isError } = useTeamsPageData(currentPeriod?.id, user);
+  const { data: pg, isLoading: isLightLoadingData, isError: isLightErrorData } = useTeamsPageData(undefined, user);
+  const { data: evaluationsData, isLoading: evalsLoading, isError: evalsError } = useEvaluations(currentPeriod?.id, user);
+
   const users = useMemo(() => pg?.users ?? [], [pg?.users]);
-  const usersError = Boolean(pg?.usersError || isError);
-  const usersLoading = isLoading;
+  const usersError = Boolean(pg?.usersError || isLightErrorData);
+  const usersLoading = isLightLoadingData;
   const teams = useMemo(() => pg?.teams ?? [], [pg?.teams]);
-  const teamsError = Boolean(pg?.teamsError || isError);
-  const teamsLoading = isLoading;
-  const evaluations = useMemo(() => pg?.evaluations ?? [], [pg?.evaluations]);
-  const evalsError = Boolean(pg?.evalsError || isError);
-  const evalsLoading = isLoading;
+  const teamsError = Boolean(pg?.teamsError || isLightErrorData);
+  const teamsLoading = isLightLoadingData;
+  const evaluations = useMemo(() => evaluationsData ?? [], [evaluationsData]);
 
   const isLightLoading = (!user && user === undefined) || usersLoading || teamsLoading;
   const isLightError = teamsError || usersError;

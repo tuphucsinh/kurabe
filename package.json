@@ -6,7 +6,9 @@
     "dev": "node scripts/run-with-env.mjs next dev",
     "build": "node scripts/run-with-env.mjs next build",
     "start": "node scripts/run-with-env.mjs next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

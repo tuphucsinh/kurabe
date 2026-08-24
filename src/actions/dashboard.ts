@@ -169,22 +169,20 @@ export async function getDashboardLightData(periodId: string): Promise<Dashboard
 
 /**
  * Server action: Lấy dữ liệu nặng cho Dashboard (Pending reviews, Anomaly alerts, Radar chart, Recent activities).
- * Tải evaluations đầy đủ, criteriaGroups và users độc lập để chạy song song với light data.
+ * Tải evaluations đầy đủ và criteriaGroups, tái sử dụng userNameById từ light data để tránh query thừa.
  */
 export async function getDashboardHeavyData(
-  periodId: string
+  periodId: string,
+  userNameById: Record<string, string> = {}
 ): Promise<DashboardHeavyData | null> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
   if (auth.error !== null || !periodId) return null;
 
   try {
-    const [evaluations, criteriaGroups, users] = await Promise.all([
+    const [evaluations, criteriaGroups] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, auth.user),
       getAllCriteriaGroups(),
-      getUsersAdmin(auth.user),
     ]);
-
-    const userNameById = Object.fromEntries(users.map((u) => [u.id, u.name]));
 
     const recentActivities: DashboardRecentActivityItem[] = evaluations
       .map((evaluation) => {
