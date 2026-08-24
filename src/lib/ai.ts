@@ -1,9 +1,17 @@
 import 'server-only';
+import {
+  boundAIText,
+  validateAIProvider,
+  MAX_AI_PROMPT_CHARS,
+  MAX_AI_SYSTEM_CHARS,
+  MAX_AI_IMAGE_BASE64_CHARS,
+} from '@/lib/ai-governance';
 
 /**
  * Khung gọi LLM (OpenAI-compatible) — sẵn sàng khi Manager cấp API key.
- * Env server-side: AI_API_KEY (bắt buộc), AI_BASE_URL (mặc định OpenAI), AI_MODEL (mặc định gpt-4o-mini).
- * Fail-soft: thiếu key / lỗi / timeout → trả null (KHÔNG bao giờ làm vỡ app).
+ * Env server-side: AI_API_KEY (bắt buộc), AI_BASE_URL (mặc định OpenAI), AI_MODEL (mặc định gpt-4o-mini),
+ * AI_ALLOWED_HOSTS (tùy chọn host allowlist).
+ * Fail-soft: thiếu key / lỗi / timeout / host rejected → trả null (KHÔNG bao giờ làm vỡ app).
  * KHÔNG BAO GIỜ import vào client component (key là bí mật).
  */
 
@@ -22,8 +30,23 @@ export async function callAI(
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
 
-  const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const rawBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
+  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS);
+  if (!providerCheck.allowed) {
+    console.error('callAI provider rejected:', {
+      hostname: providerCheck.hostname,
+      reason: providerCheck.reason,
+    });
+    return null;
+  }
+
+  const baseUrl = rawBaseUrl.replace(/\/$/, '');
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
+  const boundedPrompt = boundAIText(prompt, MAX_AI_PROMPT_CHARS);
+  const baseSystem =
+    opts.system ||
+    'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt. TRẢ LỜI TRỰC TIẾP NỘI DUNG, KHÔNG suy luận dài dòng.';
+  const boundedSystem = boundAIText(baseSystem, MAX_AI_SYSTEM_CHARS);
 
   const attempt = async (
     maxTokens: number,
@@ -32,6 +55,7 @@ export async function callAI(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 45000);
+      const systemContent = boundAIText(boundedSystem + extraSystem, MAX_AI_SYSTEM_CHARS);
 
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
@@ -44,11 +68,9 @@ export async function callAI(
           messages: [
             {
               role: 'system',
-              content:
-                opts.system ||
-                'Bạn là trợ lý phân tích dữ liệu đánh giá QAQC, trả lời ngắn gọn bằng tiếng Việt. TRẢ LỜI TRỰC TIẾP NỘI DUNG, KHÔNG suy luận dài dòng.' + extraSystem,
+              content: systemContent,
             },
-            { role: 'user', content: prompt },
+            { role: 'user', content: boundedPrompt },
           ],
           max_tokens: maxTokens,
           temperature: opts.temperature ?? 0.3,
@@ -58,7 +80,11 @@ export async function callAI(
       clearTimeout(timer);
 
       if (!res.ok) {
-        console.error('callAI HTTP error:', res.status);
+        console.error('callAI HTTP error:', {
+          status: res.status,
+          hostname: providerCheck.hostname,
+          model,
+        });
         return null;
       }
 
@@ -68,8 +94,11 @@ export async function callAI(
       const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
       const content = typeof text === 'string' && text.trim() ? text.trim() : null;
       return { content, finishReason };
-    } catch (err) {
-      console.error('callAI error:', err);
+    } catch {
+      console.error('callAI request error:', {
+        hostname: providerCheck.hostname,
+        model,
+      });
       return null;
     }
   };
@@ -101,9 +130,26 @@ export async function callAIVision(
 ): Promise<string | null> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
-  const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+
+  if (!imageBase64 || imageBase64.length > MAX_AI_IMAGE_BASE64_CHARS) {
+    return null;
+  }
+
+  const rawBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
+  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS);
+  if (!providerCheck.allowed) {
+    console.error('callAIVision provider rejected:', {
+      hostname: providerCheck.hostname,
+      reason: providerCheck.reason,
+    });
+    return null;
+  }
+
+  const baseUrl = rawBaseUrl.replace(/\/$/, '');
   const model = process.env.AI_VISION_MODEL || DEFAULT_VISION_MODEL;
   const dataUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
+  const boundedPrompt = boundAIText(prompt, MAX_AI_PROMPT_CHARS);
+  const boundedSystem = opts.system ? boundAIText(opts.system, MAX_AI_SYSTEM_CHARS) : '';
 
   const attempt = async (
     maxTokens: number,
@@ -112,8 +158,8 @@ export async function callAIVision(
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 60000);
-      // Vision endpoint chỉ nhận message 'user' — system rules ghép vào đầu text content
-      const textContent = [opts.system, prompt, extraSystem].filter(Boolean).join('\n\n');
+      // Vision endpoint chỉ nhận message 'user' — retry extraSystem và system rules ghép vào đầu text content
+      const textContent = [extraSystem, boundedSystem, boundedPrompt].filter(Boolean).join('\n\n');
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -123,7 +169,7 @@ export async function callAIVision(
             {
               role: 'user',
               content: [
-                { type: 'text', text: textContent },
+                { type: 'text', text: boundAIText(textContent, MAX_AI_PROMPT_CHARS) },
                 { type: 'image_url', image_url: { url: dataUrl } },
               ],
             },
@@ -135,7 +181,11 @@ export async function callAIVision(
       });
       clearTimeout(timer);
       if (!res.ok) {
-        console.error('callAIVision HTTP error:', res.status);
+        console.error('callAIVision HTTP error:', {
+          status: res.status,
+          hostname: providerCheck.hostname,
+          model,
+        });
         return null;
       }
       const data = await res.json();
@@ -144,8 +194,11 @@ export async function callAIVision(
       const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
       const content = typeof text === 'string' && text.trim() ? text.trim() : null;
       return { content, finishReason };
-    } catch (err) {
-      console.error('callAIVision error:', err);
+    } catch {
+      console.error('callAIVision request error:', {
+        hostname: providerCheck.hostname,
+        model,
+      });
       return null;
     }
   };

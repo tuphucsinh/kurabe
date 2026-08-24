@@ -10,6 +10,12 @@ import { getUsersAdmin, getUserByIdAdmin } from '@/lib/db/users-admin';
 import { getTeamByIdAdmin, getTeamsAdmin } from '@/lib/db/teams-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { buildEmployeeContext, buildEvaluationStatus } from '@/lib/ai-context';
+import {
+  boundAIText,
+  sanitizeAIHistory,
+  MAX_AI_IMAGE_BASE64_CHARS,
+  MAX_AI_REPORT_HISTORY_CHARS,
+} from '@/lib/ai-governance';
 import { User } from '@/types';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -109,8 +115,8 @@ async function countRecent(userId: string): Promise<number> {
       return CHAT_LIMIT; // fail-close: nếu lỗi DB, chặn thay vì cho qua
     }
     return count ?? 0;
-  } catch (err) {
-    console.error('countRecent exception:', err);
+  } catch {
+    console.error('countRecent exception');
     return CHAT_LIMIT; // fail-close
   }
 }
@@ -255,8 +261,8 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
     }
 
     return `\n${summary}`;
-  } catch (err) {
-    console.error('Error building Manager semantic context:', err);
+  } catch {
+    console.error('Error building Manager semantic context');
     return '';
   }
 }
@@ -389,7 +395,8 @@ interface ChatPrepared {
  * auth → validate câu hỏi → rate limit (non-Manager) → AI configured → page context → build prompt.
  */
 async function prepareChatContext(
-  input: ChatAskInputBase
+  input: ChatAskInputBase,
+  options?: { maxQuestionLength?: number }
 ): Promise<{ ok: true; data: ChatPrepared } | { ok: false; error: string }> {
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader', 'Worker']);
   if (auth.error !== null) return { ok: false, error: auth.error };
@@ -401,6 +408,10 @@ async function prepareChatContext(
 
   const question = (input.question || '').trim();
   if (!question) return { ok: false, error: `${Addr} chưa nhập câu hỏi.` };
+
+  if (options?.maxQuestionLength && (input.question?.length || 0) > options.maxQuestionLength) {
+    return { ok: false, error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
+  }
 
   const recent = await countRecent(userId);
   if (recent >= CHAT_LIMIT) {
@@ -426,15 +437,18 @@ async function prepareChatContext(
     : null;
   const requesterEval = await buildEvaluationStatus(auth.user?.id || '', auth.user);
 
-  const history = (input.history || []).slice(-12);
-  let prompt = `Câu hỏi mới của ${addr}:\n${question}`;
+  const history = sanitizeAIHistory(input.history);
+  const userInfo = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}${requesterEval ? `, trạng thái đánh giá của ${addr}: ${requesterEval}` : ''}; trang đang mở = ${page}.${pageContext}${empContext.text}`;
+
+  let historySection = '';
   if (history.length > 0) {
     const historyText = history
       .map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`)
       .join('\n');
-    prompt = `Lịch sử hội thoại (12 lượt gần nhất):\n${historyText}\n\n${prompt}`;
+    historySection = `\n\nLịch sử hội thoại (12 lượt gần nhất):\n${historyText}`;
   }
-  prompt = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}${requesterEval ? `, trạng thái đánh giá của ${addr}: ${requesterEval}` : ''}; trang đang mở = ${page}.${pageContext}${empContext.text}\n\n${prompt}`;
+
+  const prompt = `Câu hỏi mới của ${addr}:\n${question}\n\n${userInfo}${historySection}`;
 
   return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
 }
@@ -444,13 +458,9 @@ export async function chatAskAction(input: {
   pathname: string;
   history?: { role: 'user' | 'assistant'; text: string }[];
 }): Promise<{ reply?: string; error?: string }> {
-  const prepared = await prepareChatContext(input);
+  const prepared = await prepareChatContext(input, { maxQuestionLength: 500 });
   if (!prepared.ok) return { error: prepared.error };
   const { role, addr, user, prompt } = prepared.data;
-
-  if (input.question.length > 500) {
-    return { error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
-  }
 
   const reply = await callAI(prompt, {
     system: buildSystem(role, user?.gender),
@@ -470,7 +480,7 @@ export async function chatAskWithScreenshotAction(input: {
   imageBase64: string;
 }): Promise<{ reply?: string; error?: string }> {
   // server-side size cap: độ dài chuỗi base64 ≤ 900KB (Reviewer R2+R3) — check trước khi tốn quota
-  if (!input.imageBase64 || input.imageBase64.length > 921600) {
+  if (!input.imageBase64 || input.imageBase64.length > MAX_AI_IMAGE_BASE64_CHARS) {
     const addr = 'anh/chị';
     return { error: `Ảnh quá lớn hoặc không hợp lệ. ${capitalize(addr)} thử lại với ảnh nhỏ hơn ạ.` };
   }
@@ -508,7 +518,7 @@ export async function chatReportErrorAction(input: {
     return { reply: `Hôm nay ${addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé. Em vẫn theo dõi và sẽ phản hồi sớm ạ.` };
   }
 
-  const question = (input.question || '').trim().slice(0, 2000);
+  const boundedQuestion = boundAIText(input.question, 2000);
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_HOME_CHANNEL;
@@ -520,7 +530,10 @@ export async function chatReportErrorAction(input: {
     const name = auth.user?.name || '?';
     const role = auth.user?.role || '?';
 
-    const historyText = (input.history || []).map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n').slice(0, 8000);
+    const sanitizedHistory = sanitizeAIHistory(input.history);
+    const historyRaw = sanitizedHistory.map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n');
+    const historyText = boundAIText(historyRaw, MAX_AI_REPORT_HISTORY_CHARS);
+
     // Tóm tắt AI (gpt-5.6-luna) — ngữ cảnh lỗi gọn; fallback: 6 lượt gần nhất
     let contextSummary = historyText.split('\n').slice(-6).join('\n');
     try {
@@ -529,7 +542,7 @@ export async function chatReportErrorAction(input: {
           `Hãy tóm tắt NGẮN GỌN (~100 từ) nội dung hội thoại hỗ trợ dưới đây để developer điều tra lỗi: vấn đề chính, user đã thử gì, kết quả. Không thêm giả định.\n\nHội thoại:\n${historyText || '(không có)'}`,
           { system: 'Bạn là trợ lý tóm tắt kỹ thuật tiếng Việt. Trả về đúng ~100 từ, không dẫn dắt.', maxTokens: 200, temperature: 0.2 }
         );
-        if (s) contextSummary = s;
+        if (s) contextSummary = boundAIText(s, 1000);
       }
     } catch { /* fallback giữ 6 lượt */ }
 
@@ -541,14 +554,14 @@ export async function chatReportErrorAction(input: {
           user_name: name,
           role,
           pathname: input.pathname || '',
-          question,
+          question: boundedQuestion,
           history: historyText,
           user_id: userId,
         })
         .select('id').single();
       reportId = reportRow?.id || null;
-    } catch (err) {
-      console.error('chat_reports insert error:', err);
+    } catch {
+      console.error('chat_reports insert error');
     }
 
     // POST webhook tức thì → Mika điều tra (event-driven; chỉ khi env cấu hình — KURABE chạy Pi5/LAN; Vercel bỏ trống → fallback cron)
@@ -560,7 +573,7 @@ export async function chatReportErrorAction(input: {
           user_name: name,
           role,
           pathname: input.pathname || '',
-          question,
+          question: boundedQuestion,
           summary: contextSummary,
           report_id: reportId,
         });
@@ -581,11 +594,11 @@ export async function chatReportErrorAction(input: {
           signal: AbortSignal.timeout(10000),
         });
         if (!wh.ok) console.error('webhook POST error:', wh.status);
-      } catch (err) {
-        console.error('webhook POST error:', err);
+      } catch {
+        console.error('webhook POST error');
       }
     }
-    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${question}\nBối cảnh: ${contextSummary.slice(0, 400)}\nLúc: ${new Date().toLocaleString('vi-VN')}`;
+    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${boundedQuestion}\nBối cảnh: ${contextSummary.slice(0, 400)}\nLúc: ${new Date().toLocaleString('vi-VN')}`;
 
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
@@ -598,8 +611,8 @@ export async function chatReportErrorAction(input: {
       return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
     }
     return { reply: `${Addr} hãy thông báo lỗi này cho Manager nhé. Lỗi này cũng đã được gửi về cho Developer để xử lý.` };
-  } catch (err) {
-    console.error('Telegram send error:', err);
+  } catch {
+    console.error('Telegram send error');
     return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
   }
 }

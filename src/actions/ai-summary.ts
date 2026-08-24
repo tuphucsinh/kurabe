@@ -8,6 +8,7 @@ import { getUsersAdmin } from '@/lib/db/users-admin';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
+import { boundAIText, MAX_AI_PROMPT_CHARS } from '@/lib/ai-governance';
 
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
 export async function getPeriodSummary(periodId: string): Promise<{ summary?: string; created_at?: string }> {
@@ -60,7 +61,7 @@ export async function generatePeriodSummary(
       const lastRound = [...e.rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0);
       const notes = (e.rounds || [])
         .filter((r) => (r.comment || '').trim())
-        .map((r) => `vòng ${r.round}: ${r.comment}`)
+        .map((r) => `vòng ${r.round}: ${boundAIText(r.comment, 500)}`)
         .join(' | ');
       return {
         code: u?.employeeCode || e.employeeId.slice(0, 8),
@@ -72,16 +73,31 @@ export async function generatePeriodSummary(
       };
     });
 
-    const prompt = `Dữ liệu đánh giá QAQC kỳ (đã ẩn danh hóa — mã NV thay tên):
-${JSON.stringify(rows, null, 1)}
-
-Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:
+    const instructions = `Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:
 1. Tổng quan: số nhân sự đã đánh giá, phân bổ xếp loại (S/A/AB/B/C/D), điểm trung bình.
 2. Điểm nổi bật: nhân sự có điểm cao nhất (mã NV), điểm yếu cần lưu ý (mã NV, xếp loại thấp).
 3. Xu hướng nhận xét chung từ các ghi chú (nếu có).
 4. Gợi ý hành động cho quản lý (1-2 ý).`;
 
-    const summary = await callAI(prompt, { maxTokens: 800 });
+    const dataHeader = `Dữ liệu đánh giá QAQC kỳ (đã ẩn danh hóa — mã NV thay tên):`;
+    const promptPrefix = `${instructions}\n\n${dataHeader}\n`;
+
+    // Khớp deterministically các dòng JSON hoàn chỉnh trong giới hạn MAX_AI_PROMPT_CHARS
+    const fittedRows: typeof rows = [];
+    for (const row of rows) {
+      const candidate = [...fittedRows, row];
+      const candidateJson = JSON.stringify(candidate, null, 1);
+      const fullPrompt = `${promptPrefix}${candidateJson}`;
+      if (fullPrompt.length <= MAX_AI_PROMPT_CHARS) {
+        fittedRows.push(row);
+      } else {
+        break;
+      }
+    }
+
+    const prompt = `${promptPrefix}${JSON.stringify(fittedRows, null, 1)}`;
+    const boundedPrompt = boundAIText(prompt, MAX_AI_PROMPT_CHARS);
+    const summary = await callAI(boundedPrompt, { maxTokens: 800 });
     if (!summary) return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
 
     const { error } = await supabaseAdmin.from('ai_summaries').upsert(
@@ -99,7 +115,7 @@ Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown n
     revalidatePath('/reports');
     return { summary };
   } catch (err) {
-    console.error('generatePeriodSummary error:', err);
+    console.error('generatePeriodSummary error');
     return { error: toClientError(err, 'Lỗi khi tạo tóm tắt. Vui lòng thử lại.') };
   }
 }

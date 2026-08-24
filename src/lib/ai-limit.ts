@@ -1,5 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { normalizeAIAction } from '@/lib/ai-governance';
 
 const AI_LIMIT_PER_HOUR = 30; // 30 lượt / giờ cho các tác vụ AI quản trị
 const AI_WINDOW_MS = 60 * 60 * 1000; // 1 giờ
@@ -35,9 +36,10 @@ export async function checkAndRecordAiUsage(
     }
 
     // Reserve slot
+    const safeAction = normalizeAIAction(action);
     const { error: insertErr } = await supabaseAdmin
       .from('ai_usage')
-      .insert({ user_id: userId, action });
+      .insert({ user_id: userId, action: safeAction });
 
     if (insertErr) {
       console.error('checkAndRecordAiUsage insert error:', insertErr.message);
@@ -45,8 +47,8 @@ export async function checkAndRecordAiUsage(
     }
 
     return { allowed: true };
-  } catch (err) {
-    console.error('checkAndRecordAiUsage exception:', err);
+  } catch {
+    console.error('checkAndRecordAiUsage exception');
     return { allowed: false, error: 'Hệ thống AI tạm thời bận, vui lòng thử lại sau.' };
   }
 }
