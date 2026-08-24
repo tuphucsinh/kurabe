@@ -1,89 +1,47 @@
 import { cache } from 'react';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { mapUserFromDb, USER_SELECT } from '@/lib/db/users';
+import { isOpaqueSessionToken } from '@/lib/session-token';
 import { User, Role } from '@/types';
 
 export type AuthResult = { user: User; error: null } | { user: null; error: string };
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 ngày
-
 /**
  * Lấy user từ session cookie `auth_session` (server-side). Trả null nếu không có/không hợp lệ.
- * - Nếu cookie là token 64 hex chars: hash sha256 -> tìm session còn hạn -> mapUser.
- * - Chuyển tiếp mềm: Nếu cookie là UUID (user.id cũ, 36 chars) -> verify user active -> tạo session mới & set cookie nếu context cho phép -> mapUser.
+ * - Chỉ chấp nhận token 64 hex chars (isOpaqueSessionToken): hash sha256 -> tìm session còn hạn -> mapUser.
  * Bọc cache() của React: page + action gọi nhiều lần trong 1 request chỉ ra 1 query (C5).
  */
 export const getSessionUser = cache(async (): Promise<User | null> => {
   try {
     const cookieStore = await cookies();
-    const rawSession = cookieStore.get('auth_session')?.value?.trim();
-    if (!rawSession) return null;
-
-    // 1. Session token mới (64 hex characters)
-    if (/^[0-9a-f]{64}$/i.test(rawSession)) {
-      const tokenHash = crypto.createHash('sha256').update(rawSession).digest('hex');
-      const nowIso = new Date().toISOString();
-
-      const { data: sessionData, error: sessionErr } = await supabaseAdmin
-        .from('sessions')
-        .select('user_id, expires_at')
-        .eq('token_hash', tokenHash)
-        .gt('expires_at', nowIso)
-        .maybeSingle();
-
-      if (sessionErr || !sessionData) return null;
-
-      const { data: userData, error: userErr } = await supabaseAdmin
-        .from('users')
-        .select(USER_SELECT)
-        .eq('id', sessionData.user_id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (userErr || !userData) return null;
-      return mapUserFromDb(userData);
+    const rawSession = cookieStore.get('auth_session')?.value;
+    if (!isOpaqueSessionToken(rawSession)) {
+      return null;
     }
 
-    // 2. Chuyển tiếp mềm: cookie cũ là UUID (36 chars)
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawSession)) {
-      const { data: userData, error: userErr } = await supabaseAdmin
-        .from('users')
-        .select(USER_SELECT)
-        .eq('id', rawSession)
-        .eq('is_active', true)
-        .maybeSingle();
+    const tokenHash = crypto.createHash('sha256').update(rawSession).digest('hex');
+    const nowIso = new Date().toISOString();
 
-      if (userErr || !userData) return null;
+    const { data: sessionData, error: sessionErr } = await supabaseAdmin
+      .from('sessions')
+      .select('user_id, expires_at')
+      .eq('token_hash', tokenHash)
+      .gt('expires_at', nowIso)
+      .maybeSingle();
 
-      // Thử tạo session mới và ghi đè cookie (chỉ thành công trong Server Actions / Route Handlers; RSC context sẽ throw/ignore)
-      try {
-        const token = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+    if (sessionErr || !sessionData) return null;
 
-        await supabaseAdmin.from('sessions').insert({
-          token_hash: tokenHash,
-          user_id: userData.id,
-          expires_at: expiresAt,
-        });
+    const { data: userData, error: userErr } = await supabaseAdmin
+      .from('users')
+      .select(USER_SELECT)
+      .eq('id', sessionData.user_id)
+      .eq('is_active', true)
+      .maybeSingle();
 
-        cookieStore.set('auth_session', token, {
-          httpOnly: true,
-          secure: (await headers()).get('x-forwarded-proto') === 'https',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: SESSION_MAX_AGE_SECONDS,
-        });
-      } catch {
-        // Nếu context không cho phép set cookie (ví dụ RSC rendering), không sao — trả user bình thường để không logout
-      }
-
-      return mapUserFromDb(userData);
-    }
-
-    return null;
+    if (userErr || !userData) return null;
+    return mapUserFromDb(userData);
   } catch {
     return null;
   }

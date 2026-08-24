@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import bcrypt from 'bcryptjs';
 import { mapUserFromDb } from '@/lib/db/users';
 import { toClientError } from '@/lib/errors';
+import { isOpaqueSessionToken } from '@/lib/session-token';
 import type { User } from '@/types';
 
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -114,7 +115,7 @@ export async function logoutAction(): Promise<{ success: boolean }> {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth_session')?.value;
 
-    if (token && /^[0-9a-f]{64}$/i.test(token)) {
+    if (isOpaqueSessionToken(token)) {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       await supabaseAdmin.from('sessions').delete().eq('token_hash', tokenHash);
     }
