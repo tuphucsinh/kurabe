@@ -77,15 +77,39 @@ function runTestFile(testRelPath) {
       return false;
     }
 
-    const tscArgs = [
-      '--module', 'commonjs',
-      '--target', 'es2020',
-      '--esModuleInterop',
-      '--strict',
-      '--skipLibCheck',
-      '--outDir', '.tmp/testbuild',
-      testRelPath,
-    ];
+    if (!fs.existsSync(testBuildDir)) {
+      fs.mkdirSync(testBuildDir, { recursive: true });
+    }
+
+    const sanitizedTestName = path.basename(testRelPath).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const tempConfigPath = path.join(testBuildDir, `tsconfig.${sanitizedTestName}.json`);
+    const testFileAbs = path.resolve(rootDir, testRelPath);
+
+    const tempConfig = {
+      compilerOptions: {
+        module: 'commonjs',
+        target: 'es2020',
+        strict: true,
+        skipLibCheck: true,
+        esModuleInterop: true,
+        baseUrl: rootDir,
+        paths: {
+          '@/*': ['./src/*'],
+        },
+        outDir: testBuildDir,
+      },
+      files: [testFileAbs],
+    };
+
+    try {
+      fs.writeFileSync(tempConfigPath, JSON.stringify(tempConfig, null, 2), 'utf-8');
+    } catch (err) {
+      console.error(`Error: Failed to write temporary test tsconfig at "${tempConfigPath}":`, err.message);
+      console.error(`=== FAIL ${testRelPath} (config write failed) ===`);
+      return false;
+    }
+
+    const tscArgs = ['-p', tempConfigPath];
 
     let compileRes;
     try {
@@ -111,6 +135,17 @@ function runTestFile(testRelPath) {
       return false;
     }
 
+    // Support runtime resolution of @/* aliases in emitted CommonJS code
+    const atSymlink = path.join(testBuildDir, '@');
+    const srcDirInBuild = path.join(testBuildDir, 'src');
+    if (fs.existsSync(srcDirInBuild) && !fs.existsSync(atSymlink)) {
+      try {
+        fs.symlinkSync(srcDirInBuild, atSymlink, 'junction');
+      } catch {
+        // Fallback: ignore if symlink creation is not permitted
+      }
+    }
+
     // Locate emitted JS file in .tmp/testbuild
     const jsRelPath = testRelPath.replace(/\.ts$/, '.js');
     const candidatePaths = [
@@ -126,10 +161,17 @@ function runTestFile(testRelPath) {
       return false;
     }
 
+    const nodePath = process.env.NODE_PATH
+      ? `${testBuildDir}${path.delimiter}${process.env.NODE_PATH}`
+      : testBuildDir;
+
     const runRes = spawnSync(process.execPath, [emittedJs], {
       cwd: rootDir,
       stdio: 'inherit',
-      env: process.env,
+      env: {
+        ...process.env,
+        NODE_PATH: nodePath,
+      },
     });
 
     if (runRes.status === 0 && !runRes.error) {

@@ -29,6 +29,7 @@ import {
   validateEvaluationRoundPayload,
   EvaluationRoundPayloadInput,
 } from '@/lib/evaluation-round-validation';
+import { buildEvaluationRoundTransactionRpcArgs } from '@/lib/evaluation-transaction-rpc';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -134,6 +135,57 @@ export async function saveEvaluationRound(
       }
     }
     
+    // 2.5. Transactional RPC candidate branch (Feature-flagged: KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC)
+    if (process.env.KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC === 'true') {
+      const rpcArgs = buildEvaluationRoundTransactionRpcArgs({
+        evaluationId,
+        round,
+        actorId,
+        canonical,
+        totalScore,
+        grade,
+        submittedAt: now,
+        nextStep,
+        nextEvaluator,
+      });
+
+      const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: unknown }>)(
+        'save_evaluation_round_transaction',
+        rpcArgs as unknown as Record<string, unknown>
+      );
+
+      if (rpcError) {
+        return {
+          success: false,
+          error: toClientError(rpcError, 'Lỗi cập nhật kết quả đánh giá (giao dịch thất bại).'),
+        };
+      }
+
+      if (!rpcData || (Array.isArray(rpcData) && rpcData.length === 0)) {
+        return {
+          success: false,
+          error: 'Lỗi cập nhật kết quả đánh giá: không có dữ liệu trả về từ giao dịch.',
+        };
+      }
+
+      revalidatePath(`/evaluations/${evaluationId}`);
+      if (isSubmit) {
+        revalidateTag('dashboard-data', 'default');
+        revalidateTag('report-aggregation', 'default');
+        await logAudit(
+          auth.user,
+          nextStep?.isFinal ? 'APPROVE_EVALUATION' : 'SUBMIT_EVALUATION',
+          'evaluation',
+          evaluationId,
+          { round, grade, score: totalScore }
+        );
+      }
+      return { success: true };
+    }
+
     // 3. Cập nhật record round (Atomic) sử dụng hoàn toàn canonical data
     const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
     const updateData: UpdateRound = {
