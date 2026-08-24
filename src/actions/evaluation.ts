@@ -24,6 +24,11 @@ import {
   nextStatusAfterReturn,
 } from '@/lib/return-evaluation';
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
+import { loadAuthoritativeCriteriaForRole } from '@/lib/db/criteria-admin';
+import {
+  validateEvaluationRoundPayload,
+  EvaluationRoundPayloadInput,
+} from '@/lib/evaluation-round-validation';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -71,19 +76,45 @@ export async function saveEvaluationRound(
       teamId: evalInfo.team_id,
     };
 
-    // 2. Tính toán điểm và grade theo role người được đánh giá
+    // 1.5. Nạp danh mục tiêu chí authoritative và validate payload fail-closed
+    const criteriaResult = await loadAuthoritativeCriteriaForRole(evaluation.employeeRole);
+    if (!criteriaResult.success) {
+      return { success: false, error: criteriaResult.error };
+    }
+
+    const payloadInput: EvaluationRoundPayloadInput = {
+      scores,
+      notes,
+      selectedLevelIndexes,
+      comment,
+      isSubmit,
+    };
+
+    const validationResult = validateEvaluationRoundPayload(
+      payloadInput,
+      criteriaResult.rules,
+      { isSubmitOverride: isSubmit }
+    );
+
+    if (!validationResult.ok) {
+      return { success: false, error: validationResult.error };
+    }
+
+    const canonical = validationResult.data;
+
+    // 2. Tính toán điểm và grade theo role người được đánh giá bằng canonical data
     // Nạp thang điểm từ DB trước khi tính — nếu không server dùng fallback hardcode cũ
     await ensureServerGradeBands();
 
     const tempRound: Partial<EvaluationRound> = {
-      scores,
+      scores: canonical.scores,
       evaluatorRole: evaluation.employeeRole,
     };
     
     const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
 
     const now = new Date().toISOString();
-    const nextStep = isSubmit ? getNextEvaluationStep(evaluation.employeeRole, round) : null;
+    const nextStep = canonical.isSubmit ? getNextEvaluationStep(evaluation.employeeRole, round) : null;
     let nextEvaluator = null;
 
     if (nextStep && !nextStep.isFinal && nextStep.evaluator) {
@@ -103,18 +134,18 @@ export async function saveEvaluationRound(
       }
     }
     
-    // 3. Cập nhật record round (Atomic)
-    const composedNotes = composeRoundNotes(notes, selectedLevelIndexes);
+    // 3. Cập nhật record round (Atomic) sử dụng hoàn toàn canonical data
+    const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
     const updateData: UpdateRound = {
-      scores,
+      scores: canonical.scores,
       notes: composedNotes,
-      comment,
+      comment: canonical.comment,
       total_score: totalScore,
       grade: grade,
-      status: isSubmit ? 'Submitted' : 'Draft'
+      status: canonical.isSubmit ? 'Submitted' : 'Draft'
     };
 
-    if (isSubmit) {
+    if (canonical.isSubmit) {
       updateData.submitted_at = now;
     }
 

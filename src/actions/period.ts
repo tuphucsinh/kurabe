@@ -14,6 +14,7 @@ import {
 import { Database } from '@/types/database';
 import { toClientError } from '@/lib/errors';
 import { parseRole } from '@/lib/parsers';
+import { canDeleteEvaluationPeriodStatus } from '@/lib/period-status';
 
 type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
 type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
@@ -207,7 +208,7 @@ export async function deleteEvaluationPeriod(periodId: string) {
       .maybeSingle();
 
     if (!period) return { success: false, error: 'Không tìm thấy kỳ đánh giá.' };
-    if (period.status === 'Active') {
+    if (!canDeleteEvaluationPeriodStatus(period.status)) {
       return { success: false, error: 'Kỳ đang Active — hãy "Đóng kỳ" trước khi xóa để tránh mất dữ liệu đang chấm.' };
     }
 
@@ -273,3 +274,5 @@ export async function savePeriodTarget(
     return { success: false, error: toClientError(err, 'Lỗi không xác định khi lưu mục tiêu.') };
   }
 }
+
+export const deleteEvaluationPeriodAction = deleteEvaluationPeriod;
