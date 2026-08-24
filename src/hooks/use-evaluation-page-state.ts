@@ -127,6 +127,7 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
             for (const criterion of group.criteria) {
               if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
                 initialScores[criterion.id!] = criterion.levels[criterion.defaultLevelIndex].points;
+                initialSelectedLevelIndexes[criterion.id!] = criterion.defaultLevelIndex;
               }
             }
           }
