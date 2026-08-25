@@ -68,34 +68,36 @@ Nếu dữ liệu cuối năm chưa đầy đủ, có thể dùng mô hình dư�
 - Quy mô giả định: khoảng 200 người.
 - Phần đang đo: **thời gian quản trị, tổng hợp, theo dõi và làm báo cáo**, không tính thời gian chuyên môn để người quản lý suy xét và chấm.
 - Mốc Excel giả định: **120 giờ/kỳ**.
-- Ba kịch bản tiết kiệm thời gian:
-  - Thận trọng: 15% = 18 giờ/kỳ.
-  - Cơ sở: 25% = 30 giờ/kỳ.
-  - Lạc quan: **30% = 36 giờ/kỳ**.
-- Giả định **1 kỳ/năm**: kịch bản lạc quan tiết kiệm 36 giờ/năm, tương đương 4,5 ngày công nếu 1 ngày công = 8 giờ.
+- Đánh giá ước lượng theo ba kịch bản:
+  - Thận trọng: **25% = 30 giờ/kỳ**.
+  - Cơ sở: **35% = 42 giờ/kỳ**.
+  - Tích cực: **40% = 48 giờ/kỳ**.
+- Nếu tính cả thời gian chuyên môn chấm điểm, nên dùng khoảng **25–35%**; nếu chỉ tính phần quản trị/tổng hợp/báo cáo, khoảng **35–45%** là hợp lý.
+- Con số nên dùng trong slide thành tích: **khoảng 40% giảm thời gian quản trị**, vì app đã tập trung hóa workflow, theo dõi tiến độ, tổng hợp báo cáo, export và hỗ trợ AI.
+- Giả định **1 kỳ/năm**: kịch bản tích cực tiết kiệm 48 giờ/năm, tương đương 6 ngày công nếu 1 ngày công = 8 giờ.
 
 #### Bộ số ước lượng tích cực để đưa vào slide
 
 | Hạng mục | Excel trước đây | KURABE QAQC | Hiệu quả ước lượng |
 |---|---:|---:|---:|
-| Quản trị, tổng hợp, theo dõi và báo cáo cả kỳ | 120 giờ | **84 giờ** | **Giảm 36 giờ, tương đương 30%** |
-| Lập báo cáo cuối kỳ | 20 giờ | **14 giờ** | **Giảm 6 giờ, tương đương 30%** |
-| Quy đổi ngày công cho toàn bộ phần quản trị | 15 ngày công | **10,5 ngày công** | **Giảm 4,5 ngày công** |
+| Quản trị, tổng hợp, theo dõi và báo cáo cả kỳ | 120 giờ | **72 giờ** | **Giảm 48 giờ, tương đương 40%** |
+| Lập báo cáo cuối kỳ | 20 giờ | **12 giờ** | **Giảm 8 giờ, tương đương 40%** |
+| Quy đổi ngày công cho toàn bộ phần quản trị | 15 ngày công | **9 ngày công** | **Giảm 6 ngày công** |
 
 #### Chi phí nhân sự quy đổi — ước lượng tham khảo
 
 | Chi phí quy đổi | Excel trước đây | KURABE QAQC | Giá trị tiết kiệm |
 |---:|---:|---:|---:|
-| 100.000 đồng/giờ | 12 triệu đồng/kỳ | **8,4 triệu đồng/kỳ** | **3,6 triệu đồng/kỳ** |
-| 150.000 đồng/giờ | 18 triệu đồng/kỳ | **12,6 triệu đồng/kỳ** | **5,4 triệu đồng/kỳ** |
+| 100.000 đồng/giờ | 12 triệu đồng/kỳ | **7,2 triệu đồng/kỳ** | **4,8 triệu đồng/kỳ** |
+| 150.000 đồng/giờ | 18 triệu đồng/kỳ | **10,8 triệu đồng/kỳ** | **7,2 triệu đồng/kỳ** |
 
 - Đây là chi phí nhân sự quy đổi cho phần quản trị, không phải chi phí license hoặc chi phí triển khai hệ thống.
 - Chi phí triển khai, vận hành, đào tạo, thiết bị và license nếu có: `[điền số thực tế cuối kỳ]`.
 - ROI ròng tham khảo: `giá trị thời gian tiết kiệm − tổng chi phí thực tế`.
-- Cách diễn đạt tích cực nhưng an toàn: **“KURABE QAQC có thể giảm khoảng 30% thời gian quản trị và rút ngắn khoảng 30% thời gian lập báo cáo trong kịch bản ước lượng; số thực tế sẽ thay vào cuối kỳ.”**
+- Cách diễn đạt tích cực nhưng an toàn: **“KURABE QAQC có thể giảm khoảng 40% thời gian quản trị và rút ngắn khoảng 40% thời gian lập báo cáo trong kịch bản ước lượng; số thực tế sẽ thay vào cuối kỳ.”**
 
 - Giá trị tài chính chỉ là giá trị thời gian quy đổi: `giờ tiết kiệm × chi phí nhân sự quy đổi mỗi giờ`.
-- Ví dụ minh họa ở kịch bản lạc quan: nếu chi phí quy đổi là 100.000 đồng/giờ, giá trị thời gian tiết kiệm khoảng 3,6 triệu đồng/năm; nếu 150.000 đồng/giờ, khoảng 5,4 triệu đồng/năm.
+- Ví dụ minh họa ở kịch bản tích cực: nếu chi phí quy đổi là 100.000 đồng/giờ, giá trị thời gian tiết kiệm khoảng 4,8 triệu đồng/năm; nếu 150.000 đồng/giờ, khoảng 7,2 triệu đồng/năm.
 - Đây **chưa phải ROI ròng**: chưa trừ chi phí triển khai, vận hành, đào tạo, thiết bị hoặc license nếu có.
 
 Khi trình bày báo cáo cuối năm, ưu tiên thay bảng minh họa bằng số liệu thực tế của Kurabe. Nếu chưa thay được, ghi rõ: `試算例 — mô hình tham khảo, không phải kết quả thực tế`.
@@ -490,7 +492,7 @@ Giá trị thời gian tiết kiệm/năm
 
 ### Mô hình ước lượng chỉ dùng khi thiếu số đo
 
-Nếu chưa có đủ số liệu thực tế, có thể đưa bảng 15% / 25% / 30% ở phần phụ chú, luôn gắn nhãn `試算例`; không đặt dấu `実績` và không dùng làm kết luận chính của báo cáo.
+Nếu chưa có đủ số liệu thực tế, có thể đưa bảng **25% / 35% / 40%** ở phần phụ chú, luôn gắn nhãn `試算例`; không đặt dấu `実績` và không dùng làm kết luận chính của báo cáo.
 
 ---
 
