@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/layout/Sidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, Users, Layout, Settings, FileText, HelpCircle } from 'lucide-react';
+import { Menu, Home, Users, Layout, Settings, FileText, HelpCircle, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { isIndividualRole } from '@/lib/role-policy';
 
@@ -119,7 +119,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <BottomNavItem href="/dashboard" icon={<Home size={24} />} ariaLabel="Trang chủ" active={pathname === '/dashboard'} />
             <BottomNavItem href="/teams" icon={<Layout size={24} />} ariaLabel="Nhóm" active={pathname === '/teams'} />
             <BottomNavItem href="/employees" icon={<Users size={24} />} ariaLabel="Nhân sự" active={pathname === '/employees'} />
-            <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
+            {(user?.role === 'Manager' || user?.role === 'Leader') ? (
+              <BottomNavItem href="/reports" icon={<BarChart3 size={24} />} ariaLabel="Báo cáo" active={pathname === '/reports'} />
+            ) : (
+              <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
+            )}
           </>
         )}
       </nav>
