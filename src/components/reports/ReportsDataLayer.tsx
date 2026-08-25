@@ -91,7 +91,7 @@ export default function ReportsDataLayer({
         title="Báo cáo QAQC"
         description="Tổng hợp kết quả đánh giá năng lực và chất lượng QAQC"
       >
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 lg:flex-col lg:items-end lg:gap-3">
           {/* KPI COMPACT pill — Light Data Layer */}
           <div
             data-load-layer="light"
@@ -159,14 +159,16 @@ export default function ReportsDataLayer({
             )}
           </div>
 
-          {viewer?.role === 'Manager' && (
-            <div className="max-md:hidden flex items-center gap-3">
-              <PeriodMinutesModal periodId={periodId || ''} />
-              <BatchResultMessageModal periodId={periodId || ''} />
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {viewer?.role === 'Manager' && (
+              <div className="max-md:hidden flex items-center gap-3">
+                <PeriodMinutesModal periodId={periodId || ''} />
+                <BatchResultMessageModal periodId={periodId || ''} />
+              </div>
+            )}
+            <div className="max-md:hidden">
+              <ExportReportButton periodId={periodId || ''} />
             </div>
-          )}
-          <div className="max-md:hidden">
-            <ExportReportButton periodId={periodId || ''} />
           </div>
         </div>
       </PageHeader>
