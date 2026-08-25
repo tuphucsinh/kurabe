@@ -24,23 +24,23 @@ export default function TeamEvaluationCell({
 
   if (skeleton) {
     return (
-      <div className="space-y-3 md:space-y-5" data-load-layer="heavy">
+      <div className="space-y-3 md:space-y-4" data-load-layer="heavy">
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Nhân sự</p>
+        <div className="grid grid-cols-3 gap-2 md:gap-2.5">
+          <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Nhân sự</p>
             <div className="h-6 md:h-7 flex items-center justify-center">
               <Skeleton variant="text" width={24} height={20} className="rounded" />
             </div>
           </div>
-          <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Xong</p>
+          <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Xong</p>
             <div className="h-6 md:h-7 flex items-center justify-center">
               <Skeleton variant="text" width={24} height={20} className="rounded" />
             </div>
           </div>
-          <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Chờ</p>
+          <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Chờ</p>
             <div className="h-6 md:h-7 flex items-center justify-center">
               <Skeleton variant="text" width={24} height={20} className="rounded" />
             </div>
@@ -48,7 +48,7 @@ export default function TeamEvaluationCell({
         </div>
 
         {/* Progress Bar */}
-        <div className="space-y-1.5 md:space-y-2">
+        <div className="space-y-1 md:space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-[11px] md:text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
             <Skeleton variant="text" width={32} height={16} className="rounded" />
@@ -60,15 +60,15 @@ export default function TeamEvaluationCell({
   }
 
   return (
-    <div className="space-y-3 md:space-y-5" data-load-layer="heavy">
+    <div className="space-y-3 md:space-y-4" data-load-layer="heavy">
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-2 md:gap-3">
-        <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Nhân sự</p>
+      <div className="grid grid-cols-3 gap-2 md:gap-2.5">
+        <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Nhân sự</p>
           <p className="text-lg md:text-xl font-black text-on-surface">{membersCount}</p>
         </div>
-        <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Xong</p>
+        <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Xong</p>
           {isLoading ? (
             <div className="h-6 md:h-7 flex items-center justify-center">
               <Skeleton variant="text" width={24} height={20} className="rounded" />
@@ -79,8 +79,8 @@ export default function TeamEvaluationCell({
             <p className="text-lg md:text-xl font-black text-green-600">{completedCount}</p>
           )}
         </div>
-        <div className="text-center p-2 md:p-3 rounded-xl bg-surface">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1">Chờ</p>
+        <div className="text-center p-2 md:p-2.5 rounded-xl bg-surface">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-outline mb-0.5 md:mb-1 whitespace-nowrap">Chờ</p>
           {isLoading ? (
             <div className="h-6 md:h-7 flex items-center justify-center">
               <Skeleton variant="text" width={24} height={20} className="rounded" />
@@ -94,7 +94,7 @@ export default function TeamEvaluationCell({
       </div>
 
       {/* Progress Bar */}
-      <div className="space-y-1.5 md:space-y-2">
+      <div className="space-y-1 md:space-y-1.5">
         <div className="flex justify-between items-center">
           <span className="text-[11px] md:text-xs font-bold text-outline uppercase tracking-wider">Tiến độ</span>
           {isLoading ? (
