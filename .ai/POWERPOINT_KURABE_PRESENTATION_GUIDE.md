@@ -17,8 +17,9 @@
 1. **Excel không sai vì Excel yếu**, mà vì quy mô khoảng 200 người và nhiều vòng đánh giá khiến việc phân tán file, tổng hợp và kiểm soát trạng thái trở nên tốn thời gian.
 2. Web app tạo ra **một nguồn dữ liệu thống nhất** cho nhân sự, nhóm, tiêu chuẩn, kỳ đánh giá, điểm số, nhận xét và kết quả.
 3. Hệ thống **không thay thế người đánh giá**. Hệ thống kiểm soát quy trình, tính điểm theo cấu hình, cảnh báo bất thường và để quản lý đưa ra quyết định cuối cùng.
-4. AI giúp giảm thời gian học và hỗ trợ thao tác: người dùng chỉ cần làm quen giao diện trong vài phút; khi không biết, có thể hỏi chatbot bằng ngôn ngữ tự nhiên.
-5. Hiệu quả tài chính cần được chốt bằng một pilot đo thực tế tại Kurabe. Không trình bày số giờ tiết kiệm như một sự thật đã được đo nếu chưa có time-study.
+4. Người phụ trách **luôn nắm được tiến độ**: biết ai đã hoàn thành, ai còn thiếu, nhóm nào đang chậm và cần xử lý bước nào tiếp theo.
+5. AI giúp giảm thời gian học và hỗ trợ thao tác: người dùng chỉ cần làm quen giao diện trong vài phút; khi không biết, có thể hỏi chatbot bằng ngôn ngữ tự nhiên.
+6. Hiệu quả tài chính phải phản ánh số liệu thực tế của kỳ đánh giá đã hoàn tất. Nếu còn dùng mô hình minh họa, phải ghi rõ là `試算例`, không trình bày như kết quả đã đo.
 
 ---
 
@@ -40,14 +41,14 @@
 - Có giao diện hướng dẫn theo vai trò và bản in A4.
 - Có chatbot AI theo vai trò và trang đang mở.
 - Có AI hỗ trợ nhận xét, soạn thông báo kết quả, tóm tắt kỳ và giải thích cảnh báo.
+- AI có thể phân tích dữ liệu thống kê / báo cáo trong phạm vi quyền được cấp, giúp nhận diện khu vực có vấn đề, điểm cần cải thiện và điểm mạnh cần phát huy; kết luận cuối vẫn do quản lý xác nhận.
 - Cảnh báo chênh lệch điểm được phát hiện bằng quy tắc xác định, không phải AI đoán tùy ý:
   - Chênh lệch từ 20 điểm: cảnh báo mức cần chú ý.
   - Chênh lệch từ 30 điểm: cảnh báo mức nghiêm trọng.
-- Production canary gần nhất đã kiểm tra workflow SubLeader → Leader → Manager → Approved và kiểm tra rollback failure-path thành công trên dữ liệu test của hệ thống.
 
-### 2.2. Những số liệu chưa được đo tại Kurabe
+### 2.2. Những số liệu phải cập nhật từ kỳ đánh giá đã hoàn tất
 
-Các số liệu dưới đây phải ghi rõ là **mô hình minh họa / cần xác nhận bằng pilot**:
+Các số liệu dưới đây phải lấy từ dữ liệu thực tế của Kurabe. Nếu chưa có số đo, ghi rõ là **chưa có dữ liệu / mô hình minh họa**, không tự biến thành kết quả thực tế:
 
 - Số giờ hiện đang dùng cho một kỳ đánh giá Excel.
 - Số giờ thực tế sau khi dùng web app.
@@ -56,13 +57,13 @@ Các số liệu dưới đây phải ghi rõ là **mô hình minh họa / cần
 - Số ngày công tiết kiệm mỗi năm.
 - Chi phí tiền quy đổi từ thời gian tiết kiệm.
 - Khả năng vận hành ổn định ở đúng quy mô 200 người trong điều kiện thực tế của Kurabe.
-- Backup định kỳ, quy trình phục hồi và BCP/khả năng sẵn sàng cho môi trường production — **cần xác nhận riêng trước rollout chính thức**.
+- Backup định kỳ, quy trình phục hồi và BCP/khả năng sẵn sàng cho môi trường production — **trong báo cáo phải ghi trạng thái thực tế hoặc đánh dấu chưa xác nhận**.
 
 Không dùng các câu như “tiết kiệm chính xác 75%” hoặc “giảm 90% lỗi” nếu chưa có bảng đo trước/sau.
 
-### 2.3. Bộ số liệu ước lượng đề xuất cho bản trình bày
+### 2.3. Mô hình tham khảo nếu còn thiếu số liệu thực tế
 
-Để bài trình bày có con số cụ thể nhưng vẫn trung thực, dùng một mô hình minh họa duy nhất:
+Nếu dữ liệu cuối năm chưa đầy đủ, có thể dùng mô hình dưới đây như **phụ chú minh họa**, nhưng slide chính phải ưu tiên số đo thực tế:
 
 - Quy mô giả định: khoảng 200 người.
 - Phần đang đo: **thời gian quản trị, tổng hợp, theo dõi và làm báo cáo**, không tính thời gian chuyên môn để người quản lý suy xét và chấm.
@@ -72,13 +73,32 @@ Không dùng các câu như “tiết kiệm chính xác 75%” hoặc “giảm
   - Cơ sở: 25% = 30 giờ/kỳ.
   - Lạc quan: **30% = 36 giờ/kỳ**.
 - Giả định **1 kỳ/năm**: kịch bản lạc quan tiết kiệm 36 giờ/năm, tương đương 4,5 ngày công nếu 1 ngày công = 8 giờ.
+
+#### Bộ số ước lượng tích cực để đưa vào slide
+
+| Hạng mục | Excel trước đây | KURABE QAQC | Hiệu quả ước lượng |
+|---|---:|---:|---:|
+| Quản trị, tổng hợp, theo dõi và báo cáo cả kỳ | 120 giờ | **84 giờ** | **Giảm 36 giờ, tương đương 30%** |
+| Lập báo cáo cuối kỳ | 20 giờ | **14 giờ** | **Giảm 6 giờ, tương đương 30%** |
+| Quy đổi ngày công cho toàn bộ phần quản trị | 15 ngày công | **10,5 ngày công** | **Giảm 4,5 ngày công** |
+
+#### Chi phí nhân sự quy đổi — ước lượng tham khảo
+
+| Chi phí quy đổi | Excel trước đây | KURABE QAQC | Giá trị tiết kiệm |
+|---:|---:|---:|---:|
+| 100.000 đồng/giờ | 12 triệu đồng/kỳ | **8,4 triệu đồng/kỳ** | **3,6 triệu đồng/kỳ** |
+| 150.000 đồng/giờ | 18 triệu đồng/kỳ | **12,6 triệu đồng/kỳ** | **5,4 triệu đồng/kỳ** |
+
+- Đây là chi phí nhân sự quy đổi cho phần quản trị, không phải chi phí license hoặc chi phí triển khai hệ thống.
+- Chi phí triển khai, vận hành, đào tạo, thiết bị và license nếu có: `[điền số thực tế cuối kỳ]`.
+- ROI ròng tham khảo: `giá trị thời gian tiết kiệm − tổng chi phí thực tế`.
+- Cách diễn đạt tích cực nhưng an toàn: **“KURABE QAQC có thể giảm khoảng 30% thời gian quản trị và rút ngắn khoảng 30% thời gian lập báo cáo trong kịch bản ước lượng; số thực tế sẽ thay vào cuối kỳ.”**
+
 - Giá trị tài chính chỉ là giá trị thời gian quy đổi: `giờ tiết kiệm × chi phí nhân sự quy đổi mỗi giờ`.
-- Ví dụ minh họa ở kịch bản lạc quan:
-  - Nếu chi phí nhân sự quy đổi là 100.000 đồng/giờ: khoảng 3,6 triệu đồng/năm.
-  - Nếu chi phí nhân sự quy đổi là 150.000 đồng/giờ: khoảng 5,4 triệu đồng/năm.
+- Ví dụ minh họa ở kịch bản lạc quan: nếu chi phí quy đổi là 100.000 đồng/giờ, giá trị thời gian tiết kiệm khoảng 3,6 triệu đồng/năm; nếu 150.000 đồng/giờ, khoảng 5,4 triệu đồng/năm.
 - Đây **chưa phải ROI ròng**: chưa trừ chi phí triển khai, vận hành, đào tạo, thiết bị hoặc license nếu có.
 
-Khi trình bày, ghi rõ: `試算例 — ước lượng trước pilot`. Sau pilot, thay toàn bộ bằng số đo thực tế của Kurabe.
+Khi trình bày báo cáo cuối năm, ưu tiên thay bảng minh họa bằng số liệu thực tế của Kurabe. Nếu chưa thay được, ghi rõ: `試算例 — mô hình tham khảo, không phải kết quả thực tế`.
 
 ---
 
@@ -129,14 +149,14 @@ Khi trình bày, ghi rõ: `試算例 — ước lượng trước pilot`. Sau pi
 
 1. **Bối cảnh:** đánh giá khoảng 200 người bằng Excel tạo chi phí quản trị và rủi ro kiểm soát.
 2. **Vấn đề cốt lõi:** dữ liệu phân tán, nhiều vòng, khó theo dõi, khó tổng hợp và khó truy vết.
-3. **Năm nguyên lý của giải pháp:** một nguồn dữ liệu, chuẩn hóa quy trình, phân quyền rõ, nhìn thấy tiến độ, người chịu trách nhiệm cuối.
+3. **Năm nguyên lý của giải pháp:** một nguồn dữ liệu, chuẩn hóa quy trình, phân quyền rõ, **luôn nắm được tiến độ**, người chịu trách nhiệm cuối.
 4. **Hiệu suất vận hành:** giảm thao tác lặp, giảm thời gian tìm/gộp/kiểm tra file, tập trung thời gian vào đánh giá và cải tiến.
 5. **Hiệu quả chất lượng:** giảm nhầm người, nhầm vòng, sai trạng thái và bỏ sót điểm cần kiểm tra.
-6. **AI tạo đòn bẩy:** chatbot giảm thời gian đào tạo; AI hỗ trợ nhận xét, cảnh báo và tóm tắt; người quản lý vẫn quyết định.
-7. **Ước lượng thời gian:** mô hình 15% / 25% / 30%, trong đó 30% là kịch bản lạc quan trước pilot.
-8. **Ước lượng tài chính:** giờ tiết kiệm × chi phí nhân sự quy đổi; phân biệt giá trị thời gian với ROI ròng.
-9. **Điều kiện thành công và rủi ro:** dữ liệu, quyền hạn, backup/BCP, thiết bị hiện trường, đào tạo và pilot.
-10. **Đề xuất:** pilot một kỳ, đo trước/sau, xác nhận ROI rồi mới mở rộng lên khoảng 200 người.
+6. **AI tạo đòn bẩy:** chatbot giảm thời gian đào tạo; AI phân tích thống kê và báo cáo theo quyền, chỉ ra vấn đề, điểm cần cải thiện và điểm mạnh cần phát huy; AI hỗ trợ nhận xét, cảnh báo và tóm tắt; người quản lý vẫn quyết định.
+7. **Kết quả thời gian thực tế:** so sánh thời gian quản trị Excel và web app trong kỳ đánh giá đã hoàn tất.
+8. **Kết quả tài chính:** giờ thực tế tiết kiệm × chi phí nhân sự quy đổi; phân biệt giá trị thời gian với ROI ròng.
+9. **Kiểm soát và độ tin cậy:** dữ liệu, quyền hạn, backup/BCP, thiết bị hiện trường, nhật ký và human-in-the-loop.
+10. **Kết luận:** giá trị thực tế mang lại cho Kurabe và các điểm cần tiếp tục cải thiện trong hệ thống.
 
 ### Tỷ lệ nội dung khuyến nghị
 
@@ -144,7 +164,7 @@ Khi trình bày, ghi rõ: `試算例 — ước lượng trước pilot`. Sau pi
 - 25%: nguyên lý giải pháp.
 - 35%: hiệu suất, hiệu quả, thời gian và tài chính.
 - 15%: AI và nguyên tắc human-in-the-loop.
-- 5%: pilot / bước tiếp theo.
+- 5%: kết luận và tác động tổng thể.
 
 ### Nguyên tắc hình ảnh
 
@@ -334,7 +354,7 @@ Dùng biểu đồ thanh “thời gian quản trị” theo 6 nhóm. Không ghi
 - Xem kết quả của chính mình sau khi kỳ đánh giá được chốt.
 - Nhận thông báo kết quả rõ ràng.
 - Có thể hỏi hướng dẫn cơ bản bằng chatbot theo phạm vi được cấp.
-- Giao diện responsive cho smartphone/tablet; điều kiện thiết bị và mạng tại hiện trường sẽ được xác nhận trong pilot.
+- Giao diện responsive cho smartphone/tablet; điều kiện thiết bị và mạng tại hiện trường được trình bày theo kết quả thực tế của kỳ đánh giá.
 
 ### Bộ phận nhân sự / QAQC
 
@@ -385,7 +405,7 @@ Không nói “AI thay thế đào tạo hoàn toàn”. Nói:
 
 `AIは判断を代替せず、評価品質を支援する`
 
-### 4 lớp hỗ trợ
+### 5 lớp hỗ trợ
 
 #### 1. Gợi ý nhận xét theo dữ liệu đã chấm
 
@@ -403,6 +423,16 @@ Hệ thống phát hiện chênh lệch giữa các vòng bằng quy tắc xác 
 
 AI hỗ trợ tổng hợp tình hình kỳ đánh giá, kết quả, vấn đề và khuyến nghị để quản lý rà soát.
 
+#### 5. Phân tích thống kê và báo cáo
+
+AI đọc các thống kê và báo cáo mà người dùng được phép xem để chỉ ra:
+
+- Vấn đề nằm ở đâu: nhóm, tiêu chuẩn, vòng đánh giá hoặc khu vực có dấu hiệu cần xem lại.
+- Chỗ nào cần cải thiện: điểm thấp, chênh lệch, tiến độ chậm hoặc xu hướng bất lợi.
+- Chỗ nào cần phát huy: nhóm / cá nhân / tiêu chuẩn có kết quả tốt hoặc xu hướng tích cực.
+
+AI chỉ hỗ trợ phát hiện và giải thích điểm đáng chú ý; quản lý vẫn kiểm tra dữ liệu và quyết định hành động.
+
 ### Guardrail bắt buộc trên slide
 
 `最終評価は必ず人が確認・承認する。AIの出力は提案であり、確定結果ではない。`
@@ -417,61 +447,50 @@ Không nói AI đảm bảo không có sai sót. Nói:
 
 ---
 
-## Slide 10 — Hiệu quả thời gian: mô hình minh họa có kiểm soát
+## Slide 10 — Hiệu quả thời gian: kết quả của kỳ đánh giá đã hoàn tất
 
 ### Tiêu đề tiếng Nhật
 
-`時間削減効果：まずは1サイクルで測定する`
+`時間削減効果：評価実績と業務効率化`
 
 ### Lời dẫn bắt buộc
 
-`以下はKurabeで実測した数値ではなく、効果測定のための試算例です。実運用前に1回の評価サイクルで測定します。`
+`以下は、完了した評価期間におけるKurabeの実測結果です。実績値と試算値を明確に区別して示します。`
 
 ### Công thức
 
 ```text
 Thời gian tiết kiệm
-= Thời gian quản trị bằng Excel
-− Thời gian quản trị bằng web app
+= Thời gian quản trị bằng Excel trước đây
+− Thời gian quản trị bằng web app trong kỳ đã hoàn tất
 
 Tỷ lệ tiết kiệm
-= Thời gian tiết kiệm / Thời gian Excel × 100
+= Thời gian tiết kiệm / Thời gian Excel trước đây × 100
 ```
 
-### Mô hình ước lượng đề xuất
+### Bảng kết quả thực tế cần điền
 
-Lấy mốc Excel giả định **120 giờ/kỳ** cho phần quản trị, tổng hợp, theo dõi và báo cáo. Không tính thời gian chuyên môn để quản lý suy xét và chấm điểm.
+| Chỉ số | Excel trước đây | KURABE QAQC trong kỳ đã hoàn tất | Kết quả |
+|---|---:|---:|---:|
+| Thời gian quản trị / tổng hợp | [___] giờ | [___] giờ | [___] giờ, [___]% |
+| Thời gian lập báo cáo | [___] giờ | [___] giờ | [___] giờ, [___]% |
+| Số lỗi cần sửa | [___] lỗi | [___] lỗi | giảm [___] lỗi |
+| Số lần nhắc / hỗ trợ thao tác | [___] lần | [___] lần | giảm [___] lần |
 
-| Kịch bản | Excel giả định | Web app ước lượng | Tiết kiệm/kỳ | Tiết kiệm/năm (1 kỳ) |
-|---|---:|---:|---:|---:|
-| Thận trọng | 120 giờ | 102 giờ | 18 giờ, 15% | 18 giờ/năm = 2,25 ngày công |
-| Cơ sở | 120 giờ | 90 giờ | 30 giờ, 25% | 30 giờ/năm = 3,75 ngày công |
-| Lạc quan | 120 giờ | 84 giờ | **36 giờ, 30%** | **36 giờ/năm = 4,5 ngày công** |
-
-Giả định Kurabe có **1 kỳ đánh giá mỗi năm** và 1 ngày công = 8 giờ. Đây là **ước lượng trước pilot**, không phải số liệu thực tế.
-
-### Giá trị tài chính minh họa — chỉ tính giá trị thời gian
-
-Công thức:
+### Giá trị tài chính thực tế
 
 ```text
 Giá trị thời gian tiết kiệm/năm
-= Giờ tiết kiệm trong 1 kỳ/năm × Chi phí nhân sự quy đổi/giờ
+= Giờ thực tế tiết kiệm trong 1 kỳ/năm × Chi phí nhân sự quy đổi/giờ
 ```
 
-Ở kịch bản lạc quan, tiết kiệm 36 giờ/năm:
+- Ghi rõ chi phí nhân sự quy đổi được Kurabe sử dụng.
+- Phân biệt **giá trị thời gian quy đổi** với **ROI ròng**.
+- ROI ròng phải trừ chi phí triển khai, vận hành, đào tạo, thiết bị và license nếu có.
 
-- Với 100.000 đồng/giờ: khoảng **3,6 triệu đồng/năm**.
-- Với 150.000 đồng/giờ: khoảng **5,4 triệu đồng/năm**.
+### Mô hình ước lượng chỉ dùng khi thiếu số đo
 
-Đây là **giá trị thời gian quy đổi**, chưa phải ROI ròng. ROI ròng cần trừ chi phí triển khai, vận hành, đào tạo, thiết bị và license nếu có.
-
-### Cách trình bày đúng
-
-- Đặt nhãn lớn `試算例` hoặc `実測前の試算` trên biểu đồ.
-- Dùng 30% làm kịch bản lạc quan, không trình bày như kết quả đã đạt.
-- Speaker note phải nói rõ: “Sau một kỳ pilot, thay số ước lượng bằng số đo thực tế.”
-- Không đặt dấu `実績` cho bất kỳ số nào trong bảng này.
+Nếu chưa có đủ số liệu thực tế, có thể đưa bảng 15% / 25% / 30% ở phần phụ chú, luôn gắn nhãn `試算例`; không đặt dấu `実績` và không dùng làm kết luận chính của báo cáo.
 
 ---
 
@@ -489,7 +508,7 @@ Giá trị thời gian tiết kiệm/năm
 4. **Khả năng quản trị**: nhìn theo nhóm, vai trò, kỳ, xếp loại và bất thường.
 5. **Khả năng mở rộng**: quy trình chuẩn có thể áp dụng cho số người lớn hơn mà không tăng file theo cấp số nhân.
 
-### Chỉ số nên đo trong pilot
+### Các chỉ số kết quả cần trình bày
 
 - Thời gian từ lúc mở kỳ đến khi hoàn tất.
 - Thời gian tạo báo cáo cuối kỳ.
@@ -498,6 +517,8 @@ Giá trị thời gian tiết kiệm/năm
 - Số người chưa hoàn thành tại từng thời điểm.
 - Số giờ của bộ phận HR/QAQC dành cho tổng hợp.
 - Mức độ hài lòng của người đánh giá.
+
+Các chỉ số phải ghi bằng số liệu thực tế của kỳ đã hoàn tất; nếu thiếu, để `[chưa có dữ liệu]`, không tự ước lượng thành kết quả.
 
 ---
 
@@ -543,7 +564,7 @@ Dùng screenshot thật của Dashboard / Reports đã che hoặc thay toàn b�
 - Dữ liệu đánh giá và dữ liệu nhân sự được quản lý tập trung.
 - AI không tự động chốt kết quả; người quản lý rà soát và phê duyệt.
 - Có cơ chế trả lại đánh giá kèm lý do.
-- **Trước rollout production cần chốt riêng**: backup định kỳ, quy trình phục hồi, kiểm tra khôi phục và phương án BCP/khả năng sẵn sàng.
+- Backup định kỳ, quy trình phục hồi và BCP/khả năng sẵn sàng cho môi trường production — **trong báo cáo ghi trạng thái thực tế hoặc đánh dấu chưa xác nhận**.
 
 ### Lưu ý trình bày
 
@@ -551,37 +572,37 @@ Không đưa API key, tên thật, mã nhân viên thật, URL quản trị ho�
 
 ---
 
-## Slide 14 — Đề xuất bước tiếp theo
+## Slide 14 — Kết luận tổng hợp sau kỳ đánh giá
 
 ### Tiêu đề tiếng Nhật
 
-`次のステップ：小さく試し、実測してから拡張する`
+`評価期間終了後の総括：効果・課題・AI活用`
 
-### Lộ trình đề xuất
+### Nội dung tổng kết
 
-#### Giai đoạn 1 — Pilot
+- Quy mô thực tế đã đánh giá: `[___]` người.
+- Tình trạng hoàn thành: `[___]%`, số trường hợp còn thiếu / cần xử lý: `[___]`.
+- Thời gian quản trị và tổng hợp giảm: `[___]` giờ, tương đương `[___]%`.
+- Số lỗi hoặc lần sửa do nhầm file, nhầm vòng, nhầm người: `[___]`.
+- Tiến độ và báo cáo được theo dõi tập trung, giúp người phụ trách luôn biết vấn đề đang nằm ở đâu.
+- AI hỗ trợ người dùng, phân tích thống kê / báo cáo, chỉ ra điểm cần cải thiện và điểm mạnh cần phát huy.
+- Quyết định đánh giá cuối cùng vẫn do người quản lý kiểm tra và xác nhận.
 
-- Chọn 1 bộ phận hoặc 30–50 người đại diện.
-- Chạy trọn 1 kỳ đánh giá.
-- Đo thời gian Excel cũ và thời gian trên web app.
-- Thu thập lỗi, câu hỏi và phản hồi người dùng.
+### Phần “điểm cần cải thiện”
 
-#### Giai đoạn 2 — Chuẩn hóa
+Chỉ ghi các vấn đề đã quan sát được trong kỳ đánh giá, ví dụ:
 
-- Chốt tiêu chuẩn, thang điểm và quyền hạn.
-- Chốt quy trình trả lại / phê duyệt.
-- Hoàn thiện hướng dẫn tiếng Nhật.
-- Đào tạo nhóm quản trị.
+- Dữ liệu hoặc quy trình còn thiếu nhất quán.
+- Câu hỏi người dùng lặp lại nhiều.
+- Báo cáo hoặc biểu đồ còn thiếu dữ liệu.
+- Điều kiện thiết bị / mạng tại hiện trường.
+- Backup, phục hồi hoặc BCP còn cần hoàn thiện.
 
-#### Giai đoạn 3 — Mở rộng
-
-- Mở rộng lên khoảng 200 người.
-- Theo dõi KPI theo kỳ.
-- Đánh giá ROI hàng quý hoặc sau mỗi kỳ.
+Không đưa roadmap, kế hoạch thử nghiệm giới hạn, giai đoạn mở rộng hoặc lời kêu gọi triển khai vào báo cáo này.
 
 ### Câu kết tiếng Nhật
 
-`まずは1つの評価サイクルで効果を実測し、確認できた効果をKurabe全体へ段階的に展開する。`
+`KURABE QAQCは、評価業務の一元化・可視化・AI支援を通じて、管理効率と評価品質の向上に貢献した。`
 
 ---
 
@@ -611,24 +632,28 @@ Không đưa API key, tên thật, mã nhân viên thật, URL quản trị ho�
 - “AI loại bỏ hoàn toàn đào tạo.”
 - “AI tự chấm điểm chính xác 100%.”
 - “Không bao giờ có sai sót.”
-- “200 người đã được kiểm chứng production” nếu chưa có pilot đúng 200 người.
+- “200 người đã được kiểm chứng production” nếu chưa có vận hành thực tế đúng 200 người.
 
 ### Nên nói
 
-- “Hệ thống có tiềm năng giảm mạnh phần thời gian quản trị, tổng hợp và theo dõi; tỷ lệ thực tế sẽ được đo qua một kỳ pilot.”
+- “Hệ thống đã giảm phần thời gian quản trị, tổng hợp và theo dõi theo số liệu của kỳ đánh giá: [___] giờ, tương đương [___]%.”
 - “Thời gian chấm và suy xét của người quản lý vẫn là thời gian nghiệp vụ cần thiết; web app chủ yếu giảm thời gian hành chính và giảm thao tác lặp.”
 - “Chatbot giúp giảm thời gian đào tạo ban đầu và giảm số câu hỏi lặp lại trong quá trình sử dụng.”
 - “AI tạo bản nháp và cảnh báo để người quản lý kiểm tra nhanh hơn; không tự thay thế quyết định đánh giá.”
-- “Mục tiêu của pilot là đo được số giờ tiết kiệm, số lỗi tránh được và mức độ chấp nhận của người dùng.”
+- “Mức tiết kiệm, số lỗi tránh được và mức độ chấp nhận của người dùng được tổng hợp từ kỳ đánh giá đã hoàn tất.”
 
-### Mẫu câu để thay số liệu sau pilot
+### Mẫu bảng kết quả thực tế
 
 ```text
-Trước pilot: [___] giờ/kỳ cho quản trị Excel
-Sau pilot: [___] giờ/kỳ cho quản trị trên KURABE QAQC
+Excel trước đây: [___] giờ/kỳ cho quản trị
+KURABE QAQC: [___] giờ/kỳ cho quản trị
 Tiết kiệm: [___] giờ/kỳ = [___]%
-Số kỳ/năm: [___]
+Số kỳ/năm: 1
 Tiết kiệm năm: [___] giờ = [___] ngày công
+Chi phí nhân sự quy đổi: [___] đồng/giờ
+Giá trị thời gian tiết kiệm: [___] đồng/năm
+Chi phí triển khai + vận hành thực tế: [___] đồng/năm
+ROI ròng: [___] đồng/năm hoặc [___]%
 ```
 
 ---
@@ -679,10 +704,10 @@ Create a clean data analytics illustration showing two evaluation rounds with a 
 Create a premium corporate illustration showing time saved through a centralized performance evaluation workflow: a calm manager moves from repetitive paperwork toward a clear dashboard and faster decision-making. Use abstract clock and workflow motifs, Japanese manufacturing office, navy blue, white and green accents, realistic editorial style, no readable text, no logos, no watermark, 16:9 widescreen.
 ```
 
-### Prompt 8 — Tầm nhìn triển khai tại Kurabe
+### Prompt 8 — Tổng kết giá trị tại Kurabe
 
 ```text
-Create a polished closing illustration for a Japanese manufacturing company presentation: a team of managers and QAQC staff collaborating around a trusted performance evaluation dashboard, with a clean factory environment in the background. Communicate standardization, transparency, continuous improvement, and gradual rollout. Warm but professional, navy and green palette, no readable text, no logos, no watermark, 16:9 widescreen.
+Create a polished closing illustration for a Japanese manufacturing company presentation: a team of managers and QAQC staff reviewing the results of a completed performance evaluation around a trusted dashboard, with a clean factory environment in the background. Communicate standardization, transparency, measurable efficiency, continuous improvement, and informed decision-making. Warm but professional, navy and green palette, no readable text, no logos, no watermark, 16:9 widescreen.
 ```
 
 ---
@@ -700,10 +725,10 @@ Mục tiêu của bài trình bày:
 1. Giải thích vì sao đánh giá khoảng 200 người bằng nhiều file Excel gây ra chi phí quản trị lớn.
 2. Cho thấy web app giúp tập trung dữ liệu, chuẩn hóa workflow, theo dõi tiến độ, giảm tổng hợp thủ công và tăng minh bạch.
 3. Nhấn mạnh AI chatbot: người dùng chỉ cần vài phút làm quen giao diện; khi không biết có thể hỏi chatbot bằng ngôn ngữ tự nhiên; chatbot trả lời theo vai trò và trang đang mở, hướng dẫn cụ thể từng bước.
-4. Giải thích AI hỗ trợ nhận xét, soạn thông báo, tóm tắt kỳ và giải thích cảnh báo bất thường.
+4. Giải thích AI hỗ trợ nhận xét, soạn thông báo, tóm tắt kỳ, phân tích thống kê / báo cáo và giải thích cảnh báo bất thường; chỉ ra vấn đề, điểm cần cải thiện và điểm mạnh cần phát huy.
 5. Làm rõ AI không tự thay thế người đánh giá và không tự chốt kết quả. Điểm số vẫn do người đánh giá xác nhận; AI là công cụ hỗ trợ và bản nháp.
-6. Trình bày mô hình đo hiệu quả thời gian, nhưng không biến số liệu minh họa thành số liệu thực tế.
-7. Đề xuất pilot 1 kỳ đánh giá trước khi mở rộng lên khoảng 200 người.
+6. Trình bày kết quả thực tế của kỳ đánh giá đã hoàn tất: thời gian, chất lượng, tiến độ, chi phí và ROI. Nếu còn số liệu minh họa, phải ghi rõ là `試算例`.
+7. Đây là báo cáo tổng kết cuối năm; **không đưa roadmap, kế hoạch thử nghiệm giới hạn, kế hoạch triển khai hoặc bước tiếp theo**.
 
 Ngôn ngữ:
 - Text trên slide bằng tiếng Nhật business, lịch sự, tự nhiên.
@@ -714,14 +739,14 @@ Ngôn ngữ:
 Cấu trúc **10 slide executive**, không phải product demo:
 1. Bối cảnh và chi phí quản trị của Excel ở quy mô khoảng 200 người.
 2. Các vấn đề cốt lõi: phân tán, nhiều vòng, khó theo dõi, khó tổng hợp, khó truy vết.
-3. Năm nguyên lý của giải pháp: một nguồn dữ liệu, chuẩn hóa, phân quyền, minh bạch, trách nhiệm con người.
+3. Năm nguyên lý của giải pháp: một nguồn dữ liệu, chuẩn hóa, phân quyền, minh bạch, luôn nắm được tiến độ và trách nhiệm con người.
 4. Hiệu suất vận hành: thời gian và thao tác lặp được giảm ở đâu.
 5. Hiệu quả chất lượng: giảm rủi ro và tăng khả năng kiểm soát như thế nào.
-6. AI tạo đòn bẩy: chatbot, nhận xét, cảnh báo, tóm tắt; human-in-the-loop.
-7. Mô hình tiết kiệm thời gian 15% / 25% / 30%, 30% là kịch bản lạc quan trước pilot.
-8. Mô hình giá trị tài chính: giờ tiết kiệm × chi phí nhân sự quy đổi; phân biệt giá trị thời gian và ROI ròng.
-9. Điều kiện thành công: dữ liệu, quyền, backup/BCP, thiết bị hiện trường, đào tạo và pilot.
-10. Đề xuất pilot một kỳ trong một năm, đo trước/sau, rồi mới mở rộng lên khoảng 200 người.
+6. AI tạo đòn bẩy: chatbot, phân tích thống kê / báo cáo, nhận xét, cảnh báo, tóm tắt; human-in-the-loop.
+7. Kết quả thời gian thực tế của kỳ đánh giá đã hoàn tất.
+8. Kết quả tài chính và ROI: giá trị thời gian quy đổi, chi phí thực tế và ROI ròng nếu đủ dữ liệu.
+9. Kiểm soát, độ tin cậy, tiến độ và các vấn đề đã quan sát được.
+10. Kết luận: giá trị thực tế, điểm cần cải thiện và tác động tổng thể.
 
 Không tạo walkthrough chi tiết từng trang app. Tối đa 1–2 screenshot chỉ để minh họa rằng giải pháp tồn tại; không trình bày danh sách tính năng dài. Nếu cần, đưa chi tiết tính năng vào appendix.
 
@@ -734,15 +759,16 @@ Thiết kế:
 - Nếu chưa có screenshot, dùng mockup abstract không được mô tả là màn hình thật.
 
 Quy tắc số liệu:
-- Các số giờ và tỷ lệ tiết kiệm trong brief là mô hình minh họa, không phải số liệu Kurabe đã đo.
-- Gắn nhãn tiếng Nhật `試算例` hoặc `実測前の試算` trên slide có số liệu minh họa.
+- Ưu tiên số liệu thực tế của kỳ đánh giá đã hoàn tất.
+- Nếu còn số giờ hoặc tỷ lệ minh họa, gắn nhãn tiếng Nhật `試算例` hoặc `参考値`, không gọi là `実績`.
 - Không viết “75% tiết kiệm thực tế” hoặc “AI chính xác 100%”.
-- Thêm speaker note: cần đo pilot trước khi chốt ROI.
+- ROI chỉ được trình bày là ROI thực tế khi đã có cả lợi ích đo được và chi phí thực tế.
 - Không tuyên bố web app đã được kiểm chứng production ở đúng quy mô 200 người nếu không có bằng chứng.
 
 Về AI:
 - Chatbot hiểu vai trò và trang đang mở.
 - Chatbot hướng dẫn thao tác cụ thể.
+- AI phân tích thống kê / báo cáo trong phạm vi quyền được cấp, chỉ ra vấn đề, nơi cần cải thiện và điểm mạnh cần phát huy.
 - AI có thể gợi ý nhận xét dựa trên chi tiết tiêu chuẩn và điểm đã chấm.
 - AI có thể soạn thông báo kết quả theo từng nhân viên.
 - Hệ thống phát hiện chênh lệch điểm bằng quy tắc xác định; AI hỗ trợ giải thích và đề xuất kiểm tra.
@@ -753,7 +779,7 @@ Về AI:
 1. File .pptx hoàn chỉnh.
 2. Speaker notes cho từng slide.
 3. Danh sách nguồn hình ảnh / screenshot được dùng.
-4. Một slide appendix ghi rõ các số liệu nào là `実測値`, số liệu nào là `試算例`, số liệu nào cần đo trong pilot.
+4. Một slide appendix ghi rõ các số liệu nào là `実測値`, số liệu nào là `試算例`, số liệu nào cần đo trong vận hành thực tế.
 5. Checklist tự kiểm tra trước khi trình bày: không lỗi tiếng Nhật, không số liệu bịa, không lộ PII, không claim AI thay người, không claim ROI đã đo nếu chưa đo.
 ```
 
@@ -804,8 +830,8 @@ Cách trình bày thuyết phục nhất không phải là hứa một con số 
 2. Chỉ ra web app giải quyết từng điểm nghẽn bằng workflow và dữ liệu tập trung.
 3. Nhấn mạnh chatbot AI giúp người dùng tự học và tự giải quyết câu hỏi trong lúc làm việc.
 4. Giải thích AI hỗ trợ chất lượng nhưng vẫn giữ trách nhiệm quyết định ở con người.
-5. Đề xuất pilot 1 kỳ, đo trước/sau, rồi mới chốt con số tiết kiệm và mở rộng toàn Kurabe.
+5. Tổng kết giá trị thực tế: thời gian, chi phí, hiệu quả quản trị, tiến độ và các điểm cần cải thiện.
 
-> Thông điệp kết thúc đề xuất:
+> **Thông điệp kết thúc:**
 >
 > `KURABE QAQC không chỉ số hóa biểu mẫu đánh giá. Hệ thống số hóa toàn bộ cách tổ chức, thực hiện, kiểm tra và cải tiến quy trình đánh giá.`
