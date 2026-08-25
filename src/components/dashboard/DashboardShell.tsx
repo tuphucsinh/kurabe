@@ -21,10 +21,12 @@ export default function DashboardShell({
       data-load-layer="shell"
       className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
     >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 md:mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Tổng quan hệ thống</h1>
-          <p className="text-slate-500 mt-1 text-xs sm:text-sm">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-on-surface leading-[1.05] tracking-tight">
+            Tổng quan hệ thống
+          </h1>
+          <p className="text-base sm:text-lg md:text-2xl text-outline font-medium mt-2 leading-snug">
             {hasPeriod ? (
               <>Theo dõi tiến độ đánh giá năng lực QAQC — <span className="text-indigo-600 font-semibold">{displayPeriod}</span></>
             ) : (

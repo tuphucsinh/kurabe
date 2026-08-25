@@ -61,11 +61,15 @@ export default function SettingsPage() {
   return (
     <div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Cài đặt</h1>
-        <p className="text-slate-500 text-xs sm:text-sm mt-1">
-          Quản lý kỳ đánh giá, nhóm & quyền của hệ thống
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-on-surface leading-[1.05] tracking-tight">
+            Cài đặt
+          </h1>
+          <p className="text-base sm:text-lg md:text-2xl text-outline font-medium mt-2 leading-snug">
+            Quản lý kỳ đánh giá, nhóm & quyền của hệ thống
+          </p>
+        </div>
       </div>
 
       {/* Tabs: Desktop/Tablet (all tabs) vs Mobile (read-mostly tabs) */}

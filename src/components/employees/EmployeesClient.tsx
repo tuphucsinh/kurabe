@@ -736,12 +736,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   return (
     <div data-load-layer="shell" className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-on-surface leading-[1.05] tracking-tight">
             Quản lý Nhân sự QAQC
           </h1>
-          <p className="text-on-surface-variant mt-1 text-sm md:text-base">
+          <p className="text-base sm:text-lg md:text-2xl text-outline font-medium mt-2 leading-snug">
             Danh sách chi tiết nhân viên và kết quả đánh giá năng lực
           </p>
         </div>

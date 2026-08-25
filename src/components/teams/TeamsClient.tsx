@@ -138,10 +138,14 @@ export default function TeamsClient() {
   return (
     <TeamsShell>
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-wrap">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">Quản lý Nhóm QAQC</h1>
-          <p className="text-on-surface-variant mt-1 text-sm md:text-base">Theo dõi tiến độ đánh giá theo từng đơn vị</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-on-surface leading-[1.05] tracking-tight">
+            Quản lý Nhóm QAQC
+          </h1>
+          <p className="text-base sm:text-lg md:text-2xl text-outline font-medium mt-2 leading-snug">
+            Theo dõi tiến độ đánh giá theo từng đơn vị
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
