@@ -11,7 +11,7 @@ export function Skeleton({ className, variant = 'rectangular', width, height }: 
   return (
     <div
       className={cn(
-        'animate-pulse bg-slate-200',
+        'animate-pulse bg-surface-muted',
         variant === 'circular' && 'rounded-full',
         variant === 'text' && 'rounded h-4 w-full',
         variant === 'rectangular' && 'rounded-md',
@@ -43,7 +43,7 @@ export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; column
 
 export function CardSkeleton() {
   return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+    <div className="bg-surface-raised p-6 rounded-xl border border-outline-soft shadow-sm space-y-4">
       <div className="flex items-center space-x-4">
         <Skeleton variant="circular" className="h-12 w-12" />
         <div className="space-y-2 flex-1">
@@ -62,7 +62,7 @@ export function CardSkeleton() {
 
 export function StatCardSkeleton() {
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+    <div className="bg-surface-raised p-5 rounded-xl border border-outline-soft shadow-sm space-y-3">
       <div className="flex justify-between items-start">
         <Skeleton variant="circular" className="h-10 w-10" />
         <Skeleton variant="rectangular" className="h-6 w-12" />

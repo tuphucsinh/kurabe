@@ -130,19 +130,19 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative bg-surface-raised rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-          <h2 className="text-lg font-bold text-slate-800">
+        <div className="px-6 py-4 border-b border-outline-soft flex items-center justify-between bg-surface-muted shrink-0">
+          <h2 className="text-lg font-bold text-ink">
             {criterion ? 'Chỉnh sửa tiêu chuẩn' : 'Thêm tiêu chuẩn mới'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-all"
           >
             <X size={20} />
           </button>
@@ -155,12 +155,12 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
             {/* Row 1: Nhóm & Mã */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
+                <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
                   Nhóm
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised"
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
                 >
@@ -171,18 +171,18 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
+                <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
                   Mã
                 </label>
                 <div className="relative w-full">
-                  <span className="absolute left-0 inset-y-0 flex items-center font-bold text-slate-500 bg-slate-50 border border-r-0 border-slate-200 rounded-l-lg px-2 pointer-events-none select-none text-sm">
+                  <span className="absolute left-0 inset-y-0 flex items-center font-bold text-ink-muted bg-surface-muted border border-r-0 border-outline-soft rounded-l-lg px-2 pointer-events-none select-none text-sm">
                     {groups.find(g => g.id === selectedGroupId)?.code || ''}
                   </span>
                   <input
                     type="text"
                     required
                     pattern="\d+"
-                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
+                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised"
                     placeholder="1, 2..."
                     value={idSuffix}
                     onChange={(e) => setIdSuffix(e.target.value.replace(/\D/g, ''))}
@@ -193,13 +193,13 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
 
             {/* Row 2: Tên TC */}
             <div className="flex items-center gap-2">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
+              <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0">
                 Tên TC
               </label>
               <input
                 type="text"
                 required
-                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700"
+                className="flex-1 px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised"
                 placeholder="VD: Vi phạm ATGT..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -208,7 +208,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
 
             {/* Row 3: Áp dụng (3 checkboxes) */}
             <div className="flex items-start gap-2">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-3">
+              <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-3">
                 Áp dụng
               </label>
               <div className="flex-1">
@@ -219,11 +219,11 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                     return (
                       <label
                         key={opt.id}
-                        className="min-h-[44px] inline-flex items-center gap-2.5 cursor-pointer select-none text-sm text-slate-700 font-medium hover:text-slate-900 transition-colors focus-within:ring-2 focus-within:ring-primary/20 rounded-lg px-2 py-1"
+                        className="min-h-[44px] inline-flex items-center gap-2.5 cursor-pointer select-none text-sm text-ink font-medium hover:text-ink transition-colors focus-within:ring-2 focus-within:ring-brand-soft rounded-lg px-2 py-1"
                       >
                         <input
                           type="checkbox"
-                          className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 focus:ring-2 cursor-pointer accent-primary"
+                          className="w-4 h-4 rounded border-outline-soft text-brand focus:ring-brand-soft focus:ring-2 cursor-pointer accent-brand"
                           checked={checked}
                           onChange={() => toggleAudience(opt.id)}
                         />
@@ -240,11 +240,11 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
 
             {/* Row 4: Mô tả */}
             <div className="flex items-start gap-2">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-2">
+              <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-2">
                 Mô tả
               </label>
               <textarea
-                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm text-slate-700 resize-none"
+                className="flex-1 px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised resize-none"
                 placeholder="Mô tả chi tiết (không bắt buộc)..."
                 rows={2}
                 value={description}
@@ -255,13 +255,13 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
             {/* Các mức điểm */}
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-xs font-bold text-ink-muted uppercase tracking-wider">
                   Các mức điểm (Options)
                 </label>
                 <button
                   type="button"
                   onClick={addLevel}
-                  className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/15 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                  className="text-xs font-bold text-brand bg-brand-soft hover:bg-brand-soft/80 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                 >
                   Thêm option
                 </button>
@@ -274,7 +274,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                       type="text"
                       required
                       placeholder="Mô tả mức (VD: Rất tốt, 1 lần...)"
-                      className="flex-1 px-3 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm"
+                      className="flex-1 px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none text-sm text-ink bg-surface-raised"
                       value={level.label}
                       onChange={(e) => updateLevel(idx, 'label', e.target.value)}
                     />
@@ -283,17 +283,17 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                         type="number"
                         required
                         placeholder="Điểm"
-                        className="w-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm text-right font-mono"
+                        className="w-full pl-3 pr-8 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none text-sm text-right font-mono text-ink bg-surface-raised"
                         value={level.points === 0 && level.label === '' ? '' : level.points} // UX: allow empty initial state but required on submit
                         onChange={(e) => updateLevel(idx, 'points', Number(e.target.value))}
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">pt</span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-muted font-bold">pt</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeLevel(idx)}
                       disabled={levels.length <= 1}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                      className="p-2 text-ink-muted hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -306,11 +306,11 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-3 shrink-0">
+        <div className="p-4 border-t border-outline-soft bg-surface-muted flex gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all"
+            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-ink-muted hover:text-ink hover:bg-surface-muted transition-all"
           >
             Hủy
           </button>
@@ -318,7 +318,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
             type="submit"
             form="criteria-form"
             disabled={selectedAudiences.length === 0}
-            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-brand hover:bg-brand-strong shadow-md shadow-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {criterion ? 'Cập nhật' : 'Thêm mới'}
           </button>

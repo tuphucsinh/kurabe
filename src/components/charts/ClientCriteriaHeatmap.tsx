@@ -9,7 +9,7 @@ const CriteriaHeatmapComponent = dynamic(
   () => import('@/components/reports/CriteriaHeatmap'),
   {
     ssr: false,
-    loading: () => <div className="animate-pulse h-64 bg-slate-100 rounded-3xl w-full" />,
+    loading: () => <div className="animate-pulse h-64 bg-surface-muted rounded-3xl w-full" />,
   }
 );
 

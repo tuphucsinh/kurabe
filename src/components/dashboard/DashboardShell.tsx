@@ -23,12 +23,12 @@ export default function DashboardShell({
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-on-surface leading-[1.05] tracking-tight">
+          <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-ink leading-[1.05] tracking-tight">
             Tổng quan hệ thống
           </h1>
-          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-outline font-medium mt-2 leading-snug">
+          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-ink-muted font-medium mt-2 leading-snug">
             {hasPeriod ? (
-              <>Theo dõi tiến độ đánh giá năng lực QAQC — <span className="text-indigo-600 font-semibold">{displayPeriod}</span></>
+              <>Theo dõi tiến độ đánh giá năng lực QAQC — <span className="text-brand font-semibold">{displayPeriod}</span></>
             ) : (
               'Chưa có kỳ đánh giá nào được chọn'
             )}

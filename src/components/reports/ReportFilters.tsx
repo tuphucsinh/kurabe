@@ -62,7 +62,7 @@ export default function ReportFilters({
         ))}
       </select>
 
-      <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-semibold text-indigo-600">
+      <div className="flex items-center gap-2 px-3 md:px-4 py-2 bg-brand-soft border border-outline-soft rounded-xl text-sm font-semibold text-brand">
         <Calendar className="w-4 h-4" />
         <span>Kỳ {displayYear || '—'}</span>
       </div>

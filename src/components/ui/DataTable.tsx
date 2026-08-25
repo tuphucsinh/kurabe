@@ -43,16 +43,16 @@ export default function DataTable<T extends { id: string | number }>({
   };
 
   return (
-    <div className={`w-full overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm ${className}`}>
+    <div className={`w-full overflow-hidden rounded-xl border border-outline-soft bg-surface-raised shadow-sm ${className}`}>
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
           <thead className="sticky top-0 z-10">
-            <tr className="border-b border-outline-variant bg-surface/50 backdrop-blur-md">
+            <tr className="border-b border-outline-soft bg-surface-muted/60 backdrop-blur-md">
               {columns.map((column) => (
                 <th
                   key={column.key as string}
-                  className={`px-4 py-3 text-[11px] font-bold text-outline uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:text-primary transition-colors' : ''
+                  className={`px-4 py-3 text-[11px] font-bold text-ink-muted uppercase tracking-wider ${
+                    column.sortable ? 'cursor-pointer hover:text-brand transition-colors' : ''
                   } ${column.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
                   onClick={() => column.sortable && handleSort(column.key as string)}
                   aria-sort={sortKey === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
@@ -60,7 +60,7 @@ export default function DataTable<T extends { id: string | number }>({
                   <div className="flex items-center gap-1.5">
                     {column.header}
                     {column.sortable && (
-                      <div className="text-outline-variant">
+                      <div className="text-outline">
                         {sortKey === column.key ? (
                           sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                         ) : (
@@ -73,19 +73,19 @@ export default function DataTable<T extends { id: string | number }>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-outline-variant/50">
+          <tbody className="divide-y divide-outline-soft/60">
             {data.length > 0 ? (
               data.map((item, index) => (
                 <tr 
                   key={item.id} 
-                  className={`group hover:bg-surface/80 transition-colors h-[48px] ${
-                    index % 2 === 1 ? 'bg-surface/30' : ''
+                  className={`group hover:bg-surface-muted/70 transition-colors h-[48px] ${
+                    index % 2 === 1 ? 'bg-surface-muted/30' : ''
                   } ${rowClassName}`}
                 >
                   {columns.map((column) => (
                     <td 
                       key={column.key as string} 
-                      className={`px-4 py-2 text-sm text-on-surface-variant ${column.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
+                      className={`px-4 py-2 text-sm text-ink ${column.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
                     >
                       {column.render ? column.render(item, index) : (item[column.key as keyof T] as React.ReactNode)}
                     </td>
@@ -94,7 +94,7 @@ export default function DataTable<T extends { id: string | number }>({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-outline text-sm">
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-ink-muted text-sm">
                   Không tìm thấy dữ liệu
                 </td>
               </tr>

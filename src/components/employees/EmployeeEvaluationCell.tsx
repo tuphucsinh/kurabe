@@ -69,7 +69,7 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
         <button
           type="button"
           onClick={() => onRetry?.(employeeId)}
-          className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
+          className="text-xs text-brand font-bold hover:underline inline-flex items-center gap-1"
           title="Thử tải lại đánh giá"
         >
           <RefreshCw size={12} />
@@ -121,8 +121,8 @@ export const EmployeeEvaluationCell = React.memo(function EmployeeEvaluationCell
                 key={`round-${roundNum}`}
                 className={
                   isLatest
-                    ? 'font-bold text-slate-800'
-                    : 'font-medium text-slate-500 opacity-60'
+                    ? 'font-bold text-ink'
+                    : 'font-medium text-ink-muted opacity-60'
                 }
               >
                 L{roundNum}: {scoreText}

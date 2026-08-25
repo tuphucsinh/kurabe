@@ -25,9 +25,9 @@ export default function TopPerformers({ employees = [] }: TopPerformersProps) {
       render: (_, index) => {
         const rank = (index || 0) + 1;
         if (rank === 1) return <div className="flex justify-center"><Trophy className="w-5 h-5 text-amber-500" /></div>;
-        if (rank === 2) return <div className="flex justify-center"><Medal className="w-5 h-5 text-slate-400" /></div>;
+        if (rank === 2) return <div className="flex justify-center"><Medal className="w-5 h-5 text-outline" /></div>;
         if (rank === 3) return <div className="flex justify-center"><Medal className="w-5 h-5 text-amber-700" /></div>;
-        return <div className="flex justify-center font-medium text-outline-variant">{rank}</div>;
+        return <div className="flex justify-center font-medium text-outline-soft">{rank}</div>;
       }
     },
     {
@@ -35,10 +35,10 @@ export default function TopPerformers({ employees = [] }: TopPerformersProps) {
       header: 'Nhân viên',
       render: (item) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+          <div className="w-8 h-8 rounded-full bg-brand-soft flex items-center justify-center text-brand font-bold text-xs">
             {item.name.split(' ').pop()?.charAt(0)}
           </div>
-          <div className="font-medium text-on-surface">{item.name}</div>
+          <div className="font-medium text-ink">{item.name}</div>
         </div>
       )
     },
@@ -51,7 +51,7 @@ export default function TopPerformers({ employees = [] }: TopPerformersProps) {
       key: 'score',
       header: 'Điểm số',
       render: (item) => (
-        <div className="flex items-center gap-1.5 font-bold text-primary">
+        <div className="flex items-center gap-1.5 font-bold text-brand">
           {item.score.toFixed(1)}
           <Star className="w-3 h-3 fill-current" />
         </div>
@@ -74,17 +74,17 @@ export default function TopPerformers({ employees = [] }: TopPerformersProps) {
   return (
     <div
       data-load-layer="heavy"
-      className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col h-full"
+      className="bg-surface-raised rounded-3xl border border-outline-soft shadow-sm overflow-hidden flex flex-col h-full"
     >
-      <div className="p-6 border-b border-outline-variant bg-surface/30">
+      <div className="p-6 border-b border-outline-soft bg-surface-muted/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500 bg-opacity-10 rounded-xl text-amber-600">
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-on-surface">Top Performers</h3>
-              <p className="text-xs text-outline font-medium">Bảng xếp hạng 5 nhân viên xuất sắc nhất</p>
+              <h3 className="text-lg font-bold text-ink">Top Performers</h3>
+              <p className="text-xs text-ink-muted font-medium">Bảng xếp hạng 5 nhân viên xuất sắc nhất</p>
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function TopPerformers({ employees = [] }: TopPerformersProps) {
 
       <div className="flex-1 p-0">
         {employees.length === 0 ? (
-          <div className="flex items-center justify-center py-10 text-outline text-xs italic">
+          <div className="flex items-center justify-center py-10 text-ink-muted text-xs italic">
             Chưa có dữ liệu nhân viên xuất sắc
           </div>
         ) : (

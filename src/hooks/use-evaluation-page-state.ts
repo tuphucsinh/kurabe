@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useReducer, useState } from 'react';
-import { User, Evaluation, EvaluationRound, CriteriaGroup, EvaluationAccessState } from '@/types';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { User, Evaluation, EvaluationRound, CriteriaGroup, EvaluationAccessState, RoundNumber } from '@/types';
 import { 
   getCriteriaForRoleAction, 
   getEvaluationHistoryAction, 
@@ -25,6 +25,13 @@ export type EvaluationAction =
   | { type: 'SET_SCORE'; criterionId: string; points: number; levelIndex: number }
   | { type: 'SET_NOTE'; criterionId: string; note: string }
   | { type: 'SET_COMMENT'; comment: string };
+
+export interface EvaluationInitMetadata {
+  key: string;
+  round: RoundNumber | null;
+  initialized: boolean;
+  firstOpenEligible: boolean;
+}
 
 const initialState: EvaluationState = {
   employee: null,
@@ -59,6 +66,27 @@ export function evaluationReducer(state: EvaluationState, action: EvaluationActi
   }
 }
 
+function fillMissingSelectedLevelIndexes(
+  scores: Record<string, number>,
+  selectedLevelIndexes: Record<string, number>,
+  criteriaGroups: CriteriaGroup[]
+): Record<string, number> {
+  const criteriaById = new Map(
+    criteriaGroups.flatMap((group) => group.criteria).map((criterion) => [criterion.id, criterion])
+  );
+  const normalizedIndexes = { ...selectedLevelIndexes };
+
+  for (const [criterionId, score] of Object.entries(scores)) {
+    if (normalizedIndexes[criterionId] !== undefined) continue;
+
+    const criterion = criteriaById.get(criterionId);
+    const derivedIndex = criterion?.levels.findIndex((level) => level.points === score) ?? -1;
+    if (derivedIndex >= 0) normalizedIndexes[criterionId] = derivedIndex;
+  }
+
+  return normalizedIndexes;
+}
+
 interface UseEvaluationPageStateArgs {
   employee: User | null;
   evaluation: Evaluation | null;
@@ -70,7 +98,8 @@ interface UseEvaluationPageStateArgs {
 /**
  * State + data-loading của trang đánh giá (D3 — tách khỏi page 1065 dòng):
  * reducer form (scores/notes/comment), nạp criteria + round đang mở,
- * lịch sử các kỳ trước (Employee owner), thang điểm từ DB, mount flag.
+ * lịch sử các kỳ trước (Employee owner), thang điểm từ DB, mount flag,
+ * first-open metadata và edit tracking cho autosave.
  */
 export function useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user }: UseEvaluationPageStateArgs) {
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
@@ -79,6 +108,21 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [gradeBands, setGradeBands] = useState<GradeBands>(() => getGradeBandsSync());
   const [isMounted, setIsMounted] = useState(false);
+  const [initMetadata, setInitMetadata] = useState<EvaluationInitMetadata>({
+    key: '',
+    round: null,
+    initialized: false,
+    firstOpenEligible: false,
+  });
+  const userEditedRef = useRef(false);
+  const lastInitializedKeyRef = useRef<string | null>(null);
+
+  const wrappedDispatch = useCallback((action: EvaluationAction) => {
+    if (action.type === 'SET_SCORE' || action.type === 'SET_NOTE' || action.type === 'SET_COMMENT') {
+      userEditedRef.current = true;
+    }
+    dispatch(action);
+  }, []);
 
   // Nạp dữ liệu form khi có employee + evaluation + accessState
   useEffect(() => {
@@ -133,6 +177,12 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
           }
         }
 
+        initialSelectedLevelIndexes = fillMissingSelectedLevelIndexes(
+          initialScores,
+          initialSelectedLevelIndexes,
+          dbCriteria
+        );
+
         dispatch({
           type: 'SET_INITIAL_DATA',
           payload: {
@@ -145,6 +195,27 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
             notes: initialNotes,
             comment: initialComment,
           }
+        });
+
+        const targetRoundNumber = (targetRound?.round ?? targetRoundNum ?? null) as RoundNumber | null;
+        const initKey = targetRound
+          ? `${evaluation.id}:${targetRound.round}`
+          : (targetRoundNum ? `${evaluation.id}:${targetRoundNum}` : '');
+        const firstOpenEligible =
+          accessState.mode === 'edit' &&
+          targetRound !== null &&
+          targetRound.status === 'NotStarted';
+
+        if (lastInitializedKeyRef.current !== initKey) {
+          userEditedRef.current = false;
+          lastInitializedKeyRef.current = initKey;
+        }
+
+        setInitMetadata({
+          key: initKey,
+          round: targetRoundNumber,
+          initialized: true,
+          firstOpenEligible,
         });
       }
     }
@@ -176,11 +247,18 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
 
   return {
     state,
-    dispatch,
+    dispatch: wrappedDispatch,
     criteriaGroups,
     history,
     isLoadingHistory,
     gradeBands,
     isMounted,
+    initMetadata,
+    key: initMetadata.key,
+    round: initMetadata.round,
+    initialized: initMetadata.initialized,
+    firstOpenEligible: initMetadata.firstOpenEligible,
+    userEditedRef,
+    isUserEdited: () => userEditedRef.current,
   };
 }

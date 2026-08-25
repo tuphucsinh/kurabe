@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Save } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { getGradeColor } from '@/lib/scoring';
@@ -9,11 +9,19 @@ import { GradeBands } from '@/lib/grade-bands';
 import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate';
 import { saveGradeBands } from '@/actions/grade-bands';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useCriteria } from '@/hooks/use-db';
+import { CriterionAudience, mapRolesToAudiences } from '@/lib/criteria-applicability';
 
 const GROUP_LABEL: Record<'leader' | 'staff' | 'worker', string> = {
   leader: 'Quản lý (Leader/Manager/SubLeader)',
   staff: 'Nhân viên (Employee)',
   worker: 'Công nhân (Worker)',
+};
+
+const GROUP_TO_AUDIENCE: Record<'leader' | 'staff' | 'worker', CriterionAudience> = {
+  leader: 'management',
+  staff: 'employee',
+  worker: 'worker',
 };
 
 type Row = GradeBandsInput;
@@ -39,6 +47,39 @@ export default function GradeBandsTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: criteriaGroups, isLoading: isCriteriaLoading, isError: isCriteriaError } = useCriteria();
+
+  const audienceSummary = useMemo<Record<CriterionAudience, { count: number; maxScore: number }>>(() => {
+    const summary: Record<CriterionAudience, { count: number; maxScore: number }> = {
+      management: { count: 0, maxScore: 0 },
+      employee: { count: 0, maxScore: 0 },
+      worker: { count: 0, maxScore: 0 },
+    };
+
+    if (!criteriaGroups) {
+      return summary;
+    }
+
+    for (const group of criteriaGroups) {
+      for (const criterion of group.criteria || []) {
+        const audiences = mapRolesToAudiences(criterion.appliesTo || []);
+        const validPoints = (criterion.levels || [])
+          .map((l) => l.points)
+          .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
+        const maxCriterionScore = validPoints.length > 0 ? Math.max(...validPoints) : null;
+
+        for (const aud of audiences) {
+          summary[aud].count += 1;
+          if (maxCriterionScore !== null && Number.isFinite(maxCriterionScore)) {
+            summary[aud].maxScore += maxCriterionScore;
+          }
+        }
+      }
+    }
+
+    return summary;
+  }, [criteriaGroups]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,15 +136,15 @@ export default function GradeBandsTab() {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+        <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6 space-y-4">
           <Skeleton variant="text" width={220} height={20} />
           <Skeleton variant="rectangular" height={240} className="rounded-xl" />
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+        <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6 space-y-4">
           <Skeleton variant="text" width={220} height={20} />
           <Skeleton variant="rectangular" height={240} className="rounded-xl" />
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+        <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6 space-y-4">
           <Skeleton variant="text" width={220} height={20} />
           <Skeleton variant="rectangular" height={240} className="rounded-xl" />
         </div>
@@ -113,17 +154,37 @@ export default function GradeBandsTab() {
 
   const renderGroup = (group: 'leader' | 'staff' | 'worker') => {
     const groupRows = rows.filter((r) => r.roleGroup === group);
+    const audience = GROUP_TO_AUDIENCE[group];
+    const summary = audienceSummary[audience];
+
+    const countLabel = isCriteriaLoading
+      ? '(Đang tải...)'
+      : isCriteriaError
+      ? '(—)'
+      : `(${summary.count} tiêu chuẩn)`;
+
+    const maxScoreLabel = isCriteriaLoading
+      ? 'Đang tải...'
+      : isCriteriaError
+      ? '—'
+      : summary.maxScore;
+
     return (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-1">
-          {GROUP_LABEL[group]}
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-4 sm:p-6">
+        <h3 className="text-sm font-bold text-ink uppercase tracking-wide mb-1">
+          {GROUP_LABEL[group]}{' '}
+          <span className="text-xs font-normal normal-case text-ink-muted">
+            {countLabel}
+          </span>
         </h3>
-        <p className="text-xs text-slate-400 mb-4">Điểm tối đa cho một đánh giá: 200</p>
+        <p className="text-xs text-ink-muted mb-4">
+          Điểm tối đa cho một đánh giá: {maxScoreLabel}
+        </p>
         <div className="space-y-3">
           {groupRows.map((row) => (
             <div
               key={`${row.roleGroup}-${row.grade}`}
-              className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50"
+              className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-surface-muted/60"
             >
               <span
                 className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border text-xs sm:text-sm font-black shrink-0 ${getGradeColor(row.grade)}`}
@@ -132,7 +193,7 @@ export default function GradeBandsTab() {
               </span>
 
               <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-                <label className="text-xs font-medium text-slate-500 shrink-0">Từ</label>
+                <label className="text-xs font-medium text-ink-muted shrink-0">Từ</label>
                 <input
                   type="number"
                   value={row.minScore ?? ''}
@@ -141,10 +202,10 @@ export default function GradeBandsTab() {
                   }
                   disabled={row.grade === 'D'}
                   placeholder="—"
-                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs sm:text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-outline-soft text-xs sm:text-sm text-center bg-surface-raised text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-surface-muted disabled:text-ink-muted"
                 />
-                <span className="text-slate-300 shrink-0">→</span>
-                <label className="text-xs font-medium text-slate-500 shrink-0">Đến</label>
+                <span className="text-outline shrink-0">→</span>
+                <label className="text-xs font-medium text-ink-muted shrink-0">Đến</label>
                 <input
                   type="number"
                   value={row.maxScore ?? ''}
@@ -153,7 +214,7 @@ export default function GradeBandsTab() {
                   }
                   disabled={row.grade === 'S'}
                   placeholder="—"
-                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs sm:text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-outline-soft text-xs sm:text-sm text-center bg-surface-raised text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-surface-muted disabled:text-ink-muted"
                 />
               </div>
             </div>
@@ -165,6 +226,19 @@ export default function GradeBandsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Mutation Save Button: Manager-only on desktop/tablet, hidden on mobile */}
+      <div className="max-md:hidden flex justify-end">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-mid transition-all active:scale-95 disabled:opacity-50"
+        >
+          <Save size={16} />
+          {isSaving ? 'Đang lưu...' : 'Lưu thang điểm'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {renderGroup('leader')}
         {renderGroup('staff')}
@@ -176,19 +250,6 @@ export default function GradeBandsTab() {
           {error}
         </div>
       )}
-
-      {/* Mutation Save Button: Manager-only on desktop/tablet, hidden on mobile */}
-      <div className="max-md:hidden flex justify-end">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-        >
-          <Save size={16} />
-          {isSaving ? 'Đang lưu...' : 'Lưu thang điểm'}
-        </button>
-      </div>
     </div>
   );
 }

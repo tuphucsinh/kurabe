@@ -19,12 +19,12 @@ export default function AccessDenied({ message, title, tone = 'red', onBack }: A
       <div className={`p-4 rounded-full ${tone === 'red' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'}`}>
         <Lock size={48} />
       </div>
-      {title && <h2 className="text-2xl font-bold text-slate-900">{title}</h2>}
-      <p className="text-slate-500 max-w-md">{message}</p>
+      {title && <h2 className="text-2xl font-bold text-ink">{title}</h2>}
+      <p className="text-ink-muted max-w-md">{message}</p>
       {onBack && (
         <button
           onClick={onBack}
-          className="px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm"
+          className="px-6 py-2 bg-brand text-white rounded-xl font-bold shadow-sm"
         >
           Quay lại
         </button>
@@ -38,8 +38,8 @@ export function RoundLoading({ label = 'Đang tải dữ liệu...' }: { label?:
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
       <div className="animate-pulse flex flex-col items-center gap-4">
-        <div className="w-12 h-12 bg-blue-100 rounded-full" />
-        <div className="text-slate-400 font-medium">{label}</div>
+        <div className="w-12 h-12 bg-brand-soft rounded-full" />
+        <div className="text-ink-muted font-medium">{label}</div>
       </div>
     </div>
   );

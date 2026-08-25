@@ -17,7 +17,7 @@ interface TabsProps {
 
 export default function Tabs({ tabs, activeTab, onChange, className = '' }: TabsProps) {
   return (
-    <div role="tablist" aria-label="Tabs" className={`flex flex-wrap gap-2 p-1 bg-surface border border-outline-variant rounded-xl ${className}`}>
+    <div role="tablist" aria-label="Tabs" className={`flex flex-wrap gap-2 p-1 bg-surface-muted border border-outline-soft rounded-xl ${className}`}>
       {tabs.map((tab) => {
         const active = activeTab === tab.id;
         return (
@@ -29,10 +29,10 @@ export default function Tabs({ tabs, activeTab, onChange, className = '' }: Tabs
             id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             className={`
-              flex flex-1 justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap
+              flex flex-1 justify-center items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2
               ${active 
-                ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                : 'text-outline hover:text-on-surface hover:bg-white/50'
+                ? 'bg-gradient-to-r from-brand to-brand-mid text-white shadow-md shadow-brand/20'
+                : 'bg-surface-raised text-ink hover:bg-brand-soft/50 hover:text-brand shadow-sm'
               }
             `}
           >

@@ -95,58 +95,58 @@ export default function ReportsDataLayer({
           {/* KPI COMPACT pill — Light Data Layer */}
           <div
             data-load-layer="light"
-            className="bg-white px-3 sm:px-4 py-2 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-2.5 sm:gap-4 max-md:min-h-[44px]"
+            className="bg-surface-raised px-3 sm:px-4 py-2 rounded-2xl border border-outline-soft/60 shadow-sm flex flex-wrap items-center gap-2.5 sm:gap-4 max-md:min-h-[44px]"
           >
             {isLoading ? (
               <div className="flex items-center gap-2.5 sm:gap-3 py-1">
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-blue-600 shrink-0 opacity-40" />
-                  <div className="h-4 w-8 bg-slate-200 animate-pulse rounded" />
-                  <span className="text-xs text-outline font-medium">nhân sự</span>
+                  <div className="h-4 w-8 bg-surface-muted animate-pulse rounded" />
+                  <span className="text-xs text-ink-muted font-medium">nhân sự</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-primary shrink-0 opacity-40" />
-                  <div className="h-4 w-8 bg-slate-200 animate-pulse rounded" />
-                  <span className="text-xs text-outline font-medium">điểm TB</span>
+                  <Target className="w-4 h-4 text-brand shrink-0 opacity-40" />
+                  <div className="h-4 w-8 bg-surface-muted animate-pulse rounded" />
+                  <span className="text-xs text-ink-muted font-medium">điểm TB</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-green-600 shrink-0 opacity-40" />
-                  <div className="h-4 w-10 bg-slate-200 animate-pulse rounded" />
-                  <span className="text-xs text-outline font-medium">≥ AB</span>
+                  <div className="h-4 w-10 bg-surface-muted animate-pulse rounded" />
+                  <span className="text-xs text-ink-muted font-medium">≥ AB</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-orange-600 shrink-0 opacity-40" />
-                  <div className="h-4 w-8 bg-slate-200 animate-pulse rounded" />
-                  <span className="text-xs text-outline font-medium">chưa đánh giá</span>
+                  <div className="h-4 w-8 bg-surface-muted animate-pulse rounded" />
+                  <span className="text-xs text-ink-muted font-medium">chưa đánh giá</span>
                 </div>
               </div>
             ) : reportData?.stats ? (
               <>
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.totalEmployees}</span>
-                  <span className="text-xs text-outline font-medium">nhân sự</span>
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.totalEmployees}</span>
+                  <span className="text-xs text-ink-muted font-medium">nhân sự</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-primary shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
-                  <span className="text-xs text-outline font-medium">điểm TB</span>
+                  <Target className="w-4 h-4 text-brand shrink-0" />
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
+                  <span className="text-xs text-ink-muted font-medium">điểm TB</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
-                  <span className="text-xs text-outline font-medium">≥ AB</span>
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
+                  <span className="text-xs text-ink-muted font-medium">≥ AB</span>
                 </div>
-                <span className="text-outline-variant/60 hidden sm:inline">•</span>
+                <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.pendingCount}</span>
-                  <span className="text-xs text-outline font-medium">chưa đánh giá</span>
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.pendingCount}</span>
+                  <span className="text-xs text-ink-muted font-medium">chưa đánh giá</span>
                 </div>
               </>
             ) : isError ? (
@@ -155,7 +155,7 @@ export default function ReportsDataLayer({
                 <span>Không tải được số liệu</span>
               </div>
             ) : (
-              <span className="text-xs text-outline font-medium">Chưa có số liệu</span>
+              <span className="text-xs text-ink-muted font-medium">Chưa có số liệu</span>
             )}
           </div>
 
@@ -180,18 +180,18 @@ export default function ReportsDataLayer({
       {isLoading ? (
         <div className="space-y-6">
           {/* Skeleton GradeDistribution */}
-          <div data-load-layer="heavy" className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60 space-y-3">
+          <div data-load-layer="heavy" className="bg-surface-raised px-5 py-4 rounded-2xl shadow-sm border border-outline-soft/60 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-on-surface">Phân bổ Xếp loại</h3>
-              <div className="h-3 w-20 bg-slate-100 animate-pulse rounded" />
+              <h3 className="text-sm font-bold text-ink">Phân bổ Xếp loại</h3>
+              <div className="h-3 w-20 bg-surface-muted animate-pulse rounded" />
             </div>
             <div className="space-y-2.5 pt-1">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="w-10 h-3 bg-slate-200 animate-pulse rounded" />
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full" />
-                  <div className="w-8 h-3 bg-slate-100 animate-pulse rounded" />
-                  <div className="w-10 h-3 bg-slate-100 animate-pulse rounded" />
+                  <div className="w-10 h-3 bg-surface-muted animate-pulse rounded" />
+                  <div className="flex-1 h-2.5 bg-surface-muted rounded-full" />
+                  <div className="w-8 h-3 bg-surface-muted animate-pulse rounded" />
+                  <div className="w-10 h-3 bg-surface-muted animate-pulse rounded" />
                 </div>
               ))}
             </div>
@@ -199,10 +199,10 @@ export default function ReportsDataLayer({
 
           {/* Skeleton Grid: TeamComparison + CriteriaHeatmap */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[300px]">
+            <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm space-y-4 min-h-[300px]">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-on-surface">So sánh nhóm</h3>
-                <span className="text-xs font-medium text-outline bg-surface-container px-2 py-1 rounded-full uppercase tracking-wider">
+                <h3 className="text-lg font-bold text-ink">So sánh nhóm</h3>
+                <span className="text-xs font-medium text-ink-muted bg-surface-muted px-2 py-1 rounded-full uppercase tracking-wider">
                   Average Score
                 </span>
               </div>
@@ -210,19 +210,19 @@ export default function ReportsDataLayer({
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between">
-                      <div className="h-4 w-28 bg-slate-200 animate-pulse rounded" />
-                      <div className="h-4 w-12 bg-slate-200 animate-pulse rounded" />
+                      <div className="h-4 w-28 bg-surface-muted animate-pulse rounded" />
+                      <div className="h-4 w-12 bg-surface-muted animate-pulse rounded" />
                     </div>
-                    <div className="h-2.5 bg-slate-100 rounded-full" />
+                    <div className="h-2.5 bg-surface-muted rounded-full" />
                   </div>
                 ))}
               </div>
             </div>
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[300px]">
-              <h3 className="text-lg font-bold text-on-surface">Phân tích nhóm tiêu chuẩn</h3>
+            <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm space-y-4 min-h-[300px]">
+              <h3 className="text-lg font-bold text-ink">Phân tích nhóm tiêu chuẩn</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-24 bg-slate-100 animate-pulse rounded-2xl" />
+                  <div key={i} className="h-24 bg-surface-muted animate-pulse rounded-2xl" />
                 ))}
               </div>
             </div>
@@ -230,20 +230,20 @@ export default function ReportsDataLayer({
 
           {/* Skeleton Grid: TopPerformers + AiSummaryCard */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[260px]">
-              <h3 className="text-lg font-bold text-on-surface">Top Performers</h3>
+            <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm space-y-4 min-h-[260px]">
+              <h3 className="text-lg font-bold text-ink">Top Performers</h3>
               <div className="space-y-3 pt-2">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-10 bg-slate-100 animate-pulse rounded-xl" />
+                  <div key={i} className="h-10 bg-surface-muted animate-pulse rounded-xl" />
                 ))}
               </div>
             </div>
-            <div data-load-layer="heavy" className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm space-y-4 min-h-[260px]">
-              <h4 className="text-base font-bold text-slate-800">Tóm tắt kỳ bằng AI</h4>
+            <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm space-y-4 min-h-[260px]">
+              <h4 className="text-base font-bold text-ink">Tóm tắt kỳ bằng AI</h4>
               <div className="space-y-3 pt-2">
-                <div className="h-4 w-3/4 bg-slate-100 animate-pulse rounded" />
-                <div className="h-4 w-full bg-slate-100 animate-pulse rounded" />
-                <div className="h-4 w-2/3 bg-slate-100 animate-pulse rounded" />
+                <div className="h-4 w-3/4 bg-surface-muted animate-pulse rounded" />
+                <div className="h-4 w-full bg-surface-muted animate-pulse rounded" />
+                <div className="h-4 w-2/3 bg-surface-muted animate-pulse rounded" />
               </div>
             </div>
           </div>
@@ -251,18 +251,18 @@ export default function ReportsDataLayer({
       ) : isError ? (
         <div
           data-load-layer="heavy"
-          className="bg-white p-8 rounded-3xl border border-rose-200 shadow-sm flex flex-col items-center justify-center gap-4 text-center"
+          className="bg-surface-raised p-8 rounded-3xl border border-error/20 shadow-sm flex flex-col items-center justify-center gap-4 text-center"
         >
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
+          <div className="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center text-error">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <h4 className="text-base font-bold text-on-surface">Không thể tải dữ liệu báo cáo</h4>
-            <p className="text-sm text-outline mt-1">{errorMessage || 'Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.'}</p>
+            <h4 className="text-base font-bold text-ink">Không thể tải dữ liệu báo cáo</h4>
+            <p className="text-sm text-ink-muted mt-1">{errorMessage || 'Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.'}</p>
           </div>
           <button
             onClick={fetchReportData}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-xs"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white text-sm font-semibold hover:opacity-90 active:scale-95 transition-all shadow-xs"
           >
             <RotateCcw className="w-4 h-4" />
             Thử lại
@@ -271,13 +271,13 @@ export default function ReportsDataLayer({
       ) : !reportData || reportData.stats.totalEmployees === 0 ? (
         <div
           data-load-layer="heavy"
-          className="bg-white p-12 rounded-3xl border border-outline-variant shadow-sm flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center"
+          className="bg-surface-raised p-12 rounded-3xl border border-outline-soft shadow-sm flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center"
         >
-          <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center text-outline">
+          <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-ink-muted">
             <Users className="w-6 h-6" />
           </div>
-          <h4 className="text-base font-bold text-on-surface">Không có dữ liệu báo cáo</h4>
-          <p className="text-sm text-outline max-w-md">
+          <h4 className="text-base font-bold text-ink">Không có dữ liệu báo cáo</h4>
+          <p className="text-sm text-ink-muted max-w-md">
             Chưa có dữ liệu đánh giá nào cho kỳ này hoặc bộ lọc nhóm được chọn.
           </p>
         </div>

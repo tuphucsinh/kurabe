@@ -40,7 +40,7 @@ export default function PeriodSelector() {
           left: 12,
           right: 12,
           position: 'fixed',
-          backgroundColor: '#0E4B66'
+          backgroundColor: 'var(--color-brand)'
         });
       } else {
         setDropdownStyle({
@@ -48,7 +48,7 @@ export default function PeriodSelector() {
           left: rect.right + 12,
           width: '260px',
           position: 'fixed',
-          backgroundColor: '#0E4B66'
+          backgroundColor: 'var(--color-brand)'
         });
       }
     }
@@ -88,12 +88,12 @@ export default function PeriodSelector() {
         <div 
           id="period-flyout-menu"
           style={dropdownStyle}
-          className="bg-[#0E4B66] backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
+          className="bg-brand backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
         >
           <div className="px-4 py-3 border-b border-white/10 bg-black/30">
             <h4 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Chọn kỳ đánh giá</h4>
           </div>
-          <div className="max-h-[300px] overflow-y-auto custom-scrollbar bg-[#0E4B66]/50">
+          <div className="max-h-[300px] overflow-y-auto custom-scrollbar bg-brand/50">
             {allPeriods.map((period) => {
               const isActive = period.id === currentPeriod.id;
               const isClosed = period.status === 'Closed';
@@ -122,7 +122,7 @@ export default function PeriodSelector() {
                       {new Date(period.createdAt).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
-                  {isActive && <Check size={14} className="text-indigo-400 shrink-0" />}
+                  {isActive && <Check size={14} className="text-brand-soft shrink-0" />}
                 </button>
               );
             })}

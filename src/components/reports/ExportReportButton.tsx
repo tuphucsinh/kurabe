@@ -31,7 +31,7 @@ export default function ExportReportButton({ periodId }: { periodId: string }) {
     <button
       onClick={handleExport}
       disabled={isExporting}
-      className="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-xl text-sm font-medium hover:bg-surface-container transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
+      className="flex items-center gap-2 px-4 py-2 bg-surface-raised border border-outline-soft rounded-xl text-sm font-medium text-ink hover:bg-surface-muted transition-colors disabled:opacity-50 w-full sm:w-auto justify-center"
     >
       {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
       Xuất file

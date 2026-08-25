@@ -124,7 +124,7 @@ export default function PeriodActions() {
         {(!currentPeriod || !allPeriods.some(p => p.status === 'Active')) && (
           <button
             onClick={() => setIsPeriodModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand rounded-xl hover:bg-brand-mid shadow-md shadow-brand/20 transition-all active:scale-95"
           >
             <Plus size={18} />
             Tạo kỳ mới
@@ -135,7 +135,7 @@ export default function PeriodActions() {
           <button
             onClick={handleExportExcel}
             disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-ink bg-surface-raised border border-outline-soft rounded-xl hover:bg-surface-muted shadow-sm transition-all active:scale-95 disabled:opacity-50"
           >
             <FileDown size={18} />
             {isExporting ? 'Đang xuất...' : 'Xuất Excel'}

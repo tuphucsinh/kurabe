@@ -8,7 +8,7 @@ export default function CompareLoading() {
         <Skeleton className="h-10 w-48 rounded-xl" />
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+      <div className="bg-surface-raised p-6 rounded-2xl border border-outline-soft shadow-sm mb-6">
         <div className="flex items-center gap-4">
           <Skeleton className="h-12 w-12 rounded-full shrink-0" />
           <div className="space-y-2 flex-1">
@@ -18,7 +18,7 @@ export default function CompareLoading() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft shadow-sm overflow-hidden">
         <div className="p-6">
           <TableSkeleton rows={10} columns={4} />
         </div>

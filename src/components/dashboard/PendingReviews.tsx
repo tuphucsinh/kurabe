@@ -40,10 +40,10 @@ export default function PendingReviews({
 
   if (totalPending === 0) {
     return (
-      <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-2xl shadow-sm border border-outline-soft">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle2 className="w-5 h-5 text-green-500" />
-          <h3 className="text-lg font-semibold text-slate-800">Đánh giá tồn đọng</h3>
+          <h3 className="text-lg font-semibold text-ink">Đánh giá tồn đọng</h3>
         </div>
         <EmptyState
           icon={CheckCircle2}
@@ -56,10 +56,10 @@ export default function PendingReviews({
   }
 
   return (
-    <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-2xl shadow-sm border border-outline-soft">
       <div className="flex items-center gap-2 mb-5">
         <Clock className="w-5 h-5 text-amber-500" />
-        <h3 className="text-lg font-semibold text-slate-800">Đánh giá tồn đọng</h3>
+        <h3 className="text-lg font-semibold text-ink">Đánh giá tồn đọng</h3>
         <span className="ml-auto text-sm font-bold text-amber-600">{totalPending} NV chưa xong</span>
       </div>
 
@@ -70,8 +70,8 @@ export default function PendingReviews({
               {p.name.charAt(0)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-slate-800 truncate">{p.name}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-semibold text-ink truncate">{p.name}</p>
+              <p className="text-xs text-ink-muted">
                 Còn đánh giá <span className="font-bold text-amber-600">{p.count} NV</span>
                 {[...p.rounds].sort().map((r) => ` • vòng ${r}`)}
               </p>

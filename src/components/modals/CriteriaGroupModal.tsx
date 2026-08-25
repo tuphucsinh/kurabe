@@ -61,20 +61,20 @@ export default function CriteriaGroupModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
       
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative bg-surface-raised rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Layers size={20} className="text-indigo-600" />
+        <div className="px-6 py-4 border-b border-outline-soft/60 flex items-center justify-between bg-surface-muted/50">
+          <h2 className="text-lg font-bold text-ink flex items-center gap-2">
+            <Layers size={20} className="text-brand" />
             {group ? 'Chỉnh sửa nhóm' : 'Thêm nhóm mới'}
           </h2>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-all"
           >
             <X size={20} />
           </button>
@@ -89,7 +89,7 @@ export default function CriteriaGroupModal({
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <label className="text-xs font-bold text-ink-muted uppercase tracking-wider flex items-center gap-2">
               <Tag size={14} />
               Mã nhóm
             </label>
@@ -98,19 +98,19 @@ export default function CriteriaGroupModal({
               required
               readOnly={!!group}
               autoFocus={!group}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700 read-only:bg-slate-50 read-only:text-slate-500 read-only:cursor-not-allowed font-mono"
+              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft focus:border-brand focus:ring-4 focus:ring-brand/30 outline-none transition-all text-ink read-only:bg-surface-muted read-only:text-ink-muted read-only:cursor-not-allowed font-mono"
               placeholder="VD: A, B, C..."
               value={code}
               onChange={handleCodeChange}
               maxLength={1}
             />
             {!group && (
-              <p className="text-xs text-slate-400">1 ký tự in hoa (A-Z)</p>
+              <p className="text-xs text-ink-muted">1 ký tự in hoa (A-Z)</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <label className="text-xs font-bold text-ink-muted uppercase tracking-wider flex items-center gap-2">
               <Layers size={14} />
               Tên nhóm (Đầy đủ)
             </label>
@@ -118,7 +118,7 @@ export default function CriteriaGroupModal({
               type="text"
               required
               autoFocus={!!group}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
+              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft focus:border-brand focus:ring-4 focus:ring-brand/30 outline-none transition-all text-ink"
               placeholder="VD: Tính kỷ luật (Discipline)..."
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -126,31 +126,31 @@ export default function CriteriaGroupModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <label className="text-xs font-bold text-ink-muted uppercase tracking-wider flex items-center gap-2">
               <Tag size={14} />
               Tên ngắn (Tab hiển thị)
             </label>
             <input
               type="text"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-slate-700"
+              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft focus:border-brand focus:ring-4 focus:ring-brand/30 outline-none transition-all text-ink"
               placeholder="VD: Kỷ luật"
               value={shortName}
               onChange={(e) => setShortName(e.target.value)}
             />
-            <p className="text-[11px] text-slate-400">Dùng để hiển thị trên thanh tab (nên ngắn gọn).</p>
+            <p className="text-[11px] text-ink-muted">Dùng để hiển thị trên thanh tab (nên ngắn gọn).</p>
           </div>
 
           <div className="pt-4 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all"
+              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-ink-muted hover:text-ink hover:bg-surface-muted transition-all"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all"
+              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-brand hover:bg-brand-mid shadow-md shadow-brand/20 transition-all"
             >
               {group ? 'Cập nhật' : 'Thêm mới'}
             </button>

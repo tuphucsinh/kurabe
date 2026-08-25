@@ -54,65 +54,6 @@ export async function explainAnomalyAction(input: {
   return { explanation };
 }
 
-/**
- * Gợi ý nhận xét chung khi chấm điểm — CHỈ Manager.
- * Gửi CHI TIẾT TỪNG TIÊU CHUẨN (tên + điểm + mức đạt) để AI nhận xét cụ thể,
- * không chung chung. Ẩn danh hóa: mã NV thay tên.
- */
-export async function suggestCommentAction(input: {
-  employeeCode: string;
-  role: string;
-  criteriaDetail: { code: string; name: string; points: number; levelLabel: string; note: string }[];
-  previousComments: string[];
-  currentComment: string;
-  totalScore: number;
-  grade: string;
-}): Promise<{ comment?: string; error?: string }> {
-  const auth = await requireManager();
-  if (auth.error !== null) return { error: auth.error };
-  if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
-
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'suggestComment');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
-
-  const detailText = input.criteriaDetail.length
-    ? input.criteriaDetail
-        .map((c) => `- ${c.code} ${c.name}: ${c.points} điểm (${c.levelLabel || 'không xác định'})${c.note ? ` — ghi chú: ${c.note}` : ''}`)
-        .join('\n')
-    : 'chưa có tiêu chí nào được chấm';
-  const prevText = input.previousComments.length
-    ? input.previousComments.map((c, i) => `- Vòng ${i + 1}: ${c}`).join('\n')
-    : 'không có';
-
-  const prompt = `Dữ liệu đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}):
-- Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
-- CHI TIẾT TỪNG TIÊU CHUẨN (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
-${detailText}
-- NHẬN XÉT CÁC VÒNG CHẤM TRƯỚC (tham khảo để nhất quán — các vòng do NHỮNG NGƯỜI ĐÁNH GIÁ KHÁC NHAU chấm, không phải theo thời gian, KHÔNG so sánh tiến bộ/lùi giữa các vòng):
-${prevText}
-${input.currentComment ? `- Nhận xét hiện tại: ${input.currentComment}` : ''}
-
-MẪU PHONG CÁCH QUẢN LÝ (chỉ THAM KHẢO CÁCH VIẾT — không sao chép nội dung):
-"Với vai trò quản lý, việc bố trí người khi cấp bách và đào tạo NV đa năng đã phát huy tốt, kíp vận hành hiếm khi chờ người; nên nhân rộng cách chia sẻ kinh nghiệm xử lý sự cố sang các kíp còn lại. Kỷ luật lao động kỳ này giữ ổn định. Tiếp tục phát huy, chú ý thêm khâu theo dõi sau đào tạo."
-MẪU PHONG CÁCH NHÂN VIÊN:
-"Hiện diện và tác phong tốt, thực hiện 6S đều đặn nên khu vực phụ trách luôn gọn gàng; điểm cần lưu ý là chủ động hơn khi phát sinh việc bất thường thay vì chờ chỉ đạo. Nhìn chung hoàn thành tốt nhiệm vụ kỳ này, duy trì nếp làm việc ổn định."
-
-Hãy viết NHẬN XÉT TỔNG QUÁT (4-5 câu, tiếng Việt) theo NGUYÊN TẮC:
-1. QUẢN LÝ (Leader/SubLeader/Manager): phân tích KỸ 2-3 tiêu chuẩn QUẢN LÝ nổi bật (mã F*) — điểm mạnh + đề xuất phát huy. NHÂN VIÊN: 1-2 tiêu chuẩn mạnh nhất + 1-2 yếu nhất + cách khắc phục cụ thể.
-2. KỶ LUẬT (mã A*): không vi phạm → CHỈ 1 câu NGẮN nhưng DIỄN ĐẠT ĐA DẠNG theo từng người (vd: "Nhân viên duy trì kỷ luật và tác phong lao động tốt trong kỳ", "Không phát sinh vi phạm nội quy, chấm công ổn định", "Tinh thần chấp hành nội quy tốt, không có vấn đề kỷ luật"...). TUYỆT ĐỐI không viết y hệt câu giống nhau cho mọi người, không liệt kê tiêu chí 0 điểm, không nêu "theo dõi chấm công" khi không có vi phạm.
-3. XƯNG HÔ: gọi người được đánh giá là "Nhân viên" (vd: "Nhân viên đạt...", "Nhân viên cần...") — KHÔNG dùng "Anh/chị", "bạn", "em".
-4. VAI TRÒ: khi nhắc vai trò, LUÔN dùng từ "quản lý" (KHÔNG viết "Leader", "SubLeader", "Manager", "điều phối", "dẫn dắt" để chỉ vai trò) và ĐA DẠNG CÁCH DIỄN ĐẠT theo từng bài (vd: "Ở vai trò quản lý...", "Với vai trò quản lý...", "Là người quản lý...", "Trong vai trò quản lý...") — không lặp lại cùng một cụm cho mọi người.
-5. NHẮC TIÊU CHUẨN: MÔ TẢ NGẮN nội dung tiêu chuẩn rồi để mã số trong ngoặc (vd: "ở tiêu chuẩn về tinh thần hợp tác, phối hợp (B1)", "ở tiêu chuẩn về đào tạo nhân sự chủ chốt (F9)") — KHÔNG viết "Ở B1" hoặc để mã đứng một mình đầu câu.
-6. NHẬN XÉT VÒNG TRƯỚC chỉ dùng để THAM KHẢO NGẦM (nắm thông tin cho nhất quán) — KHÔNG được trích dẫn kiểu "như nhận xét trước", "theo nhận xét vòng trước". KHÔNG so sánh điểm, KHÔNG nhận xét tiến bộ/lùi giữa các vòng.
-7. KHÔNG nêu tổng điểm số. Kết 1 câu khuyến khích ngắn.
-8. VIẾT GIỐNG NGƯỜI THẬT, BẮT CHƯỚC PHONG CÁCH MẪU (tự nhiên, thực tế) — TRÁNH giọng văn AI (không dùng "cho thấy sự nỗ lực", "đáng ghi nhận", "góp phần không nhỏ", "thể hiện rõ", liệt kê đều đều, cảm thán sáo rỗng). Mỗi nhân viên một cách viết khác nhau.
-YÊU CẦU: NGẮN GỌN 4-5 câu, sát dữ liệu, cụ thể theo TÊN tiêu chuẩn, không chung chung, không thừa thãi, không bịa thông tin.`;
-
-  const comment = await callAI(prompt, { maxTokens: 900, temperature: 0.7 });
-  if (!comment) return aiError();
-  return { comment };
-}
-
 export async function draftResultMessageAction(input: {
   employeeCode: string;
   name: string;

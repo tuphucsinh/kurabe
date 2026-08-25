@@ -9,7 +9,7 @@ import { FileText, Pencil } from 'lucide-react';
 
 export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   Approved: { label: 'Đã có KQĐG', className: 'bg-emerald-600 text-white font-bold shadow-sm' },
-  NotStarted: { label: 'Chưa bắt đầu', className: 'bg-slate-100 text-slate-500' },
+  NotStarted: { label: 'Chưa bắt đầu', className: 'bg-surface-muted text-ink-muted' },
   InProgress: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Draft: { label: 'Đang thực hiện', className: 'bg-amber-100 text-amber-700' },
   Submitted: { label: 'Đã nộp', className: 'bg-blue-100 text-blue-700' },
@@ -80,8 +80,8 @@ export function TeamDetailMemberEvaluationDesktop({
     return (
       <div className="contents" data-load-layer="heavy">
         <span className="w-8" />
-        <span className="text-center text-xs text-slate-400 shrink-0">-</span>
-        <span className="text-center text-xs font-bold px-3 py-1 rounded-full shrink-0 bg-slate-100 text-slate-400 inline-flex items-center justify-center whitespace-nowrap">
+        <span className="text-center text-xs text-ink-muted shrink-0">-</span>
+        <span className="text-center text-xs font-bold px-3 py-1 rounded-full shrink-0 bg-surface-muted text-ink-muted inline-flex items-center justify-center whitespace-nowrap">
           Chưa tải được
         </span>
       </div>
@@ -126,8 +126,8 @@ export function TeamDetailMemberEvaluationDesktop({
                 key={`round-${roundNum}`}
                 className={
                   isLatest
-                    ? 'font-bold text-slate-800'
-                    : 'font-medium text-slate-500 opacity-60'
+                    ? 'font-bold text-ink'
+                    : 'font-medium text-ink-muted opacity-60'
                 }
               >
                 L{roundNum}: {scoreText}
@@ -167,7 +167,7 @@ export function TeamDetailMemberAction({
     <div className="flex items-center gap-1 shrink-0 max-md:hidden">
       {isLoading ? (
         <span
-          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-slate-300 rounded-lg shrink-0"
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline rounded-lg shrink-0"
           data-load-layer="heavy"
         >
           <FileText size={18} />
@@ -176,7 +176,7 @@ export function TeamDetailMemberAction({
         <Link
           prefetch={false}
           href={`/evaluations/${memberId}`}
-          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0"
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-all shrink-0"
           title="Xem đánh giá"
           data-load-layer="heavy"
         >
@@ -188,7 +188,7 @@ export function TeamDetailMemberAction({
         <button
           type="button"
           onClick={onEdit}
-          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all shrink-0 cursor-pointer"
+          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-all shrink-0 cursor-pointer"
           title="Chỉnh sửa nhân viên"
         >
           <Pencil size={18} />
@@ -219,7 +219,7 @@ export function TeamDetailMemberEvaluationMobile({
 
   if (isError) {
     return (
-      <p className="text-xs text-slate-400 mt-1" data-load-layer="heavy">
+      <p className="text-xs text-ink-muted mt-1" data-load-layer="heavy">
         Chưa tải được đánh giá
       </p>
     );
@@ -243,7 +243,7 @@ export function TeamDetailMemberEvaluationMobile({
     }
 
     return (
-      <p className="text-xs text-slate-600 mt-1" data-load-layer="heavy">
+      <p className="text-xs text-ink-muted mt-1" data-load-layer="heavy">
         Xếp loại: {grade}
         {targetRounds.map((roundNum) => {
           const scoreVal = roundsMap.get(roundNum);
@@ -254,7 +254,7 @@ export function TeamDetailMemberEvaluationMobile({
           return (
             <span key={`mobile-round-${roundNum}`}>
               {' · '}
-              <span className={isLatest ? 'font-bold text-slate-800' : 'text-slate-500 opacity-60'}>
+              <span className={isLatest ? 'font-bold text-ink' : 'text-ink-muted opacity-60'}>
                 L{roundNum}: {scoreText}
               </span>
             </span>

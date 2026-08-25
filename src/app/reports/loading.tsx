@@ -18,7 +18,7 @@ export default function ReportsLoading() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* KPI Compact Pill */}
-          <div className="bg-white px-4 py-2.5 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="bg-surface-raised px-4 py-2.5 rounded-2xl border border-outline-soft shadow-sm flex flex-wrap items-center gap-3 sm:gap-4">
             <Skeleton className="h-6 w-24" />
             <Skeleton className="h-6 w-20" />
             <Skeleton className="h-6 w-20" />
@@ -30,7 +30,7 @@ export default function ReportsLoading() {
       </div>
 
       {/* ReportFilters Skeleton */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-3 md:p-4 rounded-2xl border border-outline-variant shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 bg-surface-raised p-3 md:p-4 rounded-2xl border border-outline-soft shadow-sm">
         <Skeleton className="h-9 w-20 rounded-xl" />
         <Skeleton className="h-9 w-40 rounded-xl" />
         <Skeleton className="h-9 w-28 rounded-xl" />
@@ -38,7 +38,7 @@ export default function ReportsLoading() {
       </div>
 
       {/* GradeDistribution Skeleton (full-width) */}
-      <div className="bg-white px-5 py-4 rounded-2xl shadow-sm border border-outline-variant/60">
+      <div className="bg-surface-raised px-5 py-4 rounded-2xl shadow-sm border border-outline-soft">
         <div className="flex items-center justify-between mb-3">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-3 w-28" />
@@ -58,7 +58,7 @@ export default function ReportsLoading() {
       {/* Grid 2 Columns: TeamComparison & CriteriaHeatmap */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* TeamComparison Skeleton */}
-        <div className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm min-h-[300px] flex flex-col justify-between">
+        <div className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm min-h-[300px] flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-6 w-36" />
             <Skeleton className="h-5 w-24 rounded-full" />
@@ -77,14 +77,14 @@ export default function ReportsLoading() {
         </div>
 
         {/* CriteriaHeatmap Skeleton */}
-        <div className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm min-h-[300px] flex flex-col justify-between">
+        <div className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm min-h-[300px] flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-4 w-32" />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 flex-1">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+              <div key={i} className="p-4 rounded-2xl border border-outline-soft bg-surface-muted space-y-2">
                 <div className="flex justify-between items-center">
                   <Skeleton className="h-3 w-14" />
                   <Skeleton className="h-3 w-8" />
@@ -100,8 +100,8 @@ export default function ReportsLoading() {
       {/* Grid 2 Columns: TopPerformers & AiSummaryCard */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* TopPerformers Skeleton */}
-        <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col min-h-[280px]">
-          <div className="p-6 border-b border-outline-variant bg-surface/30 flex items-center justify-between">
+        <div className="bg-surface-raised rounded-3xl border border-outline-soft shadow-sm overflow-hidden flex flex-col min-h-[280px]">
+          <div className="p-6 border-b border-outline-soft bg-surface-muted/30 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Skeleton className="h-9 w-9 rounded-xl" />
               <div>
@@ -117,7 +117,7 @@ export default function ReportsLoading() {
         </div>
 
         {/* AiSummaryCard Skeleton */}
-        <div className="bg-gradient-to-br from-indigo-50/80 to-white p-6 rounded-3xl border border-indigo-100 shadow-sm min-h-[280px] flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-brand-soft to-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm min-h-[280px] flex flex-col justify-between">
           <div className="flex items-center gap-2 mb-4">
             <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
             <div className="flex-1">

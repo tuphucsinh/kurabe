@@ -105,16 +105,16 @@ export default function TeamsRolesTab() {
           return (
             <div
               key={team.id}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6"
+              className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6 space-y-6"
             >
               {/* Header */}
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="p-3 rounded-xl bg-brand-soft text-brand">
                   <Users className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">{team.name}</h3>
-                  <p className="text-sm text-slate-500">
+                  <h3 className="font-bold text-ink">{team.name}</h3>
+                  <p className="text-sm text-ink-muted">
                     {teamMembers.length} thành viên
                   </p>
                 </div>
@@ -124,8 +124,8 @@ export default function TeamsRolesTab() {
               <div className="space-y-4">
                 {/* Leader */}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 font-medium flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                  <span className="text-ink-muted font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-brand" />
                     Leader
                   </span>
                   {leader ? (
@@ -142,7 +142,7 @@ export default function TeamsRolesTab() {
                 {/* SubLeader */}
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                    <span className="text-ink-muted font-medium flex items-center gap-1.5">
                       <UserIcon className="w-4 h-4 text-sky-500" />
                       SubLeader
                     </span>
@@ -157,14 +157,14 @@ export default function TeamsRolesTab() {
                       {subLeaders.map((sub) => (
                         <div
                           key={sub.id}
-                          className="flex items-center justify-between text-xs py-1.5 px-3 bg-slate-50 rounded-xl border border-slate-100"
+                          className="flex items-center justify-between text-xs py-1.5 px-3 bg-surface-muted rounded-xl border border-outline-soft/60"
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-semibold text-slate-800 truncate">
+                            <span className="font-semibold text-ink truncate">
                               {sub.name}
                             </span>
                             {sub.employeeCode && (
-                              <span className="text-slate-400 font-mono text-[11px] shrink-0">
+                              <span className="text-ink-muted font-mono text-[11px] shrink-0">
                                 ({sub.employeeCode})
                               </span>
                             )}
@@ -173,7 +173,7 @@ export default function TeamsRolesTab() {
                             className={`px-2 py-0.5 rounded-md text-[11px] font-medium shrink-0 ml-2 ${
                               sub.description && sub.description.trim() !== ''
                                 ? 'bg-sky-100 text-sky-700 border border-sky-200/50'
-                                : 'bg-slate-200/60 text-slate-500 italic'
+                                : 'bg-surface text-ink-muted border border-outline-soft/40 italic'
                             }`}
                           >
                             {sub.description && sub.description.trim() !== ''

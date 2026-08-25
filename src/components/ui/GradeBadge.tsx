@@ -15,8 +15,8 @@ export const GRADE_BADGE_STYLES: Record<string, { soft: string; solid: string }>
 };
 
 const FALLBACK_STYLES = {
-  soft: 'bg-slate-100 text-slate-400',
-  solid: 'bg-slate-700 text-white',
+  soft: 'bg-surface-muted text-ink-muted',
+  solid: 'bg-brand-strong text-white',
 };
 
 /** Lấy class màu cho grade; giá trị lạ/null → fallback xám. */

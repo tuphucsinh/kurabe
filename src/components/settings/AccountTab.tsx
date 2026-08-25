@@ -89,40 +89,40 @@ export default function AccountTab() {
   return (
     <div className="space-y-6">
       {/* Thông tin cá nhân */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <UserCircle className="w-4 h-4 text-indigo-600" />
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6">
+        <h3 className="text-sm font-bold text-ink uppercase tracking-wide mb-4 flex items-center gap-2">
+          <UserCircle className="w-4 h-4 text-brand" />
           Thông tin cá nhân
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-slate-50">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Mã nhân viên</p>
-            <p className="font-semibold text-slate-800">{user.employeeCode}</p>
+          <div className="p-4 rounded-xl bg-surface-muted">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-1">Mã nhân viên</p>
+            <p className="font-semibold text-ink">{user.employeeCode}</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-50">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Họ và tên</p>
-            <p className="font-semibold text-slate-800">{user.name}</p>
+          <div className="p-4 rounded-xl bg-surface-muted">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-1">Họ và tên</p>
+            <p className="font-semibold text-ink">{user.name}</p>
           </div>
-          <div className="p-4 rounded-xl bg-slate-50">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Chức vụ</p>
+          <div className="p-4 rounded-xl bg-surface-muted">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-1">Chức vụ</p>
             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_BADGE[user.role] || ROLE_BADGE.Employee}`}>
               {ROLE_LABEL[user.role] || user.role}
             </span>
           </div>
-          <div className="p-4 rounded-xl bg-slate-50">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nhóm</p>
-            <p className="font-semibold text-slate-800">{teamName}</p>
+          <div className="p-4 rounded-xl bg-surface-muted">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-muted mb-1">Nhóm</p>
+            <p className="font-semibold text-ink">{teamName}</p>
           </div>
         </div>
       </div>
 
       {/* Đổi mật khẩu */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-        <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-          <KeyRound className="w-4 h-4 text-indigo-600" />
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6">
+        <h3 className="text-sm font-bold text-ink uppercase tracking-wide mb-4 flex items-center gap-2">
+          <KeyRound className="w-4 h-4 text-brand" />
           {hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu'}
         </h3>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-ink-muted mb-4">
           {hasPassword
             ? 'Đổi mật khẩu đăng nhập của bạn. Mật khẩu cũ được yêu cầu để xác minh.'
             : 'Tài khoản của bạn chưa có mật khẩu. Đặt mật khẩu để sẵn sàng khi hệ thống bật đăng nhập bằng mật khẩu.'}
@@ -131,7 +131,7 @@ export default function AccountTab() {
         <div className="space-y-4 max-w-md">
           {hasPassword && (
             <div>
-              <label htmlFor="old-password" className="block text-sm font-medium text-slate-700 mb-1">
+              <label htmlFor="old-password" className="block text-sm font-medium text-ink mb-1">
                 Mật khẩu cũ
               </label>
               <input
@@ -140,12 +140,12 @@ export default function AccountTab() {
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 placeholder="Nhập mật khẩu cũ"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
               />
             </div>
           )}
           <div>
-            <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="new-password" className="block text-sm font-medium text-ink mb-1">
               Mật khẩu mới
             </label>
             <input
@@ -154,11 +154,11 @@ export default function AccountTab() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Ít nhất 6 ký tự"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
             />
           </div>
           <div>
-            <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="confirm-password" className="block text-sm font-medium text-ink mb-1">
               Xác nhận mật khẩu mới
             </label>
             <input
@@ -167,7 +167,7 @@ export default function AccountTab() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Nhập lại mật khẩu mới"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
             />
           </div>
 
@@ -175,7 +175,7 @@ export default function AccountTab() {
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-mid shadow-sm shadow-brand/20 transition-all active:scale-95 disabled:opacity-50"
           >
             <ShieldCheck size={16} />
             {isSaving ? 'Đang lưu...' : hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu'}

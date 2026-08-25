@@ -24,21 +24,22 @@ import {
   ArrowLeftRight,
   Loader2,
   Sparkles,
-  Send,
   Undo2,
   AlertTriangle,
-  Copy,
-  Check,
 } from 'lucide-react';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { LazyMotion, domAnimation } from 'framer-motion';
-import { saveEvaluationRound, returnEvaluationRound } from '@/actions/evaluation';
+import {
+  saveEvaluationRound,
+  returnEvaluationRound,
+  initializeEvaluationRoundDraft,
+} from '@/actions/evaluation';
 import {
   getMaxEvaluationRound,
   isLeaderGradingRole,
 } from '@/lib/evaluation-workflow';
 import { useToast } from '@/components/ui/Toast';
-import { suggestCommentAction, draftResultMessageAction, saveResultMessageAction } from '@/actions/ai';
+import { draftResultMessageAction } from '@/actions/ai';
 import { isIndividualRole, roleLabel } from '@/lib/role-policy';
 
 interface EvaluationPageProps {
@@ -65,13 +66,13 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { data: pageData, isLoading } = useEvaluationPageData(id, undefined, user);
   const employee = pageData?.employee ?? null;
   const evaluation = pageData?.evaluation ?? null;
+  const evaluationId = evaluation?.id;
   const users = pageData?.users ?? EMPTY_USERS;
   const periods = pageData?.periods ?? EMPTY_PERIODS;
   const isLoadingUser = isLoading;
   const isLoadingEval = isLoading;
 
   const isEmployeeOwner = isIndividualRole(user?.role) && evaluation?.employeeId === user?.id;
-  const [isSavingDraftMessage, setIsSavingDraftMessage] = useState(false);
 
   const [showDraftSavedToast, showDraftSaved] = useAutoResetToast();
   const [showSubmitSuccessToast, showSubmitSuccess] = useAutoResetToast();
@@ -84,8 +85,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
 
   // AI (Manager-only)
   const [isSuggesting, setIsSuggesting] = useState(false);
-  const [draftMessage, setDraftMessage] = useState('');
-  const [isDrafting, setIsDrafting] = useState(false);
 
   // Return dialog state
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -95,6 +94,9 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const autosaveAttemptedKeys = useRef<Set<string>>(new Set());
+  const autosavePendingKeys = useRef<Set<string>>(new Set());
 
   // Access control
   const accessState = useMemo(() =>
@@ -110,15 +112,76 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     isLoadingHistory,
     gradeBands,
     isMounted,
+    initMetadata,
+    userEditedRef,
   } = useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user });
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
 
+  useEffect(() => {
+    const currentEvaluationId = evaluationId;
+    if (!currentEvaluationId) return;
+    const safeEvaluationId: string = currentEvaluationId;
+
+    const shouldAutosave =
+      initMetadata.initialized &&
+      initMetadata.firstOpenEligible &&
+      accessState?.mode === 'edit' &&
+      initMetadata.round !== null &&
+      currentEvaluationId &&
+      initMetadata.key &&
+      !userEditedRef.current &&
+      !autosaveAttemptedKeys.current.has(initMetadata.key) &&
+      !autosavePendingKeys.current.has(initMetadata.key);
+
+    if (!shouldAutosave || !currentEvaluationId || initMetadata.round === null || !initMetadata.key) return;
+
+    const autosaveKey = initMetadata.key;
+    const autosaveRound = initMetadata.round as RoundNumber;
+
+    autosaveAttemptedKeys.current.add(autosaveKey);
+    autosavePendingKeys.current.add(autosaveKey);
+
+    async function runFirstOpenAutosave() {
+      try {
+        const res = await initializeEvaluationRoundDraft(
+          safeEvaluationId,
+          autosaveRound,
+          scores,
+          notes,
+          selectedLevelIndexes,
+          comment
+        );
+        if (!res.success && res.error) {
+          console.error('[FirstOpenAutosave] Failed to initialize draft:', res.error);
+          toast(`Không thể tự động lưu bản nháp: ${res.error}`, 'error');
+        }
+      } catch (err) {
+        console.error('[FirstOpenAutosave] Unexpected error initializing draft:', err);
+        toast('Không thể tự động khởi tạo bản nháp.', 'error');
+      } finally {
+        autosavePendingKeys.current.delete(autosaveKey);
+      }
+    }
+
+    runFirstOpenAutosave();
+  }, [
+    accessState?.mode,
+    comment,
+    evaluationId,
+    initMetadata,
+    notes,
+    scores,
+    selectedLevelIndexes,
+    toast,
+    userEditedRef,
+  ]);
+
   if (!isMounted || isLoadingUser || isLoadingEval) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-page flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 rounded-full"></div>
-          <div className="text-slate-400 font-medium">Đang tải dữ liệu...</div>
+          <div className="w-12 h-12 bg-brand-soft rounded-full"></div>
+          <div className="text-ink-muted font-medium">Đang tải dữ liệu...</div>
         </div>
       </div>
     );
@@ -308,196 +371,135 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { totalScore, grade } = calculateRoundScore(currentSummaryRound, gradeBands);
 
   const handleSuggestComment = async () => {
-    if (!employee) return;
+    if (!employee || user?.role !== 'Manager' || isReadOnly) return;
     setIsSuggesting(true);
     try {
-      const totalScoreNow = Object.values(scores).reduce((a, b) => a + (Number(b) || 0), 0);
-      const criteriaDetail = criteriaGroups
-        .flatMap((g) => g.criteria)
-        .map((c) => {
-          const levelIdx = selectedLevelIndexes[c.id] ?? 0;
-          const level = c.levels[levelIdx];
-          return {
-            code: c.code,
-            name: c.name,
-            points: Number(scores[c.id]) || 0,
-            levelLabel: level?.label || '',
-            note: notes[c.id] || '',
-          };
-        });
-      const result = await suggestCommentAction({
-        employeeCode: employee.employeeCode || '',
-        role: employee.role,
-        criteriaDetail,
-        previousComments: (allPreviousRounds || []).map((r) => r.comment || '').filter(Boolean),
-        currentComment: comment,
-        totalScore: totalScoreNow,
-        grade: currentRoundData?.grade || '',
-      });
-      if (result.comment) {
-        dispatch({ type: 'SET_COMMENT', comment: result.comment });
-        toast('Đã điền gợi ý — anh có thể chỉnh sửa trước khi lưu.', 'success');
-      } else {
-        toast(result.error || 'Lỗi khi tạo gợi ý.', 'error');
-      }
-    } catch (err) {
-      console.error('suggestComment error:', err);
-      toast('Lỗi khi tạo gợi ý.', 'error');
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
+      const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
+      const criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
 
-  const handleDraftMessage = async () => {
-    if (!employee || !evaluation) return;
-    setIsDrafting(true);
-    try {
-      const lastRound = [...evaluation.rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0);
-      const lastScores = lastRound?.scores || {};
-      const criteriaDetail = criteriaGroups
-        .flatMap((g) => g.criteria)
-        .filter((c) => lastScores[c.id] !== undefined)
-        .map((c) => {
-          const levelIdx = lastRound?.selectedLevelIndexes?.[c.id] ?? 0;
-          const level = c.levels[levelIdx];
-          return {
-            code: c.code,
-            name: c.name,
-            points: Number(lastScores[c.id]) || 0,
-            levelLabel: level?.label || '',
-          };
-        });
+      const criteriaDetail = allCriteria.map((c) => {
+        const levelIdx = selectedLevelIndexes[c.id] ?? 0;
+        const level = c.levels[levelIdx];
+        return {
+          code: c.code,
+          name: c.name,
+          points: Number(scores[c.id]) || 0,
+          levelLabel: level?.label || '',
+        };
+      });
+
+      const previousComments = (allPreviousRounds || [])
+        .map((r) => r.comment || '')
+        .filter(Boolean);
+
+      const notesSummary = Object.entries(notes)
+        .filter(([k, v]) => Boolean(v && v.trim() && criteriaMap.has(k)))
+        .slice(0, 3)
+        .map(([k, v]) => {
+          const c = criteriaMap.get(k)!;
+          return `${c.code} ${c.name}: ${v.trim()}`;
+        })
+        .join(' | ');
+
+      const prevCommentsText = previousComments.join(' | ');
+      const summaryNotes = comment.trim() || prevCommentsText;
+
+      const period = evaluation?.periodId ? periods.find((p) => p.id === evaluation.periodId) : undefined;
+      const periodName = period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
+
       const result = await draftResultMessageAction({
         employeeCode: employee.employeeCode || '',
-        name: employee.name,
-        role: employee.role,
-        totalScore: lastRound?.totalScore || 0,
-        grade: lastRound?.grade || '',
+        name: employee.name || '',
+        role: employee.role || '',
+        totalScore,
+        grade,
         criteriaDetail,
-        previousComments: (evaluation.rounds || [])
-          .filter((r) => r.round < (lastRound?.round ?? 0))
-          .map((r) => r.comment || '')
-          .filter(Boolean),
-        notesSummary: Object.entries(lastRound?.notes || {})
-          .filter(([, v]) => v && v.trim())
-          .slice(0, 3)
-          .map(([k, v]) => {
-            const c = criteriaGroups.flatMap((g) => g.criteria).find((x) => x.id === k);
-            return `${c?.code || ''} ${c?.name || ''}: ${v}`;
-          })
-          .filter(Boolean)
-          .join(' | '),
-        summaryNotes: comment || (evaluation.rounds || []).map((r) => r.comment).filter(Boolean).join(' | '),
-        periodName: (() => {
-          const period = evaluation.periodId ? periods.find((p) => p.id === evaluation.periodId) : undefined;
-          return period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
-        })(),
+        previousComments,
+        notesSummary,
+        summaryNotes,
+        periodName,
       });
-      if (result.message) {
-        setDraftMessage(result.message);
-      } else {
-        toast(result.error || 'Lỗi khi soạn thông báo.', 'error');
-      }
-    } catch (err) {
-      console.error('draftMessage error:', err);
-      toast('Lỗi khi soạn thông báo.', 'error');
-    } finally {
-      setIsDrafting(false);
-    }
-  };
 
-  const handleSaveDraftMessage = async () => {
-    if (!evaluation || !draftMessage.trim()) return;
-    setIsSavingDraftMessage(true);
-    try {
-      const res = await saveResultMessageAction({
-        evaluationId: evaluation.id,
-        message: draftMessage.trim(),
-      });
-      if (res.ok) {
-        toast('Đã lưu thông báo kết quả vào phiếu!', 'success');
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', id, undefined, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', id, undefined, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
-        ]);
+      if (result.message) {
+        dispatch({ type: 'SET_COMMENT', comment: result.message });
+        toast('Đã tạo nhận xét AI — anh có thể chỉnh sửa trước khi lưu.', 'success');
       } else {
-        toast(res.error || 'Lỗi khi lưu thông báo.', 'error');
+        toast(result.error || 'Lỗi khi tạo nhận xét AI.', 'error');
       }
     } catch (err) {
-      console.error('Error saving draft message:', err);
-      toast('Lỗi khi lưu thông báo.', 'error');
+      console.error('handleSuggestComment error:', err);
+      toast('Lỗi khi tạo nhận xét AI.', 'error');
     } finally {
-      setIsSavingDraftMessage(false);
+      setIsSuggesting(false);
     }
   };
 
   return (
     <LazyMotion features={domAnimation}>
       {showDraftSavedToast && (
-        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-xl">
-          <p className="text-sm font-semibold text-emerald-700">Đã lưu bản nháp.</p>
+        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 shadow-lg">
+          <p className="text-xs sm:text-sm font-bold text-emerald-800">Đã lưu bản nháp.</p>
         </div>
       )}
       {showSubmitSuccessToast && (
-        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 shadow-xl">
-          <p className="text-sm font-semibold text-blue-700">Đánh giá đã được gửi thành công!</p>
+        <div className="fixed left-1/2 top-5 z-50 -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 shadow-lg">
+          <p className="text-xs sm:text-sm font-bold text-emerald-800">Đánh giá đã được gửi thành công!</p>
         </div>
       )}
-      <div className="px-3 sm:px-6 md:px-10 lg:px-12 py-4 sm:py-6 md:py-8 lg:py-5 space-y-6 md:space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
-        <div className="flex flex-col gap-4 md:gap-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-outline font-medium">
+      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 max-md:px-3 max-md:py-3 max-md:space-y-4 animate-in fade-in duration-300 w-full max-w-[1600px] mx-auto xl:px-6 xl:py-4 xl:max-w-none xl:space-y-6">
+        <div className="flex flex-col gap-6 max-md:gap-3 xl:gap-4">
+          <div className="flex flex-row max-md:flex-col justify-between items-center max-md:items-start gap-4 max-md:gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm max-md:text-xs text-ink-muted font-medium max-md:w-full max-md:flex-nowrap max-md:justify-between">
               <span>Đánh giá</span>
-              <ChevronRight size={14} className="shrink-0" />
-              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-xs sm:text-sm">
+              <ChevronRight size={13} className="shrink-0 text-outline-soft max-md:hidden" />
+              <span className="text-brand bg-brand-soft px-2.5 py-0.5 rounded-lg text-sm max-md:text-xs font-bold">
                 Lần {accessState.editableRound || accessState.displayRound} / {maxRound}
               </span>
               {allPreviousRounds.length > 0 && (
                 <button
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[36px] bg-white border border-outline-variant rounded-xl text-xs sm:text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[44px] bg-surface-raised border border-outline-soft rounded-xl text-sm max-md:text-xs font-bold text-ink hover:text-brand hover:border-brand/40 transition-all shadow-2xs active:scale-95"
                 >
-                  <ArrowLeftRight size={14} />
+                  <ArrowLeftRight size={14} className="text-brand" />
                   <span>Chi tiết so sánh</span>
                 </button>
               )}
               {isReadOnly && (
                 <>
-                  <ChevronRight size={14} className="shrink-0" />
-                  <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1 text-xs sm:text-sm">
+                  <ChevronRight size={13} className="shrink-0 text-outline-soft" />
+                  <span className="text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-lg flex items-center gap-1 text-sm max-md:text-xs font-medium">
                     <Lock size={12} /> {activeRoundData.status === 'Submitted' ? 'Đã nộp' : 'Chỉ xem'}
                   </span>
                 </>
               )}
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full md:w-auto">
+            <div className="flex items-center gap-3 max-md:gap-2 w-auto max-md:w-full max-md:flex-wrap">
               {!isReadOnly ? (
                 <>
                   {accessState.editableRound !== null && accessState.editableRound > 1 && (
                     <button
                       onClick={() => setReturnDialogOpen(true)}
                       disabled={isSaving}
-                      className="w-full sm:w-auto flex-1 sm:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
+                      className="px-4 py-2 max-md:basis-full max-md:flex-none max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-rose-600 border border-rose-200 hover:border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                     >
-                      <Undo2 size={16} className="shrink-0" />
+                      <Undo2 size={15} className="shrink-0" />
                       <span>Trả lại đánh giá</span>
                     </button>
                   )}
                   <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
-                    className="flex-1 sm:flex-initial md:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
+                    className="px-4 py-2 max-md:flex-1 max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-ink border border-outline-soft rounded-xl font-bold hover:bg-surface-muted hover:border-outline transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                   >
                     Lưu bản nháp
                   </button>
                   <button
                     onClick={() => handleSave(true)}
                     disabled={isSaving}
-                    className="flex-1 sm:flex-initial md:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-xs sm:text-sm whitespace-nowrap"
+                    className="px-5 py-2 max-md:flex-1 max-md:min-h-[44px] max-md:px-4 bg-brand text-white rounded-xl font-bold shadow-sm hover:bg-brand-mid active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:hover:scale-100 text-sm max-md:text-xs whitespace-nowrap"
                   >
-                    <CheckCircle2 size={16} className="shrink-0" />
+                    <CheckCircle2 size={15} className="shrink-0" />
                     <span>{isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}</span>
                   </button>
                 </>
@@ -507,14 +509,14 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                     <button
                       onClick={() => setReturnDialogOpen(true)}
                       disabled={isSaving}
-                      className="w-full sm:w-auto flex-1 sm:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
+                      className="px-4 py-2 max-md:basis-full max-md:flex-none max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-rose-600 border border-rose-200 hover:border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                     >
-                      <Undo2 size={16} className="shrink-0" />
+                      <Undo2 size={15} className="shrink-0" />
                       <span>Trả lại báo cáo</span>
                     </button>
                   )}
-                  <div className="w-full sm:w-auto max-md:min-h-[44px] px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center sm:justify-start gap-2">
-                    <Lock size={16} className="shrink-0" />
+                  <div className="px-3.5 py-2 max-md:w-full max-md:min-h-[44px] bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm max-md:text-xs font-medium flex items-center justify-start max-md:justify-center gap-1.5">
+                    <Lock size={15} className="shrink-0" />
                     <span className="truncate">
                       {activeRoundData.status === 'Submitted'
                         ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
@@ -541,8 +543,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           />
 
           {evaluation?.returnNote && (
-            <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-sm font-medium flex items-start gap-2">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+            <div className="px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm max-md:text-xs font-medium flex items-start gap-2">
+              <AlertTriangle size={15} className="shrink-0 mt-0.5 text-amber-700" />
               <span>Đánh giá bị trả lại: {evaluation.returnNote}</span>
             </div>
           )}
@@ -569,8 +571,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="flex-1 space-y-6">
+        <div className="w-full flex flex-col lg:flex-row gap-6 items-start max-md:items-stretch">
+          <div className="flex-1 min-w-0 max-md:w-full space-y-6 max-md:space-y-4">
             <GroupNavTabs
               groups={criteriaGroups}
               activeGroupId={activeGroup?.id ?? activeGroupId}
@@ -592,18 +594,18 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
             )}
           </div>
 
-          <div className="w-full lg:w-80 shrink-0">
-            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-outline-variant shadow-sm max-md:static md:sticky md:top-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base sm:text-lg font-bold text-on-surface-variant">Ghi chú chung</h3>
+          <div className="w-full lg:w-80 shrink-0 lg:sticky lg:top-8 z-10 xl:w-[272px]">
+            <div className="bg-surface-raised rounded-2xl p-6 max-md:p-4 border border-outline-soft shadow-sm max-md:shadow-2xs space-y-3">
+              <div className="flex items-center justify-between gap-2 xl:flex-wrap xl:gap-y-3">
+                <h3 className="text-base max-md:text-sm font-bold text-ink">Nhận xét</h3>
                 {user?.role === 'Manager' && !isReadOnly && (
                   <button
                     onClick={handleSuggestComment}
-                    disabled={isSuggesting}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[36px] rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-all disabled:opacity-50 active:scale-95"
+                    disabled={isSuggesting || isSaving}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 max-md:min-h-[36px] rounded-lg bg-brand-soft text-brand text-xs font-bold hover:bg-brand-soft/80 transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isSuggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                    {isSuggesting ? 'Đang gợi ý...' : 'Gợi ý nhận xét (AI)'}
+                    <span>{isSuggesting ? 'Đang nhận xét...' : 'AI nhận xét'}</span>
                   </button>
                 )}
               </div>
@@ -612,56 +614,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 onChange={(e) => dispatch({ type: 'SET_COMMENT', comment: e.target.value })}
                 placeholder="Nhập nhận xét tổng quát cho kỳ đánh giá này..."
                 disabled={isReadOnly || isSaving}
-                className="w-full h-32 sm:h-40 p-3 sm:p-4 bg-surface border border-outline-variant rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                className="w-full h-36 max-md:h-32 p-3.5 max-md:p-3 bg-surface-muted border border-outline-soft rounded-xl text-sm max-md:text-base text-ink focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all resize-none leading-relaxed xl:h-[314px]"
               />
-              <p className="mt-2 text-xs text-outline leading-relaxed">
+              <p className="text-[11px] text-ink-muted leading-relaxed">
                 Nhận xét này sẽ được hiển thị cho nhân viên sau khi kỳ đánh giá kết thúc.
               </p>
-              {user?.role === 'Manager' && (
-                <>
-                  <button
-                    onClick={handleDraftMessage}
-                    disabled={isDrafting}
-                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 max-md:min-h-[44px] rounded-xl bg-white border border-outline-variant text-xs sm:text-sm font-bold text-on-surface hover:border-primary hover:text-primary transition-all disabled:opacity-50 active:scale-95"
-                  >
-                    {isDrafting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                    {isDrafting ? 'Đang soạn...' : 'Soạn thông báo kết quả (AI)'}
-                  </button>
-                  {draftMessage && (
-                    <div className="mt-3 p-3 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface leading-relaxed space-y-2">
-                      <p className="whitespace-pre-wrap">{draftMessage}</p>
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => { navigator.clipboard.writeText(draftMessage); toast('Đã sao chép thông báo.', 'success'); }}
-                          className="text-primary font-bold hover:underline flex items-center gap-1"
-                        >
-                          <Copy size={12} />
-                          <span>Sao chép</span>
-                        </button>
-                        <span>•</span>
-                        <button
-                          type="button"
-                          onClick={handleSaveDraftMessage}
-                          disabled={isSavingDraftMessage}
-                          className="text-emerald-700 font-bold hover:underline flex items-center gap-1 disabled:opacity-50"
-                        >
-                          {isSavingDraftMessage ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                          <span>{isSavingDraftMessage ? 'Đang lưu...' : 'Lưu vào phiếu'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
         </div>
 
         {/* Dãy nhóm tiêu chuẩn cuối trang — click chuyển nhóm + cuộn lên đầu */}
         {criteriaGroups.length > 0 && (
-          <div className="mt-8 pt-6 border-t border-outline-variant/40">
-            <p className="text-xs font-bold text-outline uppercase tracking-wide mb-3">Chuyển nhanh đến nhóm tiêu chuẩn</p>
+          <div className="mt-8 pt-6 max-md:mt-6 max-md:pt-4 border-t border-outline-soft/60 space-y-3 max-md:space-y-2">
+            <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Chuyển nhanh đến nhóm tiêu chuẩn</p>
             <GroupNavTabs
               groups={criteriaGroups}
               activeGroupId={activeGroup?.id ?? activeGroupId}

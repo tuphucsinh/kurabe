@@ -60,7 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoggingOut) {
     return (
-      <div className="min-h-screen bg-[#003449] flex items-center justify-center">
+      <div className="min-h-screen bg-brand-strong flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -68,7 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#003449] flex items-center justify-center">
+      <div className="min-h-screen bg-brand-strong flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -83,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC] max-md:bg-gradient-to-b max-md:from-primary/5 max-md:via-[#F8FAFC] max-md:to-indigo-50/30">
+    <div className="min-h-screen w-full bg-page max-md:bg-gradient-to-b max-md:from-brand/5 max-md:via-page max-md:to-brand-soft/30">
       <div className="flex w-full min-h-screen">
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -99,12 +99,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-white/80 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around z-40 px-2 pb-[env(safe-area-inset-bottom,0px)] print:hidden">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-surface-raised/80 backdrop-blur-xl border-t border-outline-soft/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around z-40 px-2 pb-[env(safe-area-inset-bottom,0px)] print:hidden">
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
           aria-label="Mở menu"
-          className="relative flex flex-col items-center justify-center w-14 h-12 text-slate-400 hover:text-slate-600 transition-all duration-300"
+          className="relative flex flex-col items-center justify-center w-14 h-12 text-ink-muted hover:text-ink transition-all duration-300"
         >
           <Menu size={24} />
         </button>
@@ -137,13 +137,13 @@ function BottomNavItem({ href, icon, ariaLabel, active }: { href: string; icon: 
       href={href}
       prefetch={false}
       aria-label={ariaLabel}
-      className={`relative flex flex-col items-center justify-center w-14 h-12 transition-all duration-300 ${active ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+      className={`relative flex flex-col items-center justify-center w-14 h-12 transition-all duration-300 ${active ? 'text-brand' : 'text-ink-muted hover:text-ink'}`}
     >
       <div className={`transition-transform duration-300 ${active ? '-translate-y-1 scale-110' : ''}`}>
         {icon}
       </div>
       {active && (
-        <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--color-primary),0.8)]" />
+        <div className="absolute -bottom-1 w-1 h-1 bg-brand rounded-full shadow-[0_0_8px_rgba(14,75,102,0.8)]" />
       )}
     </Link>
   );

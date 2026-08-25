@@ -87,7 +87,7 @@ function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: () => voi
       aria-live="assertive"
       className={`pointer-events-auto flex items-center gap-4 p-4 rounded-2xl border backdrop-blur-md shadow-xl animate-in slide-in-from-right fade-in duration-500 zoom-in-95 ease-out ${colors[toast.type]}`}
     >
-      <div className="shrink-0 p-2 rounded-xl bg-white shadow-sm border border-black/5">
+      <div className="shrink-0 p-2 rounded-xl bg-surface-raised shadow-sm border border-black/5">
         {icons[toast.type]}
       </div>
       <div className="flex-1 min-w-0">
@@ -97,7 +97,7 @@ function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: () => voi
       </div>
       <button 
         onClick={onClose}
-        className="shrink-0 p-1.5 rounded-lg hover:bg-black/5 text-slate-400 hover:text-slate-600 transition-all active:scale-90"
+        className="shrink-0 p-1.5 rounded-lg hover:bg-black/5 text-ink-muted hover:text-ink transition-all active:scale-90"
       >
         <X size={16} strokeWidth={2.5} />
       </button>

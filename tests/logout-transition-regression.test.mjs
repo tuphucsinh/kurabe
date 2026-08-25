@@ -26,7 +26,7 @@ assert.ok(layout.includes('if (isLoading || isLoggingOut) return;'), 'AppLayout 
 assert.ok(layout.includes('isLoggingOut, pathname, router'), 'AppLayout effect dependencies must include isLoggingOut');
 assert.ok(
   layout.includes('if (isLoggingOut)') &&
-    layout.includes('className="min-h-screen bg-[#003449] flex items-center justify-center"') &&
+    layout.includes('className="min-h-screen bg-brand-strong flex items-center justify-center"') &&
     layout.includes('animate-spin'),
   'AppLayout must render a full-screen transition while logging out'
 );

@@ -38,10 +38,10 @@ export default function AnomalyAlertCard({
   if (anomalies.length === 0) return null;
 
   return (
-    <div data-load-layer="heavy" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <div data-load-layer="heavy" className="bg-surface-raised p-6 rounded-2xl shadow-sm border border-outline-soft">
       <div className="flex items-center gap-2 mb-5">
         <AlertTriangle className="w-5 h-5 text-amber-500" />
-        <h3 className="text-lg font-semibold text-slate-800">Cảnh báo đánh giá bất thường</h3>
+        <h3 className="text-lg font-semibold text-ink">Cảnh báo đánh giá bất thường</h3>
         <span className="ml-auto text-sm font-bold text-amber-600">{anomalies.length} cảnh báo</span>
       </div>
 
@@ -56,25 +56,25 @@ export default function AnomalyAlertCard({
                     <AlertTriangle size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-sm font-semibold text-ink">
                       {a.name}
                       <span className={`ml-2 text-[11px] font-bold px-1.5 py-0.5 rounded-full ${isHigh ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
                         {isHigh ? 'Nghiêm trọng' : 'Chú ý'}
                       </span>
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-ink-muted mt-0.5">
                       Vòng {a.prevRound}: <b>{a.prevScore}</b> → Vòng {a.round}: <b>{a.score}</b> (chênh <b className={isHigh ? 'text-rose-600' : 'text-amber-600'}>{a.diff} điểm</b>)
                     </p>
                     <button
                       onClick={() => handleExplain(key, a.evaluationId, a.name, a.round, a.prevScore, a.score)}
                       disabled={explainingId === key}
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-50"
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-strong transition-colors disabled:opacity-50"
                     >
                       {explainingId === key ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                       {explanations[key] ? 'Đã giải thích' : 'Giải thích bằng AI'}
                     </button>
                     {explanations[key] && (
-                      <p className="mt-2 text-xs text-slate-600 bg-white/70 rounded-lg p-3 border border-slate-100">
+                      <p className="mt-2 text-xs text-ink bg-surface-raised/70 rounded-lg p-3 border border-outline-soft">
                         {explanations[key]}
                       </p>
                     )}
@@ -83,7 +83,7 @@ export default function AnomalyAlertCard({
               </div>
             );
           })}
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-ink-muted">
             * Cảnh báo dựa trên quy tắc chênh lệch điểm giữa 2 vòng liên tiếp (≥20: chú ý, ≥30: nghiêm trọng).
           </p>
         </div>

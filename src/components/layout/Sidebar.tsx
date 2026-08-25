@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar (Fixed) */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] bg-[#003449] z-50 flex-col overflow-hidden shadow-2xl print:hidden">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-[240px] bg-brand-strong z-50 flex-col overflow-hidden shadow-2xl print:hidden">
         <SidebarContent 
           user={user} 
           
@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 h-screen w-[280px] bg-[#003449] z-[70] flex flex-col overflow-hidden shadow-2xl md:hidden"
+                className="fixed left-0 top-0 h-screen w-[280px] bg-brand-strong z-[70] flex flex-col overflow-hidden shadow-2xl md:hidden"
               >
                 <SidebarContent 
                   user={user} 
@@ -324,7 +324,7 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
       {/* User Info */}
       <div className="border-t border-white/10 px-4 py-4 bg-black/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0E4B66] to-[#003449] flex items-center justify-center text-white text-sm font-bold flex-shrink-0 border border-white/10 shadow-inner">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand to-brand-strong flex items-center justify-center text-white text-sm font-bold flex-shrink-0 border border-white/10 shadow-inner">
             {user?.name?.charAt(0) || 'U'}
           </div>
           <div className="min-w-0">

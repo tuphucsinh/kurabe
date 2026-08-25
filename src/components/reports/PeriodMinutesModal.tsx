@@ -164,17 +164,17 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
     <>
       <button
         onClick={handleOpen}
-        className="flex items-center gap-2 px-3.5 py-2 bg-white border border-outline-variant rounded-2xl text-xs sm:text-sm font-medium hover:bg-surface-container text-on-surface shadow-2xs hover:opacity-95 active:scale-95 transition-all shrink-0 w-full sm:w-auto justify-center"
+        className="flex items-center gap-2 px-3.5 py-2 bg-surface-raised border border-outline-soft rounded-2xl text-xs sm:text-sm font-medium hover:bg-surface-muted text-ink shadow-2xs hover:opacity-95 active:scale-95 transition-all shrink-0 w-full sm:w-auto justify-center"
       >
-        <FileText className="w-4 h-4 text-primary" />
+        <FileText className="w-4 h-4 text-brand" />
         <span>Soạn biên bản kết thúc kỳ</span>
       </button>
 
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-outline-variant">
+          <div className="bg-surface-raised w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-outline-soft">
             {/* Header */}
-            <div className="px-6 py-5 bg-gradient-to-r from-[#003449] to-[#0E4B66] text-white flex items-center justify-between shrink-0">
+            <div className="px-6 py-5 bg-gradient-to-r from-brand-strong to-brand text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
                   <FileText className="text-cyan-300" size={20} />
@@ -208,11 +208,11 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
             {/* Body */}
             <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-ink uppercase tracking-wider">
                   Nội dung biên bản (có thể chỉnh sửa trực tiếp):
                 </label>
                 {minutes && (
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-ink-muted">
                     {minutes.trim().split(/\s+/).length} từ • {minutes.length} ký tự
                   </span>
                 )}
@@ -228,17 +228,17 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
                 }
                 rows={14}
                 disabled={isGenerating}
-                className="w-full p-4 rounded-2xl border border-outline-variant bg-slate-50/50 text-slate-900 font-mono text-xs leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y"
+                className="w-full p-4 rounded-2xl border border-outline-soft bg-surface-muted/50 text-ink font-mono text-xs leading-relaxed focus:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all resize-y"
               />
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="px-6 py-4 bg-surface-muted border-t border-outline-soft flex flex-wrap items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-primary hover:opacity-95 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs disabled:opacity-50"
+                  className="px-4 py-2 bg-gradient-to-r from-brand to-brand-mid hover:opacity-95 active:scale-95 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs disabled:opacity-50"
                 >
                   {isGenerating ? (
                     <>
@@ -258,7 +258,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
                 <button
                   onClick={handleCopy}
                   disabled={!minutes.trim() || isGenerating}
-                  className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-40"
+                  className="px-3.5 py-2 bg-surface-raised border border-outline-soft hover:bg-surface-muted text-ink-muted rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-40"
                 >
                   {isCopied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
                   <span>{isCopied ? 'Đã sao chép' : 'Sao chép'}</span>
@@ -267,7 +267,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
                 <button
                   onClick={handlePrint}
                   disabled={!minutes.trim() || isGenerating}
-                  className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-40"
+                  className="px-3.5 py-2 bg-surface-raised border border-outline-soft hover:bg-surface-muted text-ink-muted rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-40"
                 >
                   <Printer size={14} />
                   <span>In biên bản</span>
@@ -275,7 +275,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
 
                 <button
                   onClick={handleClose}
-                  className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                  className="px-3.5 py-2 bg-surface-raised border border-outline-soft hover:bg-surface-muted text-ink-muted rounded-xl text-xs font-bold transition-all"
                 >
                   Đóng
                 </button>

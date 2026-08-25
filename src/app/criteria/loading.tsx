@@ -11,7 +11,7 @@ export default function CriteriaLoading() {
         <Skeleton className="h-10 w-32 rounded-xl" />
       </div>
 
-      <div className="flex space-x-2 border-b border-slate-200 pb-px mb-8">
+      <div className="flex space-x-2 border-b border-outline-soft pb-px mb-8">
         <Skeleton className="h-10 w-32 rounded-t-lg" />
         <Skeleton className="h-10 w-32 rounded-t-lg" />
         <Skeleton className="h-10 w-32 rounded-t-lg" />

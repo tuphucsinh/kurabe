@@ -8,7 +8,7 @@ const Radar = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm h-72 flex items-center justify-center text-sm text-slate-400 animate-pulse">
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft shadow-sm h-72 flex items-center justify-center text-sm text-ink-muted animate-pulse">
         Đang tải biểu đồ...
       </div>
     ),

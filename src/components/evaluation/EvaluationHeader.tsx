@@ -32,57 +32,57 @@ export default function EvaluationHeader({
   const gradeBgClass = gradeStyles.split(' ').slice(1).join(' ');
 
   return (
-    <div className="bg-white rounded-3xl border border-outline-variant shadow-sm overflow-hidden">
+    <div className="bg-surface-raised rounded-2xl border border-outline-soft shadow-sm max-md:shadow-2xs overflow-hidden">
       <div className="flex flex-col md:flex-row">
         {/* Left: Employee Info */}
-        <div className="flex-1 p-4 sm:p-6 md:p-8 space-y-3 md:space-y-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-on-surface tracking-tight">{employee.name}</h1>
-            <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+        <div className="flex-1 p-6 md:p-8 space-y-4 max-md:p-3.5 max-md:space-y-2 xl:p-5 xl:space-y-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl md:text-3xl max-md:text-lg font-bold text-ink tracking-tight">{employee.name}</h1>
+            <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider ${isLeader ? 'bg-amber-100 text-amber-800' : 'bg-brand-soft text-brand'}`}>
               {employee.role}
             </span>
           </div>
           <div className="max-md:hidden flex flex-wrap items-center gap-8 md:gap-16 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-outline">Mã NV:</span>
-              <span className="font-bold text-on-surface">{employee.employeeCode}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-ink-muted">Mã NV:</span>
+              <span className="font-semibold text-ink">{employee.employeeCode}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-outline">Bộ phận:</span>
-              <span className="font-bold text-on-surface">QAQC Line 1</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-ink-muted">Bộ phận:</span>
+              <span className="font-semibold text-ink">QAQC Line 1</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-outline">Ngày vào làm:</span>
-              <span className="font-bold text-on-surface">{employee.joinDate || 'N/A'}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-ink-muted">Ngày vào làm:</span>
+              <span className="font-semibold text-ink">{employee.joinDate || 'N/A'}</span>
             </div>
           </div>
         </div>
 
         {/* Right: Score Panel */}
-        <div className={`flex items-center justify-center px-3 py-4 sm:px-6 sm:py-6 md:py-4 border-t md:border-t-0 md:border-l border-outline-variant/50 ${gradeBgClass}`}>
+        <div className={`flex items-center justify-center px-6 py-6 md:py-4 max-md:px-4 max-md:py-3 xl:py-2 border-t md:border-t-0 md:border-l border-outline-soft/60 ${gradeBgClass}`}>
           <table className="border-collapse text-center">
             <thead>
               <tr>
-                <th className="px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40 w-[30px]"></th>
-                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Xếp loại</th>
-                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Tổng điểm</th>
-                <th className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-black/40">Tiêu chí</th>
+                <th className="px-2 pb-1 xl:pb-0 max-md:px-1.5 text-[11px] max-md:text-[10px] font-bold uppercase tracking-wider text-ink-muted/80 w-[32px]"></th>
+                <th className="px-3 pb-1 xl:pb-0 max-md:px-2 text-[11px] max-md:text-[10px] font-bold uppercase tracking-wider text-ink-muted/80">Xếp loại</th>
+                <th className="px-3 pb-1 xl:pb-0 max-md:px-2 text-[11px] max-md:text-[10px] font-bold uppercase tracking-wider text-ink-muted/80">Tổng điểm</th>
+                <th className="px-3 pb-1 xl:pb-0 max-md:px-2 text-[11px] max-md:text-[10px] font-bold uppercase tracking-wider text-ink-muted/80">Tiêu chí</th>
               </tr>
             </thead>
             <tbody>
               {/* Current Round */}
               <tr>
-                <td className="px-2 py-1 text-[11px] font-bold text-black/45 uppercase">L{currentRound}</td>
-                <td className="px-3 py-1">
-                  <span className={`${gradeColorClass} text-2xl font-black`}>{grade}</span>
+                <td className="px-2 py-1 xl:py-0.5 max-md:px-1.5 max-md:py-0.5 text-xs font-bold text-ink-muted uppercase">L{currentRound}</td>
+                <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                  <span className={`${gradeColorClass} text-2xl max-md:text-xl font-black`}>{grade}</span>
                 </td>
-                <td className="px-3 py-1">
-                  <span className={`${gradeColorClass} text-2xl font-black`}>{totalScore}</span>
+                <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                  <span className={`${gradeColorClass} text-2xl max-md:text-xl font-black`}>{totalScore}</span>
                 </td>
-                <td className="px-3 py-1">
-                  <span className={`${gradeColorClass} text-2xl font-black`}>
+                <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                  <span className={`${gradeColorClass} text-2xl max-md:text-xl font-black`}>
                     {scoredCount}
-                    <span className="text-sm font-medium text-black/30">/{totalCriteria}</span>
+                    <span className="text-sm max-md:text-xs font-semibold text-ink-muted/70">/{totalCriteria}</span>
                   </span>
                 </td>
               </tr>
@@ -95,18 +95,18 @@ export default function EvaluationHeader({
                 const rGradeColorClass = gradeClasses.split(' ')[0];
                 
                 return (
-                  <tr key={r.round} className="opacity-50">
-                    <td className="px-2 py-0.5 text-[11px] font-bold text-[#999] uppercase">L{r.round}</td>
-                    <td className="px-3 py-0.5">
-                      <span className={`${rGradeColorClass} text-sm font-black`}>{rGrade}</span>
+                  <tr key={r.round} className="opacity-65">
+                    <td className="px-2 py-1 xl:py-0.5 max-md:px-1.5 max-md:py-0.5 text-[11px] font-bold text-ink-muted uppercase">L{r.round}</td>
+                    <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                      <span className={`${rGradeColorClass} text-sm max-md:text-xs font-bold`}>{rGrade}</span>
                     </td>
-                    <td className="px-3 py-0.5">
-                      <span className={`${rGradeColorClass} text-sm font-black`}>{rScore}</span>
+                    <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                      <span className={`${rGradeColorClass} text-sm max-md:text-xs font-bold`}>{rScore}</span>
                     </td>
-                    <td className="px-3 py-0.5">
-                      <span className={`${rGradeColorClass} text-sm font-black`}>
+                    <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
+                      <span className={`${rGradeColorClass} text-sm max-md:text-xs font-bold`}>
                         {rScoredCount}
-                        <span className="text-[11px] font-normal text-black/30">/{totalCriteria}</span>
+                        <span className="text-xs max-md:text-[10px] font-medium text-ink-muted/60">/{totalCriteria}</span>
                       </span>
                     </td>
                   </tr>

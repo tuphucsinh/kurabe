@@ -61,24 +61,24 @@ export function SkillGapRadar({ evaluations, criteriaGroups }: SkillGapRadarProp
 
   if (data.length === 0 || data.every(d => d.Self === 0 && d.Manager === 0)) {
     return (
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center h-full min-h-[300px]">
-        <h3 className="text-lg font-semibold text-slate-800 mb-2 self-start w-full">Skill Gap Analysis</h3>
-        <p className="text-slate-400 mt-10">Chưa đủ dữ liệu đánh giá 2 chiều.</p>
+      <div className="bg-surface-raised p-6 rounded-2xl shadow-sm border border-outline-soft flex flex-col items-center justify-center h-full min-h-[300px]">
+        <h3 className="text-lg font-semibold text-ink mb-2 self-start w-full">Skill Gap Analysis</h3>
+        <p className="text-ink-muted mt-10">Chưa đủ dữ liệu đánh giá 2 chiều.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-full">
-      <h3 className="text-lg font-semibold text-slate-800 mb-2">Skill Gap Analysis</h3>
-      <p className="text-sm text-slate-500 mb-6">Khoảng cách kỹ năng: Tự đánh giá vs Quản lý (%)</p>
+    <div className="bg-surface-raised p-6 rounded-2xl shadow-sm border border-outline-soft flex flex-col h-full">
+      <h3 className="text-lg font-semibold text-ink mb-2">Skill Gap Analysis</h3>
+      <p className="text-sm text-ink-muted mb-6">Khoảng cách kỹ năng: Tự đánh giá vs Quản lý (%)</p>
       <div className="flex-1 w-full min-h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data}>
-            <PolarGrid stroke="#f1f5f9" />
-            <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
-            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-            <Radar name="Tự đánh giá" dataKey="Self" stroke="#cbd5e1" fill="#e2e8f0" fillOpacity={0.5} />
+            <PolarGrid stroke="#D9E1E6" />
+            <PolarAngleAxis dataKey="subject" tick={{ fill: '#5F6B73', fontSize: 11, fontWeight: 500 }} />
+            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#AEB8BF', fontSize: 10 }} />
+            <Radar name="Tự đánh giá" dataKey="Self" stroke="#AEB8BF" fill="#EEF3F6" fillOpacity={0.5} />
             <Radar name="Quản lý" dataKey="Manager" stroke="#6366f1" fill="#818cf8" fillOpacity={0.6} />
             <Tooltip 
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}

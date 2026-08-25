@@ -43,10 +43,10 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-lg font-bold text-slate-800">Tạo kỳ đánh giá mới</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+      <div className="bg-surface-raised rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-outline-soft/60 bg-surface-muted/50">
+          <h3 className="text-lg font-bold text-ink">Tạo kỳ đánh giá mới</h3>
+          <button onClick={onClose} className="p-2 hover:bg-surface-muted rounded-full transition-colors text-ink-muted hover:text-ink">
             <X size={20} />
           </button>
         </div>
@@ -60,15 +60,15 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 ml-1">Năm đánh giá</label>
+            <label className="text-sm font-semibold text-ink ml-1">Năm đánh giá</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" size={18} />
               <input
                 type="number"
                 required
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value))}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-soft focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all text-ink bg-surface-raised"
               />
             </div>
           </div>
@@ -77,7 +77,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-brand hover:bg-brand-mid disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -86,7 +86,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
               )}
             </button>
           </div>
-          <p className="text-[11px] text-slate-400 text-center italic">
+          <p className="text-[11px] text-ink-muted text-center italic">
             * Lưu ý: Hệ thống sẽ tự động khởi tạo bảng đánh giá cho toàn bộ nhân viên khi tạo kỳ mới.
           </p>
         </form>

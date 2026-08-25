@@ -20,10 +20,24 @@ export default function GroupNavTabs({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const activeTab = containerRef.current.querySelector<HTMLElement>('[data-active="true"]');
-    if (activeTab) {
-      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    const container = containerRef.current;
+    if (!container) return;
+    const activeTab = container.querySelector<HTMLElement>('[data-active="true"]');
+    if (!activeTab) return;
+
+    const tabLeft = activeTab.offsetLeft;
+    const tabRight = tabLeft + activeTab.offsetWidth;
+    const visibleLeft = container.scrollLeft;
+    const visibleRight = visibleLeft + container.clientWidth;
+    const horizontalPadding = 8;
+
+    if (tabLeft < visibleLeft) {
+      container.scrollTo({ left: Math.max(0, tabLeft - horizontalPadding), behavior: 'smooth' });
+    } else if (tabRight > visibleRight) {
+      container.scrollTo({
+        left: tabRight - container.clientWidth + horizontalPadding,
+        behavior: 'smooth'
+      });
     }
   }, [activeGroupId]);
 
@@ -32,7 +46,7 @@ export default function GroupNavTabs({
       ref={containerRef}
       role="tablist"
       aria-label="Nhóm tiêu chí"
-      className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1 touch-pan-x"
+      className="w-full min-w-0 max-w-full flex items-center gap-2 overflow-x-auto pb-2 pt-1 max-md:pb-1.5 max-md:pt-0.5 scrollbar-hide px-1 max-md:px-0.5 touch-pan-x overscroll-x-contain"
     >
       {groups.map((group) => {
         const isActive = activeGroupId === group.id;
@@ -59,27 +73,27 @@ export default function GroupNavTabs({
             data-active={isActive}
             onClick={() => onSelect(group.id)}
             className={`
-              relative flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-all duration-300 shrink-0 max-md:min-h-[44px]
+              relative flex items-center gap-3 max-md:gap-2 px-4 py-3 max-md:px-3 max-md:py-2 rounded-2xl max-md:rounded-xl border transition-all duration-200 shrink-0 max-md:min-h-[44px] select-none
               ${isActive
-                ? 'border-transparent text-white z-10 shadow-lg shadow-primary/30'
-                : 'bg-white border-outline-variant/40 hover:border-primary/40 hover:bg-primary/5 shadow-sm hover:shadow-md'
+                ? 'border-transparent text-white z-10 shadow-lg max-md:shadow-sm'
+                : 'bg-surface-raised border-outline-soft hover:border-brand/40 hover:bg-surface-muted/50 text-ink shadow-sm max-md:shadow-2xs'
               }
             `}
           >
             {isActive && (
               <m.div
                 layoutId="activeTab"
-                className="absolute inset-0 bg-gradient-to-r from-[#0E4B66] to-[#1A6D91] rounded-2xl"
-                transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                className="absolute inset-0 bg-brand rounded-2xl max-md:rounded-xl"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
               />
             )}
 
             {/* Label */}
             <div className="relative z-20 flex flex-col items-start">
-              <span className={`text-[11px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/60' : 'text-outline'}`}>
+              <span className={`text-[11px] max-md:text-[10px] font-bold uppercase tracking-[0.15em] leading-none ${isActive ? 'text-white/70' : 'text-ink-muted'}`}>
                 Nhóm {group.code}
               </span>
-              <span className={`text-xs sm:text-sm font-bold whitespace-nowrap leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
+              <span className={`text-sm max-md:text-xs font-bold whitespace-nowrap leading-tight mt-0.5 ${isActive ? 'text-white' : 'text-ink'}`}>
                 {shortName}
               </span>
             </div>
@@ -90,16 +104,16 @@ export default function GroupNavTabs({
                 <m.span
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`text-[11px] font-black px-1.5 sm:px-2 py-0.5 rounded-full ${
-                    isActive ? 'bg-white/25 text-white' :
-                    groupScore >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  className={`text-xs max-md:text-[11px] font-bold px-2 py-0.5 max-md:px-1.5 rounded-full leading-none ${
+                    isActive ? 'bg-white/20 text-white' :
+                    groupScore >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-rose-50 text-rose-700 border border-rose-200/60'
                   }`}
                 >
                   {groupScore > 0 ? `+${groupScore}` : groupScore}
                 </m.span>
               ) : (
-                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white/70' : 'bg-surface text-outline'
+                <span className={`text-xs max-md:text-[11px] font-medium px-2 py-0.5 max-md:px-1.5 rounded-full leading-none ${
+                  isActive ? 'bg-white/20 text-white/75' : 'bg-surface-muted text-ink-muted border border-outline-soft/50'
                 }`}>
                   {group.criteria.length}
                 </span>

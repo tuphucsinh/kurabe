@@ -395,6 +395,142 @@ export async function saveEvaluationRound(
 }
 
 /**
+ * Khởi tạo bản nháp (Draft) cho Round khi evaluator mở lần đầu (first-open).
+ * Chỉ cập nhật khi round đang ở status 'NotStarted' và đúng evaluator_id.
+ * Nếu đã được khởi tạo hoặc đã bị khóa, trả về kết quả skipped lành tính mà không ghi đè.
+ */
+export async function initializeEvaluationRoundDraft(
+  evaluationId: string,
+  round: RoundNumber,
+  scores: Record<string, number>,
+  notes: Record<string, string>,
+  selectedLevelIndexes: SelectedLevelIndexes,
+  comment: string
+): Promise<{
+  success: boolean;
+  initialized?: boolean;
+  skipped?: 'already_initialized' | 'locked';
+  error?: string;
+}> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return { success: false, error: auth.error };
+  const actorId = auth.user.id;
+
+  try {
+    const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
+      .from('evaluations')
+      .select('employee_id, employee_role, team_id, status')
+      .eq('id', evaluationId)
+      .single();
+
+    if (evalInfoError || !evalInfo) {
+      return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
+    }
+
+    const evaluation: EvaluationSnapshot = {
+      employeeId: evalInfo.employee_id,
+      employeeRole: parseRole(evalInfo.employee_role),
+      teamId: evalInfo.team_id,
+    };
+
+    const criteriaResult = await loadAuthoritativeCriteriaForRole(evaluation.employeeRole);
+    if (!criteriaResult.success) {
+      return { success: false, error: criteriaResult.error };
+    }
+
+    const payloadInput: EvaluationRoundPayloadInput = {
+      scores,
+      notes,
+      selectedLevelIndexes,
+      comment,
+      isSubmit: false,
+    };
+
+    const validationResult = validateEvaluationRoundPayload(
+      payloadInput,
+      criteriaResult.rules,
+      { isSubmitOverride: false }
+    );
+
+    if (!validationResult.ok) {
+      return { success: false, error: validationResult.error };
+    }
+
+    const canonical = validationResult.data;
+
+    await ensureServerGradeBands();
+
+    const tempRound: Partial<EvaluationRound> = {
+      scores: canonical.scores,
+      evaluatorRole: evaluation.employeeRole,
+    };
+
+    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
+
+    const now = new Date().toISOString();
+    const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
+
+    const updateData: UpdateRound = {
+      scores: canonical.scores,
+      notes: composedNotes,
+      comment: canonical.comment,
+      total_score: totalScore,
+      grade: grade,
+      status: 'Draft',
+    };
+
+    const { data: updatedRounds, error: rError } = await supabaseAdmin
+      .from('evaluation_rounds')
+      .update(updateData)
+      .eq('evaluation_id', evaluationId)
+      .eq('round', round)
+      .eq('evaluator_id', actorId)
+      .eq('status', 'NotStarted')
+      .select('id');
+
+    if (rError) {
+      return {
+        success: false,
+        error: toClientError(rError, 'Lỗi khởi tạo bản nháp. Vui lòng thử lại.'),
+      };
+    }
+
+    if (!updatedRounds || updatedRounds.length === 0) {
+      const { data: checkRound } = await supabaseAdmin
+        .from('evaluation_rounds')
+        .select('status')
+        .eq('evaluation_id', evaluationId)
+        .eq('round', round)
+        .eq('evaluator_id', actorId)
+        .maybeSingle();
+
+      if (!checkRound) {
+        return { success: false, error: 'Không tìm thấy vòng đánh giá hoặc bạn không có quyền.' };
+      }
+
+      if (checkRound.status === 'Submitted') {
+        return { success: true, initialized: false, skipped: 'locked' };
+      }
+
+      return { success: true, initialized: false, skipped: 'already_initialized' };
+    }
+
+    if (evalInfo.status === 'NotStarted') {
+      await supabaseAdmin
+        .from('evaluations')
+        .update({ status: 'Draft', updated_at: now })
+        .eq('id', evaluationId)
+        .eq('status', 'NotStarted');
+    }
+
+    revalidatePath(`/evaluations/${evaluationId}`);
+    return { success: true, initialized: true };
+  } catch (err: unknown) {
+    return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
+  }
+}
+
+/**
  * Trả lại kết quả đánh giá (Return Evaluation Round).
  * Case B: Manager round 1 Approved -> trả về Draft để chỉnh sửa lại.
  * Case A: Round > 1 -> reset round hiện tại về NotStarted và mở khóa round trước về Draft.

@@ -12,11 +12,11 @@ export default function PageHeader({ title, description, children }: PageHeaderP
   return (
     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       <div>
-        <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-on-surface leading-[1.05] tracking-tight">
+        <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-ink leading-[1.05] tracking-tight">
           {title}
         </h1>
         {description && (
-          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-outline font-medium mt-2 leading-snug">
+          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-ink-muted font-medium mt-2 leading-snug">
             {description}
           </p>
         )}

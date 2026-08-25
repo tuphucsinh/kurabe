@@ -73,7 +73,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
   const currentGuide = guideContent[selectedRole] || guideContent.Employee;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-[#1e293b] print:bg-white print:text-black">
+    <div className="min-h-screen bg-page text-ink print:bg-white print:text-black">
       <style>{`
         @page {
           size: A4 portrait;
@@ -120,7 +120,7 @@ export default async function PrintGuidePage({ searchParams }: PageProps) {
 
       {/* Container bản in A4 */}
       <main className="mx-auto max-w-[210mm] py-6 px-4 sm:px-6 print:max-w-[190mm] print:p-0">
-        <div className="print-a4-page rounded-xl border border-slate-200 bg-white p-8 shadow-sm text-[9.5pt] leading-[1.5] text-[#1e293b]">
+        <div className="print-a4-page rounded-xl border border-outline bg-surface-raised p-8 shadow-sm text-[9.5pt] leading-[1.5] text-[#1e293b]">
           {/* Doc Header */}
           <header className="border-b-[3px] border-[#07384d] pb-3 mb-4 flex justify-between items-end">
             <div>

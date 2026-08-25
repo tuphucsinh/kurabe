@@ -332,7 +332,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
       <button
         onClick={handleOpen}
         disabled={isEvalsLoading || isUsersLoading}
-        className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-primary text-white rounded-2xl font-bold shadow-sm hover:opacity-95 active:scale-95 transition-all flex items-center gap-2 text-xs sm:text-sm shrink-0 disabled:opacity-50 w-full sm:w-auto justify-center"
+        className="px-4 py-2 bg-gradient-to-r from-brand to-brand-mid text-white rounded-2xl font-bold shadow-sm hover:opacity-95 active:scale-95 transition-all flex items-center gap-2 text-xs sm:text-sm shrink-0 disabled:opacity-50 w-full sm:w-auto justify-center"
       >
         <Sparkles size={16} className="text-amber-300" />
         <span>Soạn thông báo kết quả (AI)</span>
@@ -340,9 +340,9 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
 
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-outline-variant">
+          <div className="bg-surface-raised w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-outline-soft">
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-gradient-to-r from-[#003449] to-[#0E4B66] text-white flex items-center justify-between shrink-0">
+            <div className="px-6 py-5 bg-gradient-to-r from-brand-strong to-brand text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
                   <Sparkles className="text-amber-300" size={20} />
@@ -364,10 +364,10 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
             </div>
 
             {/* Sub-header / Status KPI */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-outline-variant/60 flex flex-wrap items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-600 flex-wrap">
-                <span className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
-                  Tổng phiếu Approved: <b className="text-slate-900 font-bold">{approvedEvals.length}</b>
+            <div className="bg-surface-muted px-6 py-4 border-b border-outline-soft/60 flex flex-wrap items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-4 text-xs font-medium text-ink-muted flex-wrap">
+                <span className="bg-surface-raised px-3 py-1.5 rounded-xl border border-outline-soft shadow-2xs">
+                  Tổng phiếu Approved: <b className="text-ink font-bold">{approvedEvals.length}</b>
                 </span>
                 <span className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs">
                   Đã có thông báo: <b className="font-bold">{approvedWithExistingMessage.length}</b>
@@ -381,7 +381,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                 <button
                   onClick={handleGenerateBatch}
                   disabled={isGenerating || isSavingAll || approvedEvals.length === 0}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                  className="px-4 py-2 bg-brand hover:bg-brand-mid text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
                   {isGenerating ? (
                     <>
@@ -426,10 +426,10 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
 
             {/* Progress bar if generating or saving */}
             {(isGenerating || isSavingAll) && (
-              <div className="w-full bg-slate-100 h-1.5 overflow-hidden shrink-0">
+              <div className="w-full bg-surface-muted h-1.5 overflow-hidden shrink-0">
                 <div
                   className={`h-full transition-all duration-300 ${
-                    isGenerating ? 'bg-indigo-600' : 'bg-emerald-600'
+                    isGenerating ? 'bg-brand-mid' : 'bg-emerald-600'
                   }`}
                   style={{
                     width: isGenerating
@@ -441,18 +441,18 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
             )}
 
             {/* Messages List Area */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50">
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface">
               {approvedEvals.length === 0 ? (
-                <div className="py-16 text-center text-slate-500 space-y-2">
-                  <MessageSquareQuote size={36} className="mx-auto text-slate-300" />
-                  <p className="font-semibold text-slate-700">Kỳ này chưa có phiếu đánh giá nào ở trạng thái Approved.</p>
-                  <p className="text-xs text-slate-400">Vui lòng hoàn thành phê duyệt đánh giá trước khi soạn thông báo kết quả.</p>
+                <div className="py-16 text-center text-ink-muted space-y-2">
+                  <MessageSquareQuote size={36} className="mx-auto text-outline" />
+                  <p className="font-semibold text-ink">Kỳ này chưa có phiếu đánh giá nào ở trạng thái Approved.</p>
+                  <p className="text-xs text-ink-muted">Vui lòng hoàn thành phê duyệt đánh giá trước khi soạn thông báo kết quả.</p>
                 </div>
               ) : messagesList.length === 0 ? (
-                <div className="py-16 text-center text-slate-500 space-y-3">
-                  <Sparkles size={36} className="mx-auto text-indigo-400 animate-pulse" />
-                  <p className="font-semibold text-slate-700">Sẵn sàng soạn thông báo cho {approvedEvals.length} nhân sự.</p>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                <div className="py-16 text-center text-ink-muted space-y-3">
+                  <Sparkles size={36} className="mx-auto text-brand animate-pulse" />
+                  <p className="font-semibold text-ink">Sẵn sàng soạn thông báo cho {approvedEvals.length} nhân sự.</p>
+                  <p className="text-xs text-ink-muted max-w-md mx-auto">
                     Bấm nút &quot;Bắt đầu soạn hàng loạt&quot; phía trên để AI tự động phân tích điểm số, tiêu chuẩn và tổng hợp nhận xét cá nhân hóa.
                   </p>
                 </div>
@@ -462,25 +462,25 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                   return (
                     <div
                       key={item.evaluationId}
-                      className={`bg-white rounded-2xl border p-4 shadow-sm transition-all duration-200 ${
+                      className={`bg-surface-raised rounded-2xl border p-4 shadow-sm transition-all duration-200 ${
                         item.status === 'saved'
                           ? 'border-emerald-200 bg-emerald-50/10'
                           : item.status === 'error'
                           ? 'border-rose-200 bg-rose-50/20'
-                          : 'border-slate-200'
+                          : 'border-outline-soft'
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 pb-3 border-b border-slate-100">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 pb-3 border-b border-outline-soft/60">
                         <div className="flex items-center gap-3 flex-wrap">
                           <div className="w-8 h-8 rounded-lg bg-[#003449] text-white flex items-center justify-center font-bold text-xs">
                             {item.employeeName.charAt(0)}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-slate-900">{item.employeeName}</span>
-                              <span className="text-xs text-slate-400">({item.employeeCode})</span>
+                              <span className="font-bold text-sm text-ink">{item.employeeName}</span>
+                              <span className="text-xs text-ink-muted">({item.employeeCode})</span>
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-muted">
                               <span>{item.role}</span>
                               <span>•</span>
                               <span>{item.teamName}</span>
@@ -490,8 +490,8 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
 
                         <div className="flex items-center gap-2.5">
                           {/* Grade badge */}
-                          <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl">
-                            <span className="text-xs font-bold text-slate-500">Hạng</span>
+                          <div className="flex items-center gap-1.5 bg-surface-muted px-2.5 py-1 rounded-xl">
+                            <span className="text-xs font-bold text-ink-muted">Hạng</span>
                             <span
                               className={`w-6 h-6 rounded-md flex items-center justify-center font-black text-xs ${
                                 item.grade === 'S'
@@ -505,7 +505,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                             >
                               {item.grade}
                             </span>
-                            <span className="text-xs font-bold text-slate-700">({item.score}đ)</span>
+                            <span className="text-xs font-bold text-ink">({item.score}đ)</span>
                           </div>
 
                           {/* Status Tag */}
@@ -515,7 +515,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                             </span>
                           )}
                           {item.status === 'draft' && item.message && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-soft text-brand text-xs font-bold">
                               <Sparkles size={12} /> Bản nháp AI
                             </span>
                           )}
@@ -536,7 +536,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                             setMessagesList((prev) =>
                               prev.map((m) =>
                                 m.evaluationId === item.evaluationId
-                                  ? { ...m, message: val, status: 'draft' }
+                                   ? { ...m, message: val, status: 'draft' }
                                   : m
                               )
                             );
@@ -544,11 +544,11 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                           placeholder="Chưa có thông báo kết quả. Bấm 'Thử lại' hoặc soạn hàng loạt..."
                           rows={3}
                           disabled={isGenerating || isSavingAll || isRetrying}
-                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all resize-y leading-relaxed"
+                          className="w-full p-3 bg-surface-muted/50 border border-outline-soft rounded-xl text-xs sm:text-sm text-ink focus:bg-surface-raised focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-all resize-y leading-relaxed"
                         />
 
                         <div className="flex items-center justify-between pt-1">
-                          <div className="text-[11px] text-slate-400">
+                          <div className="text-[11px] text-ink-muted">
                             {item.message ? `${item.message.length} ký tự` : 'Chưa có nội dung'}
                           </div>
 
@@ -557,7 +557,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                               <button
                                 type="button"
                                 onClick={() => handleCopy(item.evaluationId, item.message)}
-                                className="px-2.5 py-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                                className="px-2.5 py-1 text-ink-muted hover:text-ink hover:bg-surface-muted rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
                                 title="Sao chép thông báo"
                               >
                                 {copiedId === item.evaluationId ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
@@ -569,7 +569,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                               type="button"
                               onClick={() => handleRetrySingle(item)}
                               disabled={isRetrying || isGenerating || isSavingAll}
-                              className="px-2.5 py-1 text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 disabled:opacity-50"
+                              className="px-2.5 py-1 text-brand hover:bg-brand-soft rounded-lg text-xs font-bold transition-colors flex items-center gap-1 disabled:opacity-50"
                               title="Tạo lại bằng AI"
                             >
                               <RefreshCw size={12} className={isRetrying ? 'animate-spin' : ''} />
@@ -599,15 +599,15 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-white border-t border-outline-variant/60 flex items-center justify-between shrink-0">
-              <span className="text-xs text-slate-500">
+            <div className="px-6 py-4 bg-surface-raised border-t border-outline-soft/60 flex items-center justify-between shrink-0">
+              <span className="text-xs text-ink-muted">
                 Hiển thị {messagesList.length} phiếu đánh giá
               </span>
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={isGenerating || isSavingAll}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+                className="px-5 py-2.5 bg-surface-raised border border-outline-soft hover:bg-surface-muted text-ink-muted rounded-xl text-xs font-bold transition-colors"
               >
                 Đóng
               </button>

@@ -9,7 +9,7 @@ interface TeamsShellProps {
 export default function TeamsShell({ children }: TeamsShellProps) {
   return (
     <div
-      className="px-6 md:px-10 lg:px-12 py-8 lg:py-5 space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto max-md:bg-gradient-to-b max-md:from-primary/5 max-md:via-indigo-50/30 max-md:to-transparent md:bg-none"
+      className="px-6 md:px-10 lg:px-12 py-8 lg:py-5 space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto max-md:bg-gradient-to-b max-md:from-brand/5 max-md:via-brand-soft/30 max-md:to-transparent md:bg-none"
       data-load-layer="shell"
     >
       {children}

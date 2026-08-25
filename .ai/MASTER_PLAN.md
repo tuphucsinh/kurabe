@@ -1076,3 +1076,13 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - Local gates: `npm test 24/24`, typecheck, build, diff-check PASS; lint 0 error + 1 warning cũ. Flag transactional ON; production login HTTP 200.
 - Reviewer độc lập PASS/HIGH. Commit `a56fba7`; branch `audit-hardening-p0-p3-20260824` đã push GitHub và remote SHA khớp local.
 - Retention/purge/cron không thực hiện; passwordless test login và CSP Report-Only vẫn là residual risk đã ghi nhận.
+
+---
+
+## Phase 93: Evaluation UI consistency và draft reliability ✅ DONE (2026-08-26)
+
+- Hoàn tất đợt chuẩn hóa UI/loading shell/responsive presentation trên các trang chính; không đổi scoring, RBAC, auth hoặc workflow ngoài phạm vi đã duyệt.
+- Evaluation detail: first-open current editable round khởi tạo draft có điều kiện; hydrate chuẩn hóa `selectedLevelIndexes` từ score/criterion level để autosave và **Lưu bản nháp** không gửi payload thiếu metadata.
+- AI nhận xét dùng dữ liệu live của current round qua `buildResultPrompt`; bỏ flow page-only cũ và cấm kết câu xã giao kiểu “Chúc...”, yêu cầu câu kết hành động cụ thể.
+- Card Nhận xét desktop dùng `xl:h-[314px]`; mobile/tablet giữ breakpoint cũ và browser check không có horizontal overflow. Viền vàng card chỉ biểu thị điểm khác vòng gần nhất; badge mã tiêu chí có thể biểu thị khác bất kỳ vòng trước nào.
+- Verify: refresh không còn toast autosave; explicit draft save hiển thị “Đã lưu bản nháp.” trên route được cấp quyền. `npm test` 27/27, typecheck, lint, build, diff-check PASS. Route khác trong screenshot trả access denied trong session hiện tại, không dùng làm bằng chứng runtime.

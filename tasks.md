@@ -1211,3 +1211,13 @@
 **Definition of Done**: unit test PASS + tsc/lint/build PASS + E2E có evidence.
 
 **Status**: `[x]` — DONE 19-08: `tests/ai-context-match.test.mjs` (18 assertions PASS: normalizeVi/roleLabel/match — đầy đủ, "ly sa" 2 từ, tên cuối Hòa/Lan, "Sa"<3 bỏ, 2 tên→null, dup→null). tsc 0 · lint 0. **Build local SKIP** (server `next dev` port 3000 đang chạy — tránh ghi đè .next, KNOWN_BUGS; sẽ build khi deploy Vercel). **E2E real-DB verified**: "Phạm Thị Ly Sa"=Employee/nhóm "QC Gia dụng" — buildEmployeeContext resolve đúng context chức vụ+nhóm cho AI.
+
+---
+
+## Phase 93: Evaluation UI consistency và draft reliability ✅ DONE (2026-08-26)
+
+### [#P93T01] UI/responsive + evaluation draft/AI reliability
+- Chuẩn hóa presentation/loading shell/responsive UI; card Nhận xét desktop `xl:h-[314px]`, mobile/tablet giữ breakpoint; không horizontal overflow.
+- First-open current editable round init có điều kiện; hydrate bổ sung `selectedLevelIndexes` từ score/criterion level để autosave và Lưu bản nháp hợp lệ.
+- AI nhận xét dùng live current-round data qua `buildResultPrompt`, không dùng `lastRound`, không kết câu “Chúc...”.
+- **Status**: `[x]` — DONE: refresh và Lưu bản nháp PASS trên route có quyền; `npm test` 27/27, typecheck, lint, build, diff-check PASS; reviewer read-only PASS.

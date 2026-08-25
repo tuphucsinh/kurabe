@@ -35,11 +35,11 @@ export default function CriteriaHeatmap({ data = [] }: CriteriaHeatmapProps) {
   return (
     <div
       data-load-layer="heavy"
-      className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm"
+      className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm"
     >
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-on-surface">Phân tích nhóm tiêu chuẩn</h3>
-        <div className="flex gap-4 text-[11px] font-bold uppercase tracking-wider text-outline">
+        <h3 className="text-lg font-bold text-ink">Phân tích nhóm tiêu chuẩn</h3>
+        <div className="flex gap-4 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
             <span>≥80%</span>
@@ -56,7 +56,7 @@ export default function CriteriaHeatmap({ data = [] }: CriteriaHeatmapProps) {
       </div>
 
       {data.length === 0 ? (
-        <div className="py-8 text-center text-outline text-xs italic">
+        <div className="py-8 text-center text-ink-muted text-xs italic">
           Chưa có dữ liệu phân tích tiêu chuẩn
         </div>
       ) : (
@@ -88,9 +88,9 @@ export default function CriteriaHeatmap({ data = [] }: CriteriaHeatmapProps) {
         </div>
       )}
 
-      <div className="mt-6 p-4 bg-surface-container rounded-2xl border border-outline-variant">
-        <p className="text-xs text-outline leading-relaxed">
-          <span className="font-bold text-on-surface">Mẹo:</span> Nhóm tiêu chuẩn có tỉ lệ dưới 50% cần được chú trọng đào tạo hoặc điều chỉnh quy trình vận hành thực tế.
+      <div className="mt-6 p-4 bg-surface-muted rounded-2xl border border-outline-soft">
+        <p className="text-xs text-ink-muted leading-relaxed">
+          <span className="font-bold text-ink">Mẹo:</span> Nhóm tiêu chuẩn có tỉ lệ dưới 50% cần được chú trọng đào tạo hoặc điều chỉnh quy trình vận hành thực tế.
         </p>
       </div>
     </div>

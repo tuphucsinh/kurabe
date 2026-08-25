@@ -1,16 +1,32 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-primary: #0E4B66;
-  --color-primary-light: #C5E7FF;
+  --color-brand-strong: #003449;
+  --color-brand: #0E4B66;
+  --color-brand-mid: #1A6D91;
+  --color-brand-soft: #E7F2F7;
+  --color-page: #F7F9FB;
   --color-surface: #F7F9FB;
-  --color-on-surface: #191C1E;
-  --color-outline: #71787D;
-  --color-outline-variant: #C1C7CD;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-muted: #EEF3F6;
+  --color-ink: #191C1E;
+  --color-ink-muted: #5F6B73;
+  --color-outline: #AEB8BF;
+  --color-outline-soft: #D9E1E6;
+  --color-focus: #1A6D91;
   --color-error: #BA1A1A;
-  
+
+  /* Compatibility Aliases */
+  --color-primary: var(--color-brand);
+  --color-primary-light: var(--color-brand-soft);
+  --color-on-surface: var(--color-ink);
+  --color-on-surface-variant: var(--color-ink-muted);
+  --color-outline-variant: var(--color-outline-soft);
+  --color-surface-variant: var(--color-surface-muted);
+  --color-surface-container: var(--color-surface-muted);
+
   --font-sans: var(--font-inter);
-  
+
   --radius-md: 0.5rem;
 
   @keyframes pulse-slow {
@@ -22,8 +38,8 @@
 
 @layer base {
   :root {
-    --background: var(--color-surface);
-    --foreground: var(--color-on-surface);
+    --background: var(--color-page);
+    --foreground: var(--color-ink);
     scroll-behavior: smooth;
   }
 
@@ -44,11 +60,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--color-outline-soft);
     border-radius: 10px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: var(--color-outline);
   }
 }
 
@@ -56,9 +72,9 @@
   .glass {
     @apply bg-white/70 backdrop-blur-md border border-white/20;
   }
-  
+
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-sky-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-mid;
   }
 
   .shadow-premium {

@@ -18,17 +18,17 @@ export default function TeamComparison({ teams = [] }: TeamComparisonProps) {
   return (
     <div
       data-load-layer="heavy"
-      className="bg-white p-6 rounded-3xl border border-outline-variant shadow-sm h-full flex flex-col"
+      className="bg-surface-raised p-6 rounded-3xl border border-outline-soft shadow-sm h-full flex flex-col"
     >
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-on-surface">So sánh nhóm</h3>
-        <span className="text-xs font-medium text-outline bg-surface-container px-2 py-1 rounded-full uppercase tracking-wider">
+        <h3 className="text-lg font-bold text-ink">So sánh nhóm</h3>
+        <span className="text-xs font-medium text-ink-muted bg-surface-muted px-2 py-1 rounded-full uppercase tracking-wider">
           Average Score
         </span>
       </div>
 
       {sortedTeams.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center py-8 text-outline text-xs italic">
+        <div className="flex-1 flex items-center justify-center py-8 text-ink-muted text-xs italic">
           Chưa có dữ liệu so sánh nhóm
         </div>
       ) : (
@@ -37,21 +37,21 @@ export default function TeamComparison({ teams = [] }: TeamComparisonProps) {
             <div key={team.id} className="group">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-outline-variant w-4">
+                  <span className="text-xs font-bold text-outline-soft w-4">
                     {index + 1}.
                   </span>
-                  <span className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">
+                  <span className="text-sm font-semibold text-ink group-hover:text-brand transition-colors">
                     {team.name}
                   </span>
                 </div>
-                <span className="text-sm font-bold text-on-surface">
+                <span className="text-sm font-bold text-ink">
                   {team.avgScore.toFixed(1)}
                 </span>
               </div>
 
-              <div className="relative h-2.5 bg-surface-container rounded-full overflow-hidden">
+              <div className="relative h-2.5 bg-surface-muted rounded-full overflow-hidden">
                 <div
-                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-1000 ease-out group-hover:from-primary group-hover:to-primary"
+                  className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-brand/60 to-brand transition-all duration-1000 ease-out group-hover:from-brand group-hover:to-brand"
                   style={{ width: `${Math.min(team.progress, 100)}%` }}
                 />
               </div>
@@ -60,8 +60,8 @@ export default function TeamComparison({ teams = [] }: TeamComparisonProps) {
         </div>
       )}
 
-      <div className="mt-6 pt-4 border-t border-outline-variant border-dashed">
-        <p className="text-xs text-outline leading-relaxed italic">
+      <div className="mt-6 pt-4 border-t border-outline-soft border-dashed">
+        <p className="text-xs text-ink-muted leading-relaxed italic">
           * Điểm trung bình được tính dựa trên các tiêu chí QAQC trong kỳ đánh giá hiện tại.
         </p>
       </div>

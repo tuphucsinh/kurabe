@@ -9,7 +9,7 @@ const GradeDistributionComponent = dynamic(
   () => import('./GradeDistribution').then((mod) => mod.GradeDistribution),
   {
     ssr: false,
-    loading: () => <div className="animate-pulse h-48 bg-slate-100 rounded-2xl w-full" />,
+    loading: () => <div className="animate-pulse h-48 bg-surface-muted rounded-2xl w-full" />,
   }
 );
 

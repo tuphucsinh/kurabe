@@ -17,27 +17,27 @@ export default function HistoryList({ history, currentEvaluationId, periods, isL
   const otherPeriods = history.filter((h) => h.id !== currentEvaluationId);
 
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-8 border border-outline-variant shadow-sm space-y-4">
+    <div className="bg-surface-raised rounded-2xl p-4 sm:p-5 border border-outline-soft shadow-2xs space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <History className="text-primary" size={20} />
-          <h3 className="text-lg font-bold text-slate-900">Kết quả các kỳ trước</h3>
+        <div className="flex items-center gap-2">
+          <History className="text-brand shrink-0" size={18} />
+          <h3 className="text-base sm:text-lg font-bold text-ink">Kết quả các kỳ trước</h3>
         </div>
-        <span className="text-xs font-medium text-slate-400">
+        <span className="text-xs font-medium text-ink-muted bg-surface-muted px-2.5 py-0.5 rounded-md">
           {otherPeriods.length} kỳ đã lưu
         </span>
       </div>
 
       {isLoading ? (
-        <div className="py-6 text-center text-xs text-slate-400 animate-pulse">
+        <div className="py-4 text-center text-xs text-ink-muted animate-pulse">
           Đang tải lịch sử đánh giá...
         </div>
       ) : otherPeriods.length === 0 ? (
-        <p className="text-xs text-slate-500 italic py-2">
+        <p className="text-xs text-ink-muted italic py-1.5">
           Chưa có dữ liệu kết quả từ các kỳ đánh giá trước.
         </p>
       ) : (
-        <div className="space-y-3 pt-2">
+        <div className="space-y-2.5 pt-1">
           {otherPeriods.map((h) => {
             const period = periods.find((p) => p.id === h.periodId);
             const pName = period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
@@ -46,17 +46,17 @@ export default function HistoryList({ history, currentEvaluationId, periods, isL
             return (
               <div
                 key={h.id}
-                className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-primary/30 transition-all space-y-3"
+                className="p-3 sm:p-3.5 rounded-xl bg-surface-muted/60 border border-outline-soft hover:border-brand/30 transition-all space-y-2.5"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-sm text-primary shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-lg bg-surface-raised border border-outline-soft flex items-center justify-center font-bold text-sm text-brand shadow-2xs shrink-0">
                       {h.finalGrade || '-'}
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{pName}</p>
-                      <p className="text-xs text-slate-500">
-                        Điểm: <b className="text-slate-800 font-semibold">{h.finalScore ?? '-'}</b>
+                      <p className="text-sm font-bold text-ink">{pName}</p>
+                      <p className="text-xs text-ink-muted">
+                        Điểm: <b className="text-ink font-semibold">{h.finalScore ?? '-'}</b>
                         {h.updatedAt && ` • ${new Date(h.updatedAt).toLocaleDateString('vi-VN')}`}
                       </p>
                     </div>
@@ -66,7 +66,7 @@ export default function HistoryList({ history, currentEvaluationId, periods, isL
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : h.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:text-primary transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 max-md:min-h-[44px] rounded-lg bg-surface-raised border border-outline-soft text-xs font-semibold text-ink hover:text-brand hover:border-brand/30 transition-colors"
                     >
                       <span>{isExpanded ? 'Ẩn nhận xét' : 'Xem nhận xét'}</span>
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -75,9 +75,9 @@ export default function HistoryList({ history, currentEvaluationId, periods, isL
                 </div>
 
                 {isExpanded && h.resultMessage && (
-                  <div className="p-3.5 rounded-xl bg-white border border-sky-200 text-xs text-sky-950 leading-relaxed whitespace-pre-wrap animate-in fade-in duration-200">
-                    <p className="font-semibold text-sky-900 mb-1 flex items-center gap-1.5">
-                      <MessageSquareQuote size={13} className="text-sky-600" />
+                  <div className="p-3 rounded-xl bg-surface-raised border border-brand-mid/20 text-xs text-ink leading-relaxed whitespace-pre-wrap animate-in fade-in duration-150">
+                    <p className="font-semibold text-brand mb-1 flex items-center gap-1.5">
+                      <MessageSquareQuote size={13} className="text-brand-mid" />
                       Nhận xét kỳ này:
                     </p>
                     {h.resultMessage}

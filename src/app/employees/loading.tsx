@@ -35,7 +35,7 @@ export default function EmployeesLoading() {
       </div>
 
       {/* Table Section Skeleton */}
-      <div className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div className="bg-surface-raised rounded-2xl border border-outline-soft shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         <div className="p-6 flex-1">
           <TableSkeleton rows={8} columns={6} />
         </div>

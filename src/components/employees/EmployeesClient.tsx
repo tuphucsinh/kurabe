@@ -591,12 +591,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             <Link
               prefetch={false}
               href={`/evaluations/${item.id}`}
-              className="font-semibold text-slate-900 hover:text-primary hover:underline"
+              className="font-semibold text-ink hover:text-brand hover:underline"
               title="Đánh giá"
             >
               {item.name}
             </Link>
-            <p className="text-[11px] text-slate-400">Mã: {item.employeeCode || item.id.slice(0, 8)}</p>
+            <p className="text-[11px] text-ink-muted">Mã: {item.employeeCode || item.id.slice(0, 8)}</p>
           </div>
         </div>
       ),
@@ -606,7 +606,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       header: 'Nhóm',
       hiddenOnMobile: true,
       render: (item) => (
-        <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
+        <span className="px-2 py-1 rounded-md bg-surface-muted text-ink-muted text-xs font-medium">
           {item.teamName}
         </span>
       ),
@@ -626,7 +626,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               ? 'text-blue-600'
               : item.role === 'Worker'
               ? 'text-emerald-600'
-              : 'text-slate-500'
+              : 'text-ink-muted'
           }`}
         >
           {roleLabel(item.role)}
@@ -639,15 +639,15 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       hiddenOnMobile: true,
       render: (item) => {
         if (!canHaveSubLeader(item.role)) {
-          return <span className="text-xs text-slate-400 font-medium">—</span>;
+          return <span className="text-xs text-ink-muted font-medium">—</span>;
         }
         const subleaderName = item.subleaderId
           ? subleaderMap[item.subleaderId] || userMap.get(item.subleaderId)?.name
           : null;
         return subleaderName ? (
-          <span className="text-xs font-medium text-slate-700">{subleaderName}</span>
+          <span className="text-xs font-medium text-ink">{subleaderName}</span>
         ) : item.subleaderId ? (
-          <span className="text-xs font-medium text-slate-700">Đã gán</span>
+          <span className="text-xs font-medium text-ink">Đã gán</span>
         ) : (
           <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-medium border border-rose-200">
             Chưa gán
@@ -660,7 +660,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       header: 'Chức danh',
       hiddenOnMobile: true,
       render: (item) => (
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-ink-muted">
           {isManagementRole(item.role) ? item.description || '—' : '—'}
         </span>
       ),
@@ -691,7 +691,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           <Link
             prefetch={false}
             href={`/evaluations/${item.id}`}
-            className="p-2 text-outline hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+            className="p-2 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-all"
             title="Đánh giá"
           >
             <FileText size={18} />
@@ -702,7 +702,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               <button
                 type="button"
                 onClick={() => handleEdit(item)}
-                className="p-2 text-outline hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                className="p-2 text-ink-muted hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                 title="Sửa"
               >
                 <Edit2 size={18} />
@@ -712,7 +712,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             <button
               type="button"
               onClick={() => handleResetPassword(item.id, item.name)}
-              className="p-2 text-outline hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+              className="p-2 text-ink-muted hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
               title="Đặt lại mật khẩu (về trống)"
             >
               <KeyRound size={18} />
@@ -722,7 +722,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             <button
               type="button"
               onClick={() => handleDelete(item.id, item.name)}
-              className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-ink-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
               title="Xóa"
             >
               <Trash2 size={18} />
@@ -738,10 +738,10 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-on-surface leading-[1.05] tracking-tight">
+          <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[27px] font-black text-ink leading-[1.05] tracking-tight">
             Quản lý Nhân sự QAQC
           </h1>
-          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-outline font-medium mt-2 leading-snug">
+          <p className="text-sm sm:text-base md:text-lg lg:text-[14px] text-ink-muted font-medium mt-2 leading-snug">
             Danh sách chi tiết nhân viên và kết quả đánh giá năng lực
           </p>
         </div>
@@ -752,7 +752,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                 <button
                   type="button"
                   onClick={() => downloadSampleExcel(teams)}
-                  className="px-4 py-3 bg-white text-slate-600 border border-outline-variant rounded-xl font-bold hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center gap-2"
+                  className="px-4 py-3 bg-surface-raised text-ink-muted border border-outline-soft rounded-xl font-bold hover:bg-surface-muted hover:text-ink transition-all flex items-center justify-center gap-2"
                   title="Tải file mẫu"
                 >
                   <Download size={20} />
@@ -769,7 +769,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                   type="button"
                   onClick={handleImportClick}
                   disabled={isImporting}
-                  className="px-6 py-3 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="px-6 py-3 bg-surface-raised text-ink border border-outline-soft rounded-xl font-bold hover:bg-surface-muted transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isImporting ? <Loader2 size={20} className="animate-spin" /> : <Upload size={20} />}
                   Nhập từ Excel
@@ -779,7 +779,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             <button
               type="button"
               onClick={handleAdd}
-              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95"
+              className="px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand-mid transition-all shadow-lg shadow-brand/20 flex items-center justify-center gap-2 group active:scale-95"
             >
               <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
               Thêm nhân viên
@@ -791,11 +791,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       {/* Filters Section */}
       <div className="flex flex-col xl:flex-row gap-4">
         <div className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" size={20} />
           <input
             type="text"
             placeholder="Tìm tên hoặc mã NV"
-            className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all text-sm md:text-base"
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-outline-soft bg-surface-muted/50 focus:bg-surface-raised focus:border-brand focus:ring-4 focus:ring-brand/5 outline-none transition-all text-sm md:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -804,7 +804,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         <div className="flex flex-col sm:flex-row gap-4 lg:w-auto">
           <div className="relative w-full sm:w-[220px]">
             <select
-              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary outline-none transition-all text-sm appearance-none font-medium text-on-surface disabled:opacity-60"
+              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-soft bg-surface-muted/50 focus:bg-surface-raised focus:border-brand outline-none transition-all text-sm appearance-none font-medium text-ink disabled:opacity-60"
               value={teamFilter}
               onChange={(e) => setTeamFilter(e.target.value)}
               disabled={teamsLoading && teams.length === 0}
@@ -822,15 +822,15 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                 </option>
               ))}
             </select>
-            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
+            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" size={18} />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-ink-muted">
               <ChevronDown size={16} />
             </div>
           </div>
 
           <div className="relative w-full sm:w-[220px]">
             <select
-              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-variant bg-surface focus:bg-white focus:border-primary outline-none transition-all text-sm appearance-none font-medium text-on-surface"
+              className="w-full pl-11 pr-10 py-3 rounded-xl border border-outline-soft bg-surface-muted/50 focus:bg-surface-raised focus:border-brand outline-none transition-all text-sm appearance-none font-medium text-ink"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
@@ -841,8 +841,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               <option value="Employee">Nhân viên</option>
               <option value="Worker">Công nhân</option>
             </select>
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" size={18} />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-ink-muted">
               <ChevronDown size={16} />
             </div>
           </div>
@@ -857,19 +857,19 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       )}
 
       {/* Table Section */}
-      <div data-load-layer="light" className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+      <div data-load-layer="light" className="bg-surface-raised rounded-2xl border border-outline-soft shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         {isInitialLoading ? (
           <>
             {/* Desktop Loading Skeleton */}
-            <div className="max-md:hidden w-full overflow-hidden rounded-xl border-none bg-white">
+            <div className="max-md:hidden w-full overflow-hidden rounded-xl border-none bg-surface-raised">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
                   <thead className="sticky top-0 z-10">
-                    <tr className="border-b border-outline-variant bg-surface/50 backdrop-blur-md">
+                    <tr className="border-b border-outline-soft bg-surface-muted/60 backdrop-blur-md">
                       {columns.map((column) => (
                         <th
                           key={column.key as string}
-                          className={`px-4 py-3 text-[11px] font-bold text-outline uppercase tracking-wider ${
+                          className={`px-4 py-3 text-[11px] font-bold text-ink-muted uppercase tracking-wider ${
                             column.hiddenOnMobile ? 'hidden md:table-cell' : ''
                           }`}
                         >
@@ -878,9 +878,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-outline-variant/50">
+                  <tbody className="divide-y divide-outline-soft/50">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={i} className={`h-[48px] ${i % 2 === 1 ? 'bg-surface/30' : ''}`}>
+                      <tr key={i} className={`h-[48px] ${i % 2 === 1 ? 'bg-surface-muted/30' : ''}`}>
                         <td className="px-4 py-2">
                           <div className="space-y-1.5">
                             <Skeleton className="h-4 w-32 rounded" />
@@ -921,7 +921,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             </div>
 
             {/* Mobile Loading Skeleton */}
-            <div className="md:hidden divide-y divide-outline-variant/50">
+            <div className="md:hidden divide-y divide-outline-soft/50">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="p-4 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
@@ -931,7 +931,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                     </div>
                     <Skeleton className="h-5 w-20 rounded-md" />
                   </div>
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-1 border-t border-outline-soft/60">
                     <Skeleton className="h-4 w-16 rounded" />
                     <Skeleton className="h-6 w-24 rounded" />
                   </div>
@@ -959,8 +959,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             </div>
 
             {/* Load More & Batch Status Controls */}
-            <div className="border-t border-outline-variant px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface/50">
-              <span className="text-sm text-outline">
+            <div className="border-t border-outline-soft px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface-muted/50">
+              <span className="text-sm text-ink-muted">
                 Đã tải {employeesData.length} / {totalCount} nhân viên
               </span>
 
@@ -980,7 +980,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                   type="button"
                   onClick={handleLoadMore}
                   disabled={isLoadingMore}
-                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 active:scale-95"
+                  className="px-6 py-2.5 rounded-xl bg-brand text-white text-sm font-bold hover:bg-brand-mid disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand/40 active:scale-95"
                 >
                   {isLoadingMore ? (
                     <>
@@ -992,7 +992,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                   )}
                 </button>
               ) : (
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-ink-muted font-medium">
                   Đã hiển thị toàn bộ danh sách
                 </span>
               )}
@@ -1006,7 +1006,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
                 <button
                   type="button"
                   onClick={() => loadInitialBatch()}
-                  className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all inline-flex items-center gap-2"
+                  className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-mid transition-all inline-flex items-center gap-2"
                 >
                   <RefreshCw size={16} />
                   Thử lại
@@ -1037,12 +1037,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       </div>
 
       <div className="mt-6 flex items-center justify-between px-2">
-        <div className="text-sm text-outline font-medium">
+        <div className="text-sm text-ink-muted font-medium">
           {isInitialLoading ? (
             <Skeleton className="h-5 w-64 rounded inline-block" />
           ) : (
             <>
-              Tổng số: <b className="text-on-surface">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
+              Tổng số: <b className="text-ink">{totalCount}</b> nhân viên trong hệ thống ({users.length} đã tải)
             </>
           )}
         </div>

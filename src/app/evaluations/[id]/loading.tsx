@@ -8,7 +8,7 @@ export default function EvaluationLoading() {
         <Skeleton className="h-10 w-48 rounded-xl" />
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-surface-raised p-6 rounded-2xl border border-outline shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <Skeleton className="h-16 w-16 rounded-full shrink-0" />
           <div className="space-y-3 flex-1 w-full">
@@ -22,7 +22,7 @@ export default function EvaluationLoading() {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-surface-raised p-6 rounded-2xl border border-outline shadow-sm">
         <div className="space-y-6">
           <Skeleton className="h-8 w-48 mb-6" />
           {[1, 2, 3].map((i) => (
