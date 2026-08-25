@@ -63,10 +63,10 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-on-surface leading-[1.05] tracking-tight">
+          <h1 className="text-[18px] sm:text-[22px] md:text-[27px] lg:text-[36px] font-black text-on-surface leading-[1.05] tracking-tight">
             Cài đặt
           </h1>
-          <p className="text-base sm:text-lg md:text-2xl text-outline font-medium mt-2 leading-snug">
+          <p className="text-sm sm:text-base md:text-lg text-outline font-medium mt-2 leading-snug">
             Quản lý kỳ đánh giá, nhóm & quyền của hệ thống
           </p>
         </div>
