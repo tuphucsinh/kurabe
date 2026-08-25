@@ -19,7 +19,6 @@
 3. Hệ thống **không thay thế người đánh giá**. Hệ thống kiểm soát quy trình, tính điểm theo cấu hình, cảnh báo bất thường và để quản lý đưa ra quyết định cuối cùng.
 4. Người phụ trách **luôn nắm được tiến độ**: biết ai đã hoàn thành, ai còn thiếu, nhóm nào đang chậm và cần xử lý bước nào tiếp theo.
 5. AI giúp giảm thời gian học và hỗ trợ thao tác: người dùng chỉ cần làm quen giao diện trong vài phút; khi không biết, có thể hỏi chatbot bằng ngôn ngữ tự nhiên.
-6. Hiệu quả tài chính phải phản ánh số liệu thực tế của kỳ đánh giá đã hoàn tất. Nếu còn dùng mô hình minh họa, phải ghi rõ là `試算例`, không trình bày như kết quả đã đo.
 
 ---
 
@@ -47,8 +46,6 @@
   - Chênh lệch từ 30 điểm: cảnh báo mức nghiêm trọng.
 
 ### 2.2. Những số liệu phải cập nhật từ kỳ đánh giá đã hoàn tất
-
-Các số liệu dưới đây phải lấy từ dữ liệu thực tế của Kurabe. Nếu chưa có số đo, ghi rõ là **chưa có dữ liệu / mô hình minh họa**, không tự biến thành kết quả thực tế:
 
 - Số giờ hiện đang dùng cho một kỳ đánh giá Excel.
 - Số giờ thực tế sau khi dùng web app.
