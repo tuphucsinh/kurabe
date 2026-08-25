@@ -84,22 +84,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen w-full bg-[#F8FAFC]">
-      {/* Mobile Header */}
-      <header className="md:hidden sticky top-0 bg-white/70 backdrop-blur-xl text-on-surface px-4 h-14 flex items-center justify-between z-40 border-b border-outline-variant/50 print:hidden pt-[env(safe-area-inset-top,0px)]">
-        <button 
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 hover:bg-surface rounded-xl transition-all active:scale-90"
-        >
-          <Menu size={24} />
-        </button>
-        <span className="font-black tracking-tighter text-lg italic text-primary">KURABE</span>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-indigo-600 flex items-center justify-center font-bold text-sm text-white shadow-md shadow-primary/20">
-            {user?.name?.charAt(0) || 'U'}
-          </div>
-        </div>
-      </header>
-
       <div className="flex w-full min-h-screen">
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -114,8 +98,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile Floating Navigation */}
-      <nav className="md:hidden fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-6 right-6 h-14 bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl flex items-center justify-around z-40 px-2 print:hidden">
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-white/80 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around z-40 px-2 pb-[env(safe-area-inset-bottom,0px)] print:hidden">
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(true)}
+          aria-label="Mở menu"
+          className="relative flex flex-col items-center justify-center w-14 h-12 text-slate-400 hover:text-slate-600 transition-all duration-300"
+        >
+          <Menu size={24} />
+        </button>
         {isIndividualRole(user?.role) ? (
           <>
             <BottomNavItem href={`/evaluations/${user?.id}`} icon={<FileText size={24} />} ariaLabel="Phiếu đánh giá" active={pathname.startsWith('/evaluations')} />
