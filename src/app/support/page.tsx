@@ -73,7 +73,7 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto print:p-0 print:space-y-6">
+    <div className="px-6 md:px-10 lg:px-12 py-8 lg:py-5 space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto print:p-0 print:space-y-6">
       <div className="rounded-[24px] border border-slate-200 bg-white p-5 md:p-6 shadow-sm print:border-none print:shadow-none print:p-0">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-6">
           <div>

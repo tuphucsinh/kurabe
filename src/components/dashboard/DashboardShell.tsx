@@ -19,7 +19,7 @@ export default function DashboardShell({
   return (
     <div
       data-load-layer="shell"
-      className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
+      className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 lg:py-5 space-y-6 md:space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>

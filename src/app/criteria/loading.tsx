@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function CriteriaLoading() {
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1200px] mx-auto">
+    <div className="px-6 md:px-10 lg:px-12 py-8 lg:py-5 space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1200px] mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <Skeleton className="h-8 w-64 mb-2" />

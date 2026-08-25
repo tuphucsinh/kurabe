@@ -6,7 +6,7 @@ export default function EmployeesLoading() {
       role="status"
       aria-busy="true"
       aria-label="Đang tải danh sách nhân sự"
-      className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
+      className="px-6 md:px-10 lg:px-12 py-8 lg:py-5 space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
     >
       <span className="sr-only">Đang tải danh sách nhân sự...</span>
 

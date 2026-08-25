@@ -444,7 +444,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <p className="text-sm font-semibold text-blue-700">Đánh giá đã được gửi thành công!</p>
         </div>
       )}
-      <div className="px-3 sm:px-6 md:px-10 lg:px-12 py-4 sm:py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+      <div className="px-3 sm:px-6 md:px-10 lg:px-12 py-4 sm:py-6 md:py-8 lg:py-5 space-y-6 md:space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
         <div className="flex flex-col gap-4 md:gap-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
             <div className="flex flex-wrap items-center gap-2 text-sm text-outline font-medium">
