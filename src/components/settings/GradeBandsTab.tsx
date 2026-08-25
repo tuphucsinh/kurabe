@@ -114,7 +114,7 @@ export default function GradeBandsTab() {
   const renderGroup = (group: 'leader' | 'staff' | 'worker') => {
     const groupRows = rows.filter((r) => r.roleGroup === group);
     return (
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-1">
           {GROUP_LABEL[group]}
         </h3>
@@ -123,16 +123,16 @@ export default function GradeBandsTab() {
           {groupRows.map((row) => (
             <div
               key={`${row.roleGroup}-${row.grade}`}
-              className="flex items-center gap-3 p-3 rounded-xl bg-slate-50"
+              className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-slate-50"
             >
               <span
-                className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border text-sm font-black ${getGradeColor(row.grade)}`}
+                className={`inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border text-xs sm:text-sm font-black shrink-0 ${getGradeColor(row.grade)}`}
               >
                 {row.grade}
               </span>
 
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs font-medium text-slate-500 w-8">Từ</label>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                <label className="text-xs font-medium text-slate-500 shrink-0">Từ</label>
                 <input
                   type="number"
                   value={row.minScore ?? ''}
@@ -141,10 +141,10 @@ export default function GradeBandsTab() {
                   }
                   disabled={row.grade === 'D'}
                   placeholder="—"
-                  className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs sm:text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
                 />
-                <span className="text-slate-300">→</span>
-                <label className="text-xs font-medium text-slate-500 w-8">Đến</label>
+                <span className="text-slate-300 shrink-0">→</span>
+                <label className="text-xs font-medium text-slate-500 shrink-0">Đến</label>
                 <input
                   type="number"
                   value={row.maxScore ?? ''}
@@ -153,7 +153,7 @@ export default function GradeBandsTab() {
                   }
                   disabled={row.grade === 'S'}
                   placeholder="—"
-                  className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-16 sm:w-20 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs sm:text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:bg-slate-100 disabled:text-slate-400"
                 />
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function GradeBandsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {renderGroup('leader')}
         {renderGroup('staff')}
         {renderGroup('worker')}
@@ -177,7 +177,8 @@ export default function GradeBandsTab() {
         </div>
       )}
 
-      <div className="flex justify-end">
+      {/* Mutation Save Button: Manager-only on desktop/tablet, hidden on mobile */}
+      <div className="max-md:hidden flex justify-end">
         <button
           type="button"
           onClick={handleSave}

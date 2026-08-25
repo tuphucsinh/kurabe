@@ -240,7 +240,7 @@ export default function TeamDetailPage() {
                   setEditingEmployee(null);
                   setIsAddModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#07384d] px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#052b3b] active:scale-95 cursor-pointer"
+                className="max-md:hidden inline-flex items-center gap-2 rounded-xl bg-[#07384d] px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-[#052b3b] active:scale-95 cursor-pointer"
               >
                 <UserPlus size={18} />
                 Thêm nhân viên
@@ -314,15 +314,17 @@ export default function TeamDetailPage() {
                         onEdit={() => handleEditEmployee(leader)}
                       />
                     </div>
-                    <TeamDetailMemberCell
-                      memberId={leader.id}
-                      evaluation={evaluationMap.get(leader.id)}
-                      isLoading={evalsLoading}
-                      isError={evalsError}
-                      mode="action"
-                      canEdit={canAddEmployee}
-                      onEdit={() => handleEditEmployee(leader)}
-                    />
+                    <div className="max-md:hidden">
+                      <TeamDetailMemberCell
+                        memberId={leader.id}
+                        evaluation={evaluationMap.get(leader.id)}
+                        isLoading={evalsLoading}
+                        isError={evalsError}
+                        mode="action"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(leader)}
+                      />
+                    </div>
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
                       <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
@@ -330,6 +332,7 @@ export default function TeamDetailPage() {
                       <TeamDetailMemberCell
                         memberId={leader.id}
                         evaluation={evaluationMap.get(leader.id)}
+                        role={leader.role}
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="mobile"
@@ -370,15 +373,17 @@ export default function TeamDetailPage() {
                         onEdit={() => handleEditEmployee(sl)}
                       />
                     </div>
-                    <TeamDetailMemberCell
-                      memberId={sl.id}
-                      evaluation={evaluationMap.get(sl.id)}
-                      isLoading={evalsLoading}
-                      isError={evalsError}
-                      mode="action"
-                      canEdit={canAddEmployee}
-                      onEdit={() => handleEditEmployee(sl)}
-                    />
+                    <div className="max-md:hidden">
+                      <TeamDetailMemberCell
+                        memberId={sl.id}
+                        evaluation={evaluationMap.get(sl.id)}
+                        isLoading={evalsLoading}
+                        isError={evalsError}
+                        mode="action"
+                        canEdit={canAddEmployee}
+                        onEdit={() => handleEditEmployee(sl)}
+                      />
+                    </div>
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
                       <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
@@ -386,6 +391,7 @@ export default function TeamDetailPage() {
                       <TeamDetailMemberCell
                         memberId={sl.id}
                         evaluation={evaluationMap.get(sl.id)}
+                        role={sl.role}
                         isLoading={evalsLoading}
                         isError={evalsError}
                         mode="mobile"
@@ -432,15 +438,17 @@ export default function TeamDetailPage() {
                               onEdit={() => handleEditEmployee(member)}
                             />
                           </div>
-                          <TeamDetailMemberCell
-                            memberId={member.id}
-                            evaluation={evaluationMap.get(member.id)}
-                            isLoading={evalsLoading}
-                            isError={evalsError}
-                            mode="action"
-                            canEdit={canAddEmployee}
-                            onEdit={() => handleEditEmployee(member)}
-                          />
+                          <div className="max-md:hidden">
+                            <TeamDetailMemberCell
+                              memberId={member.id}
+                              evaluation={evaluationMap.get(member.id)}
+                              isLoading={evalsLoading}
+                              isError={evalsError}
+                              mode="action"
+                              canEdit={canAddEmployee}
+                              onEdit={() => handleEditEmployee(member)}
+                            />
+                          </div>
                           {/* Mobile */}
                           <div className="md:hidden min-w-0 flex-1">
                             <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
@@ -448,6 +456,7 @@ export default function TeamDetailPage() {
                             <TeamDetailMemberCell
                               memberId={member.id}
                               evaluation={evaluationMap.get(member.id)}
+                              role={member.role}
                               isLoading={evalsLoading}
                               isError={evalsError}
                               mode="mobile"
@@ -513,15 +522,17 @@ export default function TeamDetailPage() {
                             onEdit={() => handleEditEmployee(member)}
                           />
                         </div>
-                        <TeamDetailMemberCell
-                          memberId={member.id}
-                          evaluation={evaluationMap.get(member.id)}
-                          isLoading={evalsLoading}
-                          isError={evalsError}
-                          mode="action"
-                          canEdit={canAddEmployee}
-                          onEdit={() => handleEditEmployee(member)}
-                        />
+                        <div className="max-md:hidden">
+                          <TeamDetailMemberCell
+                            memberId={member.id}
+                            evaluation={evaluationMap.get(member.id)}
+                            isLoading={evalsLoading}
+                            isError={evalsError}
+                            mode="action"
+                            canEdit={canAddEmployee}
+                            onEdit={() => handleEditEmployee(member)}
+                          />
+                        </div>
                         {/* Mobile */}
                         <div className="md:hidden min-w-0 flex-1">
                           <Link prefetch={false} href={`/evaluations/${member.id}`} className="text-sm font-semibold text-on-surface truncate block hover:text-primary hover:underline" title="Đánh giá">{member.name}</Link>
@@ -529,6 +540,7 @@ export default function TeamDetailPage() {
                           <TeamDetailMemberCell
                             memberId={member.id}
                             evaluation={evaluationMap.get(member.id)}
+                            role={member.role}
                             isLoading={evalsLoading}
                             isError={evalsError}
                             mode="mobile"

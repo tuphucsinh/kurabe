@@ -164,7 +164,7 @@ export function TeamDetailMemberAction({
   }
 
   return (
-    <div className="flex items-center gap-1 shrink-0">
+    <div className="flex items-center gap-1 shrink-0 max-md:hidden">
       {isLoading ? (
         <span
           className="p-2.5 min-w-11 min-h-11 flex items-center justify-center text-slate-300 rounded-lg shrink-0"

@@ -67,7 +67,7 @@ export default function ReportFilters({
         <span>Kỳ {displayYear || '—'}</span>
       </div>
 
-      <div className="md:ml-auto text-xs md:text-sm text-outline flex items-center gap-2 w-full md:w-auto">
+      <div className="max-md:hidden md:ml-auto text-xs md:text-sm text-outline flex items-center gap-2 w-full md:w-auto">
         <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
         Dữ liệu thời gian thực
       </div>

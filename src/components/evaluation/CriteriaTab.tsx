@@ -69,18 +69,18 @@ const CriteriaTab = memo(function CriteriaTab({
 
         return (
           <div key={criterion.id} className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-300 ${hasScoreChanged ? 'border-amber-400 ring-1 ring-amber-400/50' : 'border-outline-variant hover:border-primary/20'}`}>
-            <div className="px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center flex-wrap gap-2">
-              <div className="flex items-center gap-4">
-                <h3 className="font-bold text-on-surface flex items-center gap-2">
+            <div className="px-3 sm:px-6 py-2.5 bg-surface border-b border-outline-variant flex justify-between items-center flex-wrap gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <h3 className="font-bold text-on-surface flex items-center gap-2 text-sm sm:text-base">
                   <span className={`text-[11px] font-black px-1.5 py-0.5 rounded border transition-colors ${hasHistoryVariance ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-white text-primary border-primary/20'}`}>
                     {criterion.code}
                   </span>
-                  {criterion.name}
+                  <span>{criterion.name}</span>
                 </h3>
                 <button 
                   onClick={() => toggleNote(criterion.id)}
                   className={`
-                    flex items-center gap-1.5 px-3 py-2 min-h-11 rounded-lg transition-all text-[11px] font-black uppercase tracking-wider
+                    flex items-center gap-1.5 px-3 py-2 max-md:min-h-11 rounded-lg transition-all text-[11px] font-black uppercase tracking-wider active:scale-95
                     ${isNoteVisible 
                       ? 'bg-primary text-white shadow-sm' 
                       : 'text-outline hover:bg-primary/10 hover:text-primary border border-dashed border-outline-variant'
@@ -131,10 +131,11 @@ const CriteriaTab = memo(function CriteriaTab({
                 return (
                   <button
                     key={idx}
+                    type="button"
                     disabled={disabled}
                     onClick={() => handleLevelSelect(criterion.id, idx, level.points)}
                     className={`
-                      relative p-3 rounded-xl border text-left transition-all duration-300 group
+                      w-full max-md:min-h-[48px] relative p-3 rounded-xl border text-left transition-all duration-300 group cursor-pointer active:scale-[0.99]
                       ${isSelected 
                         ? 'border-primary ring-2 ring-primary/30 bg-primary/10 shadow-lg scale-[1.02] z-10' 
                         : selectedRounds.length > 0
@@ -187,23 +188,25 @@ const CriteriaTab = memo(function CriteriaTab({
             </div>
 
             {isNoteVisible && (
-              <div className="px-4 py-2 border-t border-outline-variant/30 animate-in slide-in-from-top-2 duration-200 bg-surface/30">
-                <div className="flex items-center gap-2">
-                  <StickyNote size={12} className="text-outline shrink-0" />
-                  <input
-                    type="text"
-                    autoFocus
-                    disabled={disabled}
-                    value={notes[criterion.id] || ''}
-                    onChange={(e) => onNoteChange(criterion.id, e.target.value)}
-                    className="flex-1 h-7 bg-white border border-outline-variant rounded-md px-3 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:bg-surface disabled:cursor-not-allowed"
-                    placeholder={`Ghi chú cho ${criterion.name}...`}
-                  />
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-outline-variant/30 animate-in slide-in-from-top-2 duration-200 bg-surface/30">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <StickyNote size={14} className="text-outline shrink-0" />
+                    <input
+                      type="text"
+                      autoFocus
+                      disabled={disabled}
+                      value={notes[criterion.id] || ''}
+                      onChange={(e) => onNoteChange(criterion.id, e.target.value)}
+                      className="flex-1 max-md:min-h-[44px] bg-white border border-outline-variant rounded-xl px-3 sm:px-4 text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none disabled:bg-surface disabled:cursor-not-allowed"
+                      placeholder={`Ghi chú cho ${criterion.name}...`}
+                    />
+                  </div>
                   {allPreviousRounds.some(r => r.notes?.[criterion.id]) && (
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap pl-6 sm:pl-0">
                       {allPreviousRounds.map(round => round.notes?.[criterion.id] && (
-                        <span key={round.round} title={`L${round.round}: ${round.notes[criterion.id]}`} className="flex items-center gap-1 text-[11px] text-outline-variant border border-outline-variant/40 rounded px-1.5 py-0.5 bg-white cursor-help">
-                          <History size={9} />L{round.round}
+                        <span key={round.round} title={`L${round.round}: ${round.notes[criterion.id]}`} className="flex items-center gap-1 text-[11px] text-outline-variant border border-outline-variant/40 rounded px-2 py-1 bg-white cursor-help">
+                          <History size={10} />L{round.round}: {round.notes[criterion.id]}
                         </span>
                       ))}
                     </div>

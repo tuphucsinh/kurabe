@@ -444,19 +444,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <p className="text-sm font-semibold text-blue-700">Đánh giá đã được gửi thành công!</p>
         </div>
       )}
-      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="px-3 sm:px-6 md:px-10 lg:px-12 py-4 sm:py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+        <div className="flex flex-col gap-4 md:gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
             <div className="flex flex-wrap items-center gap-2 text-sm text-outline font-medium">
               <span>Đánh giá</span>
               <ChevronRight size={14} className="shrink-0" />
-              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">
+              <span className="text-primary bg-primary/10 px-2 py-0.5 rounded text-xs sm:text-sm">
                 Lần {accessState.editableRound || accessState.displayRound} / {maxRound}
               </span>
               {allPreviousRounds.length > 0 && (
                 <button
                   onClick={() => router.push(`/evaluations/${id}/compare`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-outline-variant rounded-xl text-xs sm:text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[36px] bg-white border border-outline-variant rounded-xl text-xs sm:text-sm font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
                 >
                   <ArrowLeftRight size={14} />
                   <span>Chi tiết so sánh</span>
@@ -465,39 +465,39 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
               {isReadOnly && (
                 <>
                   <ChevronRight size={14} className="shrink-0" />
-                  <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1">
+                  <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded flex items-center gap-1 text-xs sm:text-sm">
                     <Lock size={12} /> {activeRoundData.status === 'Submitted' ? 'Đã nộp' : 'Chỉ xem'}
                   </span>
                 </>
               )}
             </div>
 
-            <div className="flex flex-row gap-3 w-full md:w-auto">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full md:w-auto">
               {!isReadOnly ? (
                 <>
                   {accessState.editableRound !== null && accessState.editableRound > 1 && (
                     <button
                       onClick={() => setReturnDialogOpen(true)}
                       disabled={isSaving}
-                      className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                      className="w-full sm:w-auto flex-1 sm:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
                     >
-                      <Undo2 size={18} className="shrink-0" />
+                      <Undo2 size={16} className="shrink-0" />
                       <span>Trả lại đánh giá</span>
                     </button>
                   )}
                   <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
-                    className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                    className="flex-1 sm:flex-initial md:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-on-surface border border-outline-variant rounded-xl font-bold hover:bg-surface hover:border-outline transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
                   >
                     Lưu bản nháp
                   </button>
                   <button
                     onClick={() => handleSave(true)}
                     disabled={isSaving}
-                    className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-sm whitespace-nowrap"
+                    className="flex-1 sm:flex-initial md:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 text-xs sm:text-sm whitespace-nowrap"
                   >
-                    <CheckCircle2 size={18} className="shrink-0" />
+                    <CheckCircle2 size={16} className="shrink-0" />
                     <span>{isSaving ? 'Đang gửi...' : 'Gửi Đánh giá'}</span>
                   </button>
                 </>
@@ -507,17 +507,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                     <button
                       onClick={() => setReturnDialogOpen(true)}
                       disabled={isSaving}
-                      className="flex-1 md:flex-none px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm whitespace-nowrap"
+                      className="w-full sm:w-auto flex-1 sm:flex-none max-md:min-h-[44px] px-4 md:px-6 py-2.5 bg-white text-rose-600 border border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm whitespace-nowrap active:scale-[0.98]"
                     >
-                      <Undo2 size={18} className="shrink-0" />
+                      <Undo2 size={16} className="shrink-0" />
                       <span>Trả lại báo cáo</span>
                     </button>
                   )}
-                  <div className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium flex items-center gap-2">
-                    <Lock size={16} />
-                    {activeRoundData.status === 'Submitted'
-                      ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
-                      : 'Đang xem bản nháp của vòng này'}
+                  <div className="w-full sm:w-auto max-md:min-h-[44px] px-4 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center sm:justify-start gap-2">
+                    <Lock size={16} className="shrink-0" />
+                    <span className="truncate">
+                      {activeRoundData.status === 'Submitted'
+                        ? `Đã nộp${isMounted && activeRoundData.submittedAt ? ` lúc ${new Date(activeRoundData.submittedAt).toLocaleString('vi-VN')}` : ''}`
+                        : 'Đang xem bản nháp của vòng này'}
+                    </span>
                   </div>
                 </>
               )}
@@ -591,14 +593,14 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           </div>
 
           <div className="w-full lg:w-80 shrink-0">
-            <div className="bg-white rounded-2xl p-6 border border-outline-variant shadow-sm sticky top-8">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-outline-variant shadow-sm max-md:static md:sticky md:top-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-on-surface-variant">Ghi chú chung</h3>
+                <h3 className="text-base sm:text-lg font-bold text-on-surface-variant">Ghi chú chung</h3>
                 {user?.role === 'Manager' && !isReadOnly && (
                   <button
                     onClick={handleSuggestComment}
                     disabled={isSuggesting}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[36px] rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isSuggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                     {isSuggesting ? 'Đang gợi ý...' : 'Gợi ý nhận xét (AI)'}
@@ -610,7 +612,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 onChange={(e) => dispatch({ type: 'SET_COMMENT', comment: e.target.value })}
                 placeholder="Nhập nhận xét tổng quát cho kỳ đánh giá này..."
                 disabled={isReadOnly || isSaving}
-                className="w-full h-40 p-4 bg-surface border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                className="w-full h-32 sm:h-40 p-3 sm:p-4 bg-surface border border-outline-variant rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
               />
               <p className="mt-2 text-xs text-outline leading-relaxed">
                 Nhận xét này sẽ được hiển thị cho nhân viên sau khi kỳ đánh giá kết thúc.
@@ -620,7 +622,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                   <button
                     onClick={handleDraftMessage}
                     disabled={isDrafting}
-                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-outline-variant text-xs font-bold text-on-surface hover:border-primary hover:text-primary transition-all disabled:opacity-50"
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 max-md:min-h-[44px] rounded-xl bg-white border border-outline-variant text-xs sm:text-sm font-bold text-on-surface hover:border-primary hover:text-primary transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isDrafting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                     {isDrafting ? 'Đang soạn...' : 'Soạn thông báo kết quả (AI)'}

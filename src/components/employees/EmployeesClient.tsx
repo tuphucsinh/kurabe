@@ -7,6 +7,7 @@ import { getUsersBatchAction, getEvaluationSummariesBatchAction, getEmployeesPag
 import { mergeUserBatches } from '@/lib/employee-batch-helpers';
 import { projectEmployeeTableItems, type EmployeeTableItem } from '@/lib/employee-table-projection';
 import EmployeeEvaluationCell from '@/components/employees/EmployeeEvaluationCell';
+import EmployeeMobileList from '@/components/employees/EmployeeMobileList';
 import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Evaluation, Team } from '@/types';
@@ -733,7 +734,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   ];
 
   return (
-    <div data-load-layer="shell" className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div data-load-layer="shell" className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -745,7 +746,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
           </p>
         </div>
         {canManageEmployees && (
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="max-md:hidden flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {isManager && (
               <>
                 <button
@@ -858,71 +859,104 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       {/* Table Section */}
       <div data-load-layer="light" className="bg-white rounded-2xl border border-outline-variant shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         {isInitialLoading ? (
-          <div className="w-full overflow-hidden rounded-xl border-none bg-white">
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
-                <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-outline-variant bg-surface/50 backdrop-blur-md">
-                    {columns.map((column) => (
-                      <th
-                        key={column.key as string}
-                        className={`px-4 py-3 text-[11px] font-bold text-outline uppercase tracking-wider ${
-                          column.hiddenOnMobile ? 'hidden md:table-cell' : ''
-                        }`}
-                      >
-                        {column.header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/50">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className={`h-[48px] ${i % 2 === 1 ? 'bg-surface/30' : ''}`}>
-                      <td className="px-4 py-2">
-                        <div className="space-y-1.5">
-                          <Skeleton className="h-4 w-32 rounded" />
-                          <Skeleton className="h-3 w-20 rounded" />
-                        </div>
-                      </td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        <Skeleton className="h-5 w-24 rounded-md" />
-                      </td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        <Skeleton className="h-4 w-16 rounded" />
-                      </td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        <Skeleton className="h-4 w-20 rounded" />
-                      </td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        <Skeleton className="h-4 w-12 rounded" />
-                      </td>
-                      <td className="px-4 py-2">
-                        <div data-load-layer="heavy" className="flex items-center gap-2">
-                          <Skeleton className="w-8 h-8 rounded-lg" />
-                          <div className="w-12 flex flex-col items-center gap-1">
-                            <Skeleton className="h-3 w-6 rounded" />
-                            <Skeleton className="h-4 w-8 rounded" />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex justify-end gap-2">
-                          <Skeleton className="w-8 h-8 rounded-lg" />
-                        </div>
-                      </td>
+          <>
+            {/* Desktop Loading Skeleton */}
+            <div className="max-md:hidden w-full overflow-hidden rounded-xl border-none bg-white">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-outline-variant bg-surface/50 backdrop-blur-md">
+                      {columns.map((column) => (
+                        <th
+                          key={column.key as string}
+                          className={`px-4 py-3 text-[11px] font-bold text-outline uppercase tracking-wider ${
+                            column.hiddenOnMobile ? 'hidden md:table-cell' : ''
+                          }`}
+                        >
+                          {column.header}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/50">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i} className={`h-[48px] ${i % 2 === 1 ? 'bg-surface/30' : ''}`}>
+                        <td className="px-4 py-2">
+                          <div className="space-y-1.5">
+                            <Skeleton className="h-4 w-32 rounded" />
+                            <Skeleton className="h-3 w-20 rounded" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          <Skeleton className="h-5 w-24 rounded-md" />
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </td>
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          <Skeleton className="h-4 w-12 rounded" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <div data-load-layer="heavy" className="flex items-center gap-2">
+                            <Skeleton className="w-8 h-8 rounded-lg" />
+                            <div className="w-12 flex flex-col items-center gap-1">
+                              <Skeleton className="h-3 w-6 rounded" />
+                              <Skeleton className="h-4 w-8 rounded" />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2">
+                          <div className="flex justify-end gap-2">
+                            <Skeleton className="w-8 h-8 rounded-lg" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+
+            {/* Mobile Loading Skeleton */}
+            <div className="md:hidden divide-y divide-outline-variant/50">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-4 w-32 rounded" />
+                      <Skeleton className="h-3 w-20 rounded" />
+                    </div>
+                    <Skeleton className="h-5 w-20 rounded-md" />
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    <Skeleton className="h-4 w-16 rounded" />
+                    <Skeleton className="h-6 w-24 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : employeesData.length > 0 ? (
           <>
-            <DataTable
-              columns={columns}
-              data={employeesData}
-              className="border-none rounded-none flex-1"
-            />
+            {/* Desktop Table View */}
+            <div className="max-md:hidden">
+              <DataTable
+                columns={columns}
+                data={employeesData}
+                className="border-none rounded-none flex-1"
+              />
+            </div>
+
+            {/* Mobile Read-Only Card List */}
+            <div className="md:hidden">
+              <EmployeeMobileList
+                items={employeesData}
+                onRetryEvaluation={handleRetryEvaluation}
+              />
+            </div>
 
             {/* Load More & Batch Status Controls */}
             <div className="border-t border-outline-variant px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface/50">

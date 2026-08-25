@@ -185,7 +185,7 @@ export default function TeamsClient() {
           {isManager && (
             <button
               onClick={handleAddTeam}
-              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95 shrink-0"
+              className="max-md:hidden px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group active:scale-95 shrink-0"
             >
               <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
               Thêm nhóm mới
@@ -225,7 +225,7 @@ export default function TeamsClient() {
                   <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Users size={22} />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 max-md:hidden">
                     {isManager && (
                       <>
                         <button

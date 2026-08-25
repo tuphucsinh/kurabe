@@ -10,10 +10,10 @@ import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { getEvaluationAccessState } from '@/data/workflow';
 import { CriteriaGroup, User } from '@/types';
-import { 
-  ArrowLeft, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
   Minus,
   MessageSquare,
   History,
@@ -34,7 +34,7 @@ export default function ComparePage({ params }: ComparePageProps) {
   const router = useRouter();
   const { id } = use(params);
   const { user } = useAuth();
-  
+
   const { data: pageData, isLoading } = useEvaluationComparePageData(id, undefined, user);
   const employee = pageData?.employee;
   const evaluation = pageData?.evaluation;
@@ -52,7 +52,7 @@ export default function ComparePage({ params }: ComparePageProps) {
     return () => { cancelled = true; };
   }, []);
 
-  const accessState = useMemo(() => 
+  const accessState = useMemo(() =>
     evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
   [user, evaluation, users]);
 
@@ -67,7 +67,7 @@ export default function ComparePage({ params }: ComparePageProps) {
   const criteria = useMemo(() => {
     if (!employee || groups.length === 0) return [];
     const role = employee.role;
-    
+
     return groups.map(group => {
       const filteredCriteria = group.criteria?.filter(
         c => c.appliesTo.includes(role)
@@ -130,11 +130,11 @@ export default function ComparePage({ params }: ComparePageProps) {
         </div>
         <h2 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Quyền truy cập bị từ chối</h2>
         <p className="text-slate-500 max-w-md">
-          {accessState.reason === 'NO_DRAFT' 
+          {accessState.reason === 'NO_DRAFT'
             ? 'Chưa có đánh giá.'
             : 'Bạn không có quyền xem dữ liệu so sánh này.'}
         </p>
-        <button 
+        <button
           onClick={() => router.back()}
           className="px-8 py-3 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
         >
@@ -147,17 +147,17 @@ export default function ComparePage({ params }: ComparePageProps) {
   return (
     <div className="min-h-full bg-[#f8f9fa] pb-20">
       {/* ═══════ Sticky Header ═══════ */}
-      <div className="sticky top-0 z-50 bg-white border-b border-outline-variant px-4 md:px-8 py-4 shadow-sm">
+      <div className="sticky top-0 z-50 bg-white border-b border-outline-variant px-3 sm:px-4 md:px-8 py-3 sm:py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
               onClick={() => router.push(`/evaluations/${id}`)}
-              className="p-2 hover:bg-surface-variant rounded-full transition-colors text-outline"
+              className="p-2 hover:bg-surface-variant rounded-full transition-colors text-outline max-md:min-h-[44px] max-md:min-w-[44px] flex items-center justify-center active:scale-95"
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={22} />
             </button>
             <div>
-              <h1 className="text-xl font-black text-on-surface tracking-tight uppercase">So sánh các vòng đánh giá</h1>
+              <h1 className="text-base sm:text-lg md:text-xl font-black text-on-surface tracking-tight uppercase">So sánh các vòng đánh giá</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-lg">
                   {employee.name}
@@ -168,7 +168,7 @@ export default function ComparePage({ params }: ComparePageProps) {
               </div>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-3">
+          <div className="max-md:hidden flex items-center gap-3">
             <div className="flex flex-col items-end">
               <span className="text-[11px] font-bold text-outline uppercase tracking-widest">Trạng thái hiện tại</span>
               <span className="text-sm font-black text-on-surface">Lần {activeVisibleRound ?? '-'}</span>
@@ -180,9 +180,9 @@ export default function ComparePage({ params }: ComparePageProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8">
-        <div className="flex flex-col gap-8">
-          
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 mt-6 md:mt-8">
+        <div className="flex flex-col gap-6 sm:gap-8">
+
           {/* ═══════ Summary Section ═══════ */}
           <section>
             <h2 className="text-xs font-black text-outline uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -190,50 +190,50 @@ export default function ComparePage({ params }: ComparePageProps) {
               Tổng quan kết quả
             </h2>
             {allRounds.length === 0 ? (
-              <div className="p-12 text-center bg-white rounded-[2rem] border border-dashed border-outline-variant shadow-sm">
+              <div className="p-8 sm:p-12 text-center bg-white rounded-[2rem] border border-dashed border-outline-variant shadow-sm">
                 <p className="text-sm text-outline font-medium">Chưa có đánh giá.</p>
               </div>
             ) : (
-            <div className="flex items-center gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-hide touch-pan-x">
               {roundResults.map(({ round: r, result }, idx) => {
                 const prevResult = idx > 0 ? roundResults[idx - 1].result : null;
                 const delta = prevResult ? result.totalScore - prevResult.totalScore : null;
 
                 return (
-                  <div key={r.round} className="flex items-center gap-4 shrink-0">
+                  <div key={r.round} className="flex items-center gap-3 sm:gap-4 shrink-0">
                     {idx > 0 && (
                       <div className="flex flex-col items-center gap-1">
                         <div className={`
-                          flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black
-                          ${delta! > 0 ? 'bg-green-100 text-green-700' : 
+                          flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-black
+                          ${delta! > 0 ? 'bg-green-100 text-green-700' :
                             delta! < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-variant text-outline'}
                         `}>
-                          {delta! > 0 ? <TrendingUp size={14} /> : 
-                           delta! < 0 ? <TrendingDown size={14} /> : <Minus size={14} />}
+                          {delta! > 0 ? <TrendingUp size={13} /> :
+                           delta! < 0 ? <TrendingDown size={13} /> : <Minus size={13} />}
                           {delta! > 0 ? `+${delta}` : delta}
                         </div>
-                        <ArrowRight size={16} className="text-outline/30" />
+                        <ArrowRight size={14} className="text-outline/30" />
                       </div>
                     )}
 
                     <div className={`
-                      min-w-[180px] p-6 rounded-[2rem] border shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md
-                      ${r.round === evaluation.currentRound 
-                        ? 'bg-white border-primary ring-1 ring-primary/20' 
+                      min-w-[160px] sm:min-w-[180px] p-4 sm:p-6 rounded-[2rem] border shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md
+                      ${r.round === evaluation.currentRound
+                        ? 'bg-white border-primary ring-1 ring-primary/20'
                         : 'bg-white border-outline-variant'}
                     `}>
-                      <span className={`text-[11px] font-bold uppercase tracking-widest mb-3 ${
+                      <span className={`text-[11px] font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
                         r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
                       }`}>
                         Lần {r.round} {r.round === evaluation.currentRound ? '(Hiện tại)' : ''}
                       </span>
-                      <div className="text-4xl font-black text-on-surface mb-1">{result.totalScore}</div>
-                      <div className={`px-4 py-1.5 rounded-full text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
+                      <div className="text-3xl sm:text-4xl font-black text-on-surface mb-1">{result.totalScore}</div>
+                      <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
                         Hạng {result.grade}
                       </div>
-                      <button 
+                      <button
                         onClick={() => router.push(`/evaluations/${id}?round=${r.round}`)}
-                        className="mt-4 flex items-center gap-1.5 text-[11px] font-black text-primary hover:underline uppercase tracking-tighter"
+                        className="mt-3 sm:mt-4 flex items-center gap-1.5 text-[11px] font-black text-primary hover:underline uppercase tracking-tighter max-md:min-h-[36px]"
                       >
                         Xem chi tiết <ArrowRight size={12} />
                       </button>
@@ -245,97 +245,159 @@ export default function ComparePage({ params }: ComparePageProps) {
             )}
           </section>
 
-          {/* ═══════ Main Comparison Table ═══════ */}
+          {/* ═══════ Main Comparison Table & Mobile Cards ═══════ */}
           <section>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <h2 className="text-xs font-black text-outline uppercase tracking-[0.2em] flex items-center gap-2">
                 Chi tiết tiêu chí thay đổi ({changedCriteriaIds.size})
               </h2>
-              <span className="text-[11px] font-bold text-outline-variant bg-surface px-2 py-1 rounded-lg border border-outline-variant">
+              <span className="self-start sm:self-auto text-[11px] font-bold text-outline-variant bg-surface px-2 py-1 rounded-lg border border-outline-variant">
                 Chỉ hiển thị các mục có biến động điểm
               </span>
             </div>
-            
+
             {changedCriteriaIds.size > 0 ? (
-              <div className="w-full rounded-[2rem] border border-outline-variant bg-white overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
-                    <thead>
-                      <tr className="bg-surface/50 border-b border-outline-variant">
-                        <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider">
-                          Tiêu chí đánh giá
-                        </th>
-                        {allRounds.map(r => (
-                          <th key={r.round} className={`px-4 py-5 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
-                            r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
+              <>
+                {/* Mobile: Card presentation with rounds stacked */}
+                <div className="md:hidden space-y-3">
+                  {allCriteria.filter(c => changedCriteriaIds.has(c.id)).map(criterion => {
+                    const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
+                    const totalDelta = roundScores.length >= 2
+                      ? roundScores[roundScores.length - 1] - roundScores[0]
+                      : 0;
+
+                    return (
+                      <div key={criterion.id} className="p-4 rounded-2xl border border-outline-variant bg-white shadow-sm space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[11px] font-black text-primary uppercase tracking-tighter opacity-80">{criterion.id}</span>
+                            <h3 className="text-sm font-bold text-on-surface leading-tight">{criterion.name}</h3>
+                          </div>
+                          <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl shadow-sm ${
+                            totalDelta > 0 ? 'bg-green-100 text-green-700' :
+                            totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-variant text-outline'
                           }`}>
-                            L{r.round}
-                          </th>
-                        ))}
-                        <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider text-right">
-                          Biến động (Δ)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant">
-                      {allCriteria.filter(c => changedCriteriaIds.has(c.id)).map(criterion => {
-                        const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
-                        const totalDelta = roundScores.length >= 2 
-                          ? roundScores[roundScores.length - 1] - roundScores[0] 
-                          : 0;
+                            {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
+                            {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                          </span>
+                        </div>
 
-                        return (
-                          <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
-                            <td className="px-8 py-4">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[11px] font-black text-primary uppercase tracking-tighter opacity-70">{criterion.id}</span>
-                                <span className="text-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">{criterion.name}</span>
-                              </div>
-                            </td>
-                            {allRounds.map((r, rIdx) => {
-                              const score = r.scores?.[criterion.id] ?? 0;
-                              const prevScore = rIdx > 0 ? (allRounds[rIdx-1].scores?.[criterion.id] ?? 0) : null;
-                              const delta = prevScore !== null ? score - prevScore : 0;
+                        <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-2 pt-2 border-t border-outline-variant/40">
+                          {allRounds.map((r, rIdx) => {
+                            const score = r.scores?.[criterion.id] ?? 0;
+                            const prevScore = rIdx > 0 ? (allRounds[rIdx-1].scores?.[criterion.id] ?? 0) : null;
+                            const delta = prevScore !== null ? score - prevScore : 0;
+                            const isCurrent = r.round === evaluation.currentRound;
 
-                              return (
-                                <td key={r.round} className="px-4 py-4 text-center">
-                                  <div className="flex flex-col items-center">
-                                    <div className={`
-                                      w-10 h-10 flex items-center justify-center rounded-xl text-base font-black transition-all
-                                      ${r.round === evaluation.currentRound ? 'bg-primary text-white shadow-md' : 'bg-surface text-on-surface'}
-                                      ${delta > 0 ? 'ring-2 ring-green-500/30' : delta < 0 ? 'ring-2 ring-red-500/30' : ''}
-                                    `}>
-                                      {score}
-                                    </div>
-                                    {delta !== 0 && (
-                                      <span className={`text-[11px] font-bold mt-1 flex items-center gap-0.5 ${
-                                        delta > 0 ? 'text-green-600' : 'text-red-600'
-                                      }`}>
-                                        {delta > 0 ? '+' : ''}{delta}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                              );
-                            })}
-                            <td className="px-8 py-4 text-right">
-                              <span className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-xl shadow-sm ${
-                                totalDelta > 0 ? 'bg-green-100 text-green-700' : 
-                                totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-variant text-outline'
+                            return (
+                              <div key={r.round} className={`p-2.5 rounded-xl flex flex-col items-center justify-center border text-center transition-all ${
+                                isCurrent
+                                  ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20'
+                                  : 'bg-surface/50 border-outline-variant/50'
                               }`}>
-                                {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
-                                {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                <span className={`text-[11px] font-black uppercase tracking-wider mb-1 ${isCurrent ? 'text-primary font-bold' : 'text-outline'}`}>
+                                  Lần {r.round} {isCurrent ? '(Hiện tại)' : ''}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-base font-black ${isCurrent ? 'text-primary' : 'text-on-surface'}`}>
+                                    {score}
+                                  </span>
+                                  {delta !== 0 && (
+                                    <span className={`text-[11px] font-bold ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* Tablet / PC: Table presentation (Unchanged) */}
+                <div className="max-md:hidden w-full rounded-[2rem] border border-outline-variant bg-white overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                      <thead>
+                        <tr className="bg-surface/50 border-b border-outline-variant">
+                          <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider">
+                            Tiêu chí đánh giá
+                          </th>
+                          {allRounds.map(r => (
+                            <th key={r.round} className={`px-4 py-5 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
+                              r.round === evaluation.currentRound ? 'text-primary' : 'text-outline'
+                            }`}>
+                              L{r.round}
+                            </th>
+                          ))}
+                          <th className="px-8 py-5 text-[11px] font-black text-outline uppercase tracking-wider text-right">
+                            Biến động (Δ)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant">
+                        {allCriteria.filter(c => changedCriteriaIds.has(c.id)).map(criterion => {
+                          const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
+                          const totalDelta = roundScores.length >= 2
+                            ? roundScores[roundScores.length - 1] - roundScores[0]
+                            : 0;
+
+                          return (
+                            <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
+                              <td className="px-8 py-4">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[11px] font-black text-primary uppercase tracking-tighter opacity-70">{criterion.id}</span>
+                                  <span className="text-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">{criterion.name}</span>
+                                </div>
+                              </td>
+                              {allRounds.map((r, rIdx) => {
+                                const score = r.scores?.[criterion.id] ?? 0;
+                                const prevScore = rIdx > 0 ? (allRounds[rIdx-1].scores?.[criterion.id] ?? 0) : null;
+                                const delta = prevScore !== null ? score - prevScore : 0;
+
+                                return (
+                                  <td key={r.round} className="px-4 py-4 text-center">
+                                    <div className="flex flex-col items-center">
+                                      <div className={`
+                                        w-10 h-10 flex items-center justify-center rounded-xl text-base font-black transition-all
+                                        ${r.round === evaluation.currentRound ? 'bg-primary text-white shadow-md' : 'bg-surface text-on-surface'}
+                                        ${delta > 0 ? 'ring-2 ring-green-500/30' : delta < 0 ? 'ring-2 ring-red-500/30' : ''}
+                                      `}>
+                                        {score}
+                                      </div>
+                                      {delta !== 0 && (
+                                        <span className={`text-[11px] font-bold mt-1 flex items-center gap-0.5 ${
+                                          delta > 0 ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                          {delta > 0 ? '+' : ''}{delta}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                              <td className="px-8 py-4 text-right">
+                                <span className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-xl shadow-sm ${
+                                  totalDelta > 0 ? 'bg-green-100 text-green-700' :
+                                  totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-variant text-outline'
+                                }`}>
+                                  {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
+                                  {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
             ) : (
-              <div className="p-16 text-center bg-white rounded-[2rem] border border-dashed border-outline-variant shadow-sm">
+              <div className="p-8 sm:p-16 text-center bg-white rounded-[2rem] border border-dashed border-outline-variant shadow-sm">
                 <div className="inline-flex p-4 bg-surface rounded-full mb-4 text-outline/30">
                   <Minus size={32} />
                 </div>
@@ -350,15 +412,15 @@ export default function ComparePage({ params }: ComparePageProps) {
               <MessageSquare size={14} className="text-primary" />
               Nhận xét qua các vòng
             </h2>
-            
-            <div className={`grid gap-6 ${
-              allRounds.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 
+
+            <div className={`grid gap-4 sm:gap-6 ${
+              allRounds.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
               allRounds.length >= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'
             }`}>
               {allRounds.map(r => (
-                <div key={r.round} className={`p-6 rounded-[2rem] border shadow-sm flex flex-col gap-4 transition-all hover:shadow-md ${
-                  r.round === evaluation.currentRound 
-                    ? 'bg-white border-primary/20' 
+                <div key={r.round} className={`p-5 sm:p-6 rounded-[2rem] border shadow-sm flex flex-col gap-4 transition-all hover:shadow-md ${
+                  r.round === evaluation.currentRound
+                    ? 'bg-white border-primary/20'
                     : 'bg-white border-outline-variant'
                 }`}>
                   <div className="flex items-center justify-between">
@@ -371,7 +433,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                       {r.submittedAt ? 'Đã gửi' : 'Bản nháp'}
                     </span>
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="text-[11px] font-black text-outline/50 uppercase mb-2">Nhận xét chung</div>
                     <p className="text-sm text-on-surface/80 leading-relaxed italic font-medium">
@@ -380,7 +442,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                   </div>
 
                   {r.additionalComment && (
-                    <div className="pt-4 border-t border-outline-variant/30 bg-surface/30 -mx-6 -mb-6 p-6 rounded-b-[2rem]">
+                    <div className="pt-4 border-t border-outline-variant/30 bg-surface/30 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-5 sm:p-6 rounded-b-[2rem]">
                       <div className="text-[11px] font-black text-outline/50 uppercase mb-2">Thông tin bổ sung</div>
                       <p className="text-xs text-on-surface/70 leading-relaxed italic">
                         {r.additionalComment}
@@ -396,7 +458,7 @@ export default function ComparePage({ params }: ComparePageProps) {
           {unchangedCriteria.length > 0 && (
             <section className="mt-4">
               <div className="bg-white rounded-3xl border border-outline-variant overflow-hidden">
-                <div className="px-8 py-4 bg-surface/30 flex items-center justify-between">
+                <div className="px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <h3 className="text-xs font-black text-outline uppercase tracking-widest">
                     Tiêu chí giữ nguyên ({unchangedCriteria.length})
                   </h3>
@@ -404,7 +466,7 @@ export default function ComparePage({ params }: ComparePageProps) {
                     {allRounds.length > 1 ? `Không đổi qua ${allRounds.length} vòng` : 'Chưa có vòng để so sánh'}
                   </span>
                 </div>
-                <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                   {unchangedCriteria.map(criterion => {
                     const score = allRounds[0]?.scores?.[criterion.id] ?? 0;
                     return (

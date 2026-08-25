@@ -70,7 +70,7 @@ export default function TargetTab() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 max-w-xl">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 max-w-xl">
       <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
         <Target className="w-4 h-4 text-indigo-600" />
         Mục tiêu kỳ đánh giá
@@ -122,14 +122,16 @@ export default function TargetTab() {
           </select>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
-        >
-          {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-          Lưu mục tiêu
-        </button>
+        <div className="max-md:hidden">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            Lưu mục tiêu
+          </button>
+        </div>
       </div>
     </div>
   );

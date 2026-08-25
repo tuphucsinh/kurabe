@@ -48,7 +48,7 @@ export default function AuditTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
           <ScrollText className="w-4 h-4 text-indigo-600" />
           Nhật ký hoạt động gần đây
@@ -69,22 +69,22 @@ export default function AuditTab() {
         ) : (
           <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
             {rows.map((row) => (
-              <div key={row.id} className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50/50 transition-colors">
-                <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
+              <div key={row.id} className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
                   <Clock size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-800">
+                  <p className="text-xs sm:text-sm text-slate-800">
                     <span className="font-semibold">{row.actor_name || 'Không xác định'}</span>{' '}
                     <span className="text-slate-500">đã</span>{' '}
                     <span className="font-medium text-indigo-600">{ACTION_LABELS[row.action] || row.action}</span>
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
                     {ENTITY_LABELS[row.entity] || row.entity}
                     {row.entity_id ? ` • ${row.entity_id.slice(0, 8)}` : ''}
                   </p>
                 </div>
-                <span className="text-xs text-slate-400 shrink-0">
+                <span className="text-[11px] sm:text-xs text-slate-400 shrink-0 text-right">
                   {row.created_at ? new Date(row.created_at).toLocaleString('vi-VN') : ''}
                 </span>
               </div>

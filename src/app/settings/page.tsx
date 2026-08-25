@@ -40,31 +40,62 @@ export default function SettingsPage() {
     { id: 'audit', label: 'Nhật ký', icon: <ScrollText className="w-4 h-4" /> },
     { id: 'target', label: 'Mục tiêu', icon: <Target className="w-4 h-4" /> },
   ];
-  const tabs = isManager
+  const desktopTabs = isManager
     ? [{ id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> }, ...adminTabs]
     : [{ id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> }];
 
+  const mobileTabs = isManager
+    ? [
+        { id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> },
+        { id: 'periods', label: 'Kỳ đánh giá', icon: <CalendarDays className="w-4 h-4" /> },
+        { id: 'audit', label: 'Nhật ký', icon: <ScrollText className="w-4 h-4" /> },
+      ]
+    : [{ id: 'account', label: 'Tài khoản', icon: <UserCircle className="w-4 h-4" /> }];
+
+  const mobileActiveTab = mobileTabs.some((t) => t.id === activeTab)
+    ? activeTab
+    : isManager
+    ? 'periods'
+    : 'account';
+
   return (
-    <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+    <div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Cài đặt</h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Cài đặt</h1>
+        <p className="text-slate-500 text-xs sm:text-sm mt-1">
           Quản lý kỳ đánh giá, nhóm & quyền của hệ thống
         </p>
       </div>
 
-      {/* Tabs */}
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {/* Tabs: Desktop/Tablet (all tabs) vs Mobile (read-mostly tabs) */}
+      <div className="max-md:hidden">
+        <Tabs tabs={desktopTabs} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+      <div className="md:hidden">
+        <Tabs tabs={mobileTabs} activeTab={mobileActiveTab} onChange={setActiveTab} />
+      </div>
 
       {/* Tab Content */}
       <div>
         {activeTab === 'periods' && <PeriodsTab />}
         {activeTab === 'account' && <AccountTab />}
-        {activeTab === 'grades' && <GradeBandsTab />}
-        {activeTab === 'roles' && <TeamsRolesTab />}
+        {activeTab === 'grades' && (
+          <div className="max-md:hidden">
+            <GradeBandsTab />
+          </div>
+        )}
+        {activeTab === 'roles' && (
+          <div className="max-md:hidden">
+            <TeamsRolesTab />
+          </div>
+        )}
         {activeTab === 'audit' && <AuditTab />}
-        {activeTab === 'target' && <TargetTab />}
+        {activeTab === 'target' && (
+          <div className="max-md:hidden">
+            <TargetTab />
+          </div>
+        )}
       </div>
     </div>
   );

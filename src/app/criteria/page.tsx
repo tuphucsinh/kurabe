@@ -226,12 +226,12 @@ export default function CriteriaPage() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <m.div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
+      <m.div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 space-y-6 md:space-y-8 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-on-surface tracking-tight">Tiêu chuẩn Đánh giá</h1>
-          <p className="text-outline mt-1 text-lg">Hệ thống tiêu chuẩn xếp loại và thang điểm Kurabe</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">Tiêu chuẩn Đánh giá</h1>
+          <p className="text-outline mt-1 text-sm sm:text-lg">Hệ thống tiêu chuẩn xếp loại và thang điểm Kurabe</p>
         </div>
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto">
           {isManager && (
@@ -241,7 +241,7 @@ export default function CriteriaPage() {
                 setEditingGroupId(safeGroupId);
                 setCriteriaModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors shrink-0"
+              className="max-md:hidden flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors shrink-0"
             >
               <Plus size={18} />
               Thêm tiêu chuẩn
@@ -252,11 +252,11 @@ export default function CriteriaPage() {
 
 
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 md:gap-8">
         {/* Main Content */}
-        <div className="xl:col-span-3 space-y-8">
+        <div className="xl:col-span-3 space-y-6 md:space-y-8">
           {/* Group Navigation Tabs - pill style */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-3 snap-x">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1 sm:px-3 snap-x">
             {currentCriteria.map((group) => {
               const isActive = safeGroupCode === group.code;
               const displayName = group.shortName || group.name;
@@ -305,14 +305,14 @@ export default function CriteriaPage() {
               );
             })}
 
-            {/* Add Group Button — chỉ Manager */}
+            {/* Add Group Button — chỉ Manager trên desktop/tablet */}
             {isManager && (
               <button
                 onClick={() => {
                   setEditingGroup(null);
                   setGroupModalOpen(true);
                 }}
-                className="flex items-center justify-center w-12 h-12 rounded-2xl border border-dashed border-outline-variant bg-surface hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-300 shrink-0 text-outline"
+                className="max-md:hidden flex items-center justify-center w-12 h-12 rounded-2xl border border-dashed border-outline-variant bg-surface hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-300 shrink-0 text-outline"
                 title="Thêm nhóm tiêu chuẩn"
               >
                 <Plus size={20} />
@@ -321,12 +321,12 @@ export default function CriteriaPage() {
           </div>
 
           {/* Active Group Title */}
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-1.5 bg-primary rounded-full"></div>
-            <h2 className="text-2xl font-black text-on-surface flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="h-8 sm:h-10 w-1.5 bg-primary rounded-full"></div>
+            <h2 className="text-xl sm:text-2xl font-black text-on-surface flex items-center gap-3">
               Nhóm {safeGroupCode}: {activeGroup?.name}
               {activeGroup && isManager && (
-                <>
+                <span className="max-md:hidden inline-flex items-center gap-1">
                   <button
                     onClick={() => {
                       setEditingGroup(activeGroup);
@@ -344,7 +344,7 @@ export default function CriteriaPage() {
                   >
                     <Trash2 size={18} />
                   </button>
-                </>
+                </span>
               )}
             </h2>
           </div>
@@ -373,9 +373,26 @@ export default function CriteriaPage() {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                      {/* QL / NV / CN Checkbox Fieldset */}
+                      {/* Mobile: Display-only audience badges (no checkboxes, no mutation) */}
+                      <div className="md:hidden flex items-center gap-1">
+                        {AUDIENCE_BADGES.map(({ key, shortLabel, title, checkedClass }) => {
+                          const isChecked = criterionAudiences.includes(key);
+                          if (!isChecked) return null;
+                          return (
+                            <span
+                              key={key}
+                              title={`${title} (${shortLabel})`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[11px] font-bold ${checkedClass}`}
+                            >
+                              {shortLabel}
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      {/* Desktop/Tablet: Interactive Checkbox Fieldset */}
                       <fieldset
-                        className="inline-flex items-center gap-1 sm:gap-1.5 p-1 bg-white rounded-lg border border-outline-variant/60 shrink-0"
+                        className="max-md:hidden inline-flex items-center gap-1 sm:gap-1.5 p-1 bg-white rounded-lg border border-outline-variant/60 shrink-0"
                         aria-label={`Đối tượng áp dụng cho tiêu chí ${criterion.code || criterion.name}`}
                       >
                         <legend className="sr-only">Đối tượng áp dụng</legend>
@@ -410,7 +427,7 @@ export default function CriteriaPage() {
                       </fieldset>
 
                       {isManager && (
-                        <div className="flex items-center gap-0.5 sm:gap-1">
+                        <div className="max-md:hidden flex items-center gap-0.5 sm:gap-1">
                           <button
                             onClick={() => {
                               setEditingCriterion(criterion);
@@ -458,10 +475,17 @@ export default function CriteriaPage() {
                           <p className="text-sm leading-snug flex-1 text-on-surface-variant pt-1.5">
                             {level.label}
                           </p>
+                          {/* Mobile read-only default indicator */}
+                          {isDefault && (
+                            <span className="md:hidden text-amber-500 shrink-0 p-1" title="Mức mặc định">
+                              <Star size={14} className="fill-current" />
+                            </span>
+                          )}
+                          {/* Desktop/Tablet interactive default selector */}
                           {isManager && (
                             <button
                               onClick={() => handleSetDefaultLevel(criterion.id!, idx, criterion.defaultLevelIndex)}
-                              className={`shrink-0 p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors ${
+                              className={`max-md:hidden shrink-0 p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg transition-colors ${
                                 isDefault
                                   ? 'text-amber-500 bg-amber-100 hover:bg-amber-200'
                                   : 'text-outline-variant hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'

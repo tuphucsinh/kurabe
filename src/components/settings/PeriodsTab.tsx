@@ -29,8 +29,8 @@ export default function PeriodsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Card Thao tác kỳ đánh giá */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      {/* Card Thao tác kỳ đánh giá — Manager mutation cluster, hidden on mobile */}
+      <div className="max-md:hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-indigo-600" />
           Thao tác kỳ đánh giá
@@ -39,7 +39,7 @@ export default function PeriodsTab() {
       </div>
 
       {/* Card Danh sách kỳ đánh giá */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6">
         <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 flex items-center gap-2">
           <Clock className="w-4 h-4 text-slate-500" />
           Danh sách kỳ đánh giá
@@ -60,10 +60,10 @@ export default function PeriodsTab() {
               return (
                 <div
                   key={period.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-4 gap-4 hover:bg-slate-50/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-4 py-3 sm:py-4 gap-3 sm:gap-4 hover:bg-slate-50/50 transition-colors"
                 >
                   {/* Cột 1: Kỳ {year} + name */}
-                  <div className="min-w-[180px]">
+                  <div className="min-w-0 sm:min-w-[180px]">
                     <div className="font-semibold text-slate-800">
                       Kỳ {period.year}
                     </div>
@@ -75,7 +75,7 @@ export default function PeriodsTab() {
                   </div>
 
                   {/* Cột 2: Badge status */}
-                  <div className="min-w-[100px]">
+                  <div className="min-w-0 sm:min-w-[100px]">
                     <span
                       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                         period.status === 'Active'
@@ -98,7 +98,7 @@ export default function PeriodsTab() {
                   </div>
 
                   {/* Cột 3: Tiến độ */}
-                  <div className="min-w-[200px] text-sm">
+                  <div className="min-w-0 sm:min-w-[200px] text-sm">
                     {evalsLoading ? (
                       <Skeleton variant="text" width={120} height={16} />
                     ) : stat.total === 0 ? (
@@ -111,7 +111,7 @@ export default function PeriodsTab() {
                   </div>
 
                   {/* Cột 4: Nút */}
-                  <div className="flex items-center justify-end min-w-[120px]">
+                  <div className="flex items-center sm:justify-end min-w-0 sm:min-w-[120px]">
                     {isSelected ? (
                       <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-100 text-indigo-700">
                         Đang chọn

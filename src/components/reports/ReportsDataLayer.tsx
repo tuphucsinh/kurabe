@@ -95,10 +95,10 @@ export default function ReportsDataLayer({
           {/* KPI COMPACT pill — Light Data Layer */}
           <div
             data-load-layer="light"
-            className="bg-white px-4 py-2 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-3 sm:gap-4 min-h-[44px]"
+            className="bg-white px-3 sm:px-4 py-2 rounded-2xl border border-outline-variant/60 shadow-sm flex flex-wrap items-center gap-2.5 sm:gap-4 max-md:min-h-[44px]"
           >
             {isLoading ? (
-              <div className="flex items-center gap-3 py-1">
+              <div className="flex items-center gap-2.5 sm:gap-3 py-1">
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-blue-600 shrink-0 opacity-40" />
                   <div className="h-4 w-8 bg-slate-200 animate-pulse rounded" />
@@ -127,25 +127,25 @@ export default function ReportsDataLayer({
               <>
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.totalEmployees}</span>
+                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.totalEmployees}</span>
                   <span className="text-xs text-outline font-medium">nhân sự</span>
                 </div>
                 <span className="text-outline-variant/60 hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <Target className="w-4 h-4 text-primary shrink-0" />
-                  <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
+                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
                   <span className="text-xs text-outline font-medium">điểm TB</span>
                 </div>
                 <span className="text-outline-variant/60 hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
+                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
                   <span className="text-xs text-outline font-medium">≥ AB</span>
                 </div>
                 <span className="text-outline-variant/60 hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span className="font-bold text-lg text-on-surface leading-none">{reportData.stats.pendingCount}</span>
+                  <span className="font-bold text-base sm:text-lg text-on-surface leading-none">{reportData.stats.pendingCount}</span>
                   <span className="text-xs text-outline font-medium">chưa đánh giá</span>
                 </div>
               </>
@@ -160,12 +160,14 @@ export default function ReportsDataLayer({
           </div>
 
           {viewer?.role === 'Manager' && (
-            <>
+            <div className="max-md:hidden flex items-center gap-3">
               <PeriodMinutesModal periodId={periodId || ''} />
               <BatchResultMessageModal periodId={periodId || ''} />
-            </>
+            </div>
           )}
-          <ExportReportButton periodId={periodId || ''} />
+          <div className="max-md:hidden">
+            <ExportReportButton periodId={periodId || ''} />
+          </div>
         </div>
       </PageHeader>
 
