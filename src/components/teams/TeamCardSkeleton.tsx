@@ -6,7 +6,7 @@ export default function TeamCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl border border-outline-variant shadow-sm flex flex-col overflow-hidden">
       {/* Card Header */}
-      <div className="p-4 pb-3 md:p-5 md:pb-4">
+      <div className="p-4 pb-3 md:p-4 md:pb-3">
         {/* Mobile Header Skeleton (< 768px) */}
         <div className="flex items-center gap-3 md:hidden">
           <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -24,7 +24,7 @@ export default function TeamCardSkeleton() {
         {/* Desktop Header Skeleton (>= 768px) */}
         <div className="max-md:hidden">
           <div className="flex justify-between items-start mb-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Users size={20} />
             </div>
           </div>
@@ -39,7 +39,7 @@ export default function TeamCardSkeleton() {
       </div>
 
       {/* Card Body */}
-      <div className="px-4 pb-4 md:px-5 md:pb-5 flex-1">
+      <div className="px-4 pb-4 md:px-4 md:pb-4 flex-1">
         <TeamEvaluationCell skeleton />
       </div>
     </div>

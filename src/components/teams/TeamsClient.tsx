@@ -220,7 +220,7 @@ export default function TeamsClient() {
               className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
             >
               {/* Card Header (Light Data) */}
-              <div className="p-4 pb-3 md:p-5 md:pb-4">
+              <div className="p-4 pb-3 md:p-4 md:pb-3">
                 {/* Mobile Header: Compact horizontal row (< 768px) */}
                 <div className="flex items-center gap-3 md:hidden">
                   <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -238,7 +238,7 @@ export default function TeamsClient() {
                 {/* Desktop Header (>= 768px) */}
                 <div className="max-md:hidden">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                       <Users size={20} />
                     </div>
                     <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export default function TeamsClient() {
               </div>
 
               {/* Card Body (Heavy Data / Evaluation Progress) */}
-              <div className="px-4 pb-4 md:px-5 md:pb-5 flex-1">
+              <div className="px-4 pb-4 md:px-4 md:pb-4 flex-1">
                 <TeamEvaluationCell
                   membersCount={team.membersCount}
                   completedCount={team.completedCount}
