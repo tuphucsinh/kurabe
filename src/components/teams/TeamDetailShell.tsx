@@ -9,7 +9,7 @@ interface TeamDetailShellProps {
 export default function TeamDetailShell({ children }: TeamDetailShellProps) {
   return (
     <div
-      className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto"
+      className="px-6 md:px-10 lg:px-12 py-8 space-y-6 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto max-md:bg-gradient-to-b max-md:from-primary/5 max-md:via-amber-50/20 max-md:to-transparent md:bg-none"
       data-load-layer="shell"
     >
       {children}

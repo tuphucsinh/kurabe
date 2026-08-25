@@ -191,10 +191,10 @@ export default function TeamDetailPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Cụm KPI Compact */}
-            <div className="grid grid-cols-3 gap-1 bg-white rounded-xl border border-outline-variant/80 p-1 shadow-sm md:flex md:items-center md:px-1 md:py-0.5 md:gap-0 md:divide-x md:divide-slate-200">
+            <div className="grid grid-cols-3 gap-1 bg-white max-md:bg-gradient-to-r max-md:from-primary/[0.06] max-md:via-indigo-50/40 max-md:to-amber-50/30 max-md:border-primary/20 rounded-xl border border-outline-variant/80 p-1 shadow-sm md:flex md:items-center md:px-1 md:py-0.5 md:gap-0 md:divide-x md:divide-slate-200">
               <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2" data-load-layer="light">
                 <Users size={18} className="text-slate-400 shrink-0 hidden md:block" />
-                <span className="font-black text-lg text-on-surface">
+                <span className="font-black text-lg text-on-surface max-md:text-primary">
                   {isLightLoading ? (
                     <Skeleton variant="text" width={24} height={20} className="inline-block" />
                   ) : isLightError || !team ? (
@@ -207,7 +207,7 @@ export default function TeamDetailPage() {
               </div>
               <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2" data-load-layer="heavy">
                 <CheckCircle2 size={18} className="text-green-500 shrink-0 hidden md:block" />
-                <span className="font-black text-lg text-on-surface">
+                <span className="font-black text-lg text-on-surface max-md:text-emerald-700">
                   {(isLightLoading || evalsLoading) ? (
                     <Skeleton variant="text" width={40} height={20} className="inline-block" />
                   ) : (isLightError || evalsError || !team) ? (
@@ -220,7 +220,7 @@ export default function TeamDetailPage() {
               </div>
               <div className="px-1 py-2 md:px-4 flex flex-col md:flex-row items-center gap-0.5 md:gap-2" data-load-layer="heavy">
                 <Clock size={18} className="text-amber-500 shrink-0 hidden md:block" />
-                <span className="font-black text-lg text-on-surface">
+                <span className="font-black text-lg text-on-surface max-md:text-amber-700">
                   {(isLightLoading || evalsLoading) ? (
                     <Skeleton variant="text" width={24} height={20} className="inline-block" />
                   ) : (isLightError || evalsError || !team) ? (
@@ -291,8 +291,8 @@ export default function TeamDetailPage() {
             <div className="space-y-5">
               {/* Leader Block */}
               {leader && (
-                <div key={leader.id} className="bg-white rounded-2xl border border-indigo-200/80 shadow-sm overflow-hidden p-4 space-y-3">
-                  <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3.5 flex items-center gap-3">
+                <div key={leader.id} className="bg-white max-md:bg-indigo-50/20 rounded-2xl border border-indigo-200/80 max-md:border-indigo-300/80 shadow-sm overflow-hidden p-4 space-y-3">
+                  <div className="bg-indigo-50/70 max-md:bg-indigo-100/50 border border-indigo-200/80 max-md:border-indigo-200 rounded-xl p-3.5 flex items-center gap-3">
                     {/* Desktop */}
                     <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                       <div>
@@ -327,8 +327,8 @@ export default function TeamDetailPage() {
                     </div>
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
-                      <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{leader.name}</Link>
-                      <p className="text-xs text-slate-500 mt-1">Mã: {leader.employeeCode} · Vai trò: Leader</p>
+                      <Link prefetch={false} href={`/evaluations/${leader.id}`} className="font-bold text-indigo-950 text-sm truncate block hover:text-indigo-700 hover:underline" title="Đánh giá">{leader.name}</Link>
+                      <p className="text-xs text-indigo-700/80 mt-1 font-medium">Mã: {leader.employeeCode} · Vai trò: Leader</p>
                       <TeamDetailMemberCell
                         memberId={leader.id}
                         evaluation={evaluationMap.get(leader.id)}
@@ -348,10 +348,10 @@ export default function TeamDetailPage() {
               {subLeaderBlocks.grouped.map(({ subLeader: sl, rows }) => (
                 <div
                   key={sl.id}
-                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden p-4 space-y-3"
+                  className="bg-white max-md:bg-teal-50/20 rounded-2xl border border-slate-200/80 max-md:border-teal-200/70 shadow-sm overflow-hidden p-4 space-y-3"
                 >
                   {/* Block Header */}
-                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center gap-3">
+                  <div className="bg-slate-50 max-md:bg-teal-50/70 border border-slate-200/80 max-md:border-teal-200/80 rounded-xl p-3.5 flex items-center gap-3">
                     {/* Desktop */}
                     <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
                       <div>
@@ -386,8 +386,8 @@ export default function TeamDetailPage() {
                     </div>
                     {/* Mobile */}
                     <div className="md:hidden min-w-0 flex-1">
-                      <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-slate-800 text-sm truncate block hover:text-primary hover:underline" title="Đánh giá">{sl.name}</Link>
-                      <p className="text-xs text-slate-500 mt-1">Mã: {sl.employeeCode} · Vai trò: SubLeader{sl.description && sl.description.trim() !== '' && !['SubLeader', 'Sub Leader', 'Leader', 'Manager'].includes(sl.description.trim()) ? ` · ${sl.description}` : ''}</p>
+                      <Link prefetch={false} href={`/evaluations/${sl.id}`} className="font-bold text-teal-950 text-sm truncate block hover:text-teal-700 hover:underline" title="Đánh giá">{sl.name}</Link>
+                      <p className="text-xs text-teal-700/80 mt-1 font-medium">Mã: {sl.employeeCode} · Vai trò: SubLeader{sl.description && sl.description.trim() !== '' && !['SubLeader', 'Sub Leader', 'Leader', 'Manager'].includes(sl.description.trim()) ? ` · ${sl.description}` : ''}</p>
                       <TeamDetailMemberCell
                         memberId={sl.id}
                         evaluation={evaluationMap.get(sl.id)}
@@ -407,11 +407,11 @@ export default function TeamDetailPage() {
                       Chưa có nhân viên trực thuộc
                     </p>
                   ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-slate-100 max-md:divide-teal-100/40">
                       {rows.map((member) => (
                         <div
                           key={member.id}
-                          className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                          className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors max-md:bg-teal-50/30 max-md:border-l-[3px] max-md:border-teal-400/80 max-md:rounded-r-lg max-md:rounded-l-none md:border-l-0 md:bg-transparent"
                         >
                           {/* Desktop */}
                           <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">
@@ -473,9 +473,9 @@ export default function TeamDetailPage() {
 
               {/* Unassigned SubLeader Block */}
               {subLeaderBlocks.unassignedRows.length > 0 && (
-                <div className="bg-white rounded-2xl border border-amber-200/80 shadow-sm overflow-hidden p-4 space-y-3">
+                <div className="bg-white max-md:bg-amber-50/25 rounded-2xl border border-amber-200/80 max-md:border-amber-300/80 shadow-sm overflow-hidden p-4 space-y-3">
                   {/* Warning Header */}
-                  <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="bg-amber-50/80 max-md:bg-amber-100/70 border border-amber-200/80 max-md:border-amber-300/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <AlertTriangle size={18} className="text-amber-600 shrink-0" />
                       <div>
@@ -491,11 +491,11 @@ export default function TeamDetailPage() {
                   </div>
 
                   {/* Unassigned Employees List */}
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-100 max-md:divide-amber-100/40">
                     {subLeaderBlocks.unassignedRows.map((member) => (
                       <div
                         key={member.id}
-                        className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors"
+                        className="flex flex-wrap items-center gap-4 px-3 py-3 hover:bg-slate-50/60 rounded-lg transition-colors max-md:bg-amber-50/40 max-md:border-l-[3px] max-md:border-amber-400/90 max-md:rounded-r-lg max-md:rounded-l-none md:border-l-0 md:bg-transparent"
                       >
                         {/* Desktop */}
                         <div className="max-md:hidden min-w-0 flex-1 grid grid-cols-[minmax(0,1fr)_32px_170px] md:grid-cols-[minmax(0,1fr)_32px_170px_144px] items-center gap-3">

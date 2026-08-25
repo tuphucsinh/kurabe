@@ -83,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F8FAFC]">
+    <div className="min-h-screen w-full bg-[#F8FAFC] max-md:bg-gradient-to-b max-md:from-primary/5 max-md:via-[#F8FAFC] max-md:to-indigo-50/30">
       <div className="flex w-full min-h-screen">
         <Sidebar 
           isOpen={isSidebarOpen} 
