@@ -196,7 +196,7 @@ export default function TeamsClient() {
 
       {/* Team Cards / Light Layer */}
       {isLightLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6" data-load-layer="light">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6" data-load-layer="light">
           <TeamCardSkeleton />
           <TeamCardSkeleton />
           <TeamCardSkeleton />
@@ -211,7 +211,7 @@ export default function TeamsClient() {
           <p className="text-rose-700 font-medium">Đã xảy ra lỗi khi tải danh sách nhóm QAQC. Vui lòng thử lại sau.</p>
         </div>
       ) : teamsData.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6" data-load-layer="light">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-6" data-load-layer="light">
           {teamsData.map((team) => (
             <Link
               key={team.id}
@@ -220,49 +220,66 @@ export default function TeamsClient() {
               className="group bg-white rounded-2xl border border-outline-variant shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
             >
               {/* Card Header (Light Data) */}
-              <div className="p-6 pb-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                    <Users size={22} />
+              <div className="p-4 pb-3 md:p-6 md:pb-5">
+                {/* Mobile Header: Compact horizontal row (< 768px) */}
+                <div className="flex items-center gap-3 md:hidden">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Users size={20} />
                   </div>
-                  <div className="flex items-center gap-2 max-md:hidden">
-                    {isManager && (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleEditTeam(team as unknown as Team);
-                          }}
-                          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
-                          title="Chỉnh sửa nhóm"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeleteTeam(team.id, team.name);
-                          }}
-                          className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          title="Xóa nhóm"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-black text-on-surface truncate leading-snug">{team.name}</h3>
+                    <p className="text-xs text-outline flex items-center gap-1.5 mt-0.5 truncate">
+                      <UserIcon size={12} className="shrink-0" />
+                      <span className="truncate">Leader: <span className="font-bold text-on-surface">{team.leaderName}</span></span>
+                    </p>
                   </div>
                 </div>
-                <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
-                <p className="text-sm text-outline flex items-center gap-1.5">
-                  <UserIcon size={14} />
-                  Leader: <span className="font-bold text-on-surface">{team.leaderName}</span>
-                </p>
+
+                {/* Desktop Header: Unchanged (>= 768px) */}
+                <div className="max-md:hidden">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                      <Users size={22} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isManager && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditTeam(team as unknown as Team);
+                            }}
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                            title="Chỉnh sửa nhóm"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteTeam(team.id, team.name);
+                            }}
+                            className="p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            title="Xóa nhóm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-black text-on-surface mb-1.5">{team.name}</h3>
+                  <p className="text-sm text-outline flex items-center gap-1.5">
+                    <UserIcon size={14} />
+                    Leader: <span className="font-bold text-on-surface">{team.leaderName}</span>
+                  </p>
+                </div>
               </div>
 
               {/* Card Body (Heavy Data / Evaluation Progress) */}
-              <div className="px-6 pb-6 flex-1">
+              <div className="px-4 pb-4 md:px-6 md:pb-6 flex-1">
                 <TeamEvaluationCell
                   membersCount={team.membersCount}
                   completedCount={team.completedCount}
