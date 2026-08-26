@@ -19,7 +19,7 @@
 - **Context hiện có**: repo chưa có source evidence cho partial unique index `evaluation_periods.status = 'active'`; `getActivePeriod()` hiện `.limit(1).single()` nên nhiều Active bị chọn một row.
 - **Constraints**: read-only; không in row/PII/credential; chỉ aggregate count/schema metadata; `>1` Active, duplicate `(period_id, employee_id)` hoặc provenance drift → STOP/Need approval, không auto-heal.
 - **Definition of Done**: evidence ghi count 0/1/>1, exact catalog object/provenance hoặc `ABSENT`, current FK/unique state và decision `CONTINUE`/`STOP`; không mutation.
-- **Status**: `[ ]`
+- **Status**: `[x]` — P96T00 verified: live Active = 1, evaluations = 53, rounds = 69, duplicate/orphan counts = 0. PostgREST không expose `pg_catalog`/`information_schema`; single-Active catalog invariant `ABSENT_IN_REPO_ONLY`, live metadata UNKNOWN. P96T01 được phép bắt đầu; P96T03 vẫn giữ direct-catalog/apply gate.
 
 ### [#P96T01] [browser/performance] Authenticated compare baseline waterfall
 - **Goal**: đo cold/warm và các mốc `shell-visible`, `first-light-visible`, `grade-bands-ready`, `first-primary-complete`, `secondary-complete`, `full-complete` tại 390x844, 768x1024, 1440x900; kèm period matrix khi fixture/tooling read-only hỗ trợ.
