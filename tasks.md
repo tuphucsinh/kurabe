@@ -100,7 +100,7 @@
 - **Context hiện có**: project gates `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `git diff --check`; authenticated browser evidence dùng account test được phép.
 - **Constraints**: cold/warm tối thiểu 3 sample/mode nếu tooling hỗ trợ; không claim PASS từ FCP/skeleton; verify Active→Closed, none→new Active, stale tab/cross-tab; không apply migration/deploy/push trong implementation gate.
 - **Definition of Done**: milestone before/after, screenshots, console/network, overflow/focus/navigation, zero/one/multiple Active, cache transition và Closed-write matrix PASS; deterministic gates PASS; query/cache/prefetch chỉ giữ nếu lợi ích ròng được đo; DB/RPC apply vẫn chờ approval.
-- **Status**: `[ ]`
+- **Status**: `[!] BLOCKED_AUTH/UNKNOWN` — deterministic final gate PASS: `npm run test` 34/34, lint, typecheck, build, git diff/check và source commit integrity PASS. Candidate server 3011 READY; browser route protected trả HTTP 307 `/login`, browser console 0 errors trên trang login. Authenticated viewport/screenshots/overflow/focus/stale-tab/cache transition/compare performance chưa thể verify; không claim PASS. P96T03–P96T05 live catalog/race/failure-injection vẫn UNKNOWN/BLOCKED; chưa apply/deploy/push.
 
 ---
 
