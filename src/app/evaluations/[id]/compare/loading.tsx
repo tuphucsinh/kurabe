@@ -11,6 +11,7 @@ export function CompareStaticFrame() {
     <div
       className="min-h-full bg-page pb-20 w-full animate-in fade-in duration-300"
       data-load-layer="static"
+      data-load-state="loading"
       role="status"
       aria-busy="true"
       aria-label="Đang tải dữ liệu so sánh"
@@ -58,7 +59,7 @@ export function CompareStaticFrame() {
         <div className="flex flex-col gap-6 sm:gap-8">
 
           {/* ═══════ Summary Section Skeleton ═══════ */}
-          <section data-load-layer="primary">
+          <section data-load-phase="primary" data-load-layer="primary">
             <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <AlertCircle size={14} className="text-brand" />
               Tổng quan kết quả
@@ -84,7 +85,7 @@ export function CompareStaticFrame() {
           </section>
 
           {/* ═══════ Main Comparison Table & Mobile Cards Skeleton ═══════ */}
-          <section data-load-layer="changed-criteria">
+          <section data-load-phase="primary" data-load-layer="changed-criteria">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 Chi tiết tiêu chí thay đổi
@@ -164,7 +165,7 @@ export function CompareStaticFrame() {
           </section>
 
           {/* ═══════ Comments Comparison Skeleton ═══════ */}
-          <section data-load-layer="comments">
+          <section data-load-phase="secondary" data-load-layer="comments">
             <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
               <MessageSquare size={14} className="text-brand" />
               Nhận xét qua các vòng
@@ -187,7 +188,7 @@ export function CompareStaticFrame() {
           </section>
 
           {/* ═══════ Unchanged Criteria Skeleton ═══════ */}
-          <section className="mt-4" data-load-layer="unchanged">
+          <section className="mt-4" data-load-phase="secondary" data-load-layer="unchanged">
             <div className="bg-surface-raised rounded-3xl border border-outline-soft overflow-hidden">
               <div className="px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <Skeleton className="h-3 w-36 rounded" />

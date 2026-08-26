@@ -91,6 +91,7 @@ export interface CompareFrameProps {
   employeeName?: string | null;
   employeeCode?: string | null;
   activeVisibleRound?: number | null;
+  loadState?: 'loading' | 'ready';
   children: ReactNode;
 }
 
@@ -99,10 +100,15 @@ export function CompareFrame({
   employeeName,
   employeeCode,
   activeVisibleRound,
+  loadState = 'ready',
   children,
 }: CompareFrameProps) {
   return (
-    <div className="min-h-full bg-page pb-20" data-load-layer="static">
+    <div
+      className="min-h-full bg-page pb-20"
+      data-load-layer="static"
+      data-load-state={loadState}
+    >
       <CompareHeader
         onBack={onBack}
         employeeName={employeeName}
@@ -265,11 +271,12 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
       employeeName={employee.name}
       employeeCode={employee.employeeCode}
       activeVisibleRound={activeVisibleRound}
+      loadState="ready"
     >
       <div className="flex flex-col gap-6 sm:gap-8">
 
         {/* ═══════ Summary Section ═══════ */}
-        <section data-load-layer="primary">
+        <section data-load-phase="primary" data-load-layer="primary">
           <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <AlertCircle size={14} className="text-brand" />
             Tổng quan kết quả
@@ -331,7 +338,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
         </section>
 
         {/* ═══════ Main Comparison Table & Mobile Cards ═══════ */}
-        <section data-load-layer="changed-criteria">
+        <section data-load-phase="primary" data-load-layer="changed-criteria">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2">
               Chi tiết tiêu chí thay đổi ({changedCriteriaIds.size})
@@ -492,7 +499,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
         </section>
 
         {/* ═══════ Comments Comparison ═══════ */}
-        <section data-load-layer="comments">
+        <section data-load-phase="secondary" data-load-layer="comments">
           <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
             <MessageSquare size={14} className="text-brand" />
             Nhận xét qua các vòng
@@ -541,7 +548,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
         {/* ═══════ Unchanged Criteria Accordion-style ═══════ */}
         {unchangedCriteria.length > 0 && (
-          <section className="mt-4" data-load-layer="unchanged">
+          <section className="mt-4" data-load-phase="secondary" data-load-layer="unchanged">
             <div className="bg-surface-raised rounded-3xl border border-outline-soft overflow-hidden">
               <div className="px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <h3 className="text-xs font-black text-ink-muted uppercase tracking-widest">

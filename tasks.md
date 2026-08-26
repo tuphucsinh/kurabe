@@ -82,7 +82,7 @@
 - **Context hiện có**: summary `page.tsx:186-246`; changed criteria `248-407`; comments `409-455`; unchanged `457-485`.
 - **Constraints**: không đổi score/grade/delta/round ordering/access; không render score 0 thay missing data; unchanged đóng mặc định; giữ comments đầy đủ; `getGradeBandsAction()` có state/error contract riêng và grade authoritative không bị thay đổi im lặng sau primary milestone.
 - **Definition of Done**: primary/secondary markers đo được; stale scope không hiển thị data cũ; changed criteria và comments đúng với baseline.
-- **Status**: `[ ]`
+- **Status**: `[x] PASS_WITH_CONSTRAINT` — aggregate source giữ nguyên; thêm truthful `data-load-state` và `data-load-phase` markers, primary DOM trước secondary, không fake streaming/delay/retry/query. Focused contract PASS; full suite 33/33, lint, tsc, build PASS; fresh reviewer `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Browser authenticated canary `BLOCKED_AUTH` do route 307 `/login`.
 
 ### [#P96T08] [compare page/components] Compact render-cost reduction
 - **Goal**: bỏ criterion IDs khỏi DOM, giảm duplicated delta/labels/cards/padding và tránh duplicate computation mobile/desktop.
