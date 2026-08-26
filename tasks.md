@@ -54,8 +54,8 @@
 - **Parallel-safe**: no.
 - **Context hiện có**: create đang insert period/evaluations/rounds thành 3 write; delete đang xóa evaluations → ai summaries → period thành nhiều write độc lập.
 - **Constraints**: ưu tiên transactional RPC nhận payload evaluator đã resolve server-side, không duplicate workflow authority trong SQL; failed create không để partial row; period có business evaluations trả non-success; empty được định nghĩa zero evaluations + zero ai_summaries; chỉ exact empty period được cleanup transactional, Manager auth và approval; không suy ra “test period” nếu schema không đánh dấu; không auto-clean production.
-- **Definition of Done**: failure injection ở bước evaluation/round insert chứng minh rollback không còn orphan period; tests business-delete-blocked và exact-empty-delete atomic; migration/RPC có provenance/rollback; Reviewer PASS; apply production `Need approval`.
-- **Status**: `[ ]`
+- **Definition of Done**: candidate contract kiểm tra atomic RPC, payload set/period binding, business-delete-blocked và exact-empty-delete; migration/RPC có provenance/rollback; Reviewer PASS; live failure injection/catalog verification vẫn là gate riêng vì direct DB access bị BLOCKED; apply production `Need approval`.
+- **Status**: `[x]` — PASS_WITH_CONSTRAINT: candidate atomic create/delete đã verify; live DB integration/failure injection chưa chạy do Management API/pg_catalog access UNKNOWN/BLOCKED; chưa apply production.
 
 ### [#P96T05] [evaluation/AI actions + transaction RPC] Closed-period write firewall
 - **Goal**: mọi write vào evaluations/evaluation_rounds fail-closed nếu period không Active, kể cả stale tab và transactional RPC.

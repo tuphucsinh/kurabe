@@ -11,13 +11,38 @@ import {
   EvaluationSubject,
   EvaluatorResolution,
 } from '@/lib/evaluator-resolver';
-import { Database } from '@/types/database';
 import { toClientError, ClientSafeError } from '@/lib/errors';
 import { parseRole } from '@/lib/parsers';
-import { canDeleteEvaluationPeriodStatus } from '@/lib/period-status';
 
-type InsertEvaluation = Database['public']['Tables']['evaluations']['Insert'];
-type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
+export interface EvaluationPayloadItem {
+  employee_id: string;
+  employee_role: string;
+  team_id: string | null;
+  status: string;
+  current_round: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoundPayloadItem {
+  employee_id: string;
+  round: number;
+  evaluator_id: string | null;
+  evaluator_role: string;
+  scores: Record<string, unknown>;
+  notes: Record<string, unknown>;
+  total_score: number;
+  grade: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DeleteEmptyPeriodRpcResult {
+  deleted: boolean;
+  reason: 'DELETED' | 'NOT_FOUND' | 'NOT_CLOSED' | 'HAS_DATA' | string;
+  evaluation_count?: number;
+  ai_summary_count?: number;
+}
 
 function revalidatePeriodPaths() {
   revalidateTag('dashboard-data', 'default');
@@ -36,6 +61,11 @@ function getMissingEvaluatorError(employeeId: string, selector: string, round: n
 /**
  * Tạo một kỳ đánh giá mới và khởi tạo Evaluations cho TẤT CẢ nhân viên (Bao gồm cả Manager).
  * Actor lấy từ session (requireManager) — KHÔNG trust managerId từ client.
+ *
+ * P96T04 Contract:
+ * - TypeScript là thẩm quyền duy nhất giải quyết luồng đánh giá (evaluator resolution).
+ * - Toàn bộ thao tác tạo kỳ (evaluation_periods status: 'active') + danh sách evaluations + round 1
+ *   được thực thi trong 1 giao dịch database nguyên tử thông qua RPC create_evaluation_period_atomic.
  */
 export async function createEvaluationPeriod(year: number) {
   const auth = await requireManager();
@@ -77,21 +107,55 @@ export async function createEvaluationPeriod(year: number) {
       initialEvaluators.set(employee.id, evaluator);
     }
 
-    // 2. Tạo Evaluation Period (DB partial unique index là authority duy nhất chống race condition)
-    const { data: period, error: pError } = await supabaseAdmin
-      .from('evaluation_periods')
-      .insert({
-        name: periodName,
-        year,
-        created_by: managerId,
-        status: 'active',
-        created_at: now
-      })
-      .select()
-      .single();
+    // 2. Chuẩn bị payload danh sách Evaluations và Rounds cho atomic RPC
+    // status: 'active' được gán server-side trong RPC
+    const evaluationsPayload: EvaluationPayloadItem[] = periodEmployees.map((emp) => ({
+      employee_id: emp.id,
+      employee_role: emp.role,
+      team_id: emp.teamId || null,
+      status: 'NotStarted',
+      current_round: 1,
+      created_at: now,
+      updated_at: now,
+    }));
 
-    if (pError || !period) {
-      const errObj = pError as { code?: string; message?: string; details?: string; hint?: string } | null;
+    const roundsPayload: RoundPayloadItem[] = periodEmployees.map((emp) => {
+      const flow = getEvaluationFlow(emp.role);
+      const firstStep = flow[0]; // Chỉ lấy Round 1
+      const evaluator = initialEvaluators.get(emp.id);
+
+      return {
+        employee_id: emp.id,
+        round: firstStep.round,
+        evaluator_id: evaluator?.id || null,
+        evaluator_role: parseRole(evaluator?.role || firstStep.evaluator),
+        scores: {},
+        notes: {},
+        total_score: 0,
+        grade: 'Pending',
+        status: 'NotStarted',
+        created_at: now,
+      };
+    });
+
+    // 3. Thực thi Atomic Transaction RPC (Kỳ đánh giá + Evaluations + Round 1 được tạo trong 1 giao dịch)
+    const { data: periodId, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: string | null; error: unknown }>)(
+      'create_evaluation_period_atomic',
+      {
+        p_name: periodName,
+        p_year: year,
+        p_created_by: managerId,
+        p_created_at: now,
+        p_evaluations: evaluationsPayload,
+        p_rounds: roundsPayload,
+      }
+    );
+
+    if (rpcError || !periodId || typeof periodId !== 'string' || !periodId.trim()) {
+      const errObj = rpcError as { code?: string; message?: string; details?: string; hint?: string } | null;
       const dbErrorText = [errObj?.message, errObj?.details, errObj?.hint].filter(Boolean).join(' ');
       const isSingleActiveConflict =
         errObj?.code === '23505' &&
@@ -106,73 +170,27 @@ export async function createEvaluationPeriod(year: number) {
           ),
         };
       }
-      return { success: false, error: toClientError(pError, 'Lỗi tạo kỳ đánh giá. Vui lòng thử lại.') };
-    }
-
-    if (periodEmployees.length === 0) {
-      return { success: true, periodId: period.id, message: 'Kỳ đánh giá đã được tạo nhưng không có nhân viên nào để khởi tạo.' };
-    }
-
-    // 3. Chuẩn bị dữ liệu Evaluations (Bulk Insert)
-    const evaluationsData: InsertEvaluation[] = periodEmployees.map((emp) => ({
-      period_id: period.id,
-      employee_id: emp.id,
-      employee_role: emp.role,
-      team_id: emp.teamId,
-      status: 'NotStarted',
-      current_round: 1,
-      created_at: now,
-      updated_at: now
-    }));
-
-    const { data: insertedEvals, error: evError } = await supabaseAdmin
-      .from('evaluations')
-      .insert(evaluationsData)
-      .select();
-
-    if (evError || !insertedEvals) {
-      return { success: false, error: toClientError(evError, 'Lỗi khởi tạo danh sách đánh giá. Vui lòng thử lại.') };
-    }
-
-    const employeeMap = new Map(periodEmployees.map(emp => [emp.id, emp]));
-
-    // 4. Khởi tạo Round 1 cho từng nhân viên
-    const roundsData: InsertRound[] = [];
-    
-    for (const ev of insertedEvals) {
-      const employee = employeeMap.get(ev.employee_id);
-      if (!employee) continue;
-
-      const flow = getEvaluationFlow(employee.role);
-      const firstStep = flow[0]; // Chỉ lấy Round 1
-      const evaluator = initialEvaluators.get(employee.id);
-
-      // Nếu employee chưa gán subleader (evaluator null), evaluator_id = null (không được assign) để bổ sung sau
-      roundsData.push({
-        evaluation_id: ev.id,
-        round: firstStep.round,
-        evaluator_id: evaluator?.id || null,
-        evaluator_role: parseRole(evaluator?.role || firstStep.evaluator),
-        scores: {},
-        notes: {},
-        total_score: 0,
-        grade: 'Pending',
-        status: 'NotStarted',
-        created_at: now
-      });
-    }
-
-    const { error: rError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .insert(roundsData);
-
-    if (rError) {
-      return { success: false, error: toClientError(rError, 'Lỗi tạo các vòng đánh giá. Vui lòng thử lại.') };
+      if (rpcError) {
+        return { success: false, error: toClientError(rpcError, 'Lỗi tạo kỳ đánh giá. Vui lòng thử lại.') };
+      }
+      return {
+        success: false,
+        error: 'Lỗi tạo kỳ đánh giá: không nhận được mã kỳ đánh giá hợp lệ.',
+      };
     }
 
     revalidatePeriodPaths();
-    await logAudit(auth.user, 'CREATE_PERIOD', 'period', period.id, { year });
-    return { success: true, periodId: period.id };
+    await logAudit(auth.user, 'CREATE_PERIOD', 'period', periodId, { year });
+
+    if (periodEmployees.length === 0) {
+      return {
+        success: true,
+        periodId,
+        message: 'Kỳ đánh giá đã được tạo nhưng không có nhân viên nào để khởi tạo.',
+      };
+    }
+
+    return { success: true, periodId };
   } catch (err: unknown) {
     return { success: false, error: toClientError(err, 'Lỗi không xác định khi tạo kỳ đánh giá.') };
   }
@@ -215,44 +233,52 @@ export async function closeEvaluationPeriod(periodId: string) {
 }
 
 /**
- * Xóa một kỳ đánh giá và toàn bộ dữ liệu liên quan.
- * Chặn xóa kỳ đang Active (phải Đóng kỳ trước — tránh mất dữ liệu đang chấm) + dọn ai_summaries.
+ * Xóa một kỳ đánh giá trống đã đóng (Atomic RPC).
+ * Chặn xóa kỳ có dữ liệu (evaluations > 0 hoặc ai_summaries > 0) hoặc kỳ chưa đóng.
+ * Toàn bộ kiểm tra lock, đếm và xóa thực thi trong 1 transaction phía DB.
  */
 export async function deleteEvaluationPeriod(periodId: string) {
   const auth = await requireManager();
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    // 0. Kiểm tra trạng thái kỳ — kỳ Active phải đóng trước khi xóa (KNOWN_BUGS #4, fix 2026-08-17)
-    const { data: period } = await supabaseAdmin
-      .from('evaluation_periods')
-      .select('id, status')
-      .eq('id', periodId)
-      .maybeSingle();
-
-    if (!period) return { success: false, error: 'Không tìm thấy kỳ đánh giá.' };
-    if (!canDeleteEvaluationPeriodStatus(period.status)) {
-      return { success: false, error: 'Kỳ đang Active — hãy "Đóng kỳ" trước khi xóa để tránh mất dữ liệu đang chấm.' };
+    if (!periodId || typeof periodId !== 'string' || periodId.trim() === '') {
+      return { success: false, error: 'Thiếu thông tin kỳ đánh giá.' };
     }
 
-    // 1. Xóa trực tiếp evaluations, DB đã config cascade sang evaluation_rounds và responses
-    const { error: evalError } = await supabaseAdmin
-      .from('evaluations')
-      .delete()
-      .eq('period_id', periodId);
+    const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: DeleteEmptyPeriodRpcResult | null; error: unknown }>)(
+      'delete_empty_evaluation_period_atomic',
+      {
+        p_period_id: periodId,
+      }
+    );
 
-    if (evalError) return { success: false, error: toClientError(evalError, 'Lỗi xóa dữ liệu đánh giá của kỳ. Vui lòng thử lại.') };
+    if (rpcError) {
+      return { success: false, error: toClientError(rpcError, 'Lỗi xóa kỳ đánh giá. Vui lòng thử lại.') };
+    }
 
-    // 2. Dọn tóm tắt AI của kỳ — delete idempotent, đảm bảo không sót dòng mồ côi
-    await supabaseAdmin.from('ai_summaries').delete().eq('period_id', periodId);
+    if (!rpcData) {
+      return { success: false, error: 'Lỗi xóa kỳ đánh giá: không nhận được kết quả từ hệ thống.' };
+    }
 
-    // 3. Xóa period
-    const { error } = await supabaseAdmin
-      .from('evaluation_periods')
-      .delete()
-      .eq('id', periodId);
-
-    if (error) return { success: false, error: toClientError(error, 'Lỗi xóa kỳ đánh giá. Vui lòng thử lại.') };
+    if (!rpcData.deleted) {
+      if (rpcData.reason === 'NOT_FOUND') {
+        return { success: false, error: 'Không tìm thấy kỳ đánh giá.' };
+      }
+      if (rpcData.reason === 'NOT_CLOSED') {
+        return { success: false, error: 'Kỳ đang Active — hãy "Đóng kỳ" trước khi xóa để tránh mất dữ liệu đang chấm.' };
+      }
+      if (rpcData.reason === 'HAS_DATA') {
+        return {
+          success: false,
+          error: 'Không thể xóa kỳ đánh giá đã có dữ liệu (đánh giá hoặc báo cáo AI). Chỉ có thể xóa kỳ trống đã đóng.',
+        };
+      }
+      return { success: false, error: 'Không thể xóa kỳ đánh giá.' };
+    }
 
     revalidatePeriodPaths();
     await logAudit(auth.user, 'DELETE_PERIOD', 'period', periodId);
