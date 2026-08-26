@@ -49,8 +49,8 @@ function extractFunction(code, functionName) {
   const cleanCode = stripComments(code);
 
   assert.ok(
-    /import\s*\{[^}]*\bgetActivePeriod\b[^}]*\}\s*from\s*['"]@\/lib\/db\/evaluations['"]/.test(cleanCode),
-    'src/actions/read.ts must import getActivePeriod from @/lib/db/evaluations'
+    !/import\s*\{[^}]*\bgetActivePeriod\b[^}]*\}\s*from\s*['"]@\/lib\/db\/evaluations['"]/.test(cleanCode),
+    'src/actions/read.ts must not resolve an implicit active period in the employee read action'
   );
 
   assert.ok(
@@ -87,42 +87,33 @@ function extractFunction(code, functionName) {
     'getEvaluationByEmployeeAction must return null on auth error'
   );
 
-  // 2.3 Must compute effectivePeriodId falling back to active period
+  // 2.3 Missing periodId must fail closed without resolving an implicit period
   assert.ok(
-    /effectivePeriodId\s*=\s*periodId\s*\?\?\s*\(await\s+getActivePeriod\(\)\)\?\.id/.test(normFn) ||
-      /effectivePeriodId\s*=\s*periodId\s*\|\|\s*\(await\s+getActivePeriod\(\)\)\?\.id/.test(normFn),
-    'getEvaluationByEmployeeAction must compute effectivePeriodId using periodId ?? (await getActivePeriod())?.id'
+    /if\s*\(\s*!periodId\s*\)\s*\{\s*return\s+null;\s*\}/.test(normFn),
+    'getEvaluationByEmployeeAction must return null when periodId is missing'
   );
 
-  // 2.4 Must return null safely when no active period exists and periodId is omitted
+  // 2.4 Must call getEvaluationByEmployeeAdmin with the explicit periodId
   assert.ok(
-    /if\s*\(\s*!effectivePeriodId\s*\)\s*\{\s*return\s+null;\s*\}/.test(normFn),
-    'getEvaluationByEmployeeAction must return null when effectivePeriodId is falsy'
+    /return\s+getEvaluationByEmployeeAdmin\s*\(\s*employeeId\s*,\s*periodId\s*,\s*auth\.user\s*\)/.test(normFn),
+    'getEvaluationByEmployeeAction must return getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user)'
   );
 
-  // 2.5 Must call getEvaluationByEmployeeAdmin with exact argument order: (employeeId, effectivePeriodId, auth.user)
+  // 2.5 The explicit periodId is guarded immediately before the admin call
   assert.ok(
-    /return\s+getEvaluationByEmployeeAdmin\s*\(\s*employeeId\s*,\s*effectivePeriodId\s*,\s*auth\.user\s*\)/.test(normFn),
-    'getEvaluationByEmployeeAction must return getEvaluationByEmployeeAdmin(employeeId, effectivePeriodId, auth.user)'
+    /if\s*\(\s*!periodId\s*\)[\s\S]*?return\s+null;[\s\S]*?return\s+getEvaluationByEmployeeAdmin\s*\(\s*employeeId\s*,\s*periodId\s*,/.test(normFn),
+    'getEvaluationByEmployeeAction must guard periodId before the admin query'
   );
 
-  // 2.6 Must not pass raw unvalidated periodId to getEvaluationByEmployeeAdmin
-  assert.ok(
-    !/getEvaluationByEmployeeAdmin\s*\(\s*employeeId\s*,\s*periodId\s*,/.test(normFn),
-    'getEvaluationByEmployeeAction must not pass raw unvalidated periodId to getEvaluationByEmployeeAdmin'
-  );
-
-  // 2.7 Strict execution order check
+  // 2.6 Strict execution order check
   const authIdx = normFn.indexOf('requireAuth()');
   const authGuardIdx = normFn.indexOf('return null', authIdx);
-  const activePeriodIdx = normFn.indexOf('getActivePeriod()');
-  const periodGuardIdx = normFn.indexOf('!effectivePeriodId');
+  const periodGuardIdx = normFn.indexOf('!periodId');
   const periodGuardReturnIdx = normFn.indexOf('return null', periodGuardIdx);
   const adminCallIdx = normFn.indexOf('getEvaluationByEmployeeAdmin(');
 
   assert.ok(authIdx !== -1, 'requireAuth must exist in getEvaluationByEmployeeAction');
   assert.ok(authGuardIdx !== -1, 'auth error guard must return null');
-  assert.ok(activePeriodIdx !== -1, 'getActivePeriod must exist in getEvaluationByEmployeeAction');
   assert.ok(periodGuardIdx !== -1, 'effectivePeriodId null check must exist');
   assert.ok(periodGuardReturnIdx !== -1, 'missing period guard must return null');
   assert.ok(adminCallIdx !== -1, 'getEvaluationByEmployeeAdmin call must exist');
@@ -131,14 +122,7 @@ function extractFunction(code, functionName) {
     authIdx < authGuardIdx,
     'requireAuth must precede auth error guard'
   );
-  assert.ok(
-    authGuardIdx < activePeriodIdx,
-    'auth guard must return before resolving active period'
-  );
-  assert.ok(
-    activePeriodIdx < periodGuardIdx,
-    'active period resolution must precede effectivePeriodId null check'
-  );
+  assert.ok(authGuardIdx < periodGuardIdx, 'auth guard must return before period guard');
   assert.ok(
     periodGuardIdx < periodGuardReturnIdx,
     'period check must precede period guard return null'

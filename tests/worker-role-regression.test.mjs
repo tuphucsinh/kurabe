@@ -52,37 +52,37 @@ function stripComments(code) {
   );
 }
 
-// 2. src/app/evaluations/[id]/page.tsx
+// 2. src/app/evaluations/[id]/EvaluationPageClient.tsx
 {
-  const code = readProjectFile('src/app/evaluations/[id]/page.tsx');
+  const code = readProjectFile('src/app/evaluations/[id]/EvaluationPageClient.tsx');
   assert.ok(
     !code.includes("evaluatorRole: usesLeaderGrading ? 'Leader' : 'Employee'"),
-    'src/app/evaluations/[id]/page.tsx must not collapse Worker to Employee in currentSummaryRound'
+    'src/app/evaluations/[id]/EvaluationPageClient.tsx must not collapse Worker to Employee in currentSummaryRound'
   );
   assert.ok(
     code.includes('evaluatorRole: employee.role'),
-    'src/app/evaluations/[id]/page.tsx must pass employee.role into currentSummaryRound.evaluatorRole'
+    'src/app/evaluations/[id]/EvaluationPageClient.tsx must pass employee.role into currentSummaryRound.evaluatorRole'
   );
 }
 
-// 3. src/app/evaluations/[id]/compare/page.tsx
+// 3. src/app/evaluations/[id]/compare/ComparePageClient.tsx
 {
-  const code = readProjectFile('src/app/evaluations/[id]/compare/page.tsx');
+  const code = readProjectFile('src/app/evaluations/[id]/compare/ComparePageClient.tsx');
   assert.ok(
     !code.includes("const role = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee'"),
-    'src/app/evaluations/[id]/compare/page.tsx must not collapse Worker to Employee for criteria filtering'
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must not collapse Worker to Employee for criteria filtering'
   );
   assert.ok(
     !code.includes("const evaluatorRole = isLeaderGradingRole(employee.role) ? 'Leader' : 'Employee'"),
-    'src/app/evaluations/[id]/compare/page.tsx must not collapse Worker to Employee for round scoring'
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must not collapse Worker to Employee for round scoring'
   );
   assert.ok(
     code.includes('const role = employee.role;'),
-    'src/app/evaluations/[id]/compare/page.tsx must filter criteria using employee.role'
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must filter criteria using employee.role'
   );
   assert.ok(
     code.includes('const evaluatorRole = employee.role;'),
-    'src/app/evaluations/[id]/compare/page.tsx must calculate round score using employee.role'
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must calculate round score using employee.role'
   );
 }
 

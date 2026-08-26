@@ -27,7 +27,7 @@ import {
 } from '@/lib/db/teams-admin';
 import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
-import { getActivePeriod, getPeriods } from '@/lib/db/evaluations';
+import { getPeriods } from '@/lib/db/evaluations';
 
 export type AuditRow = {
   id: string;
@@ -565,8 +565,8 @@ export async function getEvaluationByIdAction(id: string): Promise<Evaluation | 
 }
 
 /**
- * Đọc evaluation của một nhân viên theo kỳ (hoặc kỳ đang mở).
- * Bắt buộc requireAuth() + canViewEvaluation.
+ * Đọc evaluation của một nhân viên theo kỳ cụ thể.
+ * Bắt buộc requireAuth() + canViewEvaluation; thiếu periodId thì fail-closed.
  */
 export async function getEvaluationByEmployeeAction(
   employeeId: string,
@@ -577,12 +577,11 @@ export async function getEvaluationByEmployeeAction(
     return null;
   }
 
-  const effectivePeriodId = periodId ?? (await getActivePeriod())?.id;
-  if (!effectivePeriodId) {
+  if (!periodId) {
     return null;
   }
 
-  return getEvaluationByEmployeeAdmin(employeeId, effectivePeriodId, auth.user);
+  return getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user);
 }
 
 /**

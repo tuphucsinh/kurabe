@@ -6,8 +6,7 @@ import {
 import { 
   getEvaluationsAction, 
   getEvaluationSummariesAction,
-  getEvaluationByIdAction, 
-  getEvaluationByEmployeeAction,
+  getEvaluationByIdAction,
   getUsersAction,
   getUsersBatchAction,
   getUserByIdAction,
@@ -201,12 +200,6 @@ export const useEvaluation = (id: string, user?: User | null) => useQuery({
   enabled: !!id && !!user 
 });
 
-export const useEvaluationByEmployee = (employeeId: string, periodId?: string, user?: User | null) => useQuery({ 
-  queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id], 
-  queryFn: () => getEvaluationByEmployeeAction(employeeId, periodId), 
-  enabled: !!employeeId && !!user 
-});
-
 export const useEvaluationPageData = (
   employeeId: string,
   periodId?: string,
@@ -215,7 +208,7 @@ export const useEvaluationPageData = (
   queryKey: ['evaluation-page-data', employeeId, periodId, user?.id],
   queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && !!user,
+  enabled: !!employeeId && !!user && !!periodId,
 });
 
 export const useEvaluationComparePageData = (
@@ -226,7 +219,7 @@ export const useEvaluationComparePageData = (
   queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id],
   queryFn: () => getEvaluationComparePageDataAction(employeeId, periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && !!user,
+  enabled: !!employeeId && !!user && !!periodId,
 });
 
 // Criteria

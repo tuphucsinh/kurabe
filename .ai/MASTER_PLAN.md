@@ -174,6 +174,7 @@ Authenticated browser evidence phải dùng account được phép; không lưu 
 
 - P96T00 đã verify live Active cardinality = 1, 53 evaluations, 69 rounds, không orphan/duplicate; PostgREST không expose system catalog nên partial-unique invariant mới `ABSENT_IN_REPO_ONLY`, live catalog metadata vẫn UNKNOWN và phải gate ở P96T03.
 - P96T01 baseline đã PASS bằng Mika Playwright fallback sau Agy timeout: 3 cold + 3 warm mỗi viewport, authenticated HTTP 200; median first-light→full = 390 `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`. Agy probe timeout được giữ trong evidence; console warning CSP Report-Only, không có app exception/failed request dai dẳng.
+- P96T02 đã PASS ở local candidate: RSC/server-only Active resolver, explicit real periodId query/cache boundary, fail-closed zero/multiple/error states, closed-only inline history; full tests/lint/typecheck/build và authenticated localhost canary đều PASS. Agy `gemini-3.1-pro-high` fresh review PASS với Critical/Important/Non-blocking = NONE, HIGH confidence. Agy execution lane blocked twice; Mika fallback đã được ghi nhận.
 - Closed-period firewall cho toàn bộ evaluation write path và SQL RPC chưa được triển khai; đây là P96T05 blocker, không còn defer tới Phase 97.
 - Period create/delete hiện chưa có transaction contract đã qualify; đây là P96T04 blocker.
 - Passwordless fallback vẫn là lựa chọn nghiệp vụ hiện tại; rate-limit và CSP Report-Only warning là residual đã biết.

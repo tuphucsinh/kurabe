@@ -60,7 +60,7 @@ assert.ok(
 );
 
 // 4. Evaluation page initial loading & transient activeRoundData vs invalid round contract
-const pageSource = fs.readFileSync('src/app/evaluations/[id]/page.tsx', 'utf8');
+const pageSource = fs.readFileSync('src/app/evaluations/[id]/EvaluationPageClient.tsx', 'utf8');
 
 // 4.1 Initial loading gate renders static frame before pageData
 const initialGateMatch = pageSource.match(

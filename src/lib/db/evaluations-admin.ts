@@ -431,16 +431,13 @@ export async function getEvaluationByEmployeeAdmin(
   periodId?: string,
   user?: User | null
 ): Promise<Evaluation | null> {
-  if (!employeeId) return null;
+  if (!employeeId || !periodId) return null;
 
-  let query = supabaseAdmin
+  const query = supabaseAdmin
     .from('evaluations')
     .select('*, evaluation_rounds(*)')
-    .eq('employee_id', employeeId);
-
-  if (periodId) {
-    query = query.eq('period_id', periodId);
-  }
+    .eq('employee_id', employeeId)
+    .eq('period_id', periodId);
 
   const { data, error } = await query.maybeSingle();
 
@@ -470,9 +467,10 @@ export async function getEvaluationHistoryByEmployeeAdmin(
 
   const { data, error } = await supabaseAdmin
     .from('evaluations')
-    .select('*, evaluation_rounds(*)')
+    .select('*, evaluation_rounds(*), evaluation_periods!inner(status)')
     .eq('employee_id', employeeId)
     .eq('status', 'Approved')
+    .eq('evaluation_periods.status', 'closed')
     .order('created_at', { ascending: false });
 
   if (error) {
