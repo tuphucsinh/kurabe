@@ -9,5 +9,5 @@
 - Card A1 viền vàng là trạng thái điểm khác vòng gần nhất; A2/A3 không khác vòng gần nhất.
 - Gates: npm test 27/27, typecheck, lint, build, diff-check PASS; reviewer read-only PASS.
 - Route `247fb...` không verify được vì Chrome session nhận access denied; không phải bằng chứng lỗi runtime.
-- Branch `audit-hardening-p0-p3-20260824`; push GitHub thực hiện trong phiên chốt này; không deploy production.
+- Branch `audit-hardening-p0-p3-20260824`; push GitHub đã đồng bộ; production deploy từ commit `7fe6ab1` đã READY (`dpl_EP4eRsweE7PqqjdnXzf3gBkNWZcx`) tại `https://lykiv.vercel.app`; không migration dữ liệu.
 - Residual: Phase 44 C1/refactor client writes và retention/purge/cron vẫn deferred; không xử lý trong phiên này.
