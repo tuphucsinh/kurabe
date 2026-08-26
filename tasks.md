@@ -28,7 +28,7 @@
 - **Context hiện có**: `src/app/evaluations/[id]/compare/page.tsx` hiện global gate `isLoading`; `src/actions/read.ts` aggregate `employee/evaluation/users/groups`; `src/hooks/use-db.ts` query staleTime 2 phút.
 - **Constraints**: chỉ đọc; không tạo/xóa kỳ hoặc mutate evaluation; không in credentials; phân biệt TTFB/LCP/CLS với data milestones; ghi request count/payload/long task nếu tooling hỗ trợ; đo riêng `getGradeBandsAction()` ở `page.tsx:47-53` và xác định fallback sync → authoritative DB transition.
 - **Definition of Done**: bảng baseline cùng route/data ở 3 viewport, cold/warm tách riêng, console/network evidence và bottleneck hypothesis có source evidence; case không thể đo ghi `UNKNOWN`, không dựng fixture production.
-- **Status**: `[ ]` — `BLOCKED_AUTH`: local và production compare route đều trả 307 → `/login`; không có authorized browser profile/session. Không có metric fabricated; P96T02 giữ blocked theo dependency cho tới khi có session hợp lệ hoặc anh cho phép đổi gate.
+- **Status**: `[x]` — PASS bằng Mika Playwright fallback sau Agy probe timeout: 3 cold + 3 warm mỗi viewport, authenticated HTTP 200 đúng compare route. Median first-light→full: 390 cold/warm `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`; resource 25, transfer ~8.7KB, encoded ~450KB. Console chỉ có CSP Report-Only warning; không có app exception/failed request dai dẳng. Không fabricated metric.
 
 ### [#P96T02] [server page/scope/actions/hooks] Active-period server boundary
 - **Goal**: implement Active-only contract bằng server-only resolver + server page wrapper trước client query; không để `periodId` undefined, localStorage/currentPeriod làm authority hoặc thêm dependent client waterfall.
