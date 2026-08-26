@@ -12,7 +12,7 @@ import {
   EvaluatorResolution,
 } from '@/lib/evaluator-resolver';
 import { Database } from '@/types/database';
-import { toClientError } from '@/lib/errors';
+import { toClientError, ClientSafeError } from '@/lib/errors';
 import { parseRole } from '@/lib/parsers';
 import { canDeleteEvaluationPeriodStatus } from '@/lib/period-status';
 
@@ -28,8 +28,6 @@ function revalidatePeriodPaths() {
   revalidatePath('/employees');
   revalidatePath('/settings');
 }
-
-
 
 function getMissingEvaluatorError(employeeId: string, selector: string, round: number): string {
   return `Không tìm thấy ${selector} phù hợp cho nhân viên ${employeeId} ở Round ${round}.`;
@@ -79,7 +77,7 @@ export async function createEvaluationPeriod(year: number) {
       initialEvaluators.set(employee.id, evaluator);
     }
 
-    // 2. Tạo Evaluation Period
+    // 2. Tạo Evaluation Period (DB partial unique index là authority duy nhất chống race condition)
     const { data: period, error: pError } = await supabaseAdmin
       .from('evaluation_periods')
       .insert({
@@ -93,6 +91,21 @@ export async function createEvaluationPeriod(year: number) {
       .single();
 
     if (pError || !period) {
+      const errObj = pError as { code?: string; message?: string; details?: string; hint?: string } | null;
+      const dbErrorText = [errObj?.message, errObj?.details, errObj?.hint].filter(Boolean).join(' ');
+      const isSingleActiveConflict =
+        errObj?.code === '23505' &&
+        (dbErrorText.includes('idx_evaluation_periods_single_active') ||
+          dbErrorText.includes('evaluation_periods_status_key'));
+      if (isSingleActiveConflict) {
+        return {
+          success: false,
+          error: toClientError(
+            new ClientSafeError('Đã có một kỳ đánh giá đang hoạt động (Active). Vui lòng đóng kỳ hiện tại trước khi tạo kỳ mới.'),
+            'Lỗi tạo kỳ đánh giá. Vui lòng thử lại.'
+          ),
+        };
+      }
       return { success: false, error: toClientError(pError, 'Lỗi tạo kỳ đánh giá. Vui lòng thử lại.') };
     }
 
@@ -173,15 +186,25 @@ export async function closeEvaluationPeriod(periodId: string) {
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const { error } = await supabaseAdmin
+    if (!periodId || typeof periodId !== 'string' || periodId.trim() === '') {
+      return { success: false, error: 'Thiếu thông tin kỳ đánh giá.' };
+    }
+
+    const { data, error } = await supabaseAdmin
       .from('evaluation_periods')
       .update({
         status: 'closed',
         closed_at: new Date().toISOString()
       })
-      .eq('id', periodId);
+      .eq('id', periodId)
+      .eq('status', 'active')
+      .select('id');
 
     if (error) return { success: false, error: toClientError(error, 'Lỗi đóng kỳ đánh giá. Vui lòng thử lại.') };
+
+    if (!data || data.length !== 1) {
+      return { success: false, error: 'Kỳ đánh giá không tồn tại hoặc đã được đóng.' };
+    }
 
     revalidatePeriodPaths();
     await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId);
@@ -251,7 +274,9 @@ export async function savePeriodTarget(
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    if (!periodId) return { success: false, error: 'Thiếu thông tin kỳ đánh giá.' };
+    if (!periodId || typeof periodId !== 'string' || periodId.trim() === '') {
+      return { success: false, error: 'Thiếu thông tin kỳ đánh giá.' };
+    }
     if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
       return { success: false, error: 'Tỉ lệ mục tiêu phải nằm trong khoảng 0-100%.' };
     }
@@ -260,12 +285,18 @@ export async function savePeriodTarget(
       return { success: false, error: 'Mức xếp loại mục tiêu không hợp lệ.' };
     }
 
-    const { error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('evaluation_periods')
       .update({ target_rate: Math.round(rate), target_grade: grade })
-      .eq('id', periodId);
+      .eq('id', periodId)
+      .eq('status', 'active')
+      .select('id');
 
     if (error) return { success: false, error: toClientError(error, 'Lỗi lưu mục tiêu. Vui lòng thử lại.') };
+
+    if (!data || data.length !== 1) {
+      return { success: false, error: 'Kỳ đánh giá không tồn tại hoặc đã bị đóng.' };
+    }
 
     revalidatePeriodPaths();
     await logAudit(auth.user, 'UPDATE_PERIOD_TARGET', 'period', periodId, { rate, grade });

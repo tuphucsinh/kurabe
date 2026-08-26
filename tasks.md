@@ -46,7 +46,7 @@
 - **Context hiện có**: `createEvaluationPeriod()` insert status active không có DB-backed guard; `closeEvaluationPeriod()` update theo id nhưng không condition status/affected-row; live catalog chưa verified.
 - **Constraints**: partial unique index có provenance + preflight + rollback; anomaly hiện hữu → STOP, không dedupe; close `.eq('status','active').select()` và verify exactly one row; `savePeriodTarget` cũng chỉ update Active; policy close khi còn incomplete evaluation phải hiện count/warning và được approval trước code; không apply production trong task này.
 - **Definition of Done**: migration/rollback candidate hermetic; tests second-Active rejected, zero/one-row close, already-closed/nonexistent non-success và Closed target update rejected; Reviewer PASS; production apply vẫn `Need approval`.
-- **Status**: `[ ]`
+- **Status**: `[x]` — PASS_WITH_CONSTRAINT: candidate migration/rollback và close/target affected-row guards đã verify; full suite 29/29, focused contract, lint, tsc, build PASS; fresh Agy `gemini-3.1-pro-high` review PASS clean, confidence HIGH. Live preflight không anomaly nhưng direct pg_catalog/information_schema vẫn UNKNOWN/BLOCKED do Management API/CLI 403; chưa apply migration, chưa deploy/push. Production apply = `Need approval` + direct catalog privilege required.
 
 ### [#P96T04] [period action + RPC] Atomic create và delete policy
 - **Goal**: period + evaluations + round 1 được tạo atomic; historical business period không thể hard-delete qua normal action.
