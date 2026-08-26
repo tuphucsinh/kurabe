@@ -9,7 +9,7 @@ import { getGradeBandsSync } from '@/lib/grade-bands';
 import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { getEvaluationAccessState } from '@/data/workflow';
-import { CriteriaGroup, User } from '@/types';
+import { CriteriaGroup, Criterion, User } from '@/types';
 import type { EvaluationPeriodScope } from '@/lib/evaluation-period-scope';
 import {
   ArrowLeft,
@@ -122,6 +122,13 @@ export function CompareFrame({
   );
 }
 
+export interface ComparisonRow {
+  criterion: Criterion;
+  roundScores: number[];
+  roundDeltas: number[];
+  totalDelta: number;
+}
+
 interface ComparePageClientProps {
   employeeId: string;
   scope: EvaluationPeriodScope;
@@ -201,6 +208,29 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
     });
     return ids;
   }, [allCriteria, allRounds]);
+
+  // Derive a single memoized comparisonRows model for changed criteria
+  const comparisonRows = useMemo<ComparisonRow[]>(() => {
+    return allCriteria
+      .filter(c => changedCriteriaIds.has(c.id))
+      .map(criterion => {
+        const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
+        const roundDeltas = roundScores.map((score, rIdx) => {
+          if (rIdx === 0) return 0;
+          return score - roundScores[rIdx - 1];
+        });
+        const totalDelta = roundScores.length >= 2
+          ? roundScores[roundScores.length - 1] - roundScores[0]
+          : 0;
+
+        return {
+          criterion,
+          roundScores,
+          roundDeltas,
+          totalDelta,
+        };
+      });
+  }, [allCriteria, changedCriteriaIds, allRounds]);
 
   const unchangedCriteria = allCriteria.filter(c => !changedCriteriaIds.has(c.id));
 
@@ -341,30 +371,22 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
         <section data-load-phase="primary" data-load-layer="changed-criteria">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2">
-              Chi tiết tiêu chí thay đổi ({changedCriteriaIds.size})
+              Chi tiết tiêu chí thay đổi ({comparisonRows.length})
             </h2>
             <span className="self-start sm:self-auto text-[11px] font-bold text-ink-muted bg-surface-muted px-2 py-1 rounded-lg border border-outline-soft">
               Chỉ hiển thị các mục có biến động điểm
             </span>
           </div>
 
-          {changedCriteriaIds.size > 0 ? (
+          {comparisonRows.length > 0 ? (
             <>
               {/* Mobile: Card presentation with rounds stacked */}
               <div className="md:hidden space-y-3">
-                {allCriteria.filter(c => changedCriteriaIds.has(c.id)).map(criterion => {
-                  const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
-                  const totalDelta = roundScores.length >= 2
-                    ? roundScores[roundScores.length - 1] - roundScores[0]
-                    : 0;
-
+                {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
                   return (
-                    <div key={criterion.id} className="p-4 rounded-2xl border border-outline-soft bg-surface-raised shadow-sm space-y-3">
+                    <div key={criterion.id} className="p-3.5 sm:p-4 rounded-2xl border border-outline-soft bg-surface-raised shadow-sm space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[11px] font-black text-brand uppercase tracking-tighter opacity-80">{criterion.id}</span>
-                          <h3 className="text-sm font-bold text-ink leading-tight">{criterion.name}</h3>
-                        </div>
+                        <h3 className="text-sm font-bold text-ink leading-tight">{criterion.name}</h3>
                         <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl shadow-sm ${
                           totalDelta > 0 ? 'bg-green-100 text-green-700' :
                           totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-muted text-ink-muted'
@@ -376,9 +398,8 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
                       <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-2 pt-2 border-t border-outline-soft/40">
                         {allRounds.map((r, rIdx) => {
-                          const score = r.scores?.[criterion.id] ?? 0;
-                          const prevScore = rIdx > 0 ? (allRounds[rIdx-1].scores?.[criterion.id] ?? 0) : null;
-                          const delta = prevScore !== null ? score - prevScore : 0;
+                          const score = roundScores[rIdx];
+                          const delta = roundDeltas[rIdx];
                           const isCurrent = r.round === evaluation.currentRound;
 
                           return (
@@ -415,43 +436,34 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                   <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                       <tr className="bg-surface/50 border-b border-outline-soft">
-                        <th className="px-8 py-5 text-[11px] font-black text-ink-muted uppercase tracking-wider">
+                        <th className="px-6 md:px-8 py-4 text-[11px] font-black text-ink-muted uppercase tracking-wider">
                           Tiêu chí đánh giá
                         </th>
                         {allRounds.map(r => (
-                          <th key={r.round} className={`px-4 py-5 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
+                          <th key={r.round} className={`px-4 py-4 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
                             r.round === evaluation.currentRound ? 'text-brand' : 'text-ink-muted'
                           }`}>
                             L{r.round}
                           </th>
                         ))}
-                        <th className="px-8 py-5 text-[11px] font-black text-ink-muted uppercase tracking-wider text-right">
+                        <th className="px-6 md:px-8 py-4 text-[11px] font-black text-ink-muted uppercase tracking-wider text-right">
                           Biến động (Δ)
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-soft">
-                      {allCriteria.filter(c => changedCriteriaIds.has(c.id)).map(criterion => {
-                        const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
-                        const totalDelta = roundScores.length >= 2
-                          ? roundScores[roundScores.length - 1] - roundScores[0]
-                          : 0;
-
+                      {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
                         return (
                           <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
-                            <td className="px-8 py-4">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[11px] font-black text-brand uppercase tracking-tighter opacity-70">{criterion.id}</span>
-                                <span className="text-sm font-bold text-ink leading-tight group-hover:text-brand transition-colors">{criterion.name}</span>
-                              </div>
+                            <td className="px-6 md:px-8 py-3.5 md:py-4">
+                              <span className="text-sm font-bold text-ink leading-tight group-hover:text-brand transition-colors">{criterion.name}</span>
                             </td>
                             {allRounds.map((r, rIdx) => {
-                              const score = r.scores?.[criterion.id] ?? 0;
-                              const prevScore = rIdx > 0 ? (allRounds[rIdx-1].scores?.[criterion.id] ?? 0) : null;
-                              const delta = prevScore !== null ? score - prevScore : 0;
+                              const score = roundScores[rIdx];
+                              const delta = roundDeltas[rIdx];
 
                               return (
-                                <td key={r.round} className="px-4 py-4 text-center">
+                                <td key={r.round} className="px-4 py-3.5 md:py-4 text-center">
                                   <div className="flex flex-col items-center">
                                     <div className={`
                                       w-10 h-10 flex items-center justify-center rounded-xl text-base font-black transition-all
@@ -471,7 +483,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                                 </td>
                               );
                             })}
-                            <td className="px-8 py-4 text-right">
+                            <td className="px-6 md:px-8 py-3.5 md:py-4 text-right">
                               <span className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-xl shadow-sm ${
                                 totalDelta > 0 ? 'bg-green-100 text-green-700' :
                                 totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-muted text-ink-muted'
@@ -546,33 +558,34 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
           </div>
         </section>
 
-        {/* ═══════ Unchanged Criteria Accordion-style ═══════ */}
+        {/* ═══════ Unchanged Criteria Native Details/Summary ═══════ */}
         {unchangedCriteria.length > 0 && (
           <section className="mt-4" data-load-phase="secondary" data-load-layer="unchanged">
-            <div className="bg-surface-raised rounded-3xl border border-outline-soft overflow-hidden">
-              <div className="px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <h3 className="text-xs font-black text-ink-muted uppercase tracking-widest">
-                  Tiêu chí giữ nguyên ({unchangedCriteria.length})
-                </h3>
+            <details className="group bg-surface-raised rounded-3xl border border-outline-soft overflow-hidden">
+              <summary className="cursor-pointer select-none px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1 transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-black text-ink-muted uppercase tracking-widest">
+                    Tiêu chí giữ nguyên ({unchangedCriteria.length})
+                  </h3>
+                </div>
                 <span className="text-[11px] font-bold text-ink-muted/50 uppercase">
                   {allRounds.length > 1 ? `Không đổi qua ${allRounds.length} vòng` : 'Chưa có vòng để so sánh'}
                 </span>
-              </div>
-              <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+              </summary>
+              <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 border-t border-outline-soft">
                 {unchangedCriteria.map(criterion => {
                   const score = allRounds[0]?.scores?.[criterion.id] ?? 0;
                   return (
                     <div key={criterion.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface/20 border border-outline-soft/50 hover:border-brand/20 transition-colors">
-                      <div className="flex flex-col truncate pr-2">
-                        <span className="text-[11px] font-black text-outline-soft uppercase">{criterion.id}</span>
-                        <span className="text-xs font-bold text-ink/70 truncate">{criterion.name}</span>
+                      <div className="flex flex-col pr-2 min-w-0">
+                        <span className="text-xs font-bold text-ink/70 leading-tight">{criterion.name}</span>
                       </div>
                       <span className="shrink-0 text-sm font-black text-ink-muted px-2.5 py-1 bg-surface-raised rounded-xl shadow-sm border border-outline-soft/30">{score}</span>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </details>
           </section>
         )}
 

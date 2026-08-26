@@ -91,7 +91,7 @@
 - **Context hiện có**: `criterion.id` là key lookup trong `page.tsx:96,264`; mobile/desktop đang có hai renderer; unchanged đang render toàn bộ.
 - **Constraints**: internal IDs vẫn giữ; không truncate comments/criteria names; không thêm chart/virtualization/dependency nếu chưa có long-task evidence.
 - **Definition of Done**: 390/768/1440 không overflow; density cải thiện; no visible UUID/helper duplication; unchanged disclosure keyboard-accessible.
-- **Status**: `[ ]`
+- **Status**: `[x] PASS_WITH_CONSTRAINT` — visible criterion IDs removed, shared memoized `comparisonRows` feeds mobile/desktop, unchanged uses native closed-by-default `<details>/<summary>`, modest density reduction. Focused PASS; full suite 34/34, lint (zero warnings), tsc, build PASS; fresh reviewer R2 `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Browser authenticated canary `BLOCKED_AUTH` do route 307 `/login`.
 
 ### [#P96T09] [cache/browser/gates] Final performance and integrity gate
 - **Goal**: verify visual, behavioral, performance và data-integrity acceptance sau implementation.
