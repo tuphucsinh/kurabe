@@ -82,7 +82,7 @@ export default function EvaluationHeader({
                 <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
                   <span className={`${gradeColorClass} text-2xl max-md:text-xl font-black`}>
                     {scoredCount}
-                    <span className="text-sm max-md:text-xs font-semibold text-ink-muted/70">/{totalCriteria}</span>
+                    <span className="text-sm max-md:text-xs font-semibold text-ink-muted/70">/{totalCriteria > 0 ? totalCriteria : '—'}</span>
                   </span>
                 </td>
               </tr>
@@ -106,7 +106,7 @@ export default function EvaluationHeader({
                     <td className="px-3 py-1 xl:py-0.5 max-md:px-2 max-md:py-0.5">
                       <span className={`${rGradeColorClass} text-sm max-md:text-xs font-bold`}>
                         {rScoredCount}
-                        <span className="text-xs max-md:text-[10px] font-medium text-ink-muted/60">/{totalCriteria}</span>
+                        <span className="text-xs max-md:text-[10px] font-medium text-ink-muted/60">/{totalCriteria > 0 ? totalCriteria : '—'}</span>
                       </span>
                     </td>
                   </tr>

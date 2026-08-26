@@ -274,8 +274,6 @@ export type EvaluationPageData = {
   employeeError: string | null;
   evaluation: Evaluation | null;
   evaluationError: string | null;
-  users: User[];
-  usersError: string | null;
   periods: EvaluationPeriod[];
   periodsError: string | null;
 };
@@ -284,12 +282,11 @@ export type EvaluationPageData = {
  * Đọc dữ liệu tổng hợp cho trang /evaluations/[id] trong 1 server action duy nhất:
  * - employee (thông tin nhân viên theo ID)
  * - evaluation (phiếu đánh giá theo kỳ hoặc kỳ active)
- * - users (danh sách người dùng theo quyền viewer)
  * - periods (danh sách các kỳ đánh giá)
  *
  * Bắt buộc requireAuth() duy nhất 1 lần.
  * Trả về discriminated per-part error contract:
- * { employee, employeeError, evaluation, evaluationError, users, usersError, periods, periodsError }
+ * { employee, employeeError, evaluation, evaluationError, periods, periodsError }
  */
 export async function getEvaluationPageDataAction(
   employeeId: string,
@@ -303,8 +300,6 @@ export async function getEvaluationPageDataAction(
       employeeError: err,
       evaluation: null,
       evaluationError: err,
-      users: [],
-      usersError: err,
       periods: [],
       periodsError: err,
     };
@@ -314,15 +309,12 @@ export async function getEvaluationPageDataAction(
   let employeeError: string | null = null;
   let evaluation: Evaluation | null = null;
   let evaluationError: string | null = null;
-  let users: User[] = [];
-  let usersError: string | null = null;
   let periods: EvaluationPeriod[] = [];
   let periodsError: string | null = null;
 
-  const [employeeRes, evalRes, usersRes, periodsRes] = await Promise.allSettled([
+  const [employeeRes, evalRes, periodsRes] = await Promise.allSettled([
     getUserByIdAdmin(employeeId, auth.user),
     getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user),
-    getUsersAdmin(auth.user),
     getPeriods(),
   ]);
 
@@ -340,13 +332,6 @@ export async function getEvaluationPageDataAction(
     evaluationError = evalRes.reason instanceof Error ? evalRes.reason.message : 'Không thể tải dữ liệu đánh giá.';
   }
 
-  if (usersRes.status === 'fulfilled') {
-    users = usersRes.value;
-  } else {
-    console.error('getEvaluationPageDataAction users error:', usersRes.reason);
-    usersError = usersRes.reason instanceof Error ? usersRes.reason.message : 'Không thể tải danh sách nhân viên.';
-  }
-
   if (periodsRes.status === 'fulfilled') {
     periods = periodsRes.value;
   } else {
@@ -359,8 +344,6 @@ export async function getEvaluationPageDataAction(
     employeeError,
     evaluation,
     evaluationError,
-    users,
-    usersError,
     periods,
     periodsError,
   };

@@ -1221,3 +1221,59 @@
 - First-open current editable round init có điều kiện; hydrate bổ sung `selectedLevelIndexes` từ score/criterion level để autosave và Lưu bản nháp hợp lệ.
 - AI nhận xét dùng live current-round data qua `buildResultPrompt`, không dùng `lastRound`, không kết câu “Chúc...”.
 - **Status**: `[x]` — DONE: refresh và Lưu bản nháp PASS trên route có quyền; `npm test` 27/27, typecheck, lint, build, diff-check PASS; reviewer read-only PASS.
+
+---
+
+## Phase 94: Staged loading cho trang chi tiết đánh giá 🟢 (2026-08-26)
+
+### [#P94T01] [src/actions/read.ts, src/app/evaluations/[id]/page.tsx] Slim critical path
+- **Goal**: loại full users list khỏi page-data detail; giữ server authorization và access matching bằng employee đã authorize.
+- **Depends on**: none.
+- **Acceptance**: contract không còn broad users fetch cho detail; page/access behavior không đổi; no auth/scoring/save/submit changes.
+- **Status**: `[x]` — code + contract review + typecheck/lint/test/build/diff-check PASS.
+
+### [#P94T02] [src/hooks/use-evaluation-page-state.ts, src/app/evaluations/[id]/page.tsx] Light/editor layers
+- **Goal**: dispatch employee/evaluation/round context trước criteria; criteria/history/grade bands có loading/error/retry/stale guards riêng.
+- **Depends on**: `[#P94T01]`.
+- **Acceptance**: light header/context render độc lập; criteria loading không làm mất shell; retry không merge response cũ.
+- **Status**: `[x]` — light/criteria/heavy state separation and transient-round regression PASS.
+
+### [#P94T03] [src/app/evaluations/[id]/loading.tsx, src/components/evaluation/*] Rich skeleton
+- **Goal**: skeleton cover 100% static page structure, không fake score/value, không nested invalid HTML.
+- **Depends on**: `[#P94T02]`.
+- **Acceptance**: header/actions/score/group tabs/criteria/nhận xét layout ổn định ở mobile/tablet/desktop.
+- **Status**: `[x]` — shell/criteria skeleton implemented; responsive authenticated browser matrix remains UNKNOWN.
+
+### [#P94T04] [browser + gates] Verify staged milestones
+- **Goal**: chứng minh thứ tự shell → light → editor → full và không regression.
+- **Depends on**: `[#P94T01]`, `[#P94T02]`, `[#P94T03]`.
+- **Acceptance**: browser 390/768/1440; console clean; overflow false; typecheck/lint/test/build PASS; reviewer PASS.
+- **Status**: `[x]` — 27/27 tests, typecheck, lint, build, diff-check PASS; reviewer PASS; authenticated timing UNKNOWN.
+
+---
+
+## Phase 95: True static-first cho trang chi tiết đánh giá 🟡 (2026-08-26)
+
+### [#P95T01] [browser] Authenticated baseline waterfall
+- **Goal**: đo static/light/criteria/full và xác định periods có material contribution hay không.
+- **Status**: `[x]` — Chrome thật + account test KIV158/password NULL: 390x844 static 509.7ms → light 1085.2ms → criteria 2025.6ms; 768x1024 716.9 → 1186.3 → 2156.9ms; 1440x900 552.6 → 1112.9 → 2040.2ms. HTTP failures 0, overflow false, editor loaded. CSP report-only warning; không JS exception.
+
+### [#P95T02] [src/components/evaluation/EvaluationStaticFrame.tsx, loading.tsx] Shared stateless static frame
+- **Goal**: labels/structure thật render trước pageData, không form/button/handler/state/fake values.
+- **Status**: `[x]` — frame dùng chung route fallback/client loading; focused contract PASS.
+
+### [#P95T03] [src/app/evaluations/[id]/page.tsx] Remove global client gate
+- **Goal**: static frame không bị chặn bởi pageData; giữ fail-closed auth, transient round guard và autosave ordering.
+- **Status**: `[x]` — static/light/criteria markers và regression PASS.
+
+### [#P95T04] [src/actions/read.ts, src/hooks/use-db.ts] Conditional periods deferral
+- **Goal**: chỉ tách periods nếu authenticated waterfall chứng minh material; tránh duplicate fetch.
+- **Status**: `[-]` — giữ aggregate. Baseline chứng minh staged path hoạt động nhưng không cô lập được periods là bottleneck riêng; chưa đủ evidence để thêm roundtrip/race.
+
+### [#P95T05] [tests] Behavior contracts
+- **Goal**: prove static frame, no interactive fallback tree, fail-closed rounds, hydration/autosave ordering.
+- **Status**: `[x]` — focused test PASS; full suite 27/27 PASS.
+
+### [#P95T06] [browser + gates] Final verification
+- **Goal**: browser 390/768/1440 và deterministic gates.
+- **Status**: `[x]` — authenticated browser matrix + typecheck/lint/test/build/diff-check/Agy review PASS; không có HTTP failure, overflow hoặc editor load failure. CSP report-only warning được ghi nhận, không phải JS runtime failure.

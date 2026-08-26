@@ -1086,3 +1086,27 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - AI nhận xét dùng dữ liệu live của current round qua `buildResultPrompt`; bỏ flow page-only cũ và cấm kết câu xã giao kiểu “Chúc...”, yêu cầu câu kết hành động cụ thể.
 - Card Nhận xét desktop dùng `xl:h-[314px]`; mobile/tablet giữ breakpoint cũ và browser check không có horizontal overflow. Viền vàng card chỉ biểu thị điểm khác vòng gần nhất; badge mã tiêu chí có thể biểu thị khác bất kỳ vòng trước nào.
 - Verify: refresh không còn toast autosave; explicit draft save hiển thị “Đã lưu bản nháp.” trên route được cấp quyền. `npm test` 27/27, typecheck, lint, build, diff-check PASS. Route khác trong screenshot trả access denied trong session hiện tại, không dùng làm bằng chứng runtime.
+
+---
+
+## Phase 94: Staged loading cho trang chi tiết đánh giá 🟢 (2026-08-26)
+
+> **Mục tiêu**: giảm time-to-first-useful-content của `/evaluations/[id]`; render shell/light context trước, criteria editor/history/heavy data sau; skeleton chỉ là local data state, không che lỗi.
+
+- **Evidence hiện tại**: `getEvaluationPageDataAction()` chờ employee + evaluation + full users + periods; page giữ màn chờ tới khi query xong; hook lại chờ `getCriteriaForRoleAction()` trước khi dispatch editor state. Runtime authenticated timing chính xác hiện **UNKNOWN** vì CDP session 9223 không chạy.
+- **P94-T01 — Slim critical path**: bỏ full users list khỏi page-data detail; dùng employee đã authorize cho access matching; giữ requireAuth/RBAC và per-part error contract cần thiết.
+- **P94-T02 — Light layer**: tách basic employee/evaluation/round state khỏi criteria fetch; criteria có loading/error/retry riêng; stale response bị bỏ qua theo evaluation/access key.
+- **P94-T03 — Rich skeleton**: skeleton đầy đủ header/actions/score panel/group tabs/criterion cards/nhận xét, chỉ placeholder layout, không fake score/value.
+- **Verification**: typecheck/lint/test/build/diff-check PASS; reviewer độc lập read-only PASS; local unauth redirect PASS. Authenticated milestone timing và browser 390/768/1440 hiện **UNKNOWN** vì không có session hợp lệ trong browser runtime.
+- **Non-goal**: không đổi scoring, save/submit, auth policy, DB schema, cache/RPC hoặc production deploy trong phase implementation.
+
+---
+
+## Phase 95: True static-first cho trang chi tiết đánh giá 🟡 (2026-08-26)
+
+> **Mục tiêu**: static labels/structure thật render trước `pageData`; sau đó light employee/evaluation/access, criteria/editor, rồi secondary history/periods/AI; không dùng skeleton để claim full performance.
+
+- **Implemented P95-T02/T03**: thêm `EvaluationStaticFrame` thuần presentation dùng chung cho route fallback và client loading; page không còn chờ global `pageData` mới render frame; permission-sensitive controls vẫn chờ `accessState`.
+- **Safety**: static frame không có button/textarea/form/handler/state; transient round vẫn frame loading; invalid/missing round vẫn AccessDenied; criteria/default/selectedLevelIndexes/autosave ordering giữ nguyên.
+- **Deferred**: chưa tách `periods` khỏi aggregate vì authenticated waterfall chưa có; chỉ làm nếu baseline chứng minh material contributor.
+- **Verification**: focused static-first test, typecheck, lint, 27/27 tests, build, diff-check PASS; authenticated Chrome canary với account test `KIV158` password NULL trên 390/768/1440 PASS: static 509.7/716.9/552.6ms, light 1085.2/1186.3/1112.9ms, criteria 2025.6/2156.9/2040.2ms; HTTP failures 0, overflow false, editor loaded. Fresh Agy read-only fallback review PASS. Chỉ ghi nhận CSP report-only warning, không có JS exception.

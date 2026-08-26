@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, use, useEffect, useMemo, useRef } from 'react';
@@ -10,10 +9,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import CriteriaTab from '@/components/evaluation/CriteriaTab';
 import EvaluationHeader from '@/components/evaluation/EvaluationHeader';
 import GroupNavTabs from '@/components/evaluation/GroupNavTabs';
-import AccessDenied, { RoundLoading } from '@/components/evaluation/AccessDenied';
+import AccessDenied from '@/components/evaluation/AccessDenied';
 import HistoryList from '@/components/evaluation/HistoryList';
 import ReturnDialog from '@/components/evaluation/ReturnDialog';
 import ResultCard from '@/components/evaluation/ResultCard';
+import { EvaluationStaticFrame, CriteriaRegionSkeleton } from '@/components/evaluation/EvaluationStaticFrame';
 import { useEvaluationPageState } from '@/hooks/use-evaluation-page-state';
 import { useAutoResetToast } from '@/hooks/use-auto-reset-toast';
 import { calculateRoundScore } from '@/lib/scoring';
@@ -54,7 +54,6 @@ const ROLE_RANK: Record<User['role'], number> = {
   Manager: 4,
 };
 
-const EMPTY_USERS: User[] = [];
 const EMPTY_PERIODS: EvaluationPeriod[] = [];
 
 export default function EvaluationPage({ params }: EvaluationPageProps) {
@@ -67,7 +66,6 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const employee = pageData?.employee ?? null;
   const evaluation = pageData?.evaluation ?? null;
   const evaluationId = evaluation?.id;
-  const users = pageData?.users ?? EMPTY_USERS;
   const periods = pageData?.periods ?? EMPTY_PERIODS;
   const isLoadingUser = isLoading;
   const isLoadingEval = isLoading;
@@ -98,16 +96,19 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const autosaveAttemptedKeys = useRef<Set<string>>(new Set());
   const autosavePendingKeys = useRef<Set<string>>(new Set());
 
-  // Access control
+  // Access control — dùng context employee đã được server authorize
   const accessState = useMemo(() =>
-    evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
-  [evaluation, user, users]);
+    evaluation ? getEvaluationAccessState(user, evaluation, employee ? [employee] : undefined) : null,
+  [evaluation, user, employee]);
 
-  // State + data loading (reducer, criteria, history, grade bands) — tách sang hook (D3)
+  // State + data loading (reducer, criteria, history, grade bands) — tách sang hook (D3 / Phase 94)
   const {
     state,
     dispatch,
     criteriaGroups,
+    criteriaStatus,
+    criteriaError,
+    refetchCriteria,
     history,
     isLoadingHistory,
     gradeBands,
@@ -176,15 +177,8 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
     userEditedRef,
   ]);
 
-  if (!isMounted || isLoadingUser || isLoadingEval) {
-    return (
-      <div className="min-h-screen bg-page flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-brand-soft rounded-full"></div>
-          <div className="text-ink-muted font-medium">Đang tải dữ liệu...</div>
-        </div>
-      </div>
-    );
+  if (!isMounted || isLoadingUser || isLoadingEval || !pageData) {
+    return <EvaluationStaticFrame />;
   }
 
   if (!employee) {
@@ -259,7 +253,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const activeRoundData = currentRoundData?.round === activeRound ? currentRoundData : null;
 
   if (activeRound && activeRoundExists && !activeRoundData) {
-    return <RoundLoading />;
+    return <EvaluationStaticFrame />;
   }
 
   if (!activeRound || !activeRoundExists || !activeRoundData) {
@@ -371,7 +365,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
   const { totalScore, grade } = calculateRoundScore(currentSummaryRound, gradeBands);
 
   const handleSuggestComment = async () => {
-    if (!employee || user?.role !== 'Manager' || isReadOnly) return;
+    if (!employee || user?.role !== 'Manager' || isReadOnly || criteriaStatus !== 'loaded') return;
     setIsSuggesting(true);
     try {
       const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
@@ -446,8 +440,11 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           <p className="text-xs sm:text-sm font-bold text-emerald-800">Đánh giá đã được gửi thành công!</p>
         </div>
       )}
-      <div className="px-6 md:px-10 lg:px-12 py-8 space-y-8 max-md:px-3 max-md:py-3 max-md:space-y-4 animate-in fade-in duration-300 w-full max-w-[1600px] mx-auto xl:px-6 xl:py-4 xl:max-w-none xl:space-y-6">
-        <div className="flex flex-col gap-6 max-md:gap-3 xl:gap-4">
+      <div
+        className="px-6 md:px-10 lg:px-12 py-8 space-y-8 max-md:px-3 max-md:py-3 max-md:space-y-4 animate-in fade-in duration-300 w-full max-w-[1600px] mx-auto xl:px-6 xl:py-4 xl:max-w-none xl:space-y-6"
+        data-load-layer="shell"
+      >
+        <div className="flex flex-col gap-6 max-md:gap-3 xl:gap-4" data-load-layer="light" data-load-state="light">
           <div className="flex flex-row max-md:flex-col justify-between items-center max-md:items-start gap-4 max-md:gap-3">
             <div className="flex flex-wrap items-center gap-2 text-sm max-md:text-xs text-ink-muted font-medium max-md:w-full max-md:flex-nowrap max-md:justify-between">
               <span>Đánh giá</span>
@@ -571,26 +568,56 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
           )}
         </div>
 
-        <div className="w-full flex flex-col lg:flex-row gap-6 items-start max-md:items-stretch">
+        <div
+          className="w-full flex flex-col lg:flex-row gap-6 items-start max-md:items-stretch"
+          data-load-layer="heavy"
+          data-load-state={criteriaStatus === 'loaded' ? 'criteria' : undefined}
+        >
           <div className="flex-1 min-w-0 max-md:w-full space-y-6 max-md:space-y-4">
-            <GroupNavTabs
-              groups={criteriaGroups}
-              activeGroupId={activeGroup?.id ?? activeGroupId}
-              onSelect={handleGroupSelect}
-              scores={scores}
-            />
+            {criteriaStatus === 'loading' && <CriteriaRegionSkeleton />}
 
-            {activeGroup && (
-              <CriteriaTab
-                group={activeGroup}
-                scores={scores}
-                selectedLevelIndexes={selectedLevelIndexes}
-                notes={notes}
-                onScoreChange={(id, val, levelIndex) => dispatch({ type: 'SET_SCORE', criterionId: id, points: val, levelIndex })}
-                onNoteChange={(id, val) => dispatch({ type: 'SET_NOTE', criterionId: id, note: val })}
-                allPreviousRounds={allPreviousRounds}
-                disabled={isReadOnly || isSaving}
-              />
+            {criteriaStatus === 'error' && (
+              <div className="bg-surface-raised rounded-2xl p-6 border border-rose-200 text-center space-y-3 shadow-sm">
+                <div className="text-rose-600 font-bold text-base">Không thể tải tiêu chí đánh giá</div>
+                <p className="text-ink-muted text-sm">{criteriaError || 'Đã xảy ra lỗi khi nạp danh sách tiêu chuẩn.'}</p>
+                <button
+                  onClick={refetchCriteria}
+                  className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold shadow-sm hover:bg-brand-mid transition-all active:scale-95"
+                >
+                  Thử lại
+                </button>
+              </div>
+            )}
+
+            {criteriaStatus === 'empty' && (
+              <div className="bg-surface-raised rounded-2xl p-6 border border-outline-soft text-center space-y-2 shadow-sm">
+                <div className="text-ink font-bold text-base">Chưa có tiêu chí đánh giá</div>
+                <p className="text-ink-muted text-sm">Chưa có tiêu chí đánh giá nào được cấu hình cho chức vụ này.</p>
+              </div>
+            )}
+
+            {criteriaStatus === 'loaded' && (
+              <>
+                <GroupNavTabs
+                  groups={criteriaGroups}
+                  activeGroupId={activeGroup?.id ?? activeGroupId}
+                  onSelect={handleGroupSelect}
+                  scores={scores}
+                />
+
+                {activeGroup && (
+                  <CriteriaTab
+                    group={activeGroup}
+                    scores={scores}
+                    selectedLevelIndexes={selectedLevelIndexes}
+                    notes={notes}
+                    onScoreChange={(id, val, levelIndex) => dispatch({ type: 'SET_SCORE', criterionId: id, points: val, levelIndex })}
+                    onNoteChange={(id, val) => dispatch({ type: 'SET_NOTE', criterionId: id, note: val })}
+                    allPreviousRounds={allPreviousRounds}
+                    disabled={isReadOnly || isSaving}
+                  />
+                )}
+              </>
             )}
           </div>
 
@@ -601,7 +628,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
                 {user?.role === 'Manager' && !isReadOnly && (
                   <button
                     onClick={handleSuggestComment}
-                    disabled={isSuggesting || isSaving}
+                    disabled={isSuggesting || isSaving || criteriaStatus === 'loading'}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 max-md:min-h-[36px] rounded-lg bg-brand-soft text-brand text-xs font-bold hover:bg-brand-soft/80 transition-all disabled:opacity-50 active:scale-95"
                   >
                     {isSuggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
@@ -624,7 +651,7 @@ export default function EvaluationPage({ params }: EvaluationPageProps) {
         </div>
 
         {/* Dãy nhóm tiêu chuẩn cuối trang — click chuyển nhóm + cuộn lên đầu */}
-        {criteriaGroups.length > 0 && (
+        {criteriaStatus === 'loaded' && criteriaGroups.length > 0 && (
           <div className="mt-8 pt-6 max-md:mt-6 max-md:pt-4 border-t border-outline-soft/60 space-y-3 max-md:space-y-2">
             <p className="text-xs font-bold text-ink-muted uppercase tracking-wider">Chuyển nhanh đến nhóm tiêu chuẩn</p>
             <GroupNavTabs
