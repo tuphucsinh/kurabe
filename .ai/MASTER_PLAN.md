@@ -1109,4 +1109,112 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 - **Implemented P95-T02/T03**: thêm `EvaluationStaticFrame` thuần presentation dùng chung cho route fallback và client loading; page không còn chờ global `pageData` mới render frame; permission-sensitive controls vẫn chờ `accessState`.
 - **Safety**: static frame không có button/textarea/form/handler/state; transient round vẫn frame loading; invalid/missing round vẫn AccessDenied; criteria/default/selectedLevelIndexes/autosave ordering giữ nguyên.
 - **Deferred**: chưa tách `periods` khỏi aggregate vì authenticated waterfall chưa có; chỉ làm nếu baseline chứng minh material contributor.
-- **Verification**: focused static-first test, typecheck, lint, 27/27 tests, build, diff-check PASS; authenticated Chrome canary với account test `KIV158` password NULL trên 390/768/1440 PASS: static 509.7/716.9/552.6ms, light 1085.2/1186.3/1112.9ms, criteria 2025.6/2156.9/2040.2ms; HTTP failures 0, overflow false, editor loaded. Fresh Agy read-only fallback review PASS. Chỉ ghi nhận CSP report-only warning, không có JS exception.
+- **Verification**: focused static-first test, typecheck, lint, 27/27 tests, build, diff-check PASS; authenticated Chrome canary với permitted test account (identity redacted) trên 390/768/1440 PASS: static 509.7/716.9/552.6ms, light 1085.2/1186.3/1112.9ms, criteria 2025.6/2156.9/2040.2ms; HTTP failures 0, overflow false, editor loaded. Fresh Agy read-only fallback review PASS. Chỉ ghi nhận CSP report-only warning, không có JS exception.
+
+---
+
+## Phase 96: Tinh gọn và tối ưu tải trang So sánh các vòng 🟡 (2026-08-26)
+
+> **Mục tiêu**: làm trang `/evaluations/[id]/compare` gọn hơn trên mobile/PC và rút ngắn thời gian tới nội dung so sánh hữu ích. Performance phải được đo theo từng milestone, không dùng riêng FCP hoặc cảm nhận UI để claim nhanh hơn.
+
+### Phạm vi UX
+
+- Bỏ mã UUID `criterion.id` khỏi DOM nhưng giữ nguyên làm key lookup điểm.
+- Giảm card/padding/khoảng trống; bỏ helper text, label, icon và delta bị lặp.
+- Header và summary compact; mobile dùng rail/snap, desktop dùng grid/table có hierarchy rõ.
+- Tiêu chí không đổi đóng mặc định; comments vẫn giữ đầy đủ nội dung.
+- Không đổi score, grade, round ordering, comments, round navigation, auth/RBAC hoặc access semantics.
+
+### Period-selection audit và policy đề xuất
+
+#### Hành vi hiện tại đã verify
+
+| Trường hợp | Detail `/evaluations/[id]` và Compare | Các path khác | Kết luận |
+|---|---|---|---|
+| Nhiều kỳ, có 1 `Active` | `page.tsx:65` và `compare/page.tsx:38` truyền `undefined`; aggregate tại `actions/read.ts:315-318,402-405` gọi admin query không có `period_id`; `evaluations-admin.ts:436-445` lọc mỗi `employee_id` rồi `maybeSingle()` | `getEvaluationByEmployeeAction()` có active fallback tại `actions/read.ts:580-585` | Hai trang chính **không bảo đảm lấy Active**; nhiều record có thể gây lỗi nhiều dòng/null |
+| Nhiều kỳ, không có `Active` | Hai trang chính vẫn query không lọc kỳ; nếu dùng action đơn lẻ thì `getActivePeriod()` trả null tại `evaluations.ts:26-40`, action trả null tại `actions/read.ts:580-583` | `AuthContext.tsx:55-57` và `resolveCurrentPeriod():67-73` fallback kỳ mới nhất | Behavior không nhất quán; có thể hiển thị rỗng/lỗi dù vẫn có kỳ đóng |
+
+#### Policy tối ưu được chọn cho plan
+
+- **Màn hình detail/compare mặc định chỉ lấy kỳ `Active`**. Một lightweight server-authoritative scope step phải resolve Active trước khi enable detail/compare query, trả `activePeriodId` thật; React Query key phải chứa ID này, không dùng `undefined`/`active` làm scope duy nhất. Aggregate vẫn re-validate cùng `period_id` trước khi trả dữ liệu; tuyệt đối không để `undefined` lọt xuống `maybeSingle()` không có filter kỳ.
+- **Không có `Active`**: trả `NO_ACTIVE_PERIOD` và hiển thị thông báo đơn giản: `Hiện chưa có kỳ đánh giá đang mở.` Không tự lấy kỳ đóng, không chọn ngẫu nhiên, không hiển thị dữ liệu có thể bị hiểu nhầm là kỳ hiện tại.
+- **Kỳ đóng không đi qua màn hình hiện tại**. Nếu sau này cần xem, tạo entry riêng `Lịch sử đánh giá`, hiển thị rõ năm + `Đã đóng`, chỉ read-only và server vẫn `requireAuth` + `canViewEvaluation`; không bật query parameter lịch sử tự do trong Phase 96.
+- Response phải trả `selectedPeriodId`, `selectedPeriodStatus` và `selectionReason` (`active`, `no-active`, `none`) để UI nói đúng ngữ nghĩa. Không dùng `latest-fallback` cho detail/compare.
+- Không dùng `localStorage`/`currentPeriod` client làm authority cho server query. React Query key phải chứa period scope để không hiển thị stale evaluation khi context thay đổi.
+- Nếu database có nhiều `Active`: scope resolver phải đọc tối đa 2 dòng Active để phân biệt `none`, `one`, `multiple`; trả `MULTIPLE_ACTIVE_PERIODS`, fail-closed và log anomaly; không dùng `getActivePeriod().single()` hiện tại làm bằng chứng phân biệt vì nó đang gộp zero/multiple thành lỗi tương tự.
+
+Lý do chọn Active-only: người dùng không rành công nghệ chỉ cần thấy đúng kỳ đang mở; khi không có kỳ mở thì thông báo rõ ràng an toàn hơn việc tự mở một kỳ đóng và có nguy cơ sửa nhầm dữ liệu. `resolveCurrentPeriod()`/`AuthContext` có thể vẫn phục vụ các màn hình có bộ chọn kỳ riêng, nhưng không được làm authority cho detail/compare.
+
+### Future scope: Lịch sử đánh giá (DEFERRED — ngoài Phase 96)
+
+Nếu sau này cần xem kỳ cũ, tạo lối riêng:
+
+```text
+Lịch sử đánh giá
+  ├── Kỳ 2025 · Đã đóng
+  └── Kỳ 2026 · Đã đóng
+```
+
+- Người dùng đi vào từ menu `Lịch sử đánh giá`, không phải tự hiểu hoặc tự sửa query parameter.
+- Mỗi kỳ hiển thị rõ năm và trạng thái `Đã đóng`.
+- Màn hình lịch sử chỉ read-only; server phải kiểm tra `requireAuth()` + `canViewEvaluation()` và write action phải chặn kỳ đóng nếu route lịch sử được mở.
+- Lịch sử kỳ cũ không làm thay đổi kỳ Active của màn hình detail/compare hiện tại và không dùng fallback ngầm.
+- Chỉ triển khai sau khi có task/plan riêng cho historical scope, permission, closed-period write guard và browser regression.
+
+### Loading/data graph hiện tại (đã verify từ source)
+
+| Vùng | Hiện tại | Vấn đề performance | Hướng xử lý |
+|---|---|---|---|
+| Static frame/loading | `compare/loading.tsx` generic skeleton; `page.tsx:105-121` global spinner | Static structure không hiện độc lập; dễ layout shift | Shared compare static frame đủ 100% section geometry |
+| Light/access | `useEvaluationComparePageData` → `getEvaluationComparePageDataAction` | Một action chờ employee/evaluation/users/groups rồi mới render page | Đo từng phần; chỉ tách boundary nếu first-useful content cải thiện thật |
+| Primary comparison | `evaluation.rounds` + `calculateRoundScore` + changed criteria | Toàn bộ page cùng render sau aggregate; không có milestone riêng | Hiển thị summary/changed rows trước secondary section; giữ score semantics |
+| Secondary | comments, unchanged criteria, async grade-band refresh | Unchanged criteria render toàn bộ; grade action tạo thêm work sau mount | Unchanged collapsed; grade fetch không được chặn shell; đo request/long task |
+| Cache/bundle | React Query `staleTime=2m`, client page, lucide imports | Chưa có evidence để thêm cache/prefetch/dynamic split | Giữ hiện trạng trước; chỉ thay đổi sau baseline và bundle evidence |
+
+### Loading contract bắt buộc
+
+1. `shell-visible`: title, back action, employee slot, summary slot, changed-criteria heading/table frame, comments heading, unchanged disclosure frame.
+2. `data-skeleton-visible` (optional): chỉ skeleton tại vùng đang chờ; không fake score/grade/name và không phải global gate.
+3. `first-light-visible`: employee/evaluation/access context hoặc summary context đầu tiên hiển thị.
+4. `first-primary-complete`: summary điểm/hạng và danh sách tiêu chí thay đổi hiển thị đúng.
+5. `secondary-complete`: comments và unchanged disclosure data sẵn sàng.
+6. `full-complete`: toàn bộ dữ liệu/async grade-band work hoàn tất.
+
+Mỗi mốc phải có DOM marker/measurement riêng. Không dùng `FCP`, spinner biến mất hoặc skeleton visible để suy ra data đã tải xong.
+
+### Performance workstream
+
+- **P96-P01 — Baseline waterfall**: đo cold/warm, 3 viewport `390x844`, `768x1024`, `1440x900`; ghi TTFB/LCP/CLS nếu đo được, request count, action duration, response/payload size nếu có, long tasks, từng milestone ở trên, console/network failures và riêng request/thời điểm hoàn tất `getGradeBandsAction()` tại `page.tsx:47-53`. Ghi rõ grade dùng fallback sync hay authoritative DB bands ở từng mốc; `first-primary-complete` không được claim ổn định trước khi biết ảnh hưởng của grade-band refresh. Dùng authenticated test account được phép; không mutate evaluation data.
+- **P96-P02 — Active-period + boundary decision**: từ baseline và period matrix xác định chậm do server action/payload, client hydration/render, grade-band request, secondary DOM, hoặc period resolution. Implement lightweight server-authoritative Active scope trước khi enable detail/compare query; truyền `activePeriodId` thật vào React Query key và re-validate trong aggregate. **Cấm dùng `getActivePeriod()` hiện tại làm resolver cho detail/compare** vì `.limit(1).single()` không phân biệt zero/multiple; resolver mới phải đọc tối đa 2 dòng, không `.single()`. Không để `undefined` lọt xuống `maybeSingle()` không có `period_id`. Không tách query hoặc thêm cache nếu chưa chứng minh bottleneck. Nếu không có Active, trả `NO_ACTIVE_PERIOD`; nếu nhiều Active, đọc tối đa 2 dòng để phân biệt và trả `MULTIPLE_ACTIVE_PERIODS` fail-closed anomaly. Nếu aggregate là blocker, chỉ đề xuất split theo dependency rõ ràng, giữ `requireAuth`, `canViewEvaluation`, visible-round filtering, fail-closed và không duplicate broad fetch.
+- **P96-P03 — Static-first loading**: tạo shared stateless compare frame dùng cho route loading và client pre-data path; frame cover toàn bộ static element của page, không chứa fake values, form, privileged action hoặc stateful control.
+- **P96-P04 — Progressive data rendering**: sau khi có safe access/context, render summary/primary comparison trước comments và unchanged section. Nếu baseline quyết định tách data source thì heavy/secondary failure có state + retry riêng, không làm mất shell/primary data; nếu giữ aggregate thì dùng đúng aggregate error contract hiện tại, không hứa retry cục bộ không thể thực hiện. `getGradeBandsAction()` phải có state/error/authoritative-refresh contract riêng nhưng không được chặn static shell. Period/viewer change phải chống stale response.
+- **P96-P05 — Render-cost reduction**: chỉ render changed criteria ở vùng chính; unchanged criteria đóng mặc định; tránh tạo duplicate mobile/desktop data computation; dùng stable keys và `useMemo`/pure helper vừa đủ. Không thêm chart, virtualization hoặc dependency mới khi chưa có evidence dataset/long-task cần thiết.
+- **P96-P06 — Cache/bundle/prefetch adjudication**: kiểm tra cold/warm cache và client bundle trước/sau. Chỉ giữ/thay đổi `staleTime`, prefetch hoặc dynamic import khi có số liệu chứng minh lợi ích và không gây stale score/RBAC leak/extra request. Không dùng cache để che lỗi data freshness.
+- **P96-P07 — Final performance gate**: lặp browser matrix và deterministic gates; so sánh cùng route/data/viewport với baseline; báo riêng shell, light, grade-bands-ready, primary, secondary và full-complete. Nếu full page nhanh hơn nhưng primary/UX không cải thiện, không PASS. Nếu chỉ perceived load cải thiện mà full-complete tăng materially, phải ghi residual risk và không tự mở rộng scope.
+
+### Acceptance performance
+
+- Static frame visible độc lập với aggregate/criteria/grade response.
+- Có evidence riêng cho `shell-visible`, `first-light-visible`, `first-primary-complete`, `secondary-complete`, `full-complete` ở cả 3 viewport.
+- Có evidence riêng cho `grade-bands-ready`; grade không được silently đổi sau khi báo `primary-complete`, hoặc phải ghi rõ fallback → authoritative transition.
+- Với nhiều kỳ + một Active: detail/compare đều load đúng `period_id` Active; với nhiều kỳ + không Active: `NO_ACTIVE_PERIOD` rõ ràng, không query không giới hạn theo employee và không fallback kỳ đóng.
+- Kỳ được chọn có metadata/reason rõ; không có nhãn Active/Hiện tại cho kỳ đóng vì kỳ đóng không được load ở default route.
+- Scope resolver phân biệt được `NO_ACTIVE_PERIOD` với `MULTIPLE_ACTIVE_PERIODS`; React Query không cache detail/compare dưới `periodId=undefined`.
+- First primary comparison không chờ unchanged criteria hoặc comments nếu dependency graph cho phép; không fake/zero score.
+- Request count/payload/long-task regression không tăng không giải thích; query split/cache chỉ được chấp nhận khi baseline chứng minh có lợi ích ròng.
+- Cold và warm result được báo riêng, tối thiểu 3 sample/mode nếu tooling hỗ trợ.
+- Không horizontal overflow; không layout shift nghiêm trọng; không console/runtime/network failure chưa giải thích.
+- Auth/RBAC, score/grade/delta, round ordering, comments và navigation giữ nguyên.
+
+### Non-goal và rollback
+
+- Không đổi `src/actions/read.ts`, `src/data/workflow.ts`, scoring, DB/schema, auth/RBAC trong UI milestone nếu chưa có dependency evidence và review riêng.
+- Không mặc định thêm Redis/cache/index/PPR/RSC rewrite/virtualization.
+- **Residual risk phải ghi nhận**: `saveEvaluationRound` hiện chưa có guard kiểm tra `evaluation_periods.status`; write guard chống sửa kỳ đóng là điều kiện bắt buộc của Phase 97 trước khi mở historical route, không được coi là đã giải quyết trong Phase 96.
+- `getActivePeriod()` có thể còn được dùng bởi chat context/Phase 75.1; không xóa hoặc đổi semantics helper đó chỉ vì tạo Active scope resolver mới cho detail/compare nếu chưa audit call chain riêng.
+- Rollback theo từng commit UI/loading nhỏ; không migration và không data cleanup.
+
+### Plan review gate
+
+- **Agy Sonnet 4.6 — R1**: `PLAN_CHANGES_REQUIRED`; đã sửa các điểm về cấm resolver `getActivePeriod()` cũ, residual closed-period write guard, call-site/cache-key/period-filter verification, message `NO_ACTIVE_PERIOD` và trigger Phase 97.
+- **Agy Sonnet 4.6 — R2**: `PLAN_PASS`; không còn Critical/Important finding. Future history tree đã được xác nhận đúng và giữ ngoài Phase 96.
