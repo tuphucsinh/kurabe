@@ -1,57 +1,135 @@
-# Hướng dẫn Tính năng: Quản lý Đa Kỳ Đánh giá (Multi-period)
+# Hướng dẫn Quản lý Đa kỳ Đánh giá
 
-Tính năng này cho phép hệ thống Kurabe vận hành qua nhiều giai đoạn thời gian (Quý, Năm) mà không làm lẫn lộn dữ liệu giữa các kỳ.
+Tính năng multi-period cho phép Kurabe lưu nhiều kỳ đánh giá và liên kết mỗi evaluation với đúng `period_id`. Kỳ `Active` là kỳ đang mở để thực hiện đánh giá; kỳ `Closed` là kỳ đã đóng và phải được bảo vệ khỏi mọi thay đổi dữ liệu.
 
-## 1. Luồng vận hành (Workflow)
+## 1. Phạm vi trạng thái hiện tại
 
-Hệ thống hoạt động theo chu kỳ khép kín:
-**Tạo kỳ mới** → **Thực hiện đánh giá** → **Xem báo cáo** → **Đóng kỳ** → **Lưu trữ**.
+- Có thể tạo kỳ mới, chọn kỳ trong bộ chọn kỳ, xem dữ liệu theo kỳ ở các màn hình có hỗ trợ period selector và đóng kỳ.
+- Lịch sử kỳ `Closed` theo một route riêng chưa triển khai. Đây là **Phase 97 — DEFERRED**, không tự khởi động sau Phase 96.
+- Detail và compare hiện hành phải theo contract Active-only ở server, không lấy kỳ từ `localStorage` hoặc `AuthContext.currentPeriod` làm authority.
 
----
+## 2. Tạo kỳ đánh giá mới
 
-## 2. Các chức năng chi tiết
+- **Ai thực hiện:** chỉ `Manager`.
+- **Cách làm:**
+  1. Mở Dashboard hoặc khu vực quản lý kỳ.
+  2. Chọn **Tạo kỳ mới** khi chưa có kỳ `Active`.
+  3. Nhập năm đánh giá. UI hiện tại tự sinh tên theo mẫu `Kỳ {year}`; không có ô nhập tên hoặc ngày bắt đầu/kết thúc.
 
-### A. Tạo kỳ đánh giá mới (Mở kỳ)
-- **Ai thực hiện**: Chỉ tài khoản có quyền `Manager`.
-- **Cách làm**:
-  1. Truy cập **Dashboard**.
-  2. Nhấn nút **"+ Tạo kỳ mới"** (nút này chỉ hiện khi không có kỳ nào đang ở trạng thái `Active`).
-  3. Nhập **Tên kỳ** (VD: Quý 2) và **Năm** (VD: 2026).
-- **Hành động hệ thống**:
-  - Tạo record mới trong bảng `evaluation_periods`.
-  - **[Quan trọng]**: Hệ thống tự động quét toàn bộ danh sách nhân viên (trừ Manager) và tạo sẵn các bản ghi `evaluations` + `evaluation_rounds` (Round 1) cho kỳ đó.
-  - Sau khi tạo, kỳ này sẽ trở thành kỳ mặc định của hệ thống.
+- **Hành động hệ thống:**
+  - Tạo một record trong `evaluation_periods` với status `active`.
+  - Khởi tạo evaluation và Round 1 theo workflow cho các user active, bao gồm cả Manager self-evaluation.
+  - Việc tạo kỳ phải giữ invariant chỉ một kỳ `Active`. UI đang ẩn nút khi đã có Active; server-side uniqueness/guard vẫn là điều kiện cần được bảo vệ khi thay đổi write path.
 
-### B. Chuyển đổi giữa các kỳ
-- **Ai thực hiện**: Tất cả người dùng.
-- **Cách làm**:
-  1. Nhìn vào thanh **Sidebar** (bên trái), ngay phía trên thông tin cá nhân.
-  2. Click vào **Bộ chọn kỳ** (hiện tên kỳ hiện tại kèm icon Lịch).
-  3. Chọn kỳ muốn xem từ danh sách xổ xuống.
-- **Hành động hệ thống**:
-  - Cập nhật Global Context.
-  - Tải lại dữ liệu (Dashboard, Báo cáo, Danh sách nhân viên) tương ứng với kỳ đã chọn.
+## 3. Chuyển đổi giữa các kỳ
 
-### C. Đóng kỳ đánh giá
-- **Ai thực hiện**: Chỉ tài khoản có quyền `Manager`.
-- **Cách làm**:
-  1. Chọn kỳ đang ở trạng thái `Active` (nếu chưa chọn).
-  2. Truy cập **Dashboard**, nhấn nút **"Đóng kỳ"** (màu đỏ).
-  3. Xác nhận qua hộp thoại Confirm.
-- **Hành động hệ thống**:
-  - Cập nhật trạng thái kỳ sang `Closed`.
-  - Toàn bộ các bản đánh giá thuộc kỳ này sẽ **không thể chỉnh sửa** (Read-only) để đảm bảo tính toàn vẹn của lịch sử.
+- **Ai thực hiện:** người dùng có quyền xem dữ liệu tương ứng.
+- **Cách làm:**
+  1. Mở **Bộ chọn kỳ** trong Sidebar.
+  2. Chọn kỳ muốn xem.
 
----
+Bộ chọn kỳ và `selected_period_id` là **UI preference** cho các màn hình hỗ trợ xem nhiều kỳ; không phải server authority cho mọi route.
 
-## 3. Các bước kiểm tra (Verification Steps)
+### Ngoại lệ bắt buộc: evaluation detail và compare
 
-1. **Kiểm tra hiển thị**: Đăng nhập bằng Manager, kiểm tra xem có thấy nút "+ Tạo kỳ mới" không.
-2. **Kiểm tra tính năng**: Tạo thử một kỳ "Test 2026". Quay lại Dashboard xem các con số StatCards có về 0 không (vì là kỳ mới chưa có data).
-3. **Kiểm tra Switching**: Chuyển sang kỳ "Quý 1 - 2026" (đã có dữ liệu), Dashboard và Reports phải hiển thị lại các biểu đồ và con số cũ.
+Hai route mặc định:
 
----
+```text
+/evaluations/[id]
+/evaluations/[id]/compare
+```
 
-## 4. Lưu ý kỹ thuật cho Admin
-- **Data Integrity**: Dữ liệu Evaluations được liên kết chặt chẽ với `period_id`. Đừng xóa kỳ đánh giá trực tiếp trong Database nếu đã có dữ liệu rounds.
-- **Active State**: Chỉ nên có **duy nhất 1 kỳ** ở trạng thái `Active` tại một thời điểm để tránh nhầm lẫn cho nhân viên khi thực hiện tự đánh giá.
+phải resolve period ở server trước khi query evaluation:
+
+```text
+0 Active  → NO_ACTIVE_PERIOD → không query evaluation
+1 Active  → dùng đúng activePeriodId
+2+ Active → MULTIPLE_ACTIVE_PERIODS → fail-closed
+```
+
+Quy tắc:
+
+- Query aggregate phải lọc chính xác `period_id = activePeriodId`.
+- React Query key phải chứa `activePeriodId` thật; không cache bằng `undefined`.
+- Không dùng `localStorage`, `AuthContext.currentPeriod` hoặc kỳ `Closed` làm authority cho current detail/compare.
+- Không fallback âm thầm sang kỳ `Closed` hoặc kỳ mới nhất.
+- `NO_ACTIVE_PERIOD` phải hiển thị trạng thái rõ: **Hiện chưa có kỳ đánh giá đang mở.**
+- `MULTIPLE_ACTIVE_PERIODS` phải fail-closed và ghi nhận anomaly để xử lý dữ liệu/configuration.
+
+## 4. Đóng kỳ đánh giá
+
+- **Ai thực hiện:** chỉ `Manager`.
+- **Cách làm:**
+  1. Chọn kỳ đang `Active`.
+  2. Mở Dashboard hoặc khu vực quản lý kỳ.
+  3. Chọn **Đóng kỳ** và xác nhận.
+
+- **Hành động hệ thống:** cập nhật period sang `Closed` và ghi `closed_at`.
+- Kỳ `Closed` phải read-only ở cả UI và server. Không được chỉ ẩn nút chỉnh sửa ở UI.
+- **Trạng thái implementation:** server-side Closed-period guard cho `saveEvaluationRound` vẫn là residual risk và phải hoàn tất trước khi mở historical write/read path. Vì vậy guide không coi điều kiện này đã hoàn tất chỉ dựa trên thao tác đóng kỳ.
+
+## 5. Lịch sử kỳ đã đóng — Phase 97
+
+Khi được yêu cầu triển khai, lịch sử phải là lối vào riêng, explicit và read-only:
+
+```text
+Lịch sử đánh giá
+  ├── Kỳ 2025 · Đã đóng
+  └── Kỳ 2026 · Đã đóng
+```
+
+Yêu cầu:
+
+- Server authorize bằng `requireAuth()` và `canViewEvaluation()`.
+- Không làm thay đổi kỳ `Active` hiện tại.
+- Không bắt người dùng nhập query parameter để mở kỳ cũ.
+- Mọi write vào evaluation thuộc kỳ `Closed` phải bị server từ chối.
+- Chỉ triển khai sau plan/WBS và approval riêng.
+
+## 6. Data integrity và thao tác nguy hiểm
+
+- Mọi evaluation và round phải giữ đúng `period_id`; không query evaluation chỉ theo `employee_id` khi route cần current period.
+- Không xóa trực tiếp `evaluation_periods` trong database nếu đã có evaluations/rounds.
+- Nếu cần xóa kỳ, chỉ dùng server action có kiểm tra quyền Manager và trạng thái kỳ; phải có approval, backup/rollback expectation và xác nhận cascade.
+- Không tạo kỳ test hoặc xóa dữ liệu test trên production. Dùng org/fixture test được phép và cleanup theo đúng ID sau khi test PASS.
+
+## 7. Verification an toàn
+
+### Kiểm tra read-only
+
+- Xác nhận UI chỉ hiển thị **Tạo kỳ mới** khi không có Active.
+- Kiểm tra bộ chọn kỳ hiển thị rõ `Active`/`Closed`.
+- Kiểm tra Dashboard/Reports/Employees tải đúng period đã chọn ở các route hỗ trợ period selector.
+- Kiểm tra detail/compare bằng dữ liệu được phép:
+  - đúng một Active → query có `period_id` đúng;
+  - không Active → `NO_ACTIVE_PERIOD`;
+  - nhiều Active → `MULTIPLE_ACTIVE_PERIODS` và không mở nhầm dữ liệu.
+- Kiểm tra không có console error, request failure hoặc cross-period data leak.
+
+### Kiểm tra có mutation
+
+Chỉ thực hiện trên fixture/org test được phép, không mặc định trên production:
+
+1. Tạo một kỳ test qua UI với quyền Manager.
+2. Xác nhận evaluation/Round 1 được khởi tạo theo workflow, bao gồm Manager nếu là user active.
+3. Đóng kỳ test.
+4. Xác nhận mọi write vào kỳ `Closed` bị server từ chối.
+5. Cleanup đúng kỳ test sau khi toàn bộ kiểm tra PASS.
+
+## 8. Contract kỹ thuật tham chiếu
+
+| Trạng thái | Ý nghĩa |
+|---|---|
+| `Active` | Kỳ đang mở; current detail/compare chỉ chấp nhận đúng một kỳ Active. |
+| `Closed` | Kỳ đã đóng; dữ liệu lịch sử, không tự động fallback vào current route. |
+| `NO_ACTIVE_PERIOD` | Không có kỳ Active; fail-closed, không query evaluation current route. |
+| `MULTIPLE_ACTIVE_PERIODS` | Dữ liệu/configuration bất thường; fail-closed, không tự chọn một kỳ. |
+
+Nguồn liên quan:
+
+- `src/actions/period.ts` — create/close/delete period.
+- `src/contexts/AuthContext.tsx` — UI period preference.
+- `src/lib/db/evaluations.ts` — period helpers và mapping status.
+- `src/app/evaluations/[id]` và `src/app/evaluations/[id]/compare` — current evaluation routes.
+- `.ai/MASTER_PLAN.md` — canonical implementation plan và residual risks.
+- `.ai/DECISIONS_LOG.md` — quyết định Active-only và Phase 97 deferred.
