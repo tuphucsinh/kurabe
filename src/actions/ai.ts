@@ -14,6 +14,7 @@ import { detectAnomalies } from '@/lib/anomaly';
 import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
+import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -88,6 +89,12 @@ export async function saveResultMessageAction(input: {
 }): Promise<{ ok?: boolean; error?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
+
+  // P96T05: Closed-period write firewall — guard evaluation period before write
+  const periodGuard = await assertEvaluationPeriodActiveForEvaluation(input.evaluationId);
+  if (!periodGuard.success) {
+    return { error: periodGuard.error };
+  }
 
   try {
     const { error } = await supabaseAdmin
@@ -360,4 +367,3 @@ YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ r�
     return { error: toClientError(err, 'Lỗi tạo biên bản kết thúc kỳ. Vui lòng thử lại.') };
   }
 }
-

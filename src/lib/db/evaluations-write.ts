@@ -5,8 +5,11 @@ import { User, RoundNumber } from '@/types';
 import { TablesInsert, Json } from '@/types/database';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
-import { getActivePeriod } from './evaluations';
 import { parseRole } from '@/lib/parsers';
+import {
+  assertEvaluationPeriodActive,
+  CLOSED_PERIOD_WRITE_ERROR,
+} from './evaluation-period-write-guard';
 
 /**
  * CÁC HÀM GHI evaluation/evaluation_rounds — server-only (service-role client).
@@ -19,22 +22,41 @@ import { parseRole } from '@/lib/parsers';
  * Gọi sau upsertUser/upsertUsers (server actions). Idempotent: user đã có evaluation sẽ được bỏ qua.
  * Logic giống createEvaluationPeriod (actions/period.ts): resolve evaluator round 1
  * theo flow role, tạo evaluation NotStarted + round 1.
+ *
+ * P96T05: Fail-closed khi không có kỳ active hoặc kỳ đã đóng/lỗi (không chuyển thành skipped thầm lặng).
  */
 export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ created: number; skipped: number; errors: string[] }> {
   const result = { created: 0, skipped: 0, errors: [] as string[] };
   if (!newUsers || newUsers.length === 0) return result;
 
-  // 1. Kỳ active (không có → không làm gì)
-  const activePeriod = await getActivePeriod();
-  if (!activePeriod) {
+  // 1. Kỳ active (không có, đã đóng, hoặc lỗi → fail-closed với observable error)
+  const { data: activePeriods, error: periodErr } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select('id, status')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(2);
+
+  if (periodErr || !activePeriods || activePeriods.length !== 1) {
+    result.errors.push(periodErr ? `Lỗi kiểm tra kỳ đánh giá: ${periodErr.message}` : CLOSED_PERIOD_WRITE_ERROR);
     result.skipped = newUsers.length;
     return result;
   }
 
+  const activePeriod = activePeriods[0];
+  const guard = await assertEvaluationPeriodActive(activePeriod.id);
+  if (!guard.success) {
+    result.errors.push(guard.error);
+    result.skipped = newUsers.length;
+    return result;
+  }
+
+  const activePeriodId = guard.periodId;
+
   // 2. Tải toàn bộ user active để resolve evaluator (batch) + map leader chỉ định + evaluation hiện có
   const [allUsersRes, existingEvalsRes, teamLeaderIds] = await Promise.all([
     supabaseAdmin.from('users').select('id, role, team_id, subleader_id').eq('is_active', true),
-    supabaseAdmin.from('evaluations').select('employee_id').eq('period_id', activePeriod.id),
+    supabaseAdmin.from('evaluations').select('employee_id').eq('period_id', activePeriodId),
     loadTeamLeaderIds(supabaseAdmin),
   ]);
   if (allUsersRes.error || existingEvalsRes.error) {
@@ -60,6 +82,14 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       continue;
     }
 
+    // P96T05: Kiểm tra active guard trước mỗi thao tác tạo evaluation/round
+    const itemGuard = await assertEvaluationPeriodActive(activePeriodId);
+    if (!itemGuard.success) {
+      result.errors.push(itemGuard.error);
+      result.skipped++;
+      continue;
+    }
+
     const flow = getEvaluationFlow(user.role);
     const firstStep = flow[0];
     const evaluator = resolveEvaluatorFromList(firstStep.evaluator, {
@@ -79,7 +109,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
     const { data: ev, error: evError } = await supabaseAdmin
       .from('evaluations')
       .insert({
-        period_id: activePeriod.id,
+        period_id: activePeriodId,
         employee_id: user.id,
         employee_role: user.role,
         team_id: user.teamId || null,

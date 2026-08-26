@@ -9,6 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 import { boundAIText, MAX_AI_PROMPT_CHARS } from '@/lib/ai-governance';
+import { assertEvaluationPeriodActive } from '@/lib/db/evaluation-period-write-guard';
 
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
 export async function getPeriodSummary(periodId: string): Promise<{ summary?: string; created_at?: string }> {
@@ -38,6 +39,12 @@ export async function generatePeriodSummary(
   if (auth.error !== null) return { error: auth.error };
   if (!periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
   if (!isAIConfigured()) return { error: 'AI chưa được cấu hình (thiếu API key).' };
+
+  // P96T05: Closed-period write firewall — guard period exact active before quota/AI work
+  const periodGuard = await assertEvaluationPeriodActive(periodId);
+  if (!periodGuard.success) {
+    return { error: periodGuard.error };
+  }
 
   const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodSummary');
   if (!aiQuota.allowed) return { error: aiQuota.error };
@@ -100,6 +107,12 @@ export async function generatePeriodSummary(
     const summary = await callAI(boundedPrompt, { maxTokens: 800 });
     if (!summary) return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
 
+    // P96T05: Closed-period write firewall — guard period exact active again before upsert
+    const preUpsertGuard = await assertEvaluationPeriodActive(periodId);
+    if (!preUpsertGuard.success) {
+      return { error: preUpsertGuard.error };
+    }
+
     const { error } = await supabaseAdmin.from('ai_summaries').upsert(
       {
         period_id: periodId,
@@ -110,7 +123,10 @@ export async function generatePeriodSummary(
       { onConflict: 'period_id' }
     );
 
-    if (error) console.error('Lưu ai_summaries error:', error.message);
+    if (error) {
+      console.error('Lưu ai_summaries error:', error.message);
+      return { error: toClientError(error, 'Lỗi khi lưu tóm tắt. Vui lòng thử lại.') };
+    }
 
     revalidatePath('/reports');
     return { summary };

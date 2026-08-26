@@ -30,6 +30,7 @@ import {
   EvaluationRoundPayloadInput,
 } from '@/lib/evaluation-round-validation';
 import { buildEvaluationRoundTransactionRpcArgs } from '@/lib/evaluation-transaction-rpc';
+import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
@@ -61,6 +62,12 @@ export async function saveEvaluationRound(
   const actorId = auth.user.id;
 
   try {
+    // P96T05: Closed-period write firewall — fail closed before any direct write or RPC
+    const periodGuard = await assertEvaluationPeriodActiveForEvaluation(evaluationId);
+    if (!periodGuard.success) {
+      return { success: false, error: periodGuard.error };
+    }
+
     const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
       .select('employee_id, employee_role, team_id, status')
@@ -153,7 +160,7 @@ export async function saveEvaluationRound(
         fn: string,
         args: Record<string, unknown>
       ) => Promise<{ data: unknown; error: unknown }>)(
-        'save_evaluation_round_transaction',
+        'save_evaluation_round_transaction_active_only',
         rpcArgs as unknown as Record<string, unknown>
       );
 
@@ -417,6 +424,12 @@ export async function initializeEvaluationRoundDraft(
   const actorId = auth.user.id;
 
   try {
+    // P96T05: Closed-period write firewall — fail closed before round/evaluation updates
+    const periodGuard = await assertEvaluationPeriodActiveForEvaluation(evaluationId);
+    if (!periodGuard.success) {
+      return { success: false, error: periodGuard.error };
+    }
+
     const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
       .select('employee_id, employee_role, team_id, status')
@@ -549,6 +562,12 @@ export async function returnEvaluationRound(
   const actorId = auth.user.id;
 
   try {
+    // P96T05: Closed-period write firewall — fail closed before any update
+    const periodGuard = await assertEvaluationPeriodActiveForEvaluation(evaluationId);
+    if (!periodGuard.success) {
+      return { success: false, error: periodGuard.error };
+    }
+
     const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
       .select('id, employee_id, employee_role, current_round, status')
@@ -757,4 +776,3 @@ export async function returnEvaluationRound(
     return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
   }
 }
-

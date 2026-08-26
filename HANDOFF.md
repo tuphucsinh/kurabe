@@ -9,5 +9,6 @@
 - Live catalog P96T03 `UNKNOWN/BLOCKED`: Management API database query và `supabase db query --linked` đều 403. Không claim live index verified.
 - P96T03 candidate chưa apply; production migration/apply cần direct catalog privilege và approval riêng. Chưa deploy/push.
 - P96T04 PASS_WITH_CONSTRAINT: atomic create RPC giữ evaluator resolution ở TypeScript; exact-empty Closed delete RPC lock/count/rowcount guard, không delete child business rows; focused contract + full suite 30/30 + lint/tsc/build PASS, fresh `gemini-3.1-pro-high` review PASS clean/HIGH.
-- P96T04 live DB integration/failure injection và catalog verification vẫn `UNKNOWN/BLOCKED`; migration chưa apply. P96T05 Closed-period write firewall chưa triển khai; Phase 97 vẫn DEFERRED.
+- P96T04 live DB integration/failure injection và catalog verification vẫn `UNKNOWN/BLOCKED`; migration chưa apply. P96T05 candidate đã hoàn tất local nhưng live catalog/race/failure injection vẫn `UNKNOWN/BLOCKED`; Phase 97 vẫn DEFERRED.
+- P96T05 PASS_WITH_CONSTRAINT: shared server-only exact-Active guard phủ evaluation/AI writes + lazy initializer; new wrapper RPC locks period `FOR UPDATE` and delegates P3 transaction; multiple Active fail-closed. Focused contract + full suite 31/31 + lint/tsc/build PASS; fresh reviewer PASS, Critical/Important NONE. Residual: direct REST TOCTOU, lazy N+1 guard. No migration/apply/deploy/push.
 - Agy execution lane tạo candidate đúng scope; Mika sửa test contract whitespace và verify độc lập; không deploy/push.

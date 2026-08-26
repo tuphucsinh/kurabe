@@ -63,8 +63,8 @@
 - **Parallel-safe**: no.
 - **Context hiện có**: thiếu period-status guard trong `saveEvaluationRound`, `initializeEvaluationRoundDraft`, `returnEvaluationRound`, `saveResultMessageAction`; `db/repair-p3-evaluation-transaction-v2.sql:109-152` chỉ lock evaluation/round, chưa lock/check period và không được coi là output đã sửa.
 - **Constraints**: shared helper `server-only` cho non-RPC action; inventory toàn bộ write callers trước patch; tạo SQL patch mới có provenance + rollback, join/lock exact evaluation period và require `status='active'` trong cùng transaction; không sửa đè/đưa repair-v2 cũ làm candidate mới; giữ evaluator/RBAC/idempotency/audit; stable business error; không chỉ ẩn UI.
-- **Definition of Done**: tests mỗi action Active PASS/Closed reject; direct action + stale-tab + RPC race matrix; SQL test chứng minh close thắng race thì RPC không write; no write/audit success giả; inventory 100% caller mapped; Reviewer PASS; production migration `Need approval`.
-- **Status**: `[ ]`
+- **Definition of Done**: source-contract tests cho mọi action Active/Closed/missing/multiple; direct action + stale-tab guard; RPC wrapper lock/check trong cùng transaction; no write/audit success giả; inventory 100% caller mapped; Reviewer PASS; live race/failure injection và migration apply vẫn `Need approval`.
+- **Status**: `[x] PASS_WITH_CONSTRAINT` — focused contract PASS; full suite 31/31, lint, tsc, build PASS; fresh `gemini-3.1-pro-high` review PASS với Critical/Important = NONE. Direct REST precheck còn TOCTOU residual; lazy initializer có N+1 guard query. Live catalog/race/failure injection `UNKNOWN/BLOCKED`; chưa apply.
 
 ### [#P96T06] [compare static/loading frame] Static shell và local loading states
 - **Goal**: render 100% static structure của compare trước data; loading chỉ che vùng data, không fake score/grade/name/action.
