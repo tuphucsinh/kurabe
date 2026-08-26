@@ -73,7 +73,7 @@
 - **Context hiện có**: `src/app/evaluations/[id]/compare/loading.tsx` generic skeleton; `page.tsx:105-121` generic spinner.
 - **Constraints**: frame stateless; không form/handler/privileged control; loading không nested invalid HTML; route fallback và client pre-data geometry nhất quán.
 - **Definition of Done**: DOM marker `data-load-layer="static"`/local states đo được; shell không phụ thuộc aggregate response; no duplicate interactive tree.
-- **Status**: `[ ]`
+- **Status**: `[x] PASS_WITH_CONSTRAINT` — static contract PASS; full suite 32/32, lint, tsc, build PASS; reviewer R2 `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Browser authenticated canary `BLOCKED_AUTH` do route 307 `/login`; chưa claim visual PASS.
 
 ### [#P96T07] [compare page/components] Progressive primary/secondary render
 - **Goal**: summary và changed criteria usable trước comments/unchanged section khi dependency cho phép; chỉ có retry/local error riêng nếu data source được tách thật; nếu giữ aggregate thì bảo toàn aggregate error contract, không tạo retry giả.
