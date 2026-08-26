@@ -1102,7 +1102,7 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 
 ---
 
-## Phase 95: True static-first cho trang chi tiết đánh giá 🟡 (2026-08-26)
+## Phase 95: True static-first cho trang chi tiết đánh giá ✅ DONE (2026-08-26)
 
 > **Mục tiêu**: static labels/structure thật render trước `pageData`; sau đó light employee/evaluation/access, criteria/editor, rồi secondary history/periods/AI; không dùng skeleton để claim full performance.
 
@@ -1116,6 +1116,8 @@ const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString(); // về 
 ## Phase 96: Tinh gọn và tối ưu tải trang So sánh các vòng 🟡 (2026-08-26)
 
 > **Mục tiêu**: làm trang `/evaluations/[id]/compare` gọn hơn trên mobile/PC và rút ngắn thời gian tới nội dung so sánh hữu ích. Performance phải được đo theo từng milestone, không dùng riêng FCP hoặc cảm nhận UI để claim nhanh hơn.
+>
+> **Trạng thái**: PLAN READY — đã qua Agy Sonnet 4.6 review; chưa triển khai application code.
 
 ### Phạm vi UX
 
