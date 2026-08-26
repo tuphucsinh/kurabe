@@ -173,6 +173,7 @@ Authenticated browser evidence phải dùng account được phép; không lưu 
 ### Residual risks còn hiệu lực
 
 - P96T00 đã verify live Active cardinality = 1, 53 evaluations, 69 rounds, không orphan/duplicate; PostgREST không expose system catalog nên partial-unique invariant mới `ABSENT_IN_REPO_ONLY`, live catalog metadata vẫn UNKNOWN và phải gate ở P96T03.
+- P96T01 baseline chưa đo được vì local và production compare route đều redirect 307 → `/login` khi không có authorized browser session; không dùng metric fabricated. P96T02 không được vượt dependency này nếu chưa có session hợp lệ hoặc approval đổi gate.
 - Closed-period firewall cho toàn bộ evaluation write path và SQL RPC chưa được triển khai; đây là P96T05 blocker, không còn defer tới Phase 97.
 - Period create/delete hiện chưa có transaction contract đã qualify; đây là P96T04 blocker.
 - Passwordless fallback vẫn là lựa chọn nghiệp vụ hiện tại; rate-limit và CSP Report-Only warning là residual đã biết.
