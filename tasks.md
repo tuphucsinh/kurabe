@@ -2,7 +2,8 @@
 
 > File làm việc cho `/do` — chỉ giữ việc đang làm và việc chờ. Chi tiết phase đã hoàn tất nằm trong `.ai/MASTER_PLAN.md`; trạng thái phiên gần nhất nằm trong `HANDOFF.md`.
 
-## Pending / Next (cập nhật 2026-08-26)
+## Pending / Next (cập nhật 2026-08-27)
+- **P96 lifecycle E2E trên current DB**: plan revision 3 đã fresh-review `PASS`; còn chờ T10 preflight, dry-run/harness proof được approval riêng và explicit production execution approval trước mutation. Trạng thái cuối đã chốt: kỳ cũ Active, kỳ test dọn exact.
 - **AI env lên Vercel**: trạng thái hiện tại chưa được xác minh trong phiên này; chỉ xử lý khi anh yêu cầu triển khai/kiểm tra production.
 - **QI Gia dụng chưa gán Leader** + 3 NV chưa gán SubLeader: giữ lại để xử lý khi anh tiếp tục UAT.
 - **Cloudflare Tunnel**: named tunnel/Access vẫn chờ anh chuyển `vorigin.vn` nameserver sang Cloudflare và báo Active; không tự khởi động.
@@ -10,112 +11,54 @@
 
 ---
 
-## Phase 96: Multi-period integrity + tối ưu trang So sánh 🟡 (PLAN PASS — implementation chưa bắt đầu)
+## Phase 96E: Current DB lifecycle E2E + exact rollback (PLAN REVISION 3 — REVIEW PASS; execution gate pending)
 
-### [#P96T00] [live DB/catalog — read-only] Multi-period preflight
-- **Goal**: xác minh Active cardinality, period/evaluation consistency và catalog index/constraint thật trước mọi implementation/migration.
+### [#P96T10] [Supabase MCP pg_catalog + snapshot] Preflight và rollback manifest
+
+- **Goal**: xác minh current DB/deployment/runtime trước mutation và tạo manifest exact để có thể khôi phục kỳ cũ Active, dọn kỳ test mới.
 - **Depends on**: none.
 - **Parallel-safe**: no.
-- **Context hiện có**: repo chưa có source evidence cho partial unique index `evaluation_periods.status = 'active'`; `getActivePeriod()` hiện `.limit(1).single()` nên nhiều Active bị chọn một row.
-- **Constraints**: read-only; không in row/PII/credential; chỉ aggregate count/schema metadata; `>1` Active, duplicate `(period_id, employee_id)` hoặc provenance drift → STOP/Need approval, không auto-heal.
-- **Definition of Done**: evidence ghi count 0/1/>1, exact catalog object/provenance hoặc `ABSENT`, current FK/unique state và decision `CONTINUE`/`STOP`; không mutation.
-- **Status**: `[x]` — P96T00 verified: live Active = 1, evaluations = 53, rounds = 69, duplicate/orphan counts = 0. PostgREST không expose `pg_catalog`/`information_schema`; single-Active catalog invariant `ABSENT_IN_REPO_ONLY`, live metadata UNKNOWN. P96T01 được phép bắt đầu; P96T03 vẫn giữ direct-catalog/apply gate.
+- **Context hiện có**: production đã có P96T03–P96T05; `/settings` → `PeriodsTab` → `PeriodActions` gọi `closeEvaluationPeriod()` và `PeriodModal` gọi `createEvaluationPeriod()`; create action fan-out evaluation + round 1 cho toàn bộ active users.
+- **Concrete checks**: qua Supabase MCP `execute_sql` read-only, kiểm tra exact deployed artifact `dpl_FyWPJ9HdXL6HdVTJsjzaBMa3TtRp`, runtime flag transactional RPC, 1 Active, counts/IDs/field snapshots của `evaluation_periods`, `evaluations`, `evaluation_rounds`, `audit_logs`, `ai_summaries`; query `pg_catalog`/`information_schema` để lập FK dependency graph, liệt kê rõ hướng FK của audit/AI (RESTRICT/SET NULL/CASCADE) và exact audit rows. Hash phải tính DB-side trên aggregate có thứ tự ổn định; không trả/lưu raw PII vào manifest.
+- **Acceptance**: manifest baseline có `run_id`, `old_period_id`, manager actor, exact baseline counts/hashes, allowed deltas và rollback SQL template không placeholder/broad predicate. Manifest phải có cơ chế append-only `run_created_ids` sau *mọi* mutation: T11 close/create và T12 close test period; capture exact period/evaluation/round/audit/AI IDs cùng affected-row counts ngay sau từng action. T13 chỉ được chạy khi phần này đầy đủ. T10 chỉ validate tĩnh reopen/rollback SQL (FK direction, no-placeholder, affected-row assertion, snapshot khớp baseline); proof thực thi chỉ qua dry-run/harness có approval riêng, không mutation trong T10. Không persist secrets/session material.
+- **Stop**: FK/audit dependency không xác định, baseline drift, nhiều/không có Active, permission/runtime mismatch, hoặc không chứng minh được rollback exact.
+- **Status**: pending.
 
-### [#P96T01] [browser/performance] Authenticated compare baseline waterfall
-- **Goal**: đo cold/warm và các mốc `shell-visible`, `first-light-visible`, `grade-bands-ready`, `first-primary-complete`, `secondary-complete`, `full-complete` tại 390x844, 768x1024, 1440x900; kèm period matrix khi fixture/tooling read-only hỗ trợ.
-- **Depends on**: `[#P96T00]`.
-- **Parallel-safe**: yes.
-- **Context hiện có**: `src/app/evaluations/[id]/compare/page.tsx` hiện global gate `isLoading`; `src/actions/read.ts` aggregate `employee/evaluation/users/groups`; `src/hooks/use-db.ts` query staleTime 2 phút.
-- **Constraints**: chỉ đọc; không tạo/xóa kỳ hoặc mutate evaluation; không in credentials; phân biệt TTFB/LCP/CLS với data milestones; ghi request count/payload/long task nếu tooling hỗ trợ; đo riêng `getGradeBandsAction()` ở `page.tsx:47-53` và xác định fallback sync → authoritative DB transition.
-- **Definition of Done**: bảng baseline cùng route/data ở 3 viewport, cold/warm tách riêng, console/network evidence và bottleneck hypothesis có source evidence; case không thể đo ghi `UNKNOWN`, không dựng fixture production.
-- **Status**: `[x]` — PASS bằng Mika Playwright fallback sau Agy probe timeout: 3 cold + 3 warm mỗi viewport, authenticated HTTP 200 đúng compare route. Median first-light→full: 390 cold/warm `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`; resource 25, transfer ~8.7KB, encoded ~450KB. Console chỉ có CSP Report-Only warning; không có app exception/failed request dai dẳng. Không fabricated metric.
+### [#P96T11] [https://lykiv.vercel.app/settings + period actions] Đóng kỳ cũ, mở kỳ test mới
 
-### [#P96T02] [server page/scope/actions/hooks] Active-period server boundary
-- **Goal**: implement Active-only contract bằng server-only resolver + server page wrapper trước client query; không để `periodId` undefined, localStorage/currentPeriod làm authority hoặc thêm dependent client waterfall.
-- **Depends on**: `[#P96T01]`.
+- **Goal**: kiểm tra lifecycle thật qua UI Manager, với maintenance window và no-concurrent-write gate.
+- **Depends on**: `[#P96T10]`.
 - **Parallel-safe**: no.
-- **Context hiện có**: P96T02 candidate đã tách detail/compare thành RSC wrapper + client child; server-only resolver query tối đa 2 Active; hooks cache 2 phút và dùng `periodId`; aggregate gọi `getEvaluationByEmployeeAdmin(employeeId, periodId)`; `getEvaluationByEmployeeAction` không còn implicit fallback; inline history join/filter `evaluation_periods.status = 'closed'`; `src/lib/db/evaluations.ts` vẫn giữ client-compatible import.
-- **Constraints**: đổi `page.tsx` thành RSC wrapper mỏng và chuyển body hiện tại sang client child; resolver mới module `server-only`, query tối đa 2 Active, discriminated union `ACTIVE`/`NO_ACTIVE_PERIOD`/`MULTIPLE_ACTIVE_PERIODS`; wrapper truyền `activePeriodId` thật, không browser resolver request riêng; chỉ ACTIVE enable hook; aggregate re-validate `period_id`; standalone action phải nhận exact period ID, không fallback `getActivePeriod()`; re-run consumer search rồi xóa `useEvaluationByEmployee` nếu vẫn unused hoặc đổi `periodId` thành required nếu giữ; inline history join/filter period `closed`; giữ `requireAuth`, `canViewEvaluation`, visible rounds, per-part error và stale guards; không PPR/cache/query split nếu baseline chưa chứng minh.
-- **Definition of Done**: tests zero/one/multiple/query-error; hai main hooks không nhận `undefined`/`AuthContext.currentPeriod`; standalone hook không còn hoặc có required exact period ID; không call site current evaluation tự fallback helper cũ; detail/compare không gọi admin query thiếu period ID; Active-period Approved evaluation bị loại khỏi `HistoryList`, Closed Approved vẫn hiện; literal `Hiện chưa có kỳ đánh giá đang mở.` đúng; anomaly không hiển thị stale data; query key chứa exact ID; network evidence không có dependent client resolver request.
-- **Status**: `[x]` — PASS: Mika fallback implemented after Agy execution lane blocked twice. Resolver/RSC boundary, explicit period propagation, fail-closed states, closed-only history, and regression tests verified. Evidence: `node scripts/run-tests.mjs` 28/28 PASS; `npm run lint` PASS; `npx tsc --noEmit` PASS; `npm run build` PASS; authenticated localhost detail/compare canary PASS with 0 console messages and 0 JS errors; fresh Agy `gemini-3.1-pro-high` review PASS, Critical/Important/Non-blocking NONE, confidence HIGH. Legacy Sidebar optional call remains compatibility-only and admin query now fails closed when periodId is absent.
+- **Browser actions**: đăng nhập account Manager được phép → `/settings` → tab `Kỳ đánh giá`; xác nhận kỳ cũ và tiến độ trước khi click; click `Đóng kỳ`, xác nhận; đọc DB ngay; sau đó click `Tạo kỳ mới`, chọn năm chưa tồn tại, xác nhận; đọc DB ngay lần nữa.
+- **Expected allowlist**: kỳ cũ đổi `status/closed_at`; một close audit row; một kỳ test mới Active; evaluations + round 1 fan-out đúng active-user baseline; một create audit row. Không coi các delta này là drift.
+- **Acceptance**: atomic create không partial; đúng 1 Active; kỳ cũ Closed; old evaluation/round rows unchanged; new rows chỉ trỏ `new_period_id`; duplicate/orphan = 0. Ngay sau close và ngay sau create phải capture exact IDs phát sinh, affected-row counts và append vào manifest `run_created_ids`. Nếu create fail thì chỉ chạy procedure reopen exact đã được T10 static-validate và dry-run/harness-approved; nếu chưa có proof đó thì STOP, không tự đoán SQL và không để no-active ngoài maintenance window. Trước close/create phải verify lại maintenance window và zero concurrent evaluator write.
+- **Stop**: partial create, count sai, audit ngoài allowlist, request/UI error, hoặc có concurrent evaluator write.
+- **Status**: pending.
 
-### [#P96T03] [DB candidate + period action] Single-Active invariant và safe close
-- **Goal**: tạo candidate DB invariant ngăn Active thứ hai và làm close fail-closed/không success giả.
-- **Depends on**: `[#P96T00]`, `[#P96T02]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: `createEvaluationPeriod()` insert status active không có DB-backed guard; `closeEvaluationPeriod()` update theo id nhưng không condition status/affected-row; live catalog chưa verified.
-- **Constraints**: partial unique index có provenance + preflight + rollback; anomaly hiện hữu → STOP, không dedupe; close `.eq('status','active').select()` và verify exactly one row; `savePeriodTarget` cũng chỉ update Active; policy close khi còn incomplete evaluation phải hiện count/warning và được approval trước code; không apply production trong task này.
-- **Definition of Done**: migration/rollback candidate hermetic; tests second-Active rejected, zero/one-row close, already-closed/nonexistent non-success và Closed target update rejected; Reviewer PASS; production apply vẫn `Need approval`.
-- **Status**: `[x]` — PASS_WITH_CONSTRAINT: candidate migration/rollback và close/target affected-row guards đã verify; full suite 29/29, focused contract, lint, tsc, build PASS; fresh Agy `gemini-3.1-pro-high` review PASS clean, confidence HIGH. Live preflight không anomaly nhưng direct pg_catalog/information_schema vẫn UNKNOWN/BLOCKED do Management API/CLI 403; chưa apply migration, chưa deploy/push. Production apply = `Need approval` + direct catalog privilege required.
+### [#P96T12] [browser contexts] E2E read/stale-tab/closed-write matrix
 
-### [#P96T04] [period action + RPC] Atomic create và delete policy
-- **Goal**: period + evaluations + round 1 được tạo atomic; historical business period không thể hard-delete qua normal action.
-- **Depends on**: `[#P96T03]`.
+- **Goal**: kiểm tra kỹ behavior sau chuyển kỳ mà không submit/approve/AI hoặc mutate employee thật ngoài allowlist.
+- **Depends on**: `[#P96T11]`.
 - **Parallel-safe**: no.
-- **Context hiện có**: create đang insert period/evaluations/rounds thành 3 write; delete đang xóa evaluations → ai summaries → period thành nhiều write độc lập.
-- **Constraints**: ưu tiên transactional RPC nhận payload evaluator đã resolve server-side, không duplicate workflow authority trong SQL; failed create không để partial row; period có business evaluations trả non-success; empty được định nghĩa zero evaluations + zero ai_summaries; chỉ exact empty period được cleanup transactional, Manager auth và approval; không suy ra “test period” nếu schema không đánh dấu; không auto-clean production.
-- **Definition of Done**: candidate contract kiểm tra atomic RPC, payload set/period binding, business-delete-blocked và exact-empty-delete; migration/RPC có provenance/rollback; Reviewer PASS; live failure injection/catalog verification vẫn là gate riêng vì direct DB access bị BLOCKED; apply production `Need approval`.
-- **Status**: `[x]` — PASS_WITH_CONSTRAINT: candidate atomic create/delete đã verify; live DB integration/failure injection chưa chạy do Management API/pg_catalog access UNKNOWN/BLOCKED; chưa apply production.
+- **Browser actions**: giữ tab cũ trước transition và mở context thứ hai; kiểm tra `/dashboard`, `/reports`, evaluation list, detail và compare; reload tab cũ; đóng **kỳ test vừa tạo**; đọc DB ngay và append exact close-audit ID/affected-row count vào `run_created_ids`. Closed-write UI chỉ attempt trên evaluation run-created thuộc kỳ test vừa đóng, với employee `TST%` nếu tồn tại và restore path đầy đủ; tuyệt đối không dùng baseline evaluation của kỳ cũ.
+- **Acceptance**: no-Active state fail-closed trong cửa sổ kiểm soát; reload stale tab resolve đúng kỳ mới; query/cache key có period ID; detail/compare đúng round 1/pending/score-grade semantics; Closed write trên evaluation của kỳ test bị chặn và DB không đổi, bao gồm `audit_logs` = 0 delta. Nếu không có `TST%`, Closed-write UI attempt ghi `NOT RUN` và không dùng employee thật; server-side P96T05 rejection evidence trước đó không bị nâng thành UI PASS. Trước khi đóng kỳ test phải re-verify maintenance window và zero concurrent write; gate này giữ đến T13. Console/runtime/network error không giải thích = non-PASS.
+- **Write boundary**: không submit/approve/AI. Không có Draft save trên evaluation mới trừ khi restore exact mọi bảng/child/audit/AI đã được chứng minh qua dry-run/harness được approval riêng (T10 chỉ static-validate); sequence gaps được allowlist riêng.
+- **Evidence**: screenshot/DOM/console/network đã redacted tại `/home/pi5/hermes-artifacts/browser-evidence/kurabe/p96-e2e/<run_id>/`; không lưu cookie/token/PII.
+- **Status**: pending.
 
-### [#P96T05] [evaluation/AI actions + transaction RPC] Closed-period write firewall
-- **Goal**: mọi write vào evaluations/evaluation_rounds fail-closed nếu period không Active, kể cả stale tab và transactional RPC.
-- **Depends on**: `[#P96T03]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: thiếu period-status guard trong `saveEvaluationRound`, `initializeEvaluationRoundDraft`, `returnEvaluationRound`, `saveResultMessageAction`; `db/repair-p3-evaluation-transaction-v2.sql:109-152` chỉ lock evaluation/round, chưa lock/check period và không được coi là output đã sửa.
-- **Constraints**: shared helper `server-only` cho non-RPC action; inventory toàn bộ write callers trước patch; tạo SQL patch mới có provenance + rollback, join/lock exact evaluation period và require `status='active'` trong cùng transaction; không sửa đè/đưa repair-v2 cũ làm candidate mới; giữ evaluator/RBAC/idempotency/audit; stable business error; không chỉ ẩn UI.
-- **Definition of Done**: source-contract tests cho mọi action Active/Closed/missing/multiple; direct action + stale-tab guard; RPC wrapper lock/check trong cùng transaction; no write/audit success giả; inventory 100% caller mapped; Reviewer PASS; live race/failure injection và migration apply vẫn `Need approval`.
-- **Status**: `[x] PASS_WITH_CONSTRAINT` — focused contract PASS; full suite 31/31, lint, tsc, build PASS; fresh `gemini-3.1-pro-high` review PASS với Critical/Important = NONE. Direct REST precheck còn TOCTOU residual; lazy initializer có N+1 guard query. Live catalog/race/failure injection `UNKNOWN/BLOCKED`; chưa apply.
+### [#P96T13] [Supabase MCP execute_sql] Exact rollback và final integrity gate
 
-### [#P96T06] [compare static/loading frame] Static shell và local loading states
-- **Goal**: render 100% static structure của compare trước data; loading chỉ che vùng data, không fake score/grade/name/action.
-- **Depends on**: `[#P96T02]`, `[#P96T05]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: `src/app/evaluations/[id]/compare/loading.tsx` generic skeleton; `page.tsx:105-121` generic spinner.
-- **Constraints**: frame stateless; không form/handler/privileged control; loading không nested invalid HTML; route fallback và client pre-data geometry nhất quán.
-- **Definition of Done**: DOM marker `data-load-layer="static"`/local states đo được; shell không phụ thuộc aggregate response; no duplicate interactive tree.
-- **Status**: `[x] PASS_WITH_CONSTRAINT` — static contract PASS; full suite 32/32, lint, tsc, build PASS; reviewer R2 `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Browser authenticated canary `BLOCKED_AUTH` do route 307 `/login`; chưa claim visual PASS.
-
-### [#P96T07] [compare page/components] Progressive primary/secondary render
-- **Goal**: summary và changed criteria usable trước comments/unchanged section khi dependency cho phép; chỉ có retry/local error riêng nếu data source được tách thật; nếu giữ aggregate thì bảo toàn aggregate error contract, không tạo retry giả.
-- **Depends on**: `[#P96T02]`, `[#P96T06]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: summary `page.tsx:186-246`; changed criteria `248-407`; comments `409-455`; unchanged `457-485`.
-- **Constraints**: không đổi score/grade/delta/round ordering/access; không render score 0 thay missing data; unchanged đóng mặc định; giữ comments đầy đủ; `getGradeBandsAction()` có state/error contract riêng và grade authoritative không bị thay đổi im lặng sau primary milestone.
-- **Definition of Done**: primary/secondary markers đo được; stale scope không hiển thị data cũ; changed criteria và comments đúng với baseline.
-- **Status**: `[x] PASS_WITH_CONSTRAINT` — aggregate source giữ nguyên; thêm truthful `data-load-state` và `data-load-phase` markers, primary DOM trước secondary, không fake streaming/delay/retry/query. Focused contract PASS; full suite 33/33, lint, tsc, build PASS; fresh reviewer `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Browser authenticated canary `BLOCKED_AUTH` do route 307 `/login`.
-
-### [#P96T08] [compare page/components] Compact render-cost reduction
-- **Goal**: bỏ criterion IDs khỏi DOM, giảm duplicated delta/labels/cards/padding và tránh duplicate computation mobile/desktop.
-- **Depends on**: `[#P96T07]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: `criterion.id` là key lookup trong `page.tsx:96,264`; mobile/desktop đang có hai renderer; unchanged đang render toàn bộ.
-- **Constraints**: internal IDs vẫn giữ; không truncate comments/criteria names; không thêm chart/virtualization/dependency nếu chưa có long-task evidence.
-- **Definition of Done**: 390/768/1440 không overflow; density cải thiện; no visible UUID/helper duplication; unchanged disclosure keyboard-accessible.
-- **Status**: `[x] PASS_WITH_CONSTRAINT` — visible criterion IDs removed, shared memoized `comparisonRows` feeds mobile/desktop, unchanged uses native closed-by-default `<details>/<summary>`, modest density reduction. Focused PASS; full suite 34/34, lint (zero warnings), tsc, build PASS; fresh reviewer R2 `gemini-3.1-pro-high` PASS với Critical/Important/Non-blocking NONE. Authenticated desktop canary PASS ở compare route với live KIV record: visual snapshot, `scrollWidth - clientWidth = 0`, native disclosure keyboard open/close, detail→compare→back và hard reload giữ đúng header/score/phase; console/JS errors 0. Mobile/tablet viewport matrix và cross-tab cache vẫn P96T09 UNKNOWN.
-
-### [#P96T09] [cache/browser/gates] Final performance and integrity gate
-- **Goal**: verify visual, behavioral, performance và data-integrity acceptance sau implementation.
-- **Depends on**: `[#P96T02]`, `[#P96T03]`, `[#P96T04]`, `[#P96T05]`, `[#P96T06]`, `[#P96T07]`, `[#P96T08]`.
-- **Parallel-safe**: no.
-- **Context hiện có**: project gates `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `git diff --check`; authenticated browser evidence dùng account test được phép.
-- **Constraints**: cold/warm tối thiểu 3 sample/mode nếu tooling hỗ trợ; không claim PASS từ FCP/skeleton; verify Active→Closed, none→new Active, stale tab/cross-tab; không apply migration/deploy/push trong implementation gate.
-- **Definition of Done**: milestone before/after, screenshots, console/network, overflow/focus/navigation, zero/one/multiple Active, cache transition và Closed-write matrix PASS; deterministic gates PASS; query/cache/prefetch chỉ giữ nếu lợi ích ròng được đo; DB/RPC apply vẫn chờ approval.
-- **Status**: `[!] PASS_WITH_CONSTRAINT` — deterministic final gate PASS: `npm run test` 34/34, lint, typecheck, build, git diff/check và source commit integrity PASS. Authenticated compare canary PASS ở desktop CSS viewport `1280x633`: browser_vision top-of-page rendered snapshot, exact live identity/score rendered, overflow delta `0`, native `<summary>` focus + Enter mở/đóng, detail→compare→back và hard reload giữ context. Navigation samples `1075.6/581.6/502.7 ms`, median `581.6 ms` (timing của browser local canary, không phải production baseline). Chrome thật + CDP authenticated matrix đã capture top-of-page screenshots hợp lệ tại `/home/pi5/hermes-artifacts/browser-evidence/kurabe/p96t09-cdp-final/{390x844,768x1024,1440x900}.png`; cả 3 viewport overflow `0`, live identity/score/grade/round và static→primary→secondary markers PASS, unchanged `<details>` đóng mặc định. CDP reload console có `0` JS exception; chỉ có CSP report-only messages đã biết. Two-tab probe cùng authenticated profile: cả hai render live data; tab reload loading transient rồi về `data-load-state=ready`; shared cache/invalidation và lifecycle Active→Closed/none→new Active chưa chứng minh. Geometry probe ghi nhận global `ChatWidget` button overlap comments card tại cả `390x844`, `768x1024`, `1440x900` — pre-existing global UI finding, P96 không đổi chat behavior. Supabase development branch không tạo vì `get_cost=$0.01344/hour`, vượt approval `$0`; không phát sinh charge. Production đã apply exact candidates qua MCP `apply_migration` một lần theo thứ tự P96T03→P96T04→P96T05; migration ledger read-back ghi nhận versions `20260826140550`, `20260826140552`, `20260826140554`. Production postflight PASS: index exact partial predicate, 3 RPCs, provenance comments, service_role-only wrapper execution, counts giữ `active=1, periods=1, evaluations=53, rounds=69`, duplicates/orphans `0`. Live transaction probes PASS trong current DB và không để lại mutation: Active create collision rollback, Closed+HAS_DATA delete guard, Closed-write firewall. True 1-winner production race chưa chạy vì cần đóng Active hiện hữu/no-active window; disposable local race đã PASS `1 commit + 1 duplicate-key`, final active `1`. Application artifact deployed production qua Vercel `dpl_FyWPJ9HdXL6HdVTJsjzaBMa3TtRp`, `READY`, alias `https://lykiv.vercel.app`; `/login` HTTP 200 và browser render PASS. Authenticated production feature E2E chưa claim vì không có test session credential trong turn này. ChatWidget và cross-tab lifecycle là residual riêng.
+- **Goal**: khôi phục kỳ cũ Active và dọn toàn bộ dữ liệu kỳ test bằng một transaction exact, FK-safe.
+- **Depends on**: `[#P96T12]`.
+- **Concrete rollback**: chỉ sau khi `run_created_ids` đã append đầy đủ cho T11 close/create và T12 close test period, đồng thời re-verify maintenance window + zero concurrent write, dùng IDs exact; xóa test children theo dependency graph và hướng FK đã kiểm tra → rounds → evaluations → test period; xử lý exact audit/AI rows của run; restore nguyên trạng old period (`status`, `closed_at`, field snapshot). Không dùng prefix delete, `LIKE`, broad time range hoặc unresolved placeholder.
+- **Audit disposition**: xóa exact toàn bộ audit/AI rows được capture là do run tạo ra để đưa database về đúng baseline T10; giữ evidence redacted ngoài DB. Nếu catalog chứng minh một row không thể xóa an toàn, STOP trước rollback và ghi `Need approval`, không tự giữ/xóa tùy ý.
+- **Acceptance**: mỗi statement có affected-row assertion đúng với số IDs đã capture; old period ID/state/fields và baseline child rows khớp T10; test period không còn; `audit_logs`/`ai_summaries` khớp exact baseline values (không chỉ count); old period read-back là đúng `old_period_id` và raw `Active`; duplicate/orphan = 0; sequence gaps chỉ ghi nhận, không tự decrement; browser contexts/cookies/localStorage/IndexedDB/temp residue được dọn và kiểm tra.
+- **Rollback of rollback**: nếu bất kỳ assertion nào fail, dừng transaction, giữ evidence; không fix-forward hay chạy cleanup rộng.
+- **Approval**: production mutation/deletion là R3; plan revision 3 đã fresh reviewer `PASS`, nhưng vẫn cần T10 preflight, dry-run/harness proof được approval riêng và explicit execution approval trước mutation. Các verdict trước đó là `CHANGES_REQUIRED`; không coi plan PASS là execution approval. ChatWidget, code, migration, push, deploy ngoài scope.
+- **Status**: pending.
 
 ---
 
 ## Phase 97: Lịch sử đánh giá (DEFERRED — ngoài Phase 96)
 
-### [#P97T01] [future history route] Lịch sử kỳ đóng read-only đầy đủ
-- **Goal**: nếu có nhu cầu xem kỳ cũ, cung cấp entry riêng, đơn giản và không nhầm với kỳ đang mở:
-  ```text
-  Lịch sử đánh giá
-    ├── Kỳ 2025 · Đã đóng
-    └── Kỳ 2026 · Đã đóng
-  ```
-- **Depends on**: none — chỉ khởi động sau khi có plan/approval riêng.
-- **Parallel-safe**: no.
-- **Context hiện có**: detail hiện có `HistoryList` summary nhưng query đang dựa evaluation `Approved`, chưa chứng minh period `Closed`; Phase 96 sẽ giới hạn summary này thành closed-only và hoàn tất write firewall. Phase 97 chỉ bổ sung entry/route lịch sử đầy đủ.
-- **Constraints**: không tự fallback kỳ đóng trong detail/compare; không bắt query parameter; hiển thị năm + `Đã đóng`; route fail-closed theo auth/permission/period status; tái sử dụng Phase 96 write firewall, không tạo authority thứ hai; không sửa kỳ Active.
-- **Definition of Done**: historical entry rõ ràng, dữ liệu exact `period_id` + period `Closed`, chỉ read-only UI/server, browser kiểm tra Active không bị đổi, permission regression PASS. Chỉ làm khi anh yêu cầu; không tự bắt đầu sau Phase 96.
-- **Status**: `[-]` — deferred, ngoài Phase 96.
+- Chỉ bắt đầu khi có plan/approval riêng; không tự khởi động sau P96E.

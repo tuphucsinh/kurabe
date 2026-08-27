@@ -5,7 +5,7 @@
 ## 1. Trạng thái hiện tại
 
 - **Production:** `https://lykiv.vercel.app` — GitHub `main` tự deploy qua Vercel.
-- **Phase hiện tại:** Phase 96 — `PLAN PASS`, chưa triển khai application code.
+- **Phase hiện tại:** Phase 96 — implementation + production migration/deploy complete; lifecycle rollback E2E pending fresh review/execution.
 - **Phase kế tiếp:** Phase 97 — `DEFERRED`, chỉ làm khi anh yêu cầu riêng.
 - **Phase 95:** static-first evaluation detail đã hoàn tất và đã verify production.
 - **Không thay đổi trong plan-only work:** scoring, workflow, auth/RBAC, database schema, evaluation write path và production runtime.
@@ -77,7 +77,7 @@ Lịch sử đánh giá
 
 ## 5. Phase 96 — Multi-period integrity + Compare UI/performance
 
-**Trạng thái:** `PLAN PASS`; R3 integrity review trả `PLAN_CHANGES_REQUIRED`; R4 PASS còn một góp ý Important đã sửa; Agy Sonnet 4.6 R5 `PLAN_PASS`, `CRITICAL: NONE`, `IMPORTANT: NONE`, `NON_BLOCKING: NONE`. Chưa sửa application code.
+**Trạng thái:** implementation + production migration/deploy complete; lifecycle rollback E2E plan revision 3 đã fresh re-review `PASS`. Revision 1/2 từng `CHANGES_REQUIRED`; revision 3 đã bổ sung capture close-audit, static-vs-live proof boundary, test-period target, DB-side hash và maintenance/no-concurrent gate xuyên T11–T13. Execution vẫn pending T10 preflight, approved dry-run/harness proof và explicit approval.
 
 ### Mục tiêu và boundary
 
@@ -143,6 +143,7 @@ Không dùng FCP, spinner biến mất hoặc skeleton visible để claim data 
 - **P96T07 — Progressive render:** summary/changed criteria trước comments/unchanged khi dependency cho phép; giữ per-part error/stale contract.
 - **P96T08 — Compact render:** giảm duplicate computation/visible UUID/helper; unchanged disclosure keyboard-accessible; không truncate content.
 - **P96T09 — Final gate:** code gates + browser/performance/data-integrity matrix; chỉ giữ cache/prefetch/split nếu có lợi ích ròng.
+- **P96T10–P96T13 — Current DB lifecycle rollback E2E:** read-only rollback manifest; close/open qua `/settings`; two-context stale/no-active/Closed-write matrix; exact FK-safe cleanup và restore kỳ cũ Active. Không chạy nếu thiếu maintenance window, dependency graph, fresh reviewer PASS và execution approval.
 
 ### Acceptance, approval và rollback
 
@@ -155,6 +156,16 @@ Không dùng FCP, spinner biến mất hoặc skeleton visible để claim data 
 - Nếu primary/full-complete xấu hơn materially hoặc request topology thêm waterfall không được baseline biện minh thì non-PASS.
 - Mỗi candidate DB/RPC có preflight, provenance, rollback script/hash và Reviewer PASS; production apply/migration/deploy/push cần approval riêng của anh.
 - UI/loading rollback theo từng commit nhỏ; anomaly/data drift là stop condition, không tự cleanup.
+
+### Phase 96E — Current DB lifecycle E2E + exact rollback (PENDING / R3)
+
+- **Review status**: bản plan đầu đã được fresh independent review và trả `CHANGES_REQUIRED` vì fan-out production và rollback chưa executable. Revision 1 đã đặt quyết định rollback trước mutation nhưng fresh re-review ngày 2026-08-27 tiếp tục trả `CHANGES_REQUIRED` với 3 gap; revision 2 đóng các gap đó nhưng re-review tiếp tục phát hiện T12 close-audit chưa được capture và T10 read-only không thể “chứng minh sống” reopen/rollback. Revision 3 bổ sung capture sau T12, static validation + approved dry-run/harness boundary, pin Closed target là kỳ test, DB-side hash và gate maintenance/no-concurrent xuyên T11–T13. Fresh reviewer revision 4 trả `PASS`; chưa execute vì vẫn cần T10 preflight, approved dry-run/harness proof và explicit production execution approval.
+- **Risk/optimality**: isolated database/branch vẫn là lựa chọn an toàn hơn. Current DB chỉ được dùng vì anh xác nhận evaluation data là test; vẫn bắt buộc exact IDs, affected-row assertions và FK/audit graph. “Data test” không cho phép prefix/broad delete.
+- **T10 — Preflight manifest (read-only)**: qua Supabase MCP `execute_sql`, pin deployment `dpl_FyWPJ9HdXL6HdVTJsjzaBMa3TtRp`, runtime transactional flag, exact old period/actor, full baseline của `evaluation_periods`, `evaluations`, `evaluation_rounds`, `audit_logs`, `ai_summaries`; đọc `pg_catalog`/`information_schema` để lập dependency graph, gồm FK direction audit/AI. Hash DB-side trên aggregate ordered; không trả raw PII. T10 static-validate reopen/rollback SQL; live proof chỉ là dry-run/harness có approval riêng.
+- **T11 — Real UI lifecycle**: trước mỗi mutation re-verify maintenance window + zero concurrent evaluator; `/settings` → `PeriodsTab` → `PeriodActions`/`PeriodModal`; close old period rồi create unused-year test period. Sau close/create đọc DB và append exact IDs/affected-row counts vào `run_created_ids`. Create failure chỉ được dùng exact reopen procedure đã static-validated và dry-run/harness-approved; nếu chưa có thì STOP.
+- **T12 — Browser matrix**: hai authenticated contexts kiểm tra `/dashboard`, `/reports`, `/settings`, detail, compare; kiểm tra controlled `NO_ACTIVE_PERIOD`, stale-tab reload sang period mới, periodId query/cache, round 1/pending/score-grade. Sau khi đóng **kỳ test** phải capture close-audit ID vào `run_created_ids`. Closed-write UI chỉ attempt trên evaluation run-created của kỳ test vừa đóng và employee `TST%`; không có thì `NOT RUN`, không chạm baseline employee thật. Trước/sau close và trước T13 re-verify maintenance window + zero concurrent write; không submit/approve/AI.
+- **T13 — Exact rollback/final gate**: chỉ chạy khi `run_created_ids` đầy đủ cho mọi mutation T11/T12 và gate concurrency còn PASS. Một transaction dùng exact IDs, cleanup theo catalog dependency/FK direction → rounds → evaluations → test period; xóa exact audit/AI rows của run để trả exact baseline T10; restore old period snapshot. Mỗi statement assert affected rows đúng expected ID count; verify old period ID/raw `Active`, baseline values, duplicate/orphan, exact audit/AI values và browser/session residue. Sequence gaps chỉ ghi nhận. Không fix-forward/broad delete.
+- **Approval/stop**: production mutation/deletion cần explicit execution approval sau T10, fresh reviewer `PASS` cho revision 3 và rollback/reopen proof qua approved dry-run/harness. Revision 4 đã `PASS` ở mức plan; đây chưa phải execution approval. Stop khi không khóa được maintenance window, có concurrent write, permission/runtime mismatch, partial create, unexplained drift hoặc rollback assertion fail. ChatWidget giữ nguyên; code/migration/push/deploy ngoài scope.
 
 ## 6. Verification và residual risk
 
