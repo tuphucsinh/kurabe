@@ -5,7 +5,7 @@
 ## 1. Trạng thái hiện tại
 
 - **Production:** `https://lykiv.vercel.app` — GitHub `main` tự deploy qua Vercel.
-- **Phase hiện tại:** Phase 96 — implementation + production migration/deploy complete; lifecycle rollback E2E pending fresh review/execution.
+- **Phase hiện tại:** Phase 96 — implementation + production migration/deploy complete; lifecycle rollback E2E plan revision 3 đã fresh re-review `PASS`, execution vẫn pending các gate R3.
 - **Phase kế tiếp:** Phase 97 — `DEFERRED`, chỉ làm khi anh yêu cầu riêng.
 - **Phase 95:** static-first evaluation detail đã hoàn tất và đã verify production.
 - **Không thay đổi trong plan-only work:** scoring, workflow, auth/RBAC, database schema, evaluation write path và production runtime.
