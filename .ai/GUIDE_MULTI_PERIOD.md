@@ -5,7 +5,7 @@ Tính năng multi-period cho phép Kurabe lưu nhiều kỳ đánh giá và liê
 ## 1. Phạm vi trạng thái hiện tại
 
 - Có thể tạo kỳ mới, chọn kỳ trong bộ chọn kỳ, xem dữ liệu theo kỳ ở các màn hình có hỗ trợ period selector và đóng kỳ.
-- Lịch sử kỳ `Closed` theo route riêng `/history/[employeeId]` đã implement, verify local và commit tại `c171462`; chưa push/deploy.
+- Lịch sử kỳ `Closed` theo route riêng `/history/[employeeId]` đã implement, verify local và commit tại `f79f94f`; chưa push/deploy.
 - Detail và compare hiện hành phải theo contract Active-only ở server, không lấy kỳ từ `localStorage` hoặc `AuthContext.currentPeriod` làm authority.
 
 ## 2. Tạo kỳ đánh giá mới

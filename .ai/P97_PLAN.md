@@ -2,7 +2,7 @@
 
 ## Status
 
-`PASS_WITH_CONSTRAINT — committed at c171462; chưa push/deploy`
+`PASS_WITH_CONSTRAINT — committed at f79f94f; chưa push/deploy`
 
 ## Goal
 

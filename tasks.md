@@ -67,13 +67,13 @@
 
 ---
 
-## Phase 97: Lịch sử đánh giá (PASS_WITH_CONSTRAINT — committed c171462; chưa push/deploy)
+## Phase 97: Lịch sử đánh giá (PASS_WITH_CONSTRAINT — committed f79f94f; chưa push/deploy)
 
 Plan: `.ai/P97_PLAN.md`.
 
 - Implementation, static contract tests, full test suite, lint, typecheck và build đã PASS.
 - Browser authenticated history chưa chạy: `BLOCKED_AUTH`; unauthenticated route redirect về login, console/JS errors `0`.
-- Đã commit tại `c171462`; chưa push/deploy.
+- Đã commit tại `f79f94f`; chưa push/deploy.
 
 ### [#P97T01] Server-only history query + access boundary
 
