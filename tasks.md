@@ -2,8 +2,8 @@
 
 > File làm việc cho `/do` — chỉ giữ việc đang làm và việc chờ. Chi tiết phase đã hoàn tất nằm trong `.ai/MASTER_PLAN.md`; trạng thái phiên gần nhất nằm trong `HANDOFF.md`.
 
-## Pending / Next (cập nhật 2026-08-27)
-- **P96 lifecycle E2E trên current DB**: plan revision 3 đã fresh-review `PASS`; còn chờ T10 preflight, dry-run/harness proof được approval riêng và explicit production execution approval trước mutation. Trạng thái cuối đã chốt: kỳ cũ Active, kỳ test dọn exact.
+## Pending / Next (cập nhật 2026-08-28)
+- **P96 lifecycle E2E trên current DB**: P96T10 read-only đã hoàn tất `PASS_WITH_CONSTRAINT` (manifest baseline + static rollback validation PASS; constraint duy nhất: Vercel env `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC` là Hidden nên không đọc giá trị); T11–T13 tiếp tục bị chặn chờ proof dry-run/harness được duyệt riêng, explicit production execution approval và maintenance/no-concurrent-write gate. Trạng thái cuối: kỳ cũ raw Active, kỳ test vắng mặt.
 - **AI env lên Vercel**: trạng thái hiện tại chưa được xác minh trong phiên này; chỉ xử lý khi anh yêu cầu triển khai/kiểm tra production.
 - **QI Gia dụng chưa gán Leader** + 3 NV chưa gán SubLeader: giữ lại để xử lý khi anh tiếp tục UAT.
 - **Cloudflare Tunnel**: named tunnel/Access vẫn chờ anh chuyển `vorigin.vn` nameserver sang Cloudflare và báo Active; không tự khởi động.
@@ -11,7 +11,7 @@
 
 ---
 
-## Phase 96E: Current DB lifecycle E2E + exact rollback (PLAN REVISION 3 — REVIEW PASS; execution gate pending)
+## Phase 96E: Current DB lifecycle E2E + exact rollback (PLAN REVISION 4 — REVIEW PASS; execution gate pending)
 
 ### [#P96T10] [Supabase MCP pg_catalog + snapshot] Preflight và rollback manifest
 
@@ -22,7 +22,15 @@
 - **Concrete checks**: qua Supabase MCP `execute_sql` read-only, kiểm tra exact deployed artifact `dpl_FyWPJ9HdXL6HdVTJsjzaBMa3TtRp`, runtime flag transactional RPC, 1 Active, counts/IDs/field snapshots của `evaluation_periods`, `evaluations`, `evaluation_rounds`, `evaluation_responses`, `audit_logs`, `ai_summaries`; query `pg_catalog`/`information_schema` để lập FK dependency graph, liệt kê rõ hướng FK của audit/AI (RESTRICT/SET NULL/CASCADE) và exact audit rows. Hash phải tính DB-side trên aggregate có thứ tự ổn định; không trả/lưu raw PII vào manifest.
 - **Acceptance**: manifest baseline có `run_id`, `old_period_id`, manager actor, exact baseline counts/hashes, allowed deltas và rollback SQL template không placeholder/broad predicate. Manifest phải có cơ chế append-only `run_created_ids` sau *mọi* mutation: T11 close/create và T12 close test period; capture exact period/evaluation/round/audit/AI IDs cùng affected-row counts ngay sau từng action. T13 chỉ được chạy khi phần này đầy đủ. T10 chỉ validate tĩnh reopen/rollback SQL (FK direction, no-placeholder, affected-row assertion, snapshot khớp baseline); proof thực thi chỉ qua dry-run/harness có approval riêng, không mutation trong T10. Không persist secrets/session material.
 - **Stop**: FK/audit dependency không xác định, baseline drift, nhiều/không có Active, permission/runtime mismatch, hoặc không chứng minh được rollback exact.
-- **Status**: in progress (2026-08-28 read-only): initial `STOP` vì current `evaluations=61`, `rounds=77` lệch baseline trước `53/69` đã được reconcile ở mức aggregate — 8 evaluation mới đều gắn với 8 user tạo cùng ngày 2026-08-27 và 8 round mới tương ứng đúng 8 evaluation đó; raw status `active=1`, duplicate/orphan `0`. Chưa có lifecycle mutation. Bước còn lại của T10: chụp baseline/hash/ID manifest ổn định, static-validate rollback SQL và ghi evidence redacted.
+- **Status**: PASS_WITH_CONSTRAINT (2026-08-28 read-only):
+  - Manifest artifact: `/home/pi5/hermes-artifacts/kurabe/p96t10-readonly-manifest.json` (SHA-256: `4509ba8b8a20e0242afbb77fb390db2f79784d729593f1b343005c92f9946bef`, run_id: `p96t10-readonly-20260828-042130z`).
+  - Baseline verified: raw status `active`, Active cardinality = 1; exact old period ID ghi trong artifact (không đưa actor UUID vào docs). Exact counts: `evaluation_periods=1`, `evaluations=61`, `evaluation_rounds=77`, `evaluation_responses=0`, `ai_summaries=0`, linked `audit_logs=17`; IDs unique UUIDs; `unknowns=[]`.
+  - DB-side ordered hashes, complete FK graph (10 relations bao gồm `evaluation_responses -> evaluation_rounds`), migration ledger P96T03/P96T04/P96T05, exact index/function metadata đều ghi nhận đầy đủ trong artifact.
+  - Deployment metadata: `dpl_FyWPJ9HdXL6HdVTJsjzaBMa3TtRp`, production `READY`, alias `https://lykiv.vercel.app`.
+  - Constraint: Vercel production env có `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC` present nhưng giá trị là Hidden và chủ động không đọc; không claim `value=true`. Đây là constraint duy nhất.
+  - Static rollback validation: `PASS` cho 3 file rollback candidate (không placeholder, không broad data/schema drop sau comment stripping, có transaction wrapper; SHA-256 lưu trong artifact). Không có rollback candidate nào được thực thi.
+  - Không có lifecycle mutation nào đã chạy (chưa close, chưa create, chưa close test, chưa browser save, chưa cleanup, chưa restore).
+  - T11–T13 tiếp tục bị chặn: cần proof dry-run/harness được approval riêng, explicit production execution approval và maintenance/no-concurrent-write gate. Plan revision 4 PASS không đồng nghĩa cấp phép thực thi. Trạng thái cuối: kỳ cũ raw Active, kỳ test absent. ChatWidget không đổi.
 
 ### [#P96T11] [https://lykiv.vercel.app/settings + period actions] Đóng kỳ cũ, mở kỳ test mới
 
@@ -54,11 +62,38 @@
 - **Audit disposition**: xóa exact toàn bộ audit/AI rows được capture là do run tạo ra để đưa database về đúng baseline T10; giữ evidence redacted ngoài DB. Nếu catalog chứng minh một row không thể xóa an toàn, STOP trước rollback và ghi `Need approval`, không tự giữ/xóa tùy ý.
 - **Acceptance**: mỗi statement có affected-row assertion đúng với số IDs đã capture; old period ID/state/fields và baseline child rows khớp T10; test period không còn; `audit_logs`/`ai_summaries` khớp exact baseline values (không chỉ count); old period read-back là đúng `old_period_id` và raw `Active`; duplicate/orphan = 0; sequence gaps chỉ ghi nhận, không tự decrement; browser contexts/cookies/localStorage/IndexedDB/temp residue được dọn và kiểm tra.
 - **Rollback of rollback**: nếu bất kỳ assertion nào fail, dừng transaction, giữ evidence; không fix-forward hay chạy cleanup rộng.
-- **Approval**: production mutation/deletion là R3; plan revision 3 đã fresh reviewer `PASS`, nhưng vẫn cần T10 preflight, dry-run/harness proof được approval riêng và explicit execution approval trước mutation. Các verdict trước đó là `CHANGES_REQUIRED`; không coi plan PASS là execution approval. ChatWidget, code, migration, push, deploy ngoài scope.
+- **Approval**: production mutation/deletion là R3; plan revision 4 đã fresh reviewer `PASS` (revision 3 đã đóng các gaps), nhưng vẫn cần T10 preflight, dry-run/harness proof được approval riêng và explicit execution approval trước mutation. Các verdict trước đó là `CHANGES_REQUIRED`; không coi plan PASS là execution approval. ChatWidget, code, migration, push, deploy ngoài scope.
 - **Status**: pending.
 
 ---
 
-## Phase 97: Lịch sử đánh giá (DEFERRED — ngoài Phase 96)
+## Phase 97: Lịch sử đánh giá (PASS_WITH_CONSTRAINT — committed c171462; chưa push/deploy)
 
-- Chỉ bắt đầu khi có plan/approval riêng; không tự khởi động sau P96E.
+Plan: `.ai/P97_PLAN.md`.
+
+- Implementation, static contract tests, full test suite, lint, typecheck và build đã PASS.
+- Browser authenticated history chưa chạy: `BLOCKED_AUTH`; unauthenticated route redirect về login, console/JS errors `0`.
+- Đã commit tại `c171462`; chưa push/deploy.
+
+### [#P97T01] Server-only history query + access boundary
+
+- Dedicated query: chỉ `Approved` evaluation thuộc period raw `closed`; map period/evaluation và filter từng entry bằng `canViewEvaluation(viewer, evaluation, allUsersContext)`.
+- Không fallback Active/latest; thiếu viewer/target/query lỗi phải fail closed.
+- Files: `src/lib/db/evaluation-history-admin.ts` (new), chỉ bounded helper edits nếu cần.
+- Verify: focused tests, không production mutation.
+
+### [#P97T02] Read-only history route/renderer
+
+- Route `/history/[employeeId]`; server auth boundary; list theo kỳ, score/grade/round summary, empty/error/read-only states.
+- Files: `src/app/history/[employeeId]/page.tsx`, `src/app/history/[employeeId]/error.tsx`, `src/components/evaluation/EvaluationHistoryPage.tsx`.
+- Verify: component/contract tests + typecheck; không import service-role client vào client.
+
+### [#P97T03] Navigation integration
+
+- Link history của chính mình trong sidebar; link history employee ở action surface hiện hữu sau khi xác định exact insertion point.
+- Giữ nguyên action handlers và mobile/desktop behavior.
+
+### [#P97T04] Verification/final gate
+
+- `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check`; browser local read-only nếu capability cho phép.
+- Fresh independent review vì route chạm auth/read boundary.

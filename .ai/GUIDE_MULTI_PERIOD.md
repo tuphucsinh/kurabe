@@ -5,7 +5,7 @@ Tính năng multi-period cho phép Kurabe lưu nhiều kỳ đánh giá và liê
 ## 1. Phạm vi trạng thái hiện tại
 
 - Có thể tạo kỳ mới, chọn kỳ trong bộ chọn kỳ, xem dữ liệu theo kỳ ở các màn hình có hỗ trợ period selector và đóng kỳ.
-- Lịch sử kỳ `Closed` theo một route riêng chưa triển khai. Đây là **Phase 97 — DEFERRED**, không tự khởi động sau Phase 96.
+- Lịch sử kỳ `Closed` theo route riêng `/history/[employeeId]` đã implement, verify local và commit tại `c171462`; chưa push/deploy.
 - Detail và compare hiện hành phải theo contract Active-only ở server, không lấy kỳ từ `localStorage` hoặc `AuthContext.currentPeriod` làm authority.
 
 ## 2. Tạo kỳ đánh giá mới
@@ -66,11 +66,11 @@ Quy tắc:
 
 - **Hành động hệ thống:** cập nhật period sang `Closed` và ghi `closed_at`.
 - Kỳ `Closed` phải read-only ở cả UI và server. Không được chỉ ẩn nút chỉnh sửa ở UI.
-- **Trạng thái implementation:** server-side Closed-period guard cho `saveEvaluationRound` vẫn là residual risk và phải hoàn tất trước khi mở historical write/read path. Vì vậy guide không coi điều kiện này đã hoàn tất chỉ dựa trên thao tác đóng kỳ.
+- **Trạng thái implementation:** server-side Closed-period guard đã được triển khai trong Phase 96; historical route Phase 97 chỉ read-only và không thay đổi write path.
 
 ## 5. Lịch sử kỳ đã đóng — Phase 97
 
-Khi được yêu cầu triển khai, lịch sử phải là lối vào riêng, explicit và read-only:
+Phase 97 candidate cung cấp lối vào riêng, explicit và read-only:
 
 ```text
 Lịch sử đánh giá
@@ -84,7 +84,7 @@ Yêu cầu:
 - Không làm thay đổi kỳ `Active` hiện tại.
 - Không bắt người dùng nhập query parameter để mở kỳ cũ.
 - Mọi write vào evaluation thuộc kỳ `Closed` phải bị server từ chối.
-- Chỉ triển khai sau plan/WBS và approval riêng.
+- Candidate đã có plan/WBS riêng và đã qua verification/review; commit/push/deploy là bước release riêng, chưa thực hiện.
 
 ## 6. Data integrity và thao tác nguy hiểm
 

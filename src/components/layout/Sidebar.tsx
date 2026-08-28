@@ -16,6 +16,7 @@ import {
   LogOut,
   X,
   FileText,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
@@ -40,6 +41,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const mainLinks = isIndividualRole(user?.role)
     ? [
         { href: `/evaluations/${user?.id || ''}`, label: 'Phiếu đánh giá của tôi', icon: FileText },
+        { href: `/history/${user?.id || ''}`, label: 'Lịch sử đánh giá', icon: History },
       ]
     : [
         { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },

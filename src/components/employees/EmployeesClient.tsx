@@ -12,7 +12,7 @@ import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Evaluation, Team } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import { Search, Filter, Plus, Edit2, FileText, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, History, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
@@ -695,6 +695,15 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             title="Đánh giá"
           >
             <FileText size={18} />
+          </Link>
+          <Link
+            prefetch={false}
+            href={`/history/${item.id}`}
+            className="p-2 text-ink-muted hover:text-brand hover:bg-brand-soft rounded-lg transition-all"
+            title="Lịch sử đánh giá"
+            aria-label={`Lịch sử đánh giá của ${item.name}`}
+          >
+            <History size={18} />
           </Link>
           {canManageEmployees &&
             (!isLeader ||
