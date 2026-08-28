@@ -1,7 +1,7 @@
 # HANDOFF — Kurabe QAQC
 
 ## Trạng thái hiện tại
-- Phase 95 `True static-first` đã hoàn tất; Phase 96 application/migration/deploy đã hoàn tất, lifecycle rollback E2E hiện bị chặn ở T10 do current-DB drift cần reconcile.
+- Phase 95 `True static-first` đã hoàn tất; Phase 96 application/migration/deploy đã hoàn tất. Test/verification plan P96T00–P96T09 đã có evidence `PASS_WITH_CONSTRAINT` với các residual được ghi rõ; lifecycle rollback E2E P96T10–P96T13 hiện đang làm T10 read-only, aggregate drift đã reconcile.
 - P96T00 live preflight PASS: Active = 1, evaluations = 53, rounds = 69, duplicate/orphan = 0; catalog metadata vẫn UNKNOWN.
 - P96T01 baseline PASS bằng Mika Playwright fallback: 3 cold + 3 warm mỗi viewport; median first-light→full 390 `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`.
 - P96T02 PASS local candidate: RSC/server-only Active resolver, exact periodId query/cache, fail-closed zero/multiple/error, Closed-only inline history; 28/28 tests + lint/tsc/build/browser canary PASS.
