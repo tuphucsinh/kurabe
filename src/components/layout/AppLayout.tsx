@@ -20,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const ownTeamHref = user?.teamId ? `/teams/${user.teamId}` : '/teams';
 
   useEffect(() => {
     if (isLoading || isLoggingOut) return;
@@ -111,13 +112,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {isIndividualRole(user?.role) ? (
           <>
             <BottomNavItem href={`/evaluations/${user?.id}`} icon={<FileText size={24} />} ariaLabel="Phiếu đánh giá" active={pathname.startsWith('/evaluations')} />
+            {user?.teamId ? (
+              <BottomNavItem href={ownTeamHref} icon={<Layout size={24} />} ariaLabel="Nhóm của tôi" active={pathname.startsWith('/teams/')} />
+            ) : null}
             <BottomNavItem href="/settings" icon={<Settings size={24} />} ariaLabel="Cài đặt" active={pathname === '/settings'} />
             <BottomNavItem href="/support" icon={<HelpCircle size={24} />} ariaLabel="Hướng dẫn" active={pathname === '/support'} />
           </>
         ) : (
           <>
             <BottomNavItem href="/dashboard" icon={<Home size={24} />} ariaLabel="Trang chủ" active={pathname === '/dashboard'} />
-            <BottomNavItem href="/teams" icon={<Layout size={24} />} ariaLabel="Nhóm" active={pathname === '/teams'} />
+            <BottomNavItem href={user?.role === 'Manager' ? '/teams' : ownTeamHref} icon={<Layout size={24} />} ariaLabel="Nhóm" active={pathname === '/teams' || pathname.startsWith('/teams/')} />
             <BottomNavItem href="/employees" icon={<Users size={24} />} ariaLabel="Nhân sự" active={pathname === '/employees'} />
             {(user?.role === 'Manager' || user?.role === 'Leader') ? (
               <BottomNavItem href="/reports" icon={<BarChart3 size={24} />} ariaLabel="Báo cáo" active={pathname === '/reports'} />

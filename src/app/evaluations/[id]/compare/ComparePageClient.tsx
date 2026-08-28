@@ -42,7 +42,7 @@ export function CompareHeader({
       className="sticky top-0 z-50 bg-surface-raised border-b border-outline-soft px-3 sm:px-4 md:px-8 py-3 sm:py-4 shadow-sm"
       data-load-layer="static-header"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="max-w-[1440px] mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             type="button"
@@ -76,7 +76,7 @@ export function CompareHeader({
               </span>
               <span className="text-sm font-black text-ink">Lần {activeVisibleRound}</span>
             </div>
-            <div className="p-3 bg-brand-soft rounded-2xl text-brand">
+            <div className="p-2.5 bg-brand-soft rounded-xl text-brand">
               <History size={24} />
             </div>
           </div>
@@ -115,7 +115,7 @@ export function CompareFrame({
         employeeCode={employeeCode}
         activeVisibleRound={activeVisibleRound}
       />
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 mt-6 md:mt-8">
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-4 md:px-8 mt-4 md:mt-5">
         {children}
       </div>
     </div>
@@ -303,11 +303,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
       activeVisibleRound={activeVisibleRound}
       loadState="ready"
     >
-      <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-4 sm:gap-6">
 
         {/* ═══════ Summary Section ═══════ */}
         <section data-load-phase="primary" data-load-layer="primary">
-          <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+          <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
             <AlertCircle size={14} className="text-brand" />
             Tổng quan kết quả
           </h2>
@@ -316,7 +316,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
               <p className="text-sm text-ink-muted font-medium">Chưa có đánh giá.</p>
             </div>
           ) : (
-            <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-hide touch-pan-x">
+            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-3 scrollbar-hide touch-pan-x">
               {roundResults.map(({ round: r, result }, idx) => {
                 const prevResult = idx > 0 ? roundResults[idx - 1].result : null;
                 const delta = prevResult ? result.totalScore - prevResult.totalScore : null;
@@ -339,23 +339,23 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                     )}
 
                     <div className={`
-                      min-w-[160px] sm:min-w-[180px] p-4 sm:p-6 rounded-[2rem] border shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md
+                      min-w-[144px] sm:min-w-[160px] p-3 sm:p-4 rounded-2xl border shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md
                       ${r.round === evaluation.currentRound
                         ? 'bg-surface-raised border-brand ring-1 ring-brand/20'
                         : 'bg-surface-raised border-outline-soft'}
                     `}>
-                      <span className={`text-[11px] font-bold uppercase tracking-widest mb-2 sm:mb-3 ${
+                      <span className={`text-[11px] font-bold uppercase tracking-widest mb-1.5 sm:mb-2 ${
                         r.round === evaluation.currentRound ? 'text-brand' : 'text-ink-muted'
                       }`}>
                         Lần {r.round} {r.round === evaluation.currentRound ? '(Hiện tại)' : ''}
                       </span>
-                      <div className="text-3xl sm:text-4xl font-black text-ink mb-1">{result.totalScore}</div>
-                      <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
+                      <div className="text-2xl sm:text-3xl font-black text-ink mb-1">{result.totalScore}</div>
+                      <div className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
                         Hạng {result.grade}
                       </div>
                       <button
                         onClick={() => router.push(`/evaluations/${employeeId}?round=${r.round}`)}
-                        className="mt-3 sm:mt-4 flex items-center gap-1.5 text-[11px] font-black text-brand hover:underline uppercase tracking-tighter max-md:min-h-[36px]"
+                        className="mt-2 sm:mt-3 flex items-center gap-1.5 text-[11px] font-black text-brand hover:underline uppercase tracking-tighter max-md:min-h-[36px]"
                       >
                         Xem chi tiết <ArrowRight size={12} />
                       </button>
@@ -369,7 +369,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
         {/* ═══════ Main Comparison Table & Mobile Cards ═══════ */}
         <section data-load-phase="primary" data-load-layer="changed-criteria">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2">
               Chi tiết tiêu chí thay đổi ({comparisonRows.length})
             </h2>
@@ -384,7 +384,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
               <div className="md:hidden space-y-3">
                 {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
                   return (
-                    <div key={criterion.id} className="p-3.5 sm:p-4 rounded-2xl border border-outline-soft bg-surface-raised shadow-sm space-y-2.5">
+                    <div key={criterion.id} className="p-3 sm:p-3.5 rounded-xl border border-outline-soft bg-surface-raised shadow-sm space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-sm font-bold text-ink leading-tight">{criterion.name}</h3>
                         <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl shadow-sm ${
@@ -403,7 +403,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                           const isCurrent = r.round === evaluation.currentRound;
 
                           return (
-                            <div key={r.round} className={`p-2.5 rounded-xl flex flex-col items-center justify-center border text-center transition-all ${
+                            <div key={r.round} className={`p-2 rounded-lg flex flex-col items-center justify-center border text-center transition-all ${
                               isCurrent
                                 ? 'bg-brand-soft border-brand/40 ring-1 ring-brand/20'
                                 : 'bg-surface/50 border-outline-soft/50'
@@ -431,22 +431,22 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
               </div>
 
               {/* Tablet / PC: Table presentation */}
-              <div className="max-md:hidden w-full rounded-[2rem] border border-outline-soft bg-surface-raised overflow-hidden shadow-sm">
+              <div className="max-md:hidden w-full rounded-2xl border border-outline-soft bg-surface-raised overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[640px]">
                     <thead>
                       <tr className="bg-surface/50 border-b border-outline-soft">
-                        <th className="px-6 md:px-8 py-4 text-[11px] font-black text-ink-muted uppercase tracking-wider">
+                        <th className="px-4 py-3 text-[11px] font-black text-ink-muted uppercase tracking-wider">
                           Tiêu chí đánh giá
                         </th>
                         {allRounds.map(r => (
-                          <th key={r.round} className={`px-4 py-4 text-[11px] font-black uppercase tracking-wider text-center min-w-[100px] ${
+                          <th key={r.round} className={`px-3 py-3 text-[11px] font-black uppercase tracking-wider text-center min-w-[84px] ${
                             r.round === evaluation.currentRound ? 'text-brand' : 'text-ink-muted'
                           }`}>
                             L{r.round}
                           </th>
                         ))}
-                        <th className="px-6 md:px-8 py-4 text-[11px] font-black text-ink-muted uppercase tracking-wider text-right">
+                        <th className="px-4 py-3 text-[11px] font-black text-ink-muted uppercase tracking-wider text-right">
                           Biến động (Δ)
                         </th>
                       </tr>
@@ -455,7 +455,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                       {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
                         return (
                           <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
-                            <td className="px-6 md:px-8 py-3.5 md:py-4">
+                            <td className="px-4 py-2.5">
                               <span className="text-sm font-bold text-ink leading-tight group-hover:text-brand transition-colors">{criterion.name}</span>
                             </td>
                             {allRounds.map((r, rIdx) => {
@@ -463,10 +463,10 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                               const delta = roundDeltas[rIdx];
 
                               return (
-                                <td key={r.round} className="px-4 py-3.5 md:py-4 text-center">
+                                <td key={r.round} className="px-3 py-2.5 text-center">
                                   <div className="flex flex-col items-center">
                                     <div className={`
-                                      w-10 h-10 flex items-center justify-center rounded-xl text-base font-black transition-all
+                                      w-9 h-9 flex items-center justify-center rounded-lg text-base font-black transition-all
                                       ${r.round === evaluation.currentRound ? 'bg-brand text-white shadow-md' : 'bg-surface text-ink'}
                                       ${delta > 0 ? 'ring-2 ring-green-500/30' : delta < 0 ? 'ring-2 ring-red-500/30' : ''}
                                     `}>
@@ -483,7 +483,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                                 </td>
                               );
                             })}
-                            <td className="px-6 md:px-8 py-3.5 md:py-4 text-right">
+                            <td className="px-4 py-2.5 text-right">
                               <span className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-xl shadow-sm ${
                                 totalDelta > 0 ? 'bg-green-100 text-green-700' :
                                 totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-muted text-ink-muted'
@@ -512,17 +512,17 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
         {/* ═══════ Comments Comparison ═══════ */}
         <section data-load-phase="secondary" data-load-layer="comments">
-          <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2 mb-4">
+          <h2 className="text-xs font-black text-ink-muted uppercase tracking-[0.2em] flex items-center gap-2 mb-3">
             <MessageSquare size={14} className="text-brand" />
             Nhận xét qua các vòng
           </h2>
 
-          <div className={`grid gap-4 sm:gap-6 ${
+          <div className={`grid gap-3 sm:gap-4 ${
             allRounds.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
             allRounds.length >= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'
           }`}>
             {allRounds.map(r => (
-              <div key={r.round} className={`p-5 sm:p-6 rounded-[2rem] border shadow-sm flex flex-col gap-4 transition-all hover:shadow-md ${
+              <div key={r.round} className={`p-4 rounded-2xl border shadow-sm flex flex-col gap-3 transition-all hover:shadow-md ${
                 r.round === evaluation.currentRound
                   ? 'bg-surface-raised border-brand/20'
                   : 'bg-surface-raised border-outline-soft'
@@ -539,15 +539,15 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                 </div>
 
                 <div className="flex-1">
-                  <div className="text-[11px] font-black text-ink-muted/50 uppercase mb-2">Nhận xét chung</div>
+                  <div className="text-[11px] font-black text-ink-muted/50 uppercase mb-1.5">Nhận xét chung</div>
                   <p className="text-sm text-ink/80 leading-relaxed italic font-medium">
                     &quot;{r.comment || "Không có nhận xét."}&quot;
                   </p>
                 </div>
 
                 {r.additionalComment && (
-                  <div className="pt-4 border-t border-outline-soft/30 bg-surface/30 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-5 sm:p-6 rounded-b-[2rem]">
-                    <div className="text-[11px] font-black text-ink-muted/50 uppercase mb-2">Thông tin bổ sung</div>
+                  <div className="pt-3 border-t border-outline-soft/30 bg-surface/30 -mx-4 -mb-4 p-4 rounded-b-2xl">
+                    <div className="text-[11px] font-black text-ink-muted/50 uppercase mb-1.5">Thông tin bổ sung</div>
                     <p className="text-xs text-ink/70 leading-relaxed italic">
                       {r.additionalComment}
                     </p>
@@ -560,9 +560,9 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
         {/* ═══════ Unchanged Criteria Native Details/Summary ═══════ */}
         {unchangedCriteria.length > 0 && (
-          <section className="mt-4" data-load-phase="secondary" data-load-layer="unchanged">
-            <details className="group bg-surface-raised rounded-3xl border border-outline-soft overflow-hidden">
-              <summary className="cursor-pointer select-none px-4 sm:px-8 py-4 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1 transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
+          <section className="mt-0" data-load-phase="secondary" data-load-layer="unchanged">
+            <details className="group bg-surface-raised rounded-2xl border border-outline-soft overflow-hidden">
+              <summary className="cursor-pointer select-none px-4 sm:px-6 py-3 bg-surface/30 flex flex-col sm:flex-row sm:items-center justify-between gap-1 transition-colors hover:bg-surface/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xs font-black text-ink-muted uppercase tracking-widest">
                     Tiêu chí giữ nguyên ({unchangedCriteria.length})
@@ -572,11 +572,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                   {allRounds.length > 1 ? `Không đổi qua ${allRounds.length} vòng` : 'Chưa có vòng để so sánh'}
                 </span>
               </summary>
-              <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 border-t border-outline-soft">
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 border-t border-outline-soft">
                 {unchangedCriteria.map(criterion => {
                   const score = allRounds[0]?.scores?.[criterion.id] ?? 0;
                   return (
-                    <div key={criterion.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface/20 border border-outline-soft/50 hover:border-brand/20 transition-colors">
+                    <div key={criterion.id} className="flex items-center justify-between p-2.5 rounded-xl bg-surface/20 border border-outline-soft/50 hover:border-brand/20 transition-colors">
                       <div className="flex flex-col pr-2 min-w-0">
                         <span className="text-xs font-bold text-ink/70 leading-tight">{criterion.name}</span>
                       </div>

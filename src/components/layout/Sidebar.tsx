@@ -35,13 +35,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const isLeaderOrSubLeader = (user?.role === 'Leader' || user?.role === 'SubLeader') && !!user?.teamId;
-  const teamsHref = isLeaderOrSubLeader ? `/teams/${user.teamId}` : '/teams';
+  const isManager = user?.role === 'Manager';
+  const teamsHref = isManager ? '/teams' : user?.teamId ? `/teams/${user.teamId}` : '/teams';
 
   const mainLinks = isIndividualRole(user?.role)
     ? [
         { href: `/evaluations/${user?.id || ''}`, label: 'Phiếu đánh giá của tôi', icon: FileText },
         { href: `/history/${user?.id || ''}`, label: 'Lịch sử đánh giá', icon: History },
+        ...(user?.teamId ? [{ href: `/teams/${user.teamId}`, label: 'Nhóm của tôi', icon: UsersRound }] : []),
       ]
     : [
         { href: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
@@ -165,6 +166,10 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         targetQueryKey = ['evaluation-page-data', user.id, undefined, user.id];
         targetQueryFn = () => getEvaluationPageDataAction(user.id, undefined);
         targetStaleTime = 2 * 60 * 1000;
+      } else if (user.teamId && href === `/teams/${user.teamId}`) {
+        targetQueryKey = ['teams-page-data', undefined, user.id, user.role, user.teamId];
+        targetQueryFn = () => getTeamsPageDataAction(undefined);
+        targetStaleTime = 2 * 60 * 1000;
       }
     } else {
       const isLeaderOrSubLeader = user.role === 'Leader' || user.role === 'SubLeader';
@@ -174,8 +179,9 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         (isManager && href === '/teams') ||
         (isLeaderOrSubLeader && user.teamId && href === `/teams/${user.teamId}`)
       ) {
-        targetQueryKey = ['teams-page-data', currentPeriod?.id];
-        targetQueryFn = () => getTeamsPageDataAction(currentPeriod?.id);
+        const periodId = isManager ? currentPeriod?.id : undefined;
+        targetQueryKey = ['teams-page-data', periodId, user.id, user.role, user.teamId];
+        targetQueryFn = () => getTeamsPageDataAction(periodId);
         targetStaleTime = 2 * 60 * 1000;
       }
     }

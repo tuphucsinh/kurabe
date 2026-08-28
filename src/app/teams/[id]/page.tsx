@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,6 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Evaluation, User } from '@/types';
-import { isIndividualRole } from '@/lib/role-policy';
 import TeamDetailShell from '@/components/teams/TeamDetailShell';
 import TeamDetailMemberCell from '@/components/teams/TeamDetailMemberCell';
 
@@ -37,13 +36,7 @@ export default function TeamDetailPage() {
   const params = useParams<{ id: string }>();
   const teamId = params.id;
 
-  const { user, currentPeriod } = useAuth();
-
-  useEffect(() => {
-    if (isIndividualRole(user?.role)) {
-      router.replace(`/evaluations/${user?.id}`);
-    }
-  }, [user, router]);
+  const { user, currentPeriod, isLoading: isAuthLoading } = useAuth();
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -66,7 +59,7 @@ export default function TeamDetailPage() {
   const teamsLoading = isLightLoadingData;
   const evaluations = useMemo(() => evaluationsData ?? [], [evaluationsData]);
 
-  const isLightLoading = (!user && user === undefined) || usersLoading || teamsLoading;
+  const isLightLoading = isAuthLoading || usersLoading || teamsLoading;
   const isLightError = teamsError || usersError;
 
   const team = useMemo(() => teams.find((t) => t.id === teamId) || null, [teams, teamId]);
@@ -174,7 +167,7 @@ export default function TeamDetailPage() {
     <TeamDetailShell>
       {/* Back Link & Header (Static Shell & Light/Heavy Frames) */}
       <div>
-        {user?.role !== 'Leader' && user?.role !== 'SubLeader' ? (
+        {user?.role === 'Manager' ? (
           <Link prefetch={false} href="/teams" className="inline-flex items-center gap-1.5 text-sm font-bold text-ink-muted hover:text-brand transition-colors mb-4">
             <ArrowLeft size={16} />
             Quay lại danh sách nhóm
@@ -268,7 +261,7 @@ export default function TeamDetailPage() {
             title="Nhóm không tồn tại"
             description="Nhóm này không có trong hệ thống hoặc đã bị xóa."
             action={
-              user?.role !== 'Leader' && user?.role !== 'SubLeader'
+              user?.role === 'Manager'
                 ? { label: 'Quay lại danh sách nhóm', onClick: () => { router.push('/teams'); }, icon: ArrowLeft }
                 : undefined
             }

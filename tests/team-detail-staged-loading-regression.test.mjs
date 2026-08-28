@@ -99,14 +99,18 @@ function normalizeWhitespace(code) {
     'TeamDetailPage must be a client component'
   );
 
-  // 3.2 Individual role redirect guard
+  // 3.2 Scoped roles stay on their own team detail page; only Manager may return to the list
   assert.ok(
-    normPage.includes('isIndividualRole(user?.role)') || normPage.includes('isIndividualRole(user.role)'),
-    'TeamDetailPage must check individual role policy'
+    !normPage.includes('isIndividualRole(user?.role)') && !normPage.includes('isIndividualRole(user.role)'),
+    'TeamDetailPage must not redirect Employee/Worker away from their own team'
   );
   assert.ok(
-    normPage.includes('router.replace(`/evaluations/${user?.id}`)') || normPage.includes('router.replace(`/evaluations/${user.id}`)'),
-    'TeamDetailPage must redirect individual roles to evaluation page'
+    normPage.includes("user?.role === 'Manager'"),
+    'TeamDetailPage must restrict list navigation to Manager'
+  );
+  assert.ok(
+    normPage.includes('isAuthLoading || usersLoading || teamsLoading'),
+    'TeamDetailPage must keep the light layer loading while AuthContext is still loading'
   );
 
   // 3.3 NO global whole-page blocking gate on evalsLoading

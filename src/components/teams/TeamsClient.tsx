@@ -29,7 +29,7 @@ export default function TeamsClient() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
 
-  const { user, currentPeriod } = useAuth();
+  const { user, currentPeriod, isLoading: isAuthLoading } = useAuth();
   const { data, isLoading, isError } = useTeamsPageData(currentPeriod?.id, user);
   const users = data?.users ?? [];
   const teams = data?.teams ?? [];
@@ -43,7 +43,7 @@ export default function TeamsClient() {
   const { toast } = useToast();
   const confirm = useConfirm();
 
-  const isLightLoading = (!user && user === undefined) || isLoading;
+  const isLightLoading = isAuthLoading || isLoading;
   const isLightError = teamsError || usersError;
   const isManager = user?.role === 'Manager';
 
@@ -201,6 +201,7 @@ export default function TeamsClient() {
       {/* Team Cards / Light Layer */}
       {isLightLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 md:gap-4" data-load-layer="light">
+          <TeamCardSkeleton />
           <TeamCardSkeleton />
           <TeamCardSkeleton />
           <TeamCardSkeleton />

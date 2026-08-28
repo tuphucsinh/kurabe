@@ -129,7 +129,7 @@ export const useTeamsPageData = (
   periodId?: string,
   requester?: User | null
 ) => useQuery<TeamsPageData>({
-  queryKey: ['teams-page-data', periodId],
+  queryKey: ['teams-page-data', periodId, requester?.id, requester?.role, requester?.teamId],
   queryFn: () => getTeamsPageDataAction(periodId),
   staleTime: 2 * 60 * 1000,
   enabled: requester !== undefined ? requester != null : true,

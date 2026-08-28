@@ -34,6 +34,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { isIndividualRole } from '@/lib/role-policy';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const AUDIENCE_BADGES = [
   {
@@ -72,7 +73,7 @@ export default function CriteriaPage() {
   }, [user, router]);
 
   const isManager = user?.role === 'Manager'; // Chỉ Manager được thêm/sửa/xóa tiêu chuẩn
-  const { data: groups = [] } = useCriteria();
+  const { data: groups = [], isLoading: isCriteriaLoading, isError: isCriteriaError } = useCriteria();
   const [, setGradeTick] = useState(0);
 
   const criteriaSummaryByAudience = useMemo<Record<CriterionAudience, { count: number; maxScore: number }>>(() => {
@@ -248,6 +249,41 @@ export default function CriteriaPage() {
 
   // Filter criteria within active group
   const filteredCriteria = activeGroup?.criteria || [];
+
+  if (isCriteriaLoading) {
+    return (
+      <div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 lg:py-5 space-y-6 md:space-y-8 lg:space-y-4 w-full max-w-[1600px] mx-auto" aria-busy="true">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 lg:gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-xl" />
+        </div>
+        <div className="flex gap-2 overflow-hidden pb-2">
+          <Skeleton className="h-12 w-28 rounded-2xl" />
+          <Skeleton className="h-12 w-28 rounded-2xl" />
+          <Skeleton className="h-12 w-28 rounded-2xl" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-48" />
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-24 w-full rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isCriteriaError) {
+    return (
+      <div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 lg:py-5 w-full max-w-[1600px] mx-auto">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center">
+          <p className="font-medium text-rose-700">Đã xảy ra lỗi khi tải tiêu chuẩn đánh giá. Vui lòng thử lại sau.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LazyMotion features={domAnimation}>

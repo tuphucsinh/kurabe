@@ -35,12 +35,20 @@ function normalizeWhitespace(code) {
     'TeamsPage must redirect unauthenticated users to /login'
   );
   assert.ok(
-    normPage.includes('isIndividualRole(viewer.role)') || normPage.includes('isIndividualRole(viewer?.role)'),
-    'TeamsPage must check individual role policy'
+    normPage.includes("viewer.role !== 'Manager'") || normPage.includes("viewer?.role !== 'Manager'"),
+    'TeamsPage must route every non-Manager role away from the group list'
   );
   assert.ok(
     normPage.includes("redirect(`/evaluations/${viewer.id}`)") || normPage.includes("redirect(`/evaluations/${viewer?.id}`)"),
-    'TeamsPage must redirect individual roles to their evaluation page'
+    'TeamsPage must keep a safe fallback for individual roles without a team'
+  );
+  assert.ok(
+    normPage.includes("redirect(`/teams/${viewer.teamId}`)") || normPage.includes("redirect(`/teams/${viewer?.teamId}`)"),
+    'TeamsPage must redirect non-Manager users with a team to their own team'
+  );
+  assert.ok(
+    normPage.includes("redirect('/dashboard')"),
+    'TeamsPage must keep a safe fallback for management roles without a team'
   );
 
   // 1.2 No blocking data fetches before returning shell
@@ -224,8 +232,96 @@ function normalizeWhitespace(code) {
     'TeamsClient must distinguish light loading, light error, and empty states'
   );
   assert.ok(
+    normClient.includes('isAuthLoading') &&
+      normClient.includes('isAuthLoading || isLoading'),
+    'TeamsClient must keep the light layer loading while AuthContext is still loading'
+  );
+  assert.ok(
+    !normClient.includes("(!user && user === undefined) || isLoading"),
+    'TeamsClient must not treat only undefined user as auth loading'
+  );
+  assert.strictEqual(
+    (clientCode.match(/<TeamCardSkeleton \/>/g) || []).length,
+    9,
+    'TeamsClient must render nine manager card skeletons'
+  );
+  assert.ok(
     normClient.includes('Chưa có nhóm nào'),
     'TeamsClient must render empty state message when no teams exist'
+  );
+}
+
+// -------------------------------------------------------------
+// 5. Verify authorization-aware Teams query cache identity
+// -------------------------------------------------------------
+{
+  const hookCode = readProjectFile('src/hooks/use-db.ts');
+  const normHook = normalizeWhitespace(stripComments(hookCode));
+  const keyStart = normHook.indexOf("queryKey: ['teams-page-data'");
+  const keyEnd = normHook.indexOf('],', keyStart);
+  assert.ok(keyStart >= 0 && keyEnd > keyStart, 'useTeamsPageData query key must be present');
+  const teamsPageKey = normHook.slice(keyStart, keyEnd);
+  assert.ok(teamsPageKey.includes('periodId'), 'Teams page query key must include periodId');
+  assert.ok(teamsPageKey.includes('requester?.id'), 'Teams page query key must include requester identity');
+  assert.ok(teamsPageKey.includes('requester?.role'), 'Teams page query key must include requester role');
+  assert.ok(teamsPageKey.includes('requester?.teamId'), 'Teams page query key must include requester team scope');
+}
+
+// -------------------------------------------------------------
+// 6. Verify route and client loading skeletons stay consistent
+// -------------------------------------------------------------
+{
+  const loadingCode = readProjectFile('src/app/teams/loading.tsx');
+  const normLoading = normalizeWhitespace(stripComments(loadingCode));
+  assert.ok(
+    normLoading.includes("import TeamCardSkeleton from '@/components/teams/TeamCardSkeleton'") ||
+      normLoading.includes('import TeamCardSkeleton from "@/components/teams/TeamCardSkeleton"'),
+    'Teams route loading must use the same TeamCardSkeleton as the client'
+  );
+  assert.strictEqual(
+    (loadingCode.match(/<TeamCardSkeleton \/>/g) || []).length,
+    9,
+    'Teams route loading must render nine manager card skeletons'
+  );
+  assert.strictEqual(
+    (loadingCode.match(/<CardSkeleton \/>/g) || []).length,
+    0,
+    'Teams route loading must not render the old generic CardSkeleton set'
+  );
+}
+
+// -------------------------------------------------------------
+// 7. Verify non-Manager team entry points stay on own team
+// -------------------------------------------------------------
+{
+  const detailCode = readProjectFile('src/app/teams/[id]/page.tsx');
+  const normDetail = normalizeWhitespace(stripComments(detailCode));
+  assert.ok(
+    !normDetail.includes('isIndividualRole(user?.role)'),
+    'Team detail must not redirect Employee/Worker away from their own team'
+  );
+  assert.ok(
+    normDetail.includes("user?.role === 'Manager'"),
+    'Team detail must show the back-to-list link only to Manager'
+  );
+
+  const sidebarCode = readProjectFile('src/components/layout/Sidebar.tsx');
+  const normSidebar = normalizeWhitespace(stripComments(sidebarCode));
+  assert.ok(
+    normSidebar.includes('`/teams/${user.teamId}`'),
+    'Sidebar must provide a direct own-team link for scoped users'
+  );
+  assert.ok(
+    normSidebar.includes('isIndividualRole(user?.role)') &&
+      normSidebar.includes('UsersRound'),
+    'Individual-role Sidebar must include the own-team entry point'
+  );
+
+  const layoutCode = readProjectFile('src/components/layout/AppLayout.tsx');
+  const normLayout = normalizeWhitespace(stripComments(layoutCode));
+  assert.ok(
+    normLayout.includes('ownTeamHref') && normLayout.includes('`/teams/${user.teamId}`'),
+    'Mobile navigation must link scoped users directly to their own team'
   );
 }
 

@@ -297,8 +297,8 @@ assert.ok(
 // 7. RESPONSIVE GEOMETRY SYMMETRY
 // ============================================================
 assert.ok(
-  cleanLoading.includes('max-w-7xl mx-auto') && cleanClient.includes('max-w-7xl mx-auto'),
-  'Both loading and client frames must share max-w-7xl mx-auto centering'
+  cleanLoading.includes('max-w-[1440px] mx-auto') && cleanClient.includes('max-w-[1440px] mx-auto'),
+  'Both loading and client frames must share max-w-[1440px] mx-auto centering'
 );
 assert.ok(
   cleanLoading.includes('px-3 sm:px-4 md:px-8') && cleanClient.includes('px-3 sm:px-4 md:px-8'),
