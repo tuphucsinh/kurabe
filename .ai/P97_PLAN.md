@@ -2,7 +2,7 @@
 
 ## Status
 
-`PASS_WITH_CONSTRAINT — committed at f79f94f; chưa push/deploy`
+`PASS_WITH_CONSTRAINT — production deployed; application commit f79f94f; deployment dpl_Fjj9vWWfq7AtuyFJZ1yPLD24CLbs; alias https://lykiv.vercel.app`
 
 ## Goal
 

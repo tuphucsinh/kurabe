@@ -58,14 +58,14 @@
 - Named tunnel/Cloudflare Access chỉ làm khi anh chuyển `vorigin.vn` nameserver sang Cloudflare và báo Active.
 - Không tự tạo public tunnel, không tự bật systemd service, không tự mở Access policy.
 
-### Phase 97 — Lịch sử đánh giá (`PASS_WITH_CONSTRAINT` — committed f79f94f; chưa push/deploy)
+### Phase 97 — Lịch sử đánh giá (`PASS_WITH_CONSTRAINT` — production deployed; application commit f79f94f; deployment dpl_Fjj9vWWfq7AtuyFJZ1yPLD24CLbs)
 
 - Plan executable: `.ai/P97_PLAN.md`; implementation đã commit tại `f79f94f`.
 - Goal: thêm route read-only `/history/[employeeId]` hiển thị kết quả `Approved` thuộc period raw `closed`, qua server auth + `canViewEvaluation()`, không fallback sang `Active/latest`.
 - Scope: dedicated server-only query, renderer read-only, self-history/sidebar và authorized employee-history links; không sửa schema, migration, scoring, workflow, Active lifecycle/write path hoặc `ChatWidget`.
 - Acceptance: access fail-closed; Active evaluations không xuất hiện; empty/error states an toàn; không có mutation control/handler; focused tests + `npm test` + typecheck + lint + build + browser read-only verification.
 - Rollback: revert bounded source diff; không cần DB rollback vì không có production mutation/schema write.
-- Approval: user đã yêu cầu thực thi phase; commit đã thực hiện. Push/deploy và production mutation không nằm trong approval hiện tại. Fresh independent review đã PASS vì route chạm server auth/read boundary.
+- Approval: user đã yêu cầu thực thi phase; push và production deploy đã thực hiện. Không có production data mutation. Fresh independent review đã PASS vì route chạm server auth/read boundary.
 - Khi có nhu cầu, entry riêng phải hiển thị rõ:
 
 ```text
