@@ -1,7 +1,7 @@
 # HANDOFF — Kurabe QAQC
 
 ## Trạng thái hiện tại
-- Phase 95 `True static-first` đã hoàn tất; Phase 96 application/migration/deploy đã hoàn tất, còn lifecycle rollback E2E đang bị chặn ở plan gate.
+- Phase 95 `True static-first` đã hoàn tất; Phase 96 application/migration/deploy đã hoàn tất, lifecycle rollback E2E hiện bị chặn ở T10 do current-DB drift cần reconcile.
 - P96T00 live preflight PASS: Active = 1, evaluations = 53, rounds = 69, duplicate/orphan = 0; catalog metadata vẫn UNKNOWN.
 - P96T01 baseline PASS bằng Mika Playwright fallback: 3 cold + 3 warm mỗi viewport; median first-light→full 390 `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`.
 - P96T02 PASS local candidate: RSC/server-only Active resolver, exact periodId query/cache, fail-closed zero/multiple/error, Closed-only inline history; 28/28 tests + lint/tsc/build/browser canary PASS.
@@ -22,5 +22,5 @@
 - Independent review revision 1 và revision 2 của P96T10–P96T13 đều trả `CHANGES_REQUIRED`; revision 2 findings đã được ghi ở `.ai/DECISIONS_LOG.md` row 52.
 - Các gap cộng dồn qua revision 1/2: (1) T10 chưa thể biết exact IDs sinh ở T11; (2) Closed-write UI test không được đụng employee thật; (3) audit/AI end-state chưa có target exact; tất cả đã được đóng trong revision 3.
 - Revision 3 đã fresh re-review `PASS`: T11 append-only `run_created_ids` sau close/create; T12 bắt buộc capture close-audit của kỳ test vừa đóng; Closed-write UI chỉ chạy trên evaluation run-created của kỳ test với employee `TST%`, nếu không `NOT RUN`; T13 xóa exact audit/AI rows của run về baseline T10 và assert exact values. T10 chỉ static-validate SQL; live proof chỉ qua dry-run/harness được approval riêng. Maintenance/no-concurrent gate kéo dài tới T13.
-- Chưa chạy close/open lifecycle mutation, chưa chạy browser save mutation, chưa cleanup production. Plan gate đã `PASS`; vẫn cần T10 preflight, rollback/reopen proof qua approved dry-run/harness và explicit production execution approval.
+- Chưa chạy close/open lifecycle mutation, chưa chạy browser save mutation, chưa cleanup production. Plan gate đã `PASS`; T10 read-only check ngày 2026-08-28 xác nhận raw `active=1`, duplicate/orphan `0` nhưng current counts `evaluations=61`, `rounds=77` lệch baseline trước `53/69`; provenance +8/+8 chưa rõ nên `STOP`. Cần reconcile drift, refresh manifest/baseline, rồi mới xét rollback/reopen proof qua approved dry-run/harness và explicit production execution approval.
 - Final state theo anh chốt: old period raw `Active`, test period absent; không broad/prefix delete; ChatWidget giữ nguyên.
