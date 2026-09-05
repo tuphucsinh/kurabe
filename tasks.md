@@ -63,7 +63,7 @@
 - `npm ci`, lint, typecheck, full tests, build, `git diff --check`, `npm audit --omit=dev` PASS.
 - Installed Next `>=16.3.3`; không edit `tasks.md`, không commit.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 
