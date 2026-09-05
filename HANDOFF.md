@@ -1,6 +1,7 @@
 # HANDOFF — Kurabe QAQC
 
 ## Trạng thái hiện tại
+- Repository reconciliation đã PASS: canonical source branch `main` và hardening branch cùng ở SHA `08bd91afbe170686c633a7da6d362e87eb36afe4`; source split trước đây đã được reconcile. Latest verified Production deployment record vẫn ở SHA `008b2b68e2d49f5ed7406bb9c565c85ee77c4c0d`.
 - Phase 95 `True static-first` đã hoàn tất; Phase 96 application/migration/deploy đã hoàn tất. Test/verification plan P96T00–P96T09 đã có evidence `PASS_WITH_CONSTRAINT` với các residual được ghi rõ; lifecycle rollback E2E P96T10 đã hoàn tất `PASS_WITH_CONSTRAINT` (2026-08-28 read-only manifest + static rollback validation PASS; Vercel env hidden constraint), T11–T13 pending dry-run/harness proof + execution approval + maintenance gate. Phase 97 read-only history đã implement, verify local, commit tại f79f94f và deploy production qua dpl_Fjj9vWWfq7AtuyFJZ1yPLD24CLbs; alias https://lykiv.vercel.app.
 - P96T00 live preflight PASS (historical snapshot ngày 2026-08-26: Active = 1, evaluations = 53, rounds = 69, duplicate/orphan = 0; current-state đã được supersede bằng T10 read-only reconciliation ngày 2026-08-28 với 61/77; catalog UNKNOWN chỉ tại checkpoint P96T00/PostgREST và live production đã verify ở P96T09).
 - P96T01 baseline PASS bằng Mika Playwright fallback: 3 cold + 3 warm mỗi viewport; median first-light→full 390 `3313/2685ms`, 768 `2898/2480ms`, 1440 `2994/2786ms`.

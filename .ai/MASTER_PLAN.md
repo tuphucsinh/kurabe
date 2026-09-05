@@ -10,6 +10,14 @@
 - **Phase 95:** static-first evaluation detail đã hoàn tất và đã verify production.
 - **Không thay đổi trong plan-only work:** scoring, workflow, auth/RBAC, database schema, evaluation write path và production runtime.
 
+### Repository source-of-truth reconciliation (2026-09-05)
+
+- Canonical source branch: `main`
+- Canonical SHA: `08bd91afbe170686c633a7da6d362e87eb36afe4`
+- Phase 96/97 implementation is now present on `main`.
+- Previous source-of-truth split has been reconciled.
+- Production SHA remains `008b2b68e2d49f5ed7406bb9c565c85ee77c4c0d` per latest verified Production deployment record; this is separate from the canonical source branch promotion.
+
 ## 2. Invariants phải giữ
 
 ### Quyền và dữ liệu
