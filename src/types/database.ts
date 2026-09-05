@@ -566,6 +566,7 @@ export type Database = {
           join_date: string | null
           name: string
           password_hash: string | null
+          password_setup_required: boolean
           role: string
           subleader_id: string | null
           team_id: string | null
@@ -581,6 +582,7 @@ export type Database = {
           join_date?: string | null
           name: string
           password_hash?: string | null
+          password_setup_required?: boolean
           role: string
           subleader_id?: string | null
           team_id?: string | null
@@ -596,6 +598,7 @@ export type Database = {
           join_date?: string | null
           name?: string
           password_hash?: string | null
+          password_setup_required?: boolean
           role?: string
           subleader_id?: string | null
           team_id?: string | null
@@ -635,6 +638,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_setup_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_setup_tokens_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -830,3 +868,10 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+export interface PasswordSetupTokenRecord {
+  user_id: string
+  token_hash: string
+  expires_at: string
+  used_at: string | null
+}
