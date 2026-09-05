@@ -16,7 +16,7 @@
 - Canonical SHA: `08bd91afbe170686c633a7da6d362e87eb36afe4`
 - Phase 96/97 implementation is now present on `main`.
 - Previous source-of-truth split has been reconciled.
-- Production SHA remains `008b2b68e2d49f5ed7406bb9c565c85ee77c4c0d` per latest verified Production deployment record; this is separate from the canonical source branch promotion.
+- Vercel production deploys from canonical `main` through Git integration; production source SHA is verified from deployment metadata, not inferred from repository docs.
 
 ## 2. Invariants phải giữ
 
