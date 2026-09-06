@@ -1,12 +1,12 @@
 # HANDOFF — Kurabe QAQC
 
-- Canonical `main` hiện ở `0fcd1c9` (`P98M2T02`), source/auth candidate đã publish; `tasks.md` đã tick `[x]`.
-- P98M2T02 hardens NULL/setup-required login fail-closed, dummy bcrypt timing, manager reset/setup token flow, transactional RPC candidates, rollback và regression contracts.
-- Verification canonical: focused PASS; full tests `39/39`; lint `0 errors` + 1 existing warning tại `tests/p98-evaluator-auth.test.mjs:232`; typecheck PASS; build PASS.
-- Fresh independent CONTROLLED review: PASS, không findings.
-- Production DB migration/RPC/legacy-state migration: **chưa apply**; production rollout P98M2T05 vẫn cần explicit approval.
-- P98M1T02 catalog artifact: `.tmp/p98-production-catalog.json`, active count `1`, NULL password `96`, NULL evaluator `7`, candidate migrations chưa có trong ledger.
-- P98M2T03 là bước code kế tiếp; phải reconcile task/dependency trước dispatch.
-- Phase 96 lifecycle T11–T13 vẫn paused; không trộn vào Phase 98.
+- Canonical `main` đã ở `43b2281` — `[#P98M2T06] restore temporary passwordless compatibility`.
+- `password_hash = NULL` và setup-required NULL account được login theo legacy mode khi `KURABE_REQUIRE_PASSWORD_LOGIN` unset/falsy.
+- Khi `KURABE_REQUIRE_PASSWORD_LOGIN=true`, strict fail-closed + dummy bcrypt của P98M2T02 vẫn giữ nguyên.
+- Verification canonical: focused PASS; full tests `39/39`; lint `0 errors` + warning có sẵn tại `tests/p98-evaluator-auth.test.mjs:232`; typecheck PASS; build PASS.
+- Fresh independent CONTROLLED review exact candidate: PASS; residual risk passwordless đã được anh chấp thuận tạm thời.
+- `P98M2T06` đã `[x]`; theo lệnh mới nhất, dừng tại đây — chưa dispatch P98M2T03/T04/T05.
+- Production DB migration/RPC và Vercel deploy: **chưa apply/chưa deploy**; GitHub push cũng chưa thực hiện.
+- Catalog artifact `.tmp/p98-production-catalog.json`: active count `1`, NULL password `96`, NULL evaluator `7`.
 - `AGENTS.md` còn dirty theo thay đổi có chủ ý của anh; không nằm trong task commit.
-- Residual: live runtime auth/transaction concurrency chưa được apply/probe; static/build/review evidence không thay thế production approval.
+- Còn 6 worktree legacy chưa reconcile đầy đủ, được giữ nguyên làm evidence; không tự xoá.
