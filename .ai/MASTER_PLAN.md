@@ -35,7 +35,7 @@
 - Sensitive Server Action tự authorize bằng server session/role.
 - Không tin actor/role/team/permission từ client.
 - `supabaseAdmin` chỉ server-side.
-- `password_hash = NULL` không bao giờ là normal authenticated credential.
+- `password_hash = NULL` không là normal authenticated credential khi enforcement bật; compatibility mode passwordless chỉ là ngoại lệ test tạm thời, phải có flag explicit và không được coi là hardening hoàn tất.
 - Reset/setup credential phải one-time, short-lived, hashed-at-rest, atomic consume/revoke.
 - Credential reset phải revoke prior sessions.
 
@@ -102,7 +102,7 @@ Source/candidate không thay production catalog proof cho:
 
 **Scope:**
 - patch Next.js sang patched 16.3 release;
-- loại bỏ NULL-password normal login và có controlled setup/reset path;
+- chuẩn bị loại bỏ NULL-password normal login bằng controlled setup/reset path; trước khi UI hoàn tất, giữ temporary passwordless compatibility exception đã được anh phê duyệt;
 - inventory/migrate legacy NULL-password accounts an toàn;
 - read-only production catalog reconciliation;
 - fix evaluator NULL authorization ở reviewed SQL/RPC;

@@ -19,6 +19,7 @@
 | **P98-W1** | `P98M1T01` + `P98M1T02` | Start Phase 98 |
 | **P98-W2** | `P98M2T01` + `P98M3T01` | `P98M1T02` PASS |
 | **P98-W3** | `P98M2T02` + `P98M2T04` | `P98M2T01` PASS |
+| **P98-W3-COMPAT** | `P98M2T06` | `P98M2T02` PASS + temporary passwordless test exception |
 | **P98-W4** | `P98M2T03` | `P98M2T02` PASS |
 | **P98-W5 SERIAL** | `P98M2T05` → `P98M3T02` | source/reviewer gates PASS + explicit production approval |
 
@@ -202,6 +203,44 @@ type ResetPasswordResult =
 
 ---
 
+### [#P98M2T06] [`src/actions/auth.ts`, `tests/p98-password-setup.test.mjs`] `temporaryPasswordlessCompatibility(): AuthCompatibility`
+
+```yaml
+task:
+  id: P98M2T06
+  tier: CONTROLLED
+  depends: [P98M2T02]
+  owns: [src/actions/auth.ts, tests/p98-password-setup.test.mjs]
+  locks: [AUTH_LOGIN_CONTRACT]
+```
+
+**Goal**: Giữ hành vi test hiện tại: tài khoản `password_hash = NULL` và trạng thái setup-required vẫn đăng nhập được bằng mã nhân viên trong giai đoạn app/setup UI chưa hoàn tất.
+
+**Interface/current context**:
+- `P98M2T02` đã thêm fail-closed login và one-time setup flow.
+- Ngoại lệ này được bật mặc định có chủ đích qua `KURABE_REQUIRE_PASSWORD_LOGIN=false`; enforcement sẽ chỉ bật khi rollout hardening được phê duyệt.
+
+**Changes**:
+1. Gate password enforcement bằng `KURABE_REQUIRE_PASSWORD_LOGIN === 'true'`.
+2. Khi flag false, khôi phục legacy behavior: NULL hash không yêu cầu password; hash hiện hữu vẫn phải match.
+3. Giữ strict fail-closed behavior và dummy bcrypt path khi flag true.
+4. Cập nhật regression simulation cho cả compatibility mode và strict mode.
+
+**Constraints**:
+- Không sửa migration, schema, token/RPC flow hoặc `AGENTS.md`.
+- Không production DB mutation, push, deploy, hoặc thay đổi credentials.
+- Đây là temporary test exception; không được đánh dấu P98M2T05 hoàn tất.
+
+**DoD**:
+- `node tests/p98-password-setup.test.mjs` PASS với cả hai flag mode.
+- `npm run test`, `npm run lint`, `npm run typecheck`, `npm run build` PASS.
+- Fresh independent CONTROLLED review PASS.
+- Chỉ sửa các path trong `owns`; canonical publish do Mika thực hiện sau verify.
+
+**Status**: `[ ]`
+
+---
+
 ### [#P98M2T03] [`src/app/setup-password/page.tsx`, `src/components/account/PasswordSetupForm.tsx`] `PasswordSetupPage`
 
 **Goal**: Cung cấp bounded unauthenticated setup UI để user dùng one-time token tạo password mới sau reset.
@@ -221,7 +260,7 @@ type PasswordSetupFormProps = { token: string };
 
 **Context hiện có**:
 - Auth action T02 cung cấp `completePasswordSetup`.
-- Normal login đã fail-closed khi setup-required.
+- Login enforcement tạm thời được giữ ở compatibility mode qua P98M2T06; strict mode vẫn fail-closed.
 
 **Concrete changes**:
 1. Add setup route nhận token từ URL theo safe parsing.
@@ -283,7 +322,7 @@ type PasswordSetupFormProps = { token: string };
 
 **Goal**: Controlled rollout P0 fix và chứng minh production không còn NULL-password normal login.
 
-**Depends on**: `[#P98M1T01], [#P98M2T02], [#P98M2T03], [#P98M2T04]`.
+**Depends on**: `[#P98M1T01], [#P98M2T02], [#P98M2T03], [#P98M2T04], [#P98M2T06]`.
 
 **Parallel-safe**: `no`.
 
