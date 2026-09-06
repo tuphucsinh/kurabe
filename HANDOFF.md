@@ -1,6 +1,6 @@
 # HANDOFF — Kurabe QAQC
 
-- Canonical `main` đã ở `43b2281` — `[#P98M2T06] restore temporary passwordless compatibility`.
+- Canonical `main` đang ở `a7e4462` (closure); source P98M2T06 đã publish tại `43b2281` — `restore temporary passwordless compatibility`.
 - `password_hash = NULL` và setup-required NULL account được login theo legacy mode khi `KURABE_REQUIRE_PASSWORD_LOGIN` unset/falsy.
 - Khi `KURABE_REQUIRE_PASSWORD_LOGIN=true`, strict fail-closed + dummy bcrypt của P98M2T02 vẫn giữ nguyên.
 - Verification canonical: focused PASS; full tests `39/39`; lint `0 errors` + warning có sẵn tại `tests/p98-evaluator-auth.test.mjs:232`; typecheck PASS; build PASS.
