@@ -486,6 +486,11 @@ assert.ok(
   !authCode.includes('Vui lòng nhập mật khẩu.'),
   'auth.ts must not return a differing error for empty password'
 );
+assert.ok(
+  authCode.includes("process.env.KURABE_REQUIRE_PASSWORD_LOGIN === 'true'") ||
+  authCode.includes('process.env.KURABE_REQUIRE_PASSWORD_LOGIN === "true"'),
+  'auth.ts must explicitly gate password enforcement on KURABE_REQUIRE_PASSWORD_LOGIN === "true"'
+);
 
 // ============================================================
 // 5. DETERMINISTIC BEHAVIORAL SIMULATIONS
@@ -501,6 +506,7 @@ function simulateLogin({
   passwordHash,
   passwordSetupRequired,
   providedPassword,
+  requirePasswordLogin = (process.env.KURABE_REQUIRE_PASSWORD_LOGIN === 'true'),
 }) {
   const attempts = [];
   const cleanCode = 'TEST_EMP';
@@ -517,37 +523,78 @@ function simulateLogin({
     };
   }
 
-  // For every existing active account login attempt, always execute one bcrypt.compare
-  // using real stored hash when normal password account has one, otherwise fixed valid dummy hash.
-  const isSetupIncomplete = !passwordHash || Boolean(passwordSetupRequired);
-  const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : passwordHash;
-  const passwordCandidate = typeof providedPassword === 'string' ? providedPassword : '';
+  // When strict mode is enabled (KURABE_REQUIRE_PASSWORD_LOGIN === 'true'):
+  // Preserves P98M2T02 fail-closed behavior for NULL/setup-required accounts:
+  // always executes one bcrypt.compare using real stored hash or fixed dummy hash.
+  if (requirePasswordLogin) {
+    const isSetupIncomplete = !passwordHash || Boolean(passwordSetupRequired);
+    const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : passwordHash;
+    const passwordCandidate = typeof providedPassword === 'string' ? providedPassword : '';
 
-  const valid = bcrypt.compareSync(passwordCandidate, targetHash);
-  const comparisonExecuted = true;
+    const valid = bcrypt.compareSync(passwordCandidate, targetHash);
+    const comparisonExecuted = true;
 
-  if (isSetupIncomplete || !valid || !providedPassword) {
-    attempts.push({ employee_code: cleanCode, ip });
+    if (isSetupIncomplete || !valid || !providedPassword) {
+      attempts.push({ employee_code: cleanCode, ip });
+      return {
+        success: false,
+        error: GENERIC_AUTH_ERROR,
+        attempts,
+        comparisonExecuted,
+        targetHashUsed: targetHash,
+      };
+    }
+
     return {
-      success: false,
-      error: GENERIC_AUTH_ERROR,
-      attempts,
+      success: true,
+      attemptsCleared: true,
       comparisonExecuted,
       targetHashUsed: targetHash,
     };
   }
 
-  // Login successful
+  // Compatibility mode (default when KURABE_REQUIRE_PASSWORD_LOGIN !== 'true'):
+  // Restores legacy behavior: NULL password_hash accounts can log in without a password;
+  // accounts with a non-NULL hash still require a non-empty matching password.
+  if (passwordHash) {
+    const passwordCandidate = typeof providedPassword === 'string' ? providedPassword : '';
+    const valid = bcrypt.compareSync(passwordCandidate, passwordHash);
+    const comparisonExecuted = true;
+
+    if (!valid || !providedPassword) {
+      attempts.push({ employee_code: cleanCode, ip });
+      return {
+        success: false,
+        error: GENERIC_AUTH_ERROR,
+        attempts,
+        comparisonExecuted,
+        targetHashUsed: passwordHash,
+      };
+    }
+
+    return {
+      success: true,
+      attemptsCleared: true,
+      comparisonExecuted,
+      targetHashUsed: passwordHash,
+    };
+  }
+
+  // NULL password_hash account in compatibility mode: login succeeds without password
   return {
     success: true,
     attemptsCleared: true,
-    comparisonExecuted,
-    targetHashUsed: targetHash,
+    comparisonExecuted: false,
+    targetHashUsed: null,
   };
 }
 
 const KNOWN_SECRET = 'CorrectP@ssw0rd123';
 const KNOWN_HASH = bcrypt.hashSync(KNOWN_SECRET, 10);
+
+// --- 5.1.A Strict Mode Regression Invariants (KURABE_REQUIRE_PASSWORD_LOGIN === 'true') ---
+// Preserves 100% of P98M2T02 fail-closed and dummy bcrypt comparison invariants without weakening.
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'true';
 
 // Case 5.1.1: Valid login with valid password and setup_required = false
 const validLoginRes = simulateLogin({
@@ -674,6 +721,175 @@ for (const { label, res } of securityFailureCases) {
   assert.strictEqual(res.attempts.length, 1, `${label} must record failed login attempt`);
   assert.strictEqual(res.comparisonExecuted, true, `${label} must exercise comparison path`);
 }
+
+// --- 5.1.B Compatibility Mode Suite (KURABE_REQUIRE_PASSWORD_LOGIN !== 'true') ---
+// Restores legacy behavior: NULL password_hash accounts can log in without a password;
+// accounts with a non-NULL hash still require a non-empty matching password.
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'false';
+
+// Case 5.1.10: NULL password_hash account with empty password logs in successfully
+const compatNullEmptyRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(compatNullEmptyRes.success, true, 'NULL password_hash with empty password must succeed in compatibility mode');
+assert.strictEqual(compatNullEmptyRes.attemptsCleared, true, 'Attempts must be cleared on successful login');
+assert.strictEqual(compatNullEmptyRes.comparisonExecuted, false, 'No comparison needed for NULL password in compatibility mode');
+
+// Case 5.1.11: NULL password_hash account without password (undefined/omitted) logs in successfully
+const compatNullNoPwRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+});
+assert.strictEqual(compatNullNoPwRes.success, true, 'NULL password_hash without password must succeed in compatibility mode');
+
+// Case 5.1.12: NULL password_hash account with arbitrary password logs in successfully
+const compatNullWithPwRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: 'some-random-password',
+});
+assert.strictEqual(compatNullWithPwRes.success, true, 'NULL password_hash with arbitrary password must succeed in compatibility mode');
+
+// Case 5.1.13: Setup-required account with NULL password_hash logs in successfully in compatibility mode
+const compatSetupReqNullPwRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: true,
+  providedPassword: '',
+});
+assert.strictEqual(compatSetupReqNullPwRes.success, true, 'NULL password_hash setup-required account must succeed in compatibility mode');
+
+// Case 5.1.14: Account with non-NULL hash and matching password succeeds in compatibility mode
+const compatNormalValidRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: KNOWN_HASH,
+  passwordSetupRequired: false,
+  providedPassword: KNOWN_SECRET,
+});
+assert.strictEqual(compatNormalValidRes.success, true, 'Non-NULL hash with matching password must succeed in compatibility mode');
+assert.strictEqual(compatNormalValidRes.comparisonExecuted, true, 'Comparison must execute for normal account');
+assert.strictEqual(compatNormalValidRes.targetHashUsed, KNOWN_HASH, 'Must compare against user password_hash');
+
+// Case 5.1.15: Account with non-NULL hash and wrong password MUST fail in compatibility mode
+const compatNormalWrongRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: KNOWN_HASH,
+  passwordSetupRequired: false,
+  providedPassword: 'WrongPassword!',
+});
+assert.strictEqual(compatNormalWrongRes.success, false, 'Non-NULL hash with wrong password must fail in compatibility mode');
+assert.strictEqual(compatNormalWrongRes.error, GENERIC_AUTH_ERROR, 'Must return generic error');
+assert.strictEqual(compatNormalWrongRes.attempts.length, 1, 'Failed attempt must be recorded');
+assert.strictEqual(compatNormalWrongRes.comparisonExecuted, true, 'Comparison must execute on wrong password');
+
+// Case 5.1.16: Account with non-NULL hash and empty password MUST fail in compatibility mode
+const compatNormalEmptyRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: KNOWN_HASH,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(compatNormalEmptyRes.success, false, 'Non-NULL hash with empty password must fail in compatibility mode');
+assert.strictEqual(compatNormalEmptyRes.error, GENERIC_AUTH_ERROR, 'Must return generic error for empty password');
+assert.strictEqual(compatNormalEmptyRes.attempts.length, 1, 'Failed attempt must be recorded');
+assert.strictEqual(compatNormalEmptyRes.comparisonExecuted, true, 'Comparison must execute on empty password');
+
+// Case 5.1.17: Inactive user MUST fail closed in compatibility mode
+const compatInactiveRes = simulateLogin({
+  userExists: true,
+  isActive: false,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(compatInactiveRes.success, false, 'Inactive user must fail closed in compatibility mode');
+assert.strictEqual(compatInactiveRes.error, GENERIC_AUTH_ERROR, 'Must return generic error for inactive user');
+assert.strictEqual(compatInactiveRes.attempts.length, 1, 'Failed attempt must be recorded');
+
+// Case 5.1.18: Non-existent user MUST fail closed in compatibility mode
+const compatNonExistentRes = simulateLogin({
+  userExists: false,
+  isActive: false,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(compatNonExistentRes.success, false, 'Non-existent user must fail closed in compatibility mode');
+assert.strictEqual(compatNonExistentRes.error, GENERIC_AUTH_ERROR, 'Must return generic error for non-existent user');
+assert.strictEqual(compatNonExistentRes.attempts.length, 1, 'Failed attempt must be recorded');
+
+// --- 5.1.C Explicit Env Gate Contract Verification ---
+// 1. Unset env var defaults to compatibility mode
+delete process.env.KURABE_REQUIRE_PASSWORD_LOGIN;
+const defaultCompatRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(defaultCompatRes.success, true, 'Unset KURABE_REQUIRE_PASSWORD_LOGIN must default to compatibility mode');
+
+// 2. Non-"true" values default to compatibility mode
+for (const falsyVal of ['false', '0', 'no', 'off', '']) {
+  process.env.KURABE_REQUIRE_PASSWORD_LOGIN = falsyVal;
+  const valRes = simulateLogin({
+    userExists: true,
+    isActive: true,
+    passwordHash: null,
+    passwordSetupRequired: false,
+    providedPassword: '',
+  });
+  assert.strictEqual(valRes.success, true, `KURABE_REQUIRE_PASSWORD_LOGIN=${falsyVal} must default to compatibility mode`);
+}
+
+// 3. Exact "true" enables strict mode
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'true';
+const exactTrueRes = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+});
+assert.strictEqual(exactTrueRes.success, false, 'KURABE_REQUIRE_PASSWORD_LOGIN="true" must activate strict mode');
+assert.strictEqual(exactTrueRes.targetHashUsed, DUMMY_BCRYPT_HASH, 'Strict mode must use dummy bcrypt hash for NULL password');
+
+// 4. Explicit parameter override takes precedence over env var
+const explicitCompatWithTrueEnv = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+  requirePasswordLogin: false,
+});
+assert.strictEqual(explicitCompatWithTrueEnv.success, true, 'Explicit requirePasswordLogin: false overrides true env');
+
+const explicitStrictWithFalseEnv = simulateLogin({
+  userExists: true,
+  isActive: true,
+  passwordHash: null,
+  passwordSetupRequired: false,
+  providedPassword: '',
+  requirePasswordLogin: true,
+});
+assert.strictEqual(explicitStrictWithFalseEnv.success, false, 'Explicit requirePasswordLogin: true overrides false env');
+
+// Reset to strict mode for subsequent token/state-machine tests
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'true';
 
 // 5.2 Token Format Validation & Hashing
 function isValidTokenFormat(token) {
@@ -910,6 +1126,8 @@ assert.strictEqual(expiredRes.error, 'Liên kết đặt mật khẩu không h�
 
 // 5.6 End-to-End Setup-to-Login Lifecycle
 // Now that user completed setup, login with old password fails, login with new password succeeds!
+// Strict mode verification:
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'true';
 const oldLoginRes = simulateLogin({
   userExists: true,
   isActive: userAfterSetup.is_active,
@@ -927,6 +1145,29 @@ const newLoginRes = simulateLogin({
   providedPassword: NEW_PASSWORD,
 });
 assert.strictEqual(newLoginRes.success, true, 'Login with new password must succeed after password setup');
+
+// Compatibility mode verification:
+process.env.KURABE_REQUIRE_PASSWORD_LOGIN = 'false';
+const oldLoginCompatRes = simulateLogin({
+  userExists: true,
+  isActive: userAfterSetup.is_active,
+  passwordHash: userAfterSetup.password_hash,
+  passwordSetupRequired: userAfterSetup.password_setup_required,
+  providedPassword: KNOWN_SECRET,
+});
+assert.strictEqual(oldLoginCompatRes.success, false, 'Login with old password must fail after password setup (compatibility mode)');
+
+const newLoginCompatRes = simulateLogin({
+  userExists: true,
+  isActive: userAfterSetup.is_active,
+  passwordHash: userAfterSetup.password_hash,
+  passwordSetupRequired: userAfterSetup.password_setup_required,
+  providedPassword: NEW_PASSWORD,
+});
+assert.strictEqual(newLoginCompatRes.success, true, 'Login with new password must succeed after password setup (compatibility mode)');
+
+// Cleanup env
+delete process.env.KURABE_REQUIRE_PASSWORD_LOGIN;
 
 // ============================================================
 // 6. RAW SECRET LEAK PREVENTION STATIC SCAN

@@ -237,7 +237,7 @@ task:
 - Fresh independent CONTROLLED review PASS.
 - Chỉ sửa các path trong `owns`; canonical publish do Mika thực hiện sau verify.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 

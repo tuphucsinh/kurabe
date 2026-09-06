@@ -62,19 +62,36 @@ export async function loginAction(
       return { success: false, error: GENERIC_AUTH_ERROR };
     }
 
-    // 3. Kiểm tra mật khẩu (fail-closed nếu password_hash là NULL hoặc password_setup_required = true)
+    // 3. Kiểm tra mật khẩu
+    // Khi KURABE_REQUIRE_PASSWORD_LOGIN === 'true' (strict mode):
+    // Fail-closed nếu password_hash là NULL hoặc password_setup_required = true.
     // Luôn thực thi đúng 1 lần bcrypt.compare cho mọi tài khoản active tồn tại:
     // dùng hash thật nếu tài khoản có mật khẩu bình thường, ngược lại dùng dummy bcrypt hash cố định.
-    const storedHash = user.password_hash ?? DUMMY_BCRYPT_HASH;
-    const isSetupIncomplete = !user.password_hash || user.password_setup_required;
-    const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : storedHash;
-    const passwordCandidate = typeof password === 'string' ? password : '';
+    // Khi KURABE_REQUIRE_PASSWORD_LOGIN !== 'true' (mặc định compatibility mode):
+    // Khôi phục legacy behavior: tài khoản có password_hash = NULL đăng nhập không cần mật khẩu;
+    // tài khoản đã có password_hash vẫn bắt buộc nhập đúng mật khẩu.
+    const requirePasswordLogin = process.env.KURABE_REQUIRE_PASSWORD_LOGIN === 'true';
 
-    const valid = await bcrypt.compare(passwordCandidate, targetHash);
-    if (isSetupIncomplete || !valid || !password) {
-      // Ghi nhận lần thử thất bại
-      await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
-      return { success: false, error: GENERIC_AUTH_ERROR };
+    if (requirePasswordLogin) {
+      const storedHash = user.password_hash ?? DUMMY_BCRYPT_HASH;
+      const isSetupIncomplete = !user.password_hash || user.password_setup_required;
+      const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : storedHash;
+      const passwordCandidate = typeof password === 'string' ? password : '';
+
+      const valid = await bcrypt.compare(passwordCandidate, targetHash);
+      if (isSetupIncomplete || !valid || !password) {
+        // Ghi nhận lần thử thất bại
+        await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+        return { success: false, error: GENERIC_AUTH_ERROR };
+      }
+    } else if (user.password_hash) {
+      const passwordCandidate = typeof password === 'string' ? password : '';
+      const valid = await bcrypt.compare(passwordCandidate, user.password_hash);
+      if (!valid || !password) {
+        // Ghi nhận lần thử thất bại
+        await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+        return { success: false, error: GENERIC_AUTH_ERROR };
+      }
     }
 
     // 4. Đăng nhập thành công -> Xóa attempts cũ của (mã NV, IP)
