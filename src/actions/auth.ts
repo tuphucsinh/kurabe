@@ -7,11 +7,20 @@ import bcrypt from 'bcryptjs';
 import { mapUserFromDb } from '@/lib/db/users';
 import { toClientError } from '@/lib/errors';
 import { isOpaqueSessionToken } from '@/lib/session-token';
+import {
+  completePasswordSetupCore,
+  type CompletePasswordSetupResult,
+  type ResetPasswordResult,
+} from '@/lib/auth-password-setup';
 import type { User } from '@/types';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 phút
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 ngày
+// Fixed valid bcrypt hash for dummy comparison on accounts without active normal password
+// (avoids timing and state leakage; contains no raw password).
+const DUMMY_BCRYPT_HASH = '$2b$10$7EqJtq98hPqEX7fNZaFWoOhi55j8KPGWprDAOWfcL6NwgVB5e3EmK';
+const GENERIC_AUTH_ERROR = 'Mã nhân viên hoặc mật khẩu không đúng.';
 
 export async function loginAction(
   employeeCode: string,
@@ -50,20 +59,22 @@ export async function loginAction(
     if (!user) {
       // Ghi nhận lần thử thất bại
       await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
-      return { success: false, error: 'Mã nhân viên hoặc mật khẩu không đúng.' };
+      return { success: false, error: GENERIC_AUTH_ERROR };
     }
 
-    // 3. Kiểm tra mật khẩu (giữ nguyên luật Q3: password_hash NULL -> không cần mật khẩu)
-    if (user.password_hash) {
-      if (!password) {
-        return { success: false, error: 'Vui lòng nhập mật khẩu.' };
-      }
-      const valid = await bcrypt.compare(password, user.password_hash);
-      if (!valid) {
-        // Ghi nhận lần thử thất bại
-        await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
-        return { success: false, error: 'Mã nhân viên hoặc mật khẩu không đúng.' };
-      }
+    // 3. Kiểm tra mật khẩu (fail-closed nếu password_hash là NULL hoặc password_setup_required = true)
+    // Luôn thực thi đúng 1 lần bcrypt.compare cho mọi tài khoản active tồn tại:
+    // dùng hash thật nếu tài khoản có mật khẩu bình thường, ngược lại dùng dummy bcrypt hash cố định.
+    const storedHash = user.password_hash ?? DUMMY_BCRYPT_HASH;
+    const isSetupIncomplete = !user.password_hash || user.password_setup_required;
+    const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : storedHash;
+    const passwordCandidate = typeof password === 'string' ? password : '';
+
+    const valid = await bcrypt.compare(passwordCandidate, targetHash);
+    if (isSetupIncomplete || !valid || !password) {
+      // Ghi nhận lần thử thất bại
+      await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+      return { success: false, error: GENERIC_AUTH_ERROR };
     }
 
     // 4. Đăng nhập thành công -> Xóa attempts cũ của (mã NV, IP)
@@ -132,3 +143,16 @@ export async function logoutAction(): Promise<{ success: boolean }> {
     return { success: true };
   }
 }
+
+/**
+ * Hoàn tất thiết lập mật khẩu mới bằng one-time setup token (unauthenticated).
+ */
+export async function completePasswordSetup(
+  token: string,
+  newPassword: string,
+  confirmPassword?: string
+): Promise<CompletePasswordSetupResult> {
+  return completePasswordSetupCore(token, newPassword, confirmPassword);
+}
+
+export type { CompletePasswordSetupResult, ResetPasswordResult };

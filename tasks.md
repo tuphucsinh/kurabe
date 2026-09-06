@@ -154,7 +154,7 @@ interface PasswordSetupTokenRecord {
 
 ---
 
-### [#P98M2T02] [`src/lib/auth-password-setup.ts`, `src/actions/account.ts`, `src/actions/auth.ts`] `resetPassword()` + `completePasswordSetup()` + `login()`
+### [#P98M2T02] [`supabase/migrations/20260905072000_p98_password_setup_transaction.sql`, `db/rollback-p98-password-setup-transaction.sql`, `src/lib/auth-password-setup.ts`, `src/actions/account.ts`, `src/actions/auth.ts`, `tests/p98-password-setup.test.mjs`] `resetPassword()` + `completePasswordSetup()` + `login()`
 
 **Goal**: Normal login fail-closed với NULL/setup-required; reset revoke sessions và issue one-time setup credential.
 
@@ -171,6 +171,9 @@ interface PasswordSetupTokenRecord {
 type ResetPasswordResult =
   | { success: true; setupToken: string; expiresAt: string }
   | { success: false; error: string };
+
+// Candidate RPC boundary: reset/session/token writes and setup token consume/password update are transactional.
+// Raw passwords/tokens never cross the database boundary; only bcrypt/token hashes do.
 ```
 
 **Context hiện có**:
@@ -179,20 +182,23 @@ type ResetPasswordResult =
 
 **Concrete changes**:
 1. NULL/setup-required normal login → reject.
-2. Reset: revoke sessions, mark setup-required, store token hash/expiry atomically.
-3. Add setup action validate+consume token, set bcrypt hash, clear setup state.
-4. Revoke prior tokens on reset/success.
+2. Add candidate transaction RPCs for reset/token issuance and setup token consume/password update, with exact rollback.
+3. Reset: revoke sessions, mark setup-required, store token hash/expiry through the transaction RPC.
+4. Add setup action validate+consume token, set bcrypt hash, clear setup state through the transaction RPC.
+5. Revoke prior tokens on reset/success.
+6. Add focused regression coverage for valid/wrong/NULL login, session revoke, expired/used token, setup→login, unauthorized reset, and RPC/rollback contracts.
 
 **Constraints**:
 - Cryptographic random, short-lived, one-time token.
 - Không log password/raw token.
 - Generic auth errors, không unnecessary account-state leak.
+- Candidate migration only; no production apply or live RPC mutation.
 
 **Definition of Done**:
-- Unit/regression: valid/wrong/NULL login, session revoke, expired/used token, setup→login, unauthorized reset.
+- `node tests/p98-password-setup.test.mjs` covers valid/wrong/NULL login, session revoke, expired/used token, setup→login, unauthorized reset, and RPC/rollback contracts.
 - Full gates PASS; không edit `tasks.md`, không commit.
 
-**Status**: `[ ]`
+**Status**: `[x]`
 
 ---
 

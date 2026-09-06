@@ -5,6 +5,12 @@ import { requireAuth, requireManager } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 import { toClientError } from '@/lib/errors';
+import {
+  executePasswordResetRpc,
+  completePasswordSetupCore,
+  type ResetPasswordResult,
+  type CompletePasswordSetupResult,
+} from '@/lib/auth-password-setup';
 
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -94,33 +100,26 @@ export async function changePassword(
 }
 
 /**
- * Đặt lại mật khẩu của một nhân viên về TRỐNG (password_hash = null).
- * Nhân viên sẽ tự đặt mật khẩu mới từ Tab Tài khoản (form "Đặt mật khẩu").
- * Manager-only về mặt UI; auth thật thuộc Phase 44.
+ * Đặt lại mật khẩu của một nhân viên và khởi tạo one-time setup token ngắn hạn.
+ * Manager-only; thu hồi toàn bộ session và setup tokens cũ của user một cách nguyên tử.
  */
-export async function resetPassword(userId: string): Promise<{ success: boolean; error?: string }> {
+export async function resetPassword(userId: string): Promise<ResetPasswordResult> {
   const auth = await requireManager();
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    if (!userId) {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId) {
       return { success: false, error: 'Thiếu thông tin tài khoản.' };
     }
 
-    const { error } = await supabaseAdmin
-      .from('users')
-      .update({ password_hash: null })
-      .eq('id', userId);
-
-    if (error) {
-      return { success: false, error: toClientError(error, 'Lỗi đặt lại mật khẩu. Vui lòng thử lại.') };
+    const result = await executePasswordResetRpc(cleanUserId);
+    if (!result.success) {
+      return result;
     }
 
-    // Xóa toàn bộ session đang active của user khi reset mật khẩu
-    await supabaseAdmin.from('sessions').delete().eq('user_id', userId);
-
-    await logAudit(auth.user, 'RESET_PASSWORD', 'user', userId);
-    return { success: true };
+    await logAudit(auth.user, 'RESET_PASSWORD', 'user', cleanUserId);
+    return result;
   } catch (err: unknown) {
     return {
       success: false,
@@ -128,3 +127,16 @@ export async function resetPassword(userId: string): Promise<{ success: boolean;
     };
   }
 }
+
+/**
+ * Hoàn tất thiết lập mật khẩu mới bằng one-time setup token (unauthenticated).
+ */
+export async function completePasswordSetup(
+  token: string,
+  newPassword: string,
+  confirmPassword?: string
+): Promise<CompletePasswordSetupResult> {
+  return completePasswordSetupCore(token, newPassword, confirmPassword);
+}
+
+export type { ResetPasswordResult, CompletePasswordSetupResult };
