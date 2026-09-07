@@ -1,5 +1,13 @@
 # Decisions Log
 
+## Release-hardening replan — source baseline 53b83f1
+
+- Owner requests full remaining WBS now: phases 98–102 and retained 96E, superseding active-phase-only planning. Historical IDs/statuses remain unchanged; planning does not authorize implementation or external actions.
+- Reuse current stack, CI and tests. Qualify minimal isolated behavior/DB/browser harness early; expand schema baseline afterwards. No new dispatcher, hosted DB project, PPR/cacheComponents or broad rewrite by default.
+- Prioritize historical/transactional integrity, authoritative grading and UI freshness before measured performance. Preserve existing valid scoring results and temporary passwordless exception until explicit security transition approval.
+- Source DAG does not wait for production permission. Prefer one final reviewed release window for ordered auth/evaluator/remaining cutover; each live action retains its own approval, rollback and readback.
+- Canonical plan and WBS are authorities; old log entries below are historical decisions/evidence, not a current runtime certification. P98M1T02/P98M2T04 evidence drift and legacy workspaces stay held for reconciliation; no task ticked by this replan.
+
 | # | Ngày | Quyết định | Lý do |
 |---|---|---|---|
 | 1 | 2026-04-27 | Chọn **TailwindCSS** thay Vanilla CSS | Tối ưu tốc độ vibe-code với AI, utility-first giảm context switching |

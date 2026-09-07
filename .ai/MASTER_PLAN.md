@@ -1,287 +1,130 @@
-# MASTER_PLAN.md
+# MASTER_PLAN — Kurabe QAQC
 
-> **Canonical phase plan — Kurabe QAQC**
->
-> MASTER_PLAN chỉ giữ **trạng thái, phase, scope, invariants và phase gates**.
-> WBS/task chi tiết chỉ nằm ở `tasks.md`. Evidence/lịch sử chi tiết nằm ở
-> `.ai/DECISIONS_LOG.md`, `.ai/KNOWN_BUGS.md`, phase plans và Git history.
->
-> **Truth order:** production/runtime evidence → canonical `main` → tracked evidence → docs.
-> Nếu các nguồn không khớp: **STOP**, không auto-heal và không production mutation.
+## Authority / approved planning scope
 
-## 1. Current state
+- Revision: release-hardening replan, source baseline `53b83f1bc16539f4fe7188e78788ceaf11bceaba`.
+- Owner requests all remaining phases decomposed now. This explicitly replaces the old active-phase-only WBS restriction, NOT execution/production approval gates.
+- `tasks.md` is the sole WBS/DAG; this file owns phase outcomes/invariants. No duplicate WBS in other plans.
+- Canonical Git proves integrated source, not deployed behavior. Current live catalog/runtime evidence proves live state; migration comments do not.
+- Planning approval includes local control-plane commits, temporarily preserving/restoring the owner's dirty AGENTS.md; no push, deploy, app implementation or production mutation.
 
-- Canonical branch: `main`
-- Canonical source SHA tại lúc lập plan: `c300719de60f9eb9993da896f54d20070395ae9e`
-- Production: `https://lykiv.vercel.app`
-- Production source linkage: VERIFIED tại repository reconciliation 2026-09-05.
-- Previous branch/source split: CLOSED.
-- Baseline quality: lint PASS; typecheck PASS; tests PASS `37/37`; build PASS; `git diff --check` PASS.
-- `npm audit --omit=dev`: 0 production vulnerabilities tại re-audit.
-- Full audit còn dev/transitive advisories: `browserslist` high, `@babel/core` low.
-- Next.js source hiện tại: `16.3.2`; phải nâng sang patched `>=16.3.3`.
-- Release state: **NOT RELEASE-HARDENED** vì còn P0/P1.
-- Production DB catalog: **PARTIALLY UNKNOWN** cho một số RLS/grants/functions/index/runtime flag; không suy đoán từ SQL file/comment.
+## Current evidence and limitations
 
-### Active blockers
+- Canonical branch `main`; Next and eslint-config-next manifest `16.3.4`, React `19.2.4`.
+- Prior source audit reported local static/test checks. This planning revision does not rerun or independently certify those results; require fresh exact-candidate root gates at implementation. In-memory transpilation is not the normal npm wrapper or DB/browser evidence.
+- Historical build evidence is in HANDOFF/state; audit did not rerun build/browser/DB integration.
+- Prior registry bulk advisory check reported no production-subset findings and dev browserslist/@babel/core findings. Treat as dated audit leads, not a current clean bill; require current full npm audit/vendor verification, including SheetJS tarball coverage limits.
+- Production URL: https://lykiv.vercel.app. Current deployment SHA, effective flags, RLS/grants/RPC definitions and ledger need fresh verification. Insufficient data.
+- `AGENTS.md` has owner changes; six legacy workspace paths are retained in recovery state, not proven clean by `git worktree list`.
+- Dependency evidence drift: P98M1T02 pending despite completed dependants; P98M2T04 commit `9321c57` exists while task pending. Preserve status/evidence and reconcile before dispatch, never infer DoD from commit titles.
+- Release verdict: NEEDS_FIX / NOT RELEASE-HARDENED. Temporary passwordless testing is accepted, not an incident to silently disable and not a completed production-hardening gate.
 
-- **P0:** NULL-password normal-login bypass.
-- **P1:** framework security patch; historical snapshot mutation; evaluator NULL-safety; sensitive anon-read live state; DB reproducibility; non-atomic user/evaluation init; AI privacy/provider governance.
-- **P2:** config atomicity; framework route/proxy maintenance; CSP enforcement; AI quota/truncation/disclosure; dev dependency advisories; measured UI/performance residuals.
+## Invariants
 
-## 2. Non-negotiable invariants
+1. Actor/role/team come from validated server sessions. Every privileged action/RPC validates its own scope; middleware is not authority.
+2. Reset/setup: short-lived one-time hashed token; atomic consume/revoke; safe delivery; explicit credential state transitions. Self-change must not bypass setup verification. Login rate limiting handles DB failures and untrusted IP headers.
+3. Compatibility mode stays unchanged until separately approved strict rollout. Strict activation requires schema/RPC/UI/delivery/session evidence first.
+4. At most one Active period. Concrete server-resolved period scope; zero/multiple fail closed where required. Cookie/context is preference, not DB authority.
+5. Closed/history snapshots immutable, including indirect personnel/config changes and initialization. Preserve submitted rounds, historical role/team/criteria/grade version; no retroactive silent recalculation.
+6. Required write graphs and config sets are transactional with affected-row checks, concurrency control, audit and observable errors. No success on partial init; no grading write with fallback configuration.
+7. Grade calculation remains threshold-based as existing matchGradeBand: descending finite minScore, lowest catch-all. Preserve valid current results; maxScore must be derived/validated consistently with thresholds. A different grading policy requires owner approval.
+8. SubLeader relations validate active role and same-team scope; sensitive reads deny outside authorized scope. Serverize consumers before revoking anon reads.
+9. AI: minimum necessary scoped data, explicit provider/retention policy, atomic quota and explicit truncation/coverage. Employee codes are pseudonyms, not anonymization. Governance acceptance requires owner evidence.
+10. Cache keys include period, viewer and effective authorization dimensions; mutations invalidate all related views. Period/filter/header/data/exports agree through loading, rapid changes, failure and retry.
+11. No optimization without before/after benefit; no new cache/PPR/virtualization/service just because possible. Keep approved composition/assets; fix accessibility and error states without redesign.
+12. Production/security permissions/external commitments require explicit approval; exact backup/rollback, candidate review and readback. No broad cleanup, force-push, automatic feature expansion.
 
-### Auth / RBAC
-- Sensitive Server Action tự authorize bằng server session/role.
-- Không tin actor/role/team/permission từ client.
-- `supabaseAdmin` chỉ server-side.
-- `password_hash = NULL` không là normal authenticated credential khi enforcement bật; compatibility mode passwordless chỉ là ngoại lệ test tạm thời, phải có flag explicit và không được coi là hardening hoàn tất.
-- Reset/setup credential phải one-time, short-lived, hashed-at-rest, atomic consume/revoke.
-- Credential reset phải revoke prior sessions.
+## History retained (not re-dispatched)
 
-### Evaluation / period
-- Tối đa 1 `Active` period ở DB; app fail-closed khi zero/multiple theo đúng route contract.
-- Detail/Compare dùng concrete server-resolved `period_id`; không `undefined`/localStorage/cookie làm authority.
-- Closed period immutable ở app và SQL/RPC, kể cả stale tab.
-- Historical evaluation/round là snapshot theo kỳ; profile hiện tại không rewrite lịch sử.
-- Evaluator authorization phải NULL-safe.
-- Write graph cần consistency phải atomic.
-- Không đổi scoring/grade/workflow semantics trong hardening phases.
+| Phase | Recorded outcome / boundary |
+|---|---|
+| 32–93 | DONE historical foundation; not newly re-certified |
+| 94 | CLOSED, absorbed into 95 |
+| 95 | DONE staged detail/loading |
+| 96 | Implemented; previous production-applied record retained, live predicates rechecked before mutation |
+| 96E | PAUSED lifecycle/rollback execution; existing P96T10 evidence retained |
+| 97 | DONE history route; previous deployment provenance retained, no new live claim |
+| Repository reconciliation | Historical source split closed; new control/evidence drift handled separately |
 
-### DB / privacy
-- Sensitive HR/evaluation data không anon-read nếu không có explicit business approval.
-- DB object quan trọng phải có migration provenance + rollback + clean-bootstrap path.
-- AI chỉ nhận minimum-necessary data; provider/retention/DPA/allowlist phải explicit.
+## Optimality decision / dependency topology
 
-### UX / performance
-- Measure before optimize.
-- Không claim performance bằng spinner/FCP.
-- Không thêm cache/PPR/query split/virtualization/dependency nếu chưa có measured net benefit.
-- Không regression responsive/accessibility/navigation/overflow/console/network.
+Reuse phases 98–102, existing CI and tests; no big-bang rewrite. Bring minimal DB/browser harness qualification into Phase 98 before auth rollout; expand bootstrap and business integration in 99. Move grading and UI freshness to 99, not performance. Full future WBS is planned now but each contract must be refreshed against integrated inputs before execution.
 
-## 3. Phase history — compressed
+- Source sequence: 98 source + qualified harness → 99 → 100 → 101 → 102 local integration. Production rollout is a separate approval lane; source integrity fixes do not wait for permission to deploy.
+- No deadlock: the Phase 98 harness validates a minimal disposable DB contract; it does not depend on Phase 99 complete schema bootstrap.
+- Dependencies gate execution, not permission. After local integration, prefer one approved release window grouping P98 auth/evaluator rollout and P102 remaining cutover, preserving their ordered checks. Early P98-only deployment is optional and needs separate owner approval. P102 cutover still depends on completed P98 rollout; no live gate is skipped.
+- Shared owns/locks serialize related tasks; verifier/build cap 1. Capacity is a ceiling, not a target.
 
-| Phase | State | Summary |
-|---|---|---|
-| 32–93 | DONE | Nền tảng Supabase, workflow, reporting, auth guards, AI features, responsive/loading, transaction hardening và audit trước. |
-| 94 | CLOSED / absorbed | Staged-loading work hấp thụ vào Phase 95. |
-| 95 | DONE | Static-first evaluation detail + authenticated responsive canary. |
-| 96 | IMPLEMENTED / production-applied | Multi-period integrity, Active resolver, atomic period lifecycle/write firewall, compare optimization. |
-| 96E | **PAUSED / execution-gated** | Read-only lifecycle baseline/rollback preparation đã xong; production lifecycle/rollback E2E còn pending explicit approval + maintenance/no-concurrent-write gate. |
-| 97 | DONE / production deployed | Read-only closed-period history route + auth/RBAC + navigation. |
-| Repository reconciliation | DONE | Hardening history đã vào canonical `main`; source-of-truth split đóng. |
+## Phase 98 — Auth closure, evidence reconciliation and early verification
 
-### Closed findings — không reopen nếu không có regression evidence
+State: ACTIVE planning; execution STOP until separately requested.
 
-- Detail/Compare `periodId=undefined`.
-- Active resolver zero/multiple fail-closed ở source.
-- Closed-period application write guard.
-- Atomic period-create wiring.
-- Closed-period target update guard.
-- Closed-period history route/query + RBAC.
-- Sensitive application writes moved server-side.
-- Repository branch/source split.
+Scope: reconcile catalog/workspaces and prior pending evidence; qualify safe DB/browser/secret wrappers; finish setup UI and token handoff; unify credential state/session policy; harden login throttle; qualify existing legacy/evaluator migrations; approved auth/framework/evaluator production rollout.
 
-### Live DB proof vẫn cần
+Gate: real reset/setup/login and session matrix in both flag modes; invalid/expired/used tokens; self-change transition; quota failure/concurrency; NULL/wrong evaluator deny. Focused and root checks, real browser, real isolated PostgreSQL, fresh CONTROLLED review. Live release predicates require approved deployment/catalog readback, not source comments.
 
-Source/candidate không thay production catalog proof cho:
-- single-Active index;
-- exact evaluation RPC definitions/signatures;
-- execute grants;
-- exact RLS/table grants;
-- anon revoke state;
-- effective transactional-RPC runtime flag.
+Rollback: preserve compatibility until transition approval, paired code/schema rollback preserving newly set credentials; no blanket NULL password reset. Production mismatch stops; only pre-reviewed rollback may run.
 
----
+## Phase 99 — Business integrity, grading, read scope and freshness
 
-# 4. Phase 98 — Release Blockers & Production Truth
+State: PLANNED / dependency-gated on Phase 98 source and harness, not production deployment. Full WBS prepared, not dispatched.
 
-**State:** ACTIVE / highest priority.
+Scope: reconstruct complete bootstrap from approved catalog and tracked migrations; preserve historical snapshots; atomic user/team/evaluator/init graph; authoritative SubLeader validation; transactional versioned criteria/grade configuration and grading reads; inventory/serverize sensitive reads plus least privilege; period switching, async Reports params and Compare invalidation.
 
-**Goal:** đóng auth/framework/authorization blockers và biến production DB security state từ `UNKNOWN` thành evidence trước khi mở rộng hardening.
+Gate: clean bootstrap/replay + drift report; failure-injection and concurrent mutation/close tests; closed snapshot unchanged; no orphan/false success; invalid grade/relations rejected; no config fallback on writes; no cross-scope reads; UI period/team/data consistency and stale-cache regression tests. Actual RLS/grants enforcement also requires approved runtime apply/readback.
 
-**Scope:**
-- patch Next.js sang patched 16.3 release;
-- chuẩn bị loại bỏ NULL-password normal login bằng controlled setup/reset path; trước khi UI hoàn tất, giữ temporary passwordless compatibility exception đã được anh phê duyệt;
-- inventory/migrate legacy NULL-password accounts an toàn;
-- read-only production catalog reconciliation;
-- fix evaluator NULL authorization ở reviewed SQL/RPC;
-- controlled production rollout/readback cho các blocker sau explicit approval.
+Rollback: new forward migrations with exact reverse contract; preserve old versions/snapshots, no rewriting already-applied legacy files; no live revoke before consumer cutover qualification.
 
-**Parallelization policy:**
-- `tasks.md` định nghĩa dispatch waves và exact dependencies.
-- Read-only catalog và framework patch chạy độc lập.
-- Sau catalog, auth candidate và evaluator-SQL candidate có thể chạy trên **separate worktrees/runners** với file ownership tách biệt.
-- Production DB mutation/canary luôn **serial**, không parallel.
-- Mika là người duy nhất merge/commit/tick task sau independent verification.
+## Phase 100 — AI governance, security headers and dependencies
 
-**Out of scope:** historical snapshot fix, broad RLS refactor, DB baseline rewrite, AI redesign, performance tuning.
+State: PLANNED / dependency-gated on Phase 99.
 
-**Phase gate:**
-- P0 = 0 trên deployed/runtime path;
-- Next patched version deployed/readback;
-- production catalog evidence captured;
-- NULL/wrong evaluator rejected bởi reviewed/live path;
-- lint/typecheck/tests/build/diff PASS;
-- auth/DB/backend/production changes có fresh Reviewer PASS.
+Scope: atomic AI/chat quota; scoped minimal payload and coverage disclosure; provider/retention approval contract; report-only → enforced CSP canary; framework middleware/proxy compatibility only if current docs and runtime tests require it; dev/transitive advisory remediation.
 
----
+Gate: concurrent quota cap, DB-failure handling; no cross-team identity disclosure; synthetic provider transport tests and owner governance acceptance; no hydration/chart/export/login regression under CSP; current full and production dependency audit with explicit tarball coverage limits. No paid live-model call implied.
 
-# 5. Phase 99 — Data Integrity, RLS & DB Reproducibility
+Rollback: revert exact source/config version; keep prior CSP policy available; provider switch/security changes approved separately. No waiver without owner/reason/expiry.
 
-**State:** PLANNED.  
-**Depends on:** Phase 98 DONE.
+## Phase 101 — Measured performance and UI quality
 
-**Goal:** bảo đảm historical data bất biến, required write graph nguyên tử, sensitive reads least-privilege và DB tái tạo deterministic.
+State: PLANNED / dependency-gated on Phase 100.
 
-**Scope:**
-- historical snapshot immutability;
-- atomic user + Active evaluation + round/evaluator initialization;
-- sensitive client-read inventory và serverization;
-- revoke anon SELECT + least-privilege RPC grants;
-- canonical current-schema baseline + ordered forward migrations;
-- clean DB recreate + schema-drift gate.
+Routes: dashboard, employees, reports, evaluation detail, compare, history, settings. Viewports: 390x844, 768x1024, 1440x900. Roles: Manager/Leader/SubLeader/Employee/Worker as route permits.
 
-**Parallelization intent:**
-- historical-snapshot lane và sensitive-read inventory lane có thể khởi động độc lập sau Phase 98.
-- DB migration/apply work chỉ serial tại controlled gate.
-- Exact WBS chỉ băm khi Phase 99 ACTIVE.
+Order: qualified baseline → duplicate reads/roundtrips → projections/payload → light/heavy waterfall → measured render transforms/lazy-load → bounded accessibility/responsive cleanup. Preserve URL/back-forward semantics and viewer-aware invalidation.
 
-**Phase gate:**
-- no historical rewrite regression;
-- no orphan/false-success write path;
-- anon sensitive reads denied;
-- clean DB bootstrap equivalent với expected production schema;
-- DB integration/fault-injection PASS;
-- fresh Reviewer PASS.
+Evidence: same candidate/environment/data/sample method; cold/warm, query count/bytes, TTFB, shell-visible, first-light-visible, first-heavy-complete, full-complete and interaction latency. Lighthouse preset recorded first; at least two samples, median tie-break on >5-point spread. Do not compare development server to production build or empty unauthorized pages.
 
----
+Gate: every retained optimization has measured net benefit, no correctness/security/visual regression; no horizontal overflow or first-party errors. A non-beneficial candidate is abandoned with evidence, not marked completed merely to satisfy task count.
 
-# 6. Phase 100 — Configuration, Framework & AI Privacy Hardening
+## Phase 102 — Integration, controlled rollout and closure
 
-**State:** PLANNED.  
-**Depends on:** Phase 99 DONE.
+State: PLANNED / dependency-gated on Phase 101.
 
-**Goal:** đóng P1/P2 còn lại ngoài core DB integrity và loại silent partial/fallback/privacy behavior.
+Scope: extend existing CI to behavior/DB/browser/secret gates; full role/workflow/error/concurrency matrix; plan exact remaining migration rollout; owner-approved GitHub branch settings/deploy; reconcile Phase 96E lifecycle gate; final source/catalog/ledger/docs evidence.
 
-**Scope:**
-- atomic/versioned criteria + audience + levels;
-- atomic grade-band set, no silent production fallback;
-- Next async route/proxy correctness;
-- staged CSP enforcement;
-- AI provider allowlist/retention/DPA/minimum context;
-- atomic AI quota;
-- explicit summary coverage/truncation;
-- no cross-team identity disclosure;
-- secret-redaction hardening;
-- dev/transitive advisory cleanup hoặc time-bounded waiver.
+Gate: P0 zero; P1 zero or explicitly accepted with owner/reason/expiry; canonical source and deployment linked; migration ledger/catalog match; DB/browser/root/security checks PASS; rollback evidence complete. No hidden waiver of Phase 96E: execute if approved, otherwise release remains gated until owner explicitly accepts omission.
 
-**Parallelization intent:**
-- config lane, framework/CSP lane, AI lane và dev-dependency lane tách file/state và có thể chạy nhiều runner sau prerequisite tương ứng.
-- Exact WBS chỉ băm khi Phase 100 ACTIVE.
+No new feature phase before release closure. Final docs use observed pre-closure SHA, not an impossible self-referential commit SHA.
 
-**Phase gate:**
-- P1 = 0 hoặc accepted-risk record có owner/reason/expiry;
-- config failure không để partial state;
-- Reports runtime filter PASS;
-- enforced CSP canary không break required assets;
-- AI privacy/quota/coverage negative tests PASS;
-- production dependency audit = 0.
+## Phase 96E — retained production lifecycle proof
 
----
+State: PAUSED, re-evaluated after P102M1T02. Preserve P96T10–P96T13 IDs. Approve complete run/rollback envelope before first mutation; rollback executes on failure as well as happy-path completion, never waits for failed test task to be marked DONE. Use exact IDs, FK-safe transaction, baseline hashes and no concurrent evaluator writes. Do not create test data on live during planning.
 
-# 7. Phase 101 — Measured Performance & UI Optimization
+## Deferred / owner-gated proposals (not executable project phases)
 
-**State:** PLANNED.  
-**Depends on:** Phase 100 DONE.
+Cloudflare Tunnel/Access; QI Gia dụng / SubLeader UAT org-data changes; expanded chat/new feature ideas. No invented implementation tasks for unspecified requirements or already-DONE phases.
 
-**Goal:** tối ưu tốc độ/UX bằng before-after evidence, không speculative tuning.
+## Project tooling / execution policy
 
-**Baseline routes:** dashboard, reports, evaluation detail, compare, history, settings.  
-**Viewports:** `390x844`, `768x1024`, `1440x900`.
-
-**Optimization order:**
-1. duplicate/sequential server reads;
-2. query scope/payload;
-3. parallel independent fetches;
-4. duplicate client auth/period bootstrap;
-5. measured render transforms;
-6. secondary lazy-load;
-7. cache/prefetch only with invalidation proof.
-
-**Parallelization intent:**
-- baseline capture chạy trước.
-- Sau baseline, dashboard/reports lane, evaluation/history lane và isolated UI-residual lane có thể chạy parallel nếu file ownership không overlap.
-- Exact WBS chỉ băm khi Phase 101 ACTIVE.
-
-**Phase gate:**
-- before/after artifact cho mỗi retained optimization;
-- no horizontal overflow;
-- no first-party JS/network errors;
-- no accessibility/navigation regression;
-- no retained change without measured net benefit.
-
----
-
-# 8. Phase 102 — Integration, CI & Production Closure
-
-**State:** PLANNED.  
-**Depends on:** Phase 101 DONE.
-
-**Goal:** chứng minh end-to-end source/DB/browser/deployment/rollback contract và đóng release-hardening.
-
-**Scope:**
-- disposable DB integration matrix;
-- browser role matrix;
-- CI required checks;
-- main branch protection/no-force-push + Vercel branch readback;
-- controlled rollout/readback của reviewed remaining migrations;
-- re-evaluate pending lifecycle/rollback E2E proof;
-- final production SHA + DB ledger/catalog + docs sync.
-
-**Parallelization intent:**
-- DB integration harness là prerequisite.
-- Sau harness, browser-E2E preparation và CI workflow có thể chạy parallel.
-- Branch-setting/production mutation/final readback chạy serial.
-- Exact WBS chỉ băm khi Phase 102 ACTIVE.
-
-**Project release-ready gate:**
-- P0 = 0;
-- P1 = 0 hoặc accepted risk có owner/reason/expiry;
-- production SHA VERIFIED;
-- DB catalog + migration ledger VERIFIED;
-- lint/typecheck/tests/build/diff PASS;
-- `npm audit --omit=dev = 0`;
-- DB integration PASS;
-- browser role matrix PASS;
-- mobile/tablet/desktop no overflow/first-party errors;
-- rollback evidence đủ cho production DB mutation;
-- canonical `main` là source duy nhất của production.
-
-**Only after Phase 102 DONE:** mở feature phase mới.
-
----
-
-# 9. Deferred / user-gated work
-
-- **Phase 96E lifecycle/rollback E2E:** PAUSED; không tự production-execute. Re-evaluate ở final integration phase.
-- **Cloudflare Tunnel / Access:** chỉ khi user chủ động yêu cầu và infra context phù hợp.
-- **QI Gia dụng Leader / 3 NV SubLeader UAT data:** xử lý khi user tiếp tục UAT; không tự mutate org data.
-- **Feature P2 như “Gợi ý khác” / mở rộng chat:** không làm trước release-hardening closure.
-
----
-
-# 10. Global execution rules
-
-- MASTER_PLAN không chứa WBS/task.
-- Chỉ `/plan2task` phase ACTIVE; future phase giữ phase-level plan để tránh stale WBS.
-- 1 task = 1 logical block = 1 Mika commit sau independent verify.
-- Runner không commit, không sửa `tasks.md`.
-- `Independent=yes` + `Parallel-safe=yes` trong `tasks.md` nghĩa là Mika có thể dispatch runner riêng/worktree riêng khi dependencies đã satisfied.
-- Task đụng same file hoặc mutable production state không chạy parallel.
-- Auth/DB/schema/backend/production task bắt buộc fresh Reviewer gate.
-- Production DB migration/data mutation/delete cần explicit user approval.
-- Force-push cấm.
-- Unexpected drift/anomaly → STOP.
-- Không đóng finding bằng docs/comment; cần source/runtime evidence.
-- Phase 100% → Mika sweep summary vào MASTER_PLAN và prune completed tasks khỏi `tasks.md`, rồi `/plan2task` phase kế tiếp.
+- Root checks: `npm run test`, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`; dependency checks `npm audit --json` and `npm audit --omit=dev --json` in isolated lane.
+- Normal tests use `scripts/run-tests.mjs`; do not relabel in-memory audit tests as wrapper/DB/browser PASS.
+- New verification commands in tasks are PROPOSED deliverables of P98M1T03, not currently available tooling. P98M1T03 must implement and exercise them before consumers execute. Missing tool => BLOCKED_CAPABILITY, no stub PASS.
+- Browser: discovered `/usr/bin/google-chrome-stable`; synthetic local fixtures only by default. Existing tests/perf/benchmark-harness.mjs targets production and mutates sessions: never treat it as read-only.
+- Source secret scan: new scanner gate must report only paths/rule IDs, never secret values. No credential/env reads by Runner.
+- Proposed Runner root `/home/pi5/projects/kurabe-task-wt`; integration root `/home/pi5/projects/kurabe-integration-wt`; distinct task directories, no shared mutable .next or DB. These roots satisfy current Agy wrapper allowlists; verify wrapper capability before dispatch. Routine evidence stays under `/home/pi5/hermes-artifacts/kurabe-execution/`.
+- MAX_PARALLEL_RUNNERS=2; MAX_CANDIDATE_VERIFIERS=1; PUBLISH_REFRESH_TIMEOUT=300 seconds; MACHINE_EXCLUSIVE lock for whole-machine checks. No infrastructure installed by this plan.
+- Disposable outputs in isolated WT: `.tmp/testbuild`, `.tmp/verification`, `.next`, `tsconfig.tsbuildinfo`; evidence retained outside disposable cleanup with hashes. Never rebuild a serving .next.
+- Single Mika control writer; `.state/control.lock` plus atomic rename for state. Liveness: exact captured PID/start-time/job handle matched via `ps -p <pid> -o pid=,lstart=,args=` plus wrapper completion; matching live process=LIVE, confirmed exit=DEAD, ambiguous=UNKNOWN. Unknown reservations retained.
+- All external actions Mika-owned; Runner owns only code/test files. No task grants credentials, push, permissions, DB mutation or deploy without separate owner approval.
+- Each task includes wiring + matching tests. Keep stable IDs; no auto-sweep that removes unresolved dependencies; future task context revalidated immediately before dispatch.
