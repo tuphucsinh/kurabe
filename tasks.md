@@ -35,7 +35,7 @@ Preserve historical PASS_WITH_CONSTRAINT, not a fresh live baseline. Refresh bef
 
 ## Phase 98 — active planning / execution held
 
-### [ ] [#P98M1T02] Reconcile production truth and retained task evidence
+### [x] [#P98M1T02] Reconcile production truth and retained task evidence
 ```yaml
 task:
   id: P98M1T02
@@ -49,6 +49,8 @@ Current context: HANDOFF, state's six retained paths, Git P98M2T04 commit 9321c5
 Changes: Inspect exact roots/refs/diffs/liveness; preserve unknown residue; reconcile existing catalog provenance and dependency statuses. If approved catalog access is needed, capture single-Active/index/RPC signature+definition/grants/RLS/ledger plus aggregate NULL counts and deployed SHA/flag evidence.
 Constraints: No deletion, DDL/DML, secrets exposure or auto-tick from commit title. Required access absent => BLOCKED, not guessed live truth.
 DoD: `git status --short --branch`, `git worktree list --porcelain`, `git for-each-ref refs/heads refs/mika`, exact retained-root inventory and scoped SELECT command manifest with successful outputs; every predicate VERIFIED/UNKNOWN/DRIFT. Unknown dependency or liveness blocks follow-on work. Control reconciliation via Mika guard.
+
+Evidence: fresh SELECT/catalog and Vercel readbacks are retained under `/home/pi5/hermes-artifacts/kurabe-execution/`; production deployment is known DRIFT (`c300719` vs canonical `c00545d`), strict password flag is absent, and six retained roots remain preserved (four dirty).
 
 ### [ ] [#P98M1T03] Qualify isolated DB/browser/security verification lane
 ```yaml
