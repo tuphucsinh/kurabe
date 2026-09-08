@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en" data-release-status="loading">
+  <head><meta charset="utf-8"><title>Kurabe local release check</title></head>
+  <body>
+    <main data-release-check="kurabe-local-browser">Local synthetic release fixture</main>
+    <script>
+      document.documentElement.dataset.releaseStatus = 'ready';
+      document.querySelector('[data-release-check]').dataset.assertion = 'executed-by-chrome';
+    </script>
+  </body>
+</html>

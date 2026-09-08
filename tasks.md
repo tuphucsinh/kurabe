@@ -52,7 +52,7 @@ DoD: `git status --short --branch`, `git worktree list --porcelain`, `git for-ea
 
 Evidence: fresh SELECT/catalog and Vercel readbacks are retained under `/home/pi5/hermes-artifacts/kurabe-execution/`; production deployment is known DRIFT (`c300719` vs canonical `c00545d`), strict password flag is absent, and six retained roots remain preserved (four dirty).
 
-### [ ] [#P98M1T03] Qualify isolated DB/browser/security verification lane
+### [x] [#P98M1T03] Qualify isolated DB/browser/security verification lane
 ```yaml
 task:
   id: P98M1T03
