@@ -200,7 +200,7 @@ DoD: `node tests/p98-evaluator-auth.test.mjs`; real DB tests via qualified harne
 
 ## Phase 99 — planned, dependency-gated
 
-### [ ] [#P99M1T01] Reproducible complete DB baseline and migration replay
+### [x] [#P99M1T01] Reproducible complete DB baseline and migration replay
 ```yaml
 task:
   id: P99M1T01

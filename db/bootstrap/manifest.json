@@ -1,0 +1,394 @@
+{
+  "applied_ledger_replay": [
+    {
+      "name": "create_base_schema",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260428135216_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260428135216"
+    },
+    {
+      "name": "add_missing_evaluation_tables_and_columns",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260428135445_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260428135445"
+    },
+    {
+      "name": "add_default_level_index",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260428155553_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260428155553"
+    },
+    {
+      "name": "add_is_active_for_soft_delete",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260507023457_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260507023457"
+    },
+    {
+      "name": "convert_unique_employee_code_to_partial_index",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260507023529_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260507023529"
+    },
+    {
+      "name": "add_updated_at_to_users",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260514125847_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260514125847"
+    },
+    {
+      "name": "optimize_performance_indexes",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260514132748_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260514132748"
+    },
+    {
+      "name": "harden_security_rls",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260514132806_legacy.sql",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "20260514132806"
+    },
+    {
+      "name": "create_chat_usage",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260815_create_chat_usage.sql",
+      "source_sha256": "528f3e26fee3485f3ac382b4a75c10515f2b345c06c7ce77ec23c5a92012a70c",
+      "version": "20260815"
+    },
+    {
+      "name": "add_users_gender",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260815180000_add_users_gender.sql",
+      "source_sha256": "420927ae89443b53d3856bcf3e1eaaad61324a2e0f49913aee470d0e0c18104b",
+      "version": "20260815180000"
+    },
+    {
+      "name": "create_chat_reports",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260815190000_create_chat_reports.sql",
+      "source_sha256": "7b4da635da693b9d27eef641b49859884c46160da63babdbcf588b5f50eae8b9",
+      "version": "20260815190000"
+    },
+    {
+      "name": "chat_reports_user_id",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260815200000_chat_reports_user_id.sql",
+      "source_sha256": "773ce6f60ea1f8afbadd98e76aae386efeccd747a23ab07df0b59c25e3ce1e6d",
+      "version": "20260815200000"
+    },
+    {
+      "name": "evaluations_result_message",
+      "replay": "ledger-only",
+      "source": "supabase/migrations/20260815210000_evaluations_result_message.sql",
+      "source_sha256": "4bc245203cdf1745963ab098d41804b257496e7d5a93d30a53764f857d4709e6",
+      "version": "20260815210000"
+    },
+    {
+      "name": "p96t03_single_active_period",
+      "replay": "ledger-only",
+      "source": null,
+      "source_sha256": null,
+      "version": "20260826140550"
+    },
+    {
+      "name": "p96t04_atomic_period_lifecycle",
+      "replay": "ledger-only",
+      "source": null,
+      "source_sha256": null,
+      "version": "20260826140552"
+    },
+    {
+      "name": "p96t05_closed_period_write_firewall",
+      "replay": "ledger-only",
+      "source": null,
+      "source_sha256": null,
+      "version": "20260826140554"
+    }
+  ],
+  "baseline": {
+    "mode": "schema-only-snapshot",
+    "path": "db/bootstrap/baseline.sql",
+    "sha256": "2d270dec3c0b5a5fbb5cf7522d23c9b6d2eace3397e8bceee5bb65b5bf08cc59"
+  },
+  "expected_catalog": {
+    "path": "db/bootstrap/expected-catalog.json",
+    "predicate": [
+      "public"
+    ],
+    "sha256": "a3ccc1796a7d9d55f3cf5650b6e79c8228bcb8aee2df0a38aad6b4da75947608"
+  },
+  "format": "kurabe-p99m1t01-bootstrap-manifest/v1",
+  "functions": {
+    "path": "db/bootstrap/functions.sql",
+    "sha256": "fe20aecfdab4029424f6d0020c5fc2dc16860f7d303dff3653a57f8bc5345d19"
+  },
+  "legacy_provenance": [
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260428135216_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260428135445_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260428155553_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260507023457_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260507023529_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260514125847_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260514132748_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260514132806_legacy.sql",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 591,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260815180000_add_users_gender.sql",
+      "sha256": "420927ae89443b53d3856bcf3e1eaaad61324a2e0f49913aee470d0e0c18104b"
+    },
+    {
+      "bytes": 821,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260815190000_create_chat_reports.sql",
+      "sha256": "7b4da635da693b9d27eef641b49859884c46160da63babdbcf588b5f50eae8b9"
+    },
+    {
+      "bytes": 318,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260815200000_chat_reports_user_id.sql",
+      "sha256": "773ce6f60ea1f8afbadd98e76aae386efeccd747a23ab07df0b59c25e3ce1e6d"
+    },
+    {
+      "bytes": 196,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260815210000_evaluations_result_message.sql",
+      "sha256": "4bc245203cdf1745963ab098d41804b257496e7d5a93d30a53764f857d4709e6"
+    },
+    {
+      "bytes": 677,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260815_create_chat_usage.sql",
+      "sha256": "528f3e26fee3485f3ac382b4a75c10515f2b345c06c7ce77ec23c5a92012a70c"
+    },
+    {
+      "bytes": 2206,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260826000000_p96t03_single_active_period.sql",
+      "sha256": "4b40bdc7c52852172aeb2aee2d062324917e07801a812fed76d8d4b4692b570d"
+    },
+    {
+      "bytes": 11964,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260826010000_p96t04_atomic_period_lifecycle.sql",
+      "sha256": "db1fd360cc19654f49646ad8fd77be8404c88fc576c22c43116d3587b8c67488"
+    },
+    {
+      "bytes": 7100,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260826020000_p96t05_closed_period_write_firewall.sql",
+      "sha256": "1a6cb19f3dfc6ac89deb38f4b3e1758eff63808233d59de218610cbf0103c019"
+    },
+    {
+      "bytes": 5516,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260905070000_p98_password_setup.sql",
+      "sha256": "f73937a04a4d4554a61de2c0957598dc109b50e311c87d6e7b1d53160d5004fe"
+    },
+    {
+      "bytes": 7359,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260905070500_p98_mark_legacy_password_setup.sql",
+      "sha256": "6bd9e7530ebeb20953bdde92d54b7987d5f9c95597fffa0a05d969fb3d21556f"
+    },
+    {
+      "bytes": 13338,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260905071000_p98_evaluator_null_safety.sql",
+      "sha256": "564bf12ccc0f7ad99cbaf6e549acaf4f913a1c64a412c90ec98845e5d7bc7a75"
+    },
+    {
+      "bytes": 9718,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260905072000_p98_password_setup_transaction.sql",
+      "sha256": "bb2bb061652d6b7e7227d5a14c9c8ffbb49d26e284883a0fc3b020d9136b5cc0"
+    },
+    {
+      "bytes": 7298,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260907000100_credential_change.sql",
+      "sha256": "55d8b76eb23a0b06f89571acd0a68239e8e4a389854cced8463963990ecc3aeb"
+    },
+    {
+      "bytes": 11443,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260907000200_login_rate_limit.sql",
+      "sha256": "e3ff0ccde051c841b5fcea9f0940431dc51c3d3733b95d7b58cf307c423c50cc"
+    },
+    {
+      "bytes": 32098,
+      "classification": "ordered-source",
+      "path": "supabase/migrations/20260909000100_p98_reconcile_login_attempts.sql",
+      "sha256": "17984ceefd58f556f21e3da2e83dac148295b32041667ffcbe3cc83dddc44976"
+    },
+    {
+      "bytes": 488,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-b-account.sql",
+      "sha256": "bfa5de26b4bd4a3fbec6ea738aff2d084b090fd5b8628a6b7165a9959ce0e55a"
+    },
+    {
+      "bytes": 1678,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-c-grade-bands.sql",
+      "sha256": "21e9e74b8b534eced48b45a5c7b213bcad226aa5616cc6498a3f8013023d049d"
+    },
+    {
+      "bytes": 1227,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-d-rls.sql",
+      "sha256": "8b150f6f87fda75114cae4dc71998aae24298b821a2e589f2025c04ed5bb28bf"
+    },
+    {
+      "bytes": 816,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-e-audit.sql",
+      "sha256": "dbf13ac56a3b2d8104bc563f162b5f73191e736758f7588467d9a7087b114bc2"
+    },
+    {
+      "bytes": 508,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-f-target.sql",
+      "sha256": "cb9b4392b1ab5a250bbd47fe61af86e0e9dbf820946a7a4fe6d53897d3b59222"
+    },
+    {
+      "bytes": 853,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-g-ai-summaries.sql",
+      "sha256": "4606892ee13743e9f5c261baeda741af4d871f76c0cd4f8f78b84fffbc7048c9"
+    },
+    {
+      "bytes": 470,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-h-subleader.sql",
+      "sha256": "4e1b4fa65cdb77cbe59949a187f357c072d132db226e5ec82bfb10ff1c9a63db"
+    },
+    {
+      "bytes": 889,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-i-password-revoke.sql",
+      "sha256": "27f5ccb83a72e6a26d654dc8659b5107f451185731a0962addd8e13775965f66"
+    },
+    {
+      "bytes": 984,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-j1-rls-evaluations.sql",
+      "sha256": "267cf4a5d2ae23f93f9cc8b0384e7a476b5e56c3e5e4207cc6e695c0b2e79a89"
+    },
+    {
+      "bytes": 718,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-j2-rls-users-teams.sql",
+      "sha256": "5b6befa487ebd26da19e199d0982171ecf4e29a8e7a9bf5d68ec1c4e84820708"
+    },
+    {
+      "bytes": 929,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-j3-rls-criteria.sql",
+      "sha256": "eb2aebaf14c06d793285fa7197d300723e5fa6192d2a7a25927144ec601bdc2f"
+    },
+    {
+      "bytes": 2000,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-k1-sessions.sql",
+      "sha256": "341129f9a9dfb42db960bac6ef7d98d4bb3798aa3cbab0aed104ff81505c2e15"
+    },
+    {
+      "bytes": 907,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-k2-revoke-anon-write.sql",
+      "sha256": "a06a8d7b218dc6bce10ca365ac01cd6724b40b7154a4550860b2736e72275c4a"
+    },
+    {
+      "bytes": 2450,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-k3-revoke-anon-read.sql",
+      "sha256": "bd6d04171e216e34beda1ee14b49817297720c2d11b4879b26e6935eb39c3452"
+    },
+    {
+      "bytes": 1918,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-k4-revoke-anon-users-teams.sql",
+      "sha256": "1480c942dcb004052f11cea7aa7e81bc0859a17e830f3429c6a6e8dd205968ea"
+    },
+    {
+      "bytes": 25740,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-p3-evaluation-transaction.sql",
+      "sha256": "4e32428022ef377db76e235ed82c0722cfed6317fbc9317a43fddd366c650ec2"
+    },
+    {
+      "bytes": 6260,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-p3-retention.sql",
+      "sha256": "faad54617456b71460bf6b109686e19d7d34673dca09c0b998153362fa25a584"
+    },
+    {
+      "bytes": 4168,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-p81-criterion-audiences.sql",
+      "sha256": "e5a9e979f1b3624f113d4e4f35fd4cdda3e8c3f9c595dce61ee0aac079a9aff9"
+    },
+    {
+      "bytes": 5748,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-p81-merge-worker-criteria.sql",
+      "sha256": "7166ae67482e9d2f18d3f358ad965b513ac8fc647b0b0d781fdcb5caea62ca66"
+    },
+    {
+      "bytes": 2798,
+      "classification": "legacy-provenance-only",
+      "path": "db/migration-p81-worker-grade-bands.sql",
+      "sha256": "726be47ffc92ec1bae887b6ce73a40f94835acceded974ae5b87f3ec0030a2e2"
+    }
+  ],
+  "replay_contract": "The baseline is the reviewed end-state snapshot. Historical applied entries are replayed into supabase_migrations.schema_migrations in exact order; source SQL is not re-executed against the end-state snapshot."
+}

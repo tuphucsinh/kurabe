@@ -1,0 +1,5134 @@
+{
+  "format": "kurabe-p99m1t01-expected-catalog/v1",
+  "migration_ledger": [
+    {
+      "name": "create_base_schema",
+      "version": "20260428135216"
+    },
+    {
+      "name": "add_missing_evaluation_tables_and_columns",
+      "version": "20260428135445"
+    },
+    {
+      "name": "add_default_level_index",
+      "version": "20260428155553"
+    },
+    {
+      "name": "add_is_active_for_soft_delete",
+      "version": "20260507023457"
+    },
+    {
+      "name": "convert_unique_employee_code_to_partial_index",
+      "version": "20260507023529"
+    },
+    {
+      "name": "add_updated_at_to_users",
+      "version": "20260514125847"
+    },
+    {
+      "name": "optimize_performance_indexes",
+      "version": "20260514132748"
+    },
+    {
+      "name": "harden_security_rls",
+      "version": "20260514132806"
+    },
+    {
+      "name": "create_chat_usage",
+      "version": "20260815"
+    },
+    {
+      "name": "add_users_gender",
+      "version": "20260815180000"
+    },
+    {
+      "name": "create_chat_reports",
+      "version": "20260815190000"
+    },
+    {
+      "name": "chat_reports_user_id",
+      "version": "20260815200000"
+    },
+    {
+      "name": "evaluations_result_message",
+      "version": "20260815210000"
+    },
+    {
+      "name": "p96t03_single_active_period",
+      "version": "20260826140550"
+    },
+    {
+      "name": "p96t04_atomic_period_lifecycle",
+      "version": "20260826140552"
+    },
+    {
+      "name": "p96t05_closed_period_write_firewall",
+      "version": "20260826140554"
+    }
+  ],
+  "predicate": {
+    "columns": [
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "period_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "summary",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "created_by",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "user_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'ai'::text",
+        "column_name": "action",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "actor_id",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 2,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "actor_name",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 3,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "action",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "entity",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 5,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "entity_id",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "detail",
+        "formatted_type": "jsonb",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 8,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "''::text",
+        "column_name": "user_name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "''::text",
+        "column_name": "role",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "''::text",
+        "column_name": "pathname",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "''::text",
+        "column_name": "question",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 5,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "''::text",
+        "column_name": "history",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 6,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 7,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'new'::text",
+        "column_name": "status",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 8,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "user_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 9,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "user_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "code",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "description",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "applies_to",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "1",
+        "column_name": "weight",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "group_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "0",
+        "column_name": "sort_order",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 8,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "default_level_index",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 9,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "true",
+        "column_name": "is_active",
+        "formatted_type": "boolean",
+        "is_nullable": "YES",
+        "ordinal_position": 10,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "code",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "short_name",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "0",
+        "column_name": "sort_order",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "true",
+        "column_name": "is_active",
+        "formatted_type": "boolean",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "criterion_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "audience",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 3,
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "criterion_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "points",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "label",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "description",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "0",
+        "column_name": "sort_order",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "year",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "status",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "created_by",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "closed_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "75",
+        "column_name": "target_rate",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 8,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'AB'::text",
+        "column_name": "target_grade",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 9,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "round_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 2,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "criterion_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 3,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "level_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "points",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 5,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "comment",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "evaluation_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "round",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "evaluator_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "evaluator_role",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 5,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'{}'::jsonb",
+        "column_name": "scores",
+        "formatted_type": "jsonb",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'{}'::jsonb",
+        "column_name": "notes",
+        "formatted_type": "jsonb",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "total_score",
+        "formatted_type": "numeric",
+        "is_nullable": "YES",
+        "ordinal_position": 8,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "grade",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 9,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "comment",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 10,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "additional_comment",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 11,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "submitted_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 12,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 13,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'Draft'::text",
+        "column_name": "status",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 14,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "period_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "employee_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "employee_role",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "team_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "1",
+        "column_name": "current_round",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "status",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 7,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "final_grade",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 8,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "final_score",
+        "formatted_type": "numeric",
+        "is_nullable": "YES",
+        "ordinal_position": 9,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 10,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "updated_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 11,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "return_note",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 12,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "result_message",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 13,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "role_group",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "grade",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "min_score",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "max_score",
+        "formatted_type": "integer",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "0",
+        "column_name": "sort_order",
+        "formatted_type": "integer",
+        "is_nullable": "NO",
+        "ordinal_position": 6,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "employee_code",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "ip",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "attempted_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "token_hash",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "user_id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "expires_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "NO",
+        "ordinal_position": 5,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "leader_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 3,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 4,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "true",
+        "column_name": "is_active",
+        "formatted_type": "boolean",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "gen_random_uuid()",
+        "column_name": "id",
+        "formatted_type": "uuid",
+        "is_nullable": "NO",
+        "ordinal_position": 1,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "employee_code",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 2,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "name",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 3,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "role",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 4,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "team_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 5,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "join_date",
+        "formatted_type": "date",
+        "is_nullable": "YES",
+        "ordinal_position": 6,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "avatar_url",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 7,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "created_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 8,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "true",
+        "column_name": "is_active",
+        "formatted_type": "boolean",
+        "is_nullable": "YES",
+        "ordinal_position": 9,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "now()",
+        "column_name": "updated_at",
+        "formatted_type": "timestamp with time zone",
+        "is_nullable": "YES",
+        "ordinal_position": 10,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "password_hash",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 11,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "subleader_id",
+        "formatted_type": "uuid",
+        "is_nullable": "YES",
+        "ordinal_position": 12,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": null,
+        "column_name": "description",
+        "formatted_type": "text",
+        "is_nullable": "YES",
+        "ordinal_position": 13,
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "column_default": "'Nữ'::text",
+        "column_name": "gender",
+        "formatted_type": "text",
+        "is_nullable": "NO",
+        "ordinal_position": 14,
+        "table_name": "users",
+        "table_schema": "public"
+      }
+    ],
+    "constraints": [
+      {
+        "constraint_name": "ai_summaries_period_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (period_id) REFERENCES evaluation_periods(id) ON DELETE CASCADE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "ai_summaries_period_id_key",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (period_id)",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "ai_summaries_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "ai_usage_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "ai_usage_user_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "audit_logs_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chat_reports_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chat_usage_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criteria_code_key",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (code)",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criteria_group_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (group_id) REFERENCES criteria_groups(id) ON DELETE CASCADE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criteria_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criteria_groups_code_key",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (code)",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criteria_groups_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criterion_audiences_audience_check",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (audience = ANY (ARRAY['management'::text, 'employee'::text, 'worker'::text]))",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criterion_audiences_criterion_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (criterion_id) REFERENCES criteria(id) ON DELETE CASCADE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criterion_audiences_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (criterion_id, audience)",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criterion_levels_criterion_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (criterion_id) REFERENCES criteria(id) ON DELETE CASCADE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "criterion_levels_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_periods_created_by_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_periods_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_responses_criterion_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (criterion_id) REFERENCES criteria(id)",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_responses_level_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (level_id) REFERENCES criterion_levels(id)",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_responses_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_responses_round_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (round_id) REFERENCES evaluation_rounds(id) ON DELETE CASCADE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluation_rounds_round_range",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (round >= 1 AND round <= 3)",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluation_rounds_status_valid",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (status = ANY (ARRAY['NotStarted'::text, 'Draft'::text, 'Submitted'::text]))",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluation_rounds_total_score_non_negative",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (total_score IS NULL OR total_score >= 0::numeric)",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_rounds_evaluation_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (evaluation_id) REFERENCES evaluations(id) ON DELETE CASCADE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_rounds_evaluator_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (evaluator_id) REFERENCES users(id) ON DELETE SET NULL",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluation_rounds_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "uq_evaluation_rounds_eval_round",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (evaluation_id, round)",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluations_current_round_range",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (current_round IS NULL OR current_round >= 1 AND current_round <= 3)",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluations_final_score_non_negative",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (final_score IS NULL OR final_score >= 0::numeric)",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "chk_evaluations_status_valid",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (status = ANY (ARRAY['NotStarted'::text, 'Draft'::text, 'Submitted'::text, 'Reviewed'::text, 'Approved'::text]))",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluations_employee_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (employee_id) REFERENCES users(id) ON DELETE CASCADE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluations_period_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (period_id) REFERENCES evaluation_periods(id) ON DELETE CASCADE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluations_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "evaluations_team_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "uq_evaluations_period_employee",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (period_id, employee_id)",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "grade_bands_grade_check",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (grade = ANY (ARRAY['S'::text, 'A'::text, 'AB'::text, 'B'::text, 'C'::text, 'D'::text]))",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "grade_bands_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "grade_bands_role_group_check",
+        "constraint_type": "CHECK",
+        "definition": "CHECK (role_group = ANY (ARRAY['leader'::text, 'staff'::text, 'worker'::text]))",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "grade_bands_role_group_grade_key",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (role_group, grade)",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "login_attempts_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "sessions_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "sessions_token_hash_key",
+        "constraint_type": "UNIQUE",
+        "definition": "UNIQUE (token_hash)",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "sessions_user_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "fk_teams_leader",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (leader_id) REFERENCES users(id) ON DELETE SET NULL",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "teams_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "users_pkey",
+        "constraint_type": "PRIMARY KEY",
+        "definition": "PRIMARY KEY (id)",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "users_subleader_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (subleader_id) REFERENCES users(id)",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "constraint_name": "users_team_id_fkey",
+        "constraint_type": "FOREIGN KEY",
+        "definition": "FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL",
+        "table_name": "users",
+        "table_schema": "public"
+      }
+    ],
+    "extensions": [
+      "pgcrypto"
+    ],
+    "functions": [
+      {
+        "comment": "kurabe:p96t04:candidate:v1:function:create_evaluation_period_atomic",
+        "configuration": [
+          "search_path=public"
+        ],
+        "definition_sha256": "61e79536f59c768026b83d18f2551d49390662a4c0c3bffc602314444fff7e71",
+        "identity_arguments": "p_name text, p_year integer, p_created_by uuid, p_created_at timestamp with time zone, p_evaluations jsonb, p_rounds jsonb",
+        "return_type": "uuid",
+        "routine_name": "create_evaluation_period_atomic",
+        "routine_schema": "public",
+        "security_definer": true
+      },
+      {
+        "comment": "kurabe:p96t04:candidate:v1:function:delete_empty_evaluation_period_atomic",
+        "configuration": [
+          "search_path=public"
+        ],
+        "definition_sha256": "7fd50792e063faa44721110a827ab585c00699f97572eb315c44e6497116905f",
+        "identity_arguments": "p_period_id uuid",
+        "return_type": "jsonb",
+        "routine_name": "delete_empty_evaluation_period_atomic",
+        "routine_schema": "public",
+        "security_definer": true
+      },
+      {
+        "comment": null,
+        "configuration": [
+          "search_path=public"
+        ],
+        "definition_sha256": "07ef54c386b5bde7720c3ea801d274628682e2c9bc5c7d49ba44117271faf9e8",
+        "identity_arguments": "",
+        "return_type": "trigger",
+        "routine_name": "handle_updated_at",
+        "routine_schema": "public",
+        "security_definer": false
+      },
+      {
+        "comment": "kurabe:p3:candidate:v1:function:save_evaluation_round_transaction",
+        "configuration": [
+          "search_path=public"
+        ],
+        "definition_sha256": "8b6f86385e3f2632c96ab8477410e0333e8a1aeaa59becbf93ef14098f29e302",
+        "identity_arguments": "p_evaluation_id uuid, p_round integer, p_actor_id uuid, p_scores jsonb, p_notes jsonb, p_comment text, p_total_score numeric, p_grade text, p_is_submit boolean, p_submitted_at timestamp with time zone, p_next_round integer, p_next_evaluator_id uuid, p_next_evaluator_role text, p_next_status text, p_is_final boolean",
+        "return_type": "TABLE(round_id uuid, evaluation_id uuid, next_round_id uuid, final_status text)",
+        "routine_name": "save_evaluation_round_transaction",
+        "routine_schema": "public",
+        "security_definer": true
+      },
+      {
+        "comment": "kurabe:p96t05:candidate:v1:function:save_evaluation_round_transaction_active_only",
+        "configuration": [
+          "search_path=public"
+        ],
+        "definition_sha256": "350ea6ad960fe8bb08ef32ebc195a0d232ebcb8e13d022e43e1d620e36d558db",
+        "identity_arguments": "p_evaluation_id uuid, p_round integer, p_actor_id uuid, p_scores jsonb, p_notes jsonb, p_comment text, p_total_score numeric, p_grade text, p_is_submit boolean, p_submitted_at timestamp with time zone, p_next_round integer, p_next_evaluator_id uuid, p_next_evaluator_role text, p_next_status text, p_is_final boolean",
+        "return_type": "TABLE(round_id uuid, evaluation_id uuid, next_round_id uuid, final_status text)",
+        "routine_name": "save_evaluation_round_transaction_active_only",
+        "routine_schema": "public",
+        "security_definer": true
+      }
+    ],
+    "indexes": [
+      {
+        "definition": "CREATE UNIQUE INDEX ai_summaries_period_id_key ON public.ai_summaries USING btree (period_id)",
+        "index_name": "ai_summaries_period_id_key",
+        "schema_name": "public",
+        "table_name": "ai_summaries"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX ai_summaries_pkey ON public.ai_summaries USING btree (id)",
+        "index_name": "ai_summaries_pkey",
+        "schema_name": "public",
+        "table_name": "ai_summaries"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX ai_usage_pkey ON public.ai_usage USING btree (id)",
+        "index_name": "ai_usage_pkey",
+        "schema_name": "public",
+        "table_name": "ai_usage"
+      },
+      {
+        "definition": "CREATE INDEX idx_ai_usage_user_time ON public.ai_usage USING btree (user_id, created_at)",
+        "index_name": "idx_ai_usage_user_time",
+        "schema_name": "public",
+        "table_name": "ai_usage"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id)",
+        "index_name": "audit_logs_pkey",
+        "schema_name": "public",
+        "table_name": "audit_logs"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX chat_reports_pkey ON public.chat_reports USING btree (id)",
+        "index_name": "chat_reports_pkey",
+        "schema_name": "public",
+        "table_name": "chat_reports"
+      },
+      {
+        "definition": "CREATE INDEX chat_reports_user_created_idx ON public.chat_reports USING btree (user_id, created_at)",
+        "index_name": "chat_reports_user_created_idx",
+        "schema_name": "public",
+        "table_name": "chat_reports"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX chat_usage_pkey ON public.chat_usage USING btree (id)",
+        "index_name": "chat_usage_pkey",
+        "schema_name": "public",
+        "table_name": "chat_usage"
+      },
+      {
+        "definition": "CREATE INDEX chat_usage_user_created_idx ON public.chat_usage USING btree (user_id, created_at)",
+        "index_name": "chat_usage_user_created_idx",
+        "schema_name": "public",
+        "table_name": "chat_usage"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criteria_code_key ON public.criteria USING btree (code)",
+        "index_name": "criteria_code_key",
+        "schema_name": "public",
+        "table_name": "criteria"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criteria_pkey ON public.criteria USING btree (id)",
+        "index_name": "criteria_pkey",
+        "schema_name": "public",
+        "table_name": "criteria"
+      },
+      {
+        "definition": "CREATE INDEX idx_criteria_group_id ON public.criteria USING btree (group_id)",
+        "index_name": "idx_criteria_group_id",
+        "schema_name": "public",
+        "table_name": "criteria"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criteria_groups_code_key ON public.criteria_groups USING btree (code)",
+        "index_name": "criteria_groups_code_key",
+        "schema_name": "public",
+        "table_name": "criteria_groups"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criteria_groups_pkey ON public.criteria_groups USING btree (id)",
+        "index_name": "criteria_groups_pkey",
+        "schema_name": "public",
+        "table_name": "criteria_groups"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criterion_audiences_pkey ON public.criterion_audiences USING btree (criterion_id, audience)",
+        "index_name": "criterion_audiences_pkey",
+        "schema_name": "public",
+        "table_name": "criterion_audiences"
+      },
+      {
+        "definition": "CREATE INDEX idx_criterion_audiences_audience ON public.criterion_audiences USING btree (audience)",
+        "index_name": "idx_criterion_audiences_audience",
+        "schema_name": "public",
+        "table_name": "criterion_audiences"
+      },
+      {
+        "definition": "CREATE INDEX idx_criterion_audiences_criterion_id ON public.criterion_audiences USING btree (criterion_id)",
+        "index_name": "idx_criterion_audiences_criterion_id",
+        "schema_name": "public",
+        "table_name": "criterion_audiences"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX criterion_levels_pkey ON public.criterion_levels USING btree (id)",
+        "index_name": "criterion_levels_pkey",
+        "schema_name": "public",
+        "table_name": "criterion_levels"
+      },
+      {
+        "definition": "CREATE INDEX idx_criterion_levels_criterion_id ON public.criterion_levels USING btree (criterion_id)",
+        "index_name": "idx_criterion_levels_criterion_id",
+        "schema_name": "public",
+        "table_name": "criterion_levels"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX evaluation_periods_pkey ON public.evaluation_periods USING btree (id)",
+        "index_name": "evaluation_periods_pkey",
+        "schema_name": "public",
+        "table_name": "evaluation_periods"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_periods_created_by ON public.evaluation_periods USING btree (created_by)",
+        "index_name": "idx_evaluation_periods_created_by",
+        "schema_name": "public",
+        "table_name": "evaluation_periods"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX idx_evaluation_periods_single_active ON public.evaluation_periods USING btree (status) WHERE (status = 'active'::text)",
+        "index_name": "idx_evaluation_periods_single_active",
+        "schema_name": "public",
+        "table_name": "evaluation_periods"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX evaluation_responses_pkey ON public.evaluation_responses USING btree (id)",
+        "index_name": "evaluation_responses_pkey",
+        "schema_name": "public",
+        "table_name": "evaluation_responses"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_responses_criterion_id ON public.evaluation_responses USING btree (criterion_id)",
+        "index_name": "idx_evaluation_responses_criterion_id",
+        "schema_name": "public",
+        "table_name": "evaluation_responses"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_responses_level_id ON public.evaluation_responses USING btree (level_id)",
+        "index_name": "idx_evaluation_responses_level_id",
+        "schema_name": "public",
+        "table_name": "evaluation_responses"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_responses_round_id ON public.evaluation_responses USING btree (round_id)",
+        "index_name": "idx_evaluation_responses_round_id",
+        "schema_name": "public",
+        "table_name": "evaluation_responses"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX evaluation_rounds_pkey ON public.evaluation_rounds USING btree (id)",
+        "index_name": "evaluation_rounds_pkey",
+        "schema_name": "public",
+        "table_name": "evaluation_rounds"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_rounds_eval_round ON public.evaluation_rounds USING btree (evaluation_id, round)",
+        "index_name": "idx_evaluation_rounds_eval_round",
+        "schema_name": "public",
+        "table_name": "evaluation_rounds"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_rounds_evaluation_id ON public.evaluation_rounds USING btree (evaluation_id)",
+        "index_name": "idx_evaluation_rounds_evaluation_id",
+        "schema_name": "public",
+        "table_name": "evaluation_rounds"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluation_rounds_evaluator_id ON public.evaluation_rounds USING btree (evaluator_id)",
+        "index_name": "idx_evaluation_rounds_evaluator_id",
+        "schema_name": "public",
+        "table_name": "evaluation_rounds"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX uq_evaluation_rounds_eval_round ON public.evaluation_rounds USING btree (evaluation_id, round)",
+        "index_name": "uq_evaluation_rounds_eval_round",
+        "schema_name": "public",
+        "table_name": "evaluation_rounds"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX evaluations_pkey ON public.evaluations USING btree (id)",
+        "index_name": "evaluations_pkey",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluations_employee_id ON public.evaluations USING btree (employee_id)",
+        "index_name": "idx_evaluations_employee_id",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluations_period_employee ON public.evaluations USING btree (period_id, employee_id)",
+        "index_name": "idx_evaluations_period_employee",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluations_period_id ON public.evaluations USING btree (period_id)",
+        "index_name": "idx_evaluations_period_id",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE INDEX idx_evaluations_team_id ON public.evaluations USING btree (team_id)",
+        "index_name": "idx_evaluations_team_id",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX uq_evaluations_period_employee ON public.evaluations USING btree (period_id, employee_id)",
+        "index_name": "uq_evaluations_period_employee",
+        "schema_name": "public",
+        "table_name": "evaluations"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX grade_bands_pkey ON public.grade_bands USING btree (id)",
+        "index_name": "grade_bands_pkey",
+        "schema_name": "public",
+        "table_name": "grade_bands"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX grade_bands_role_group_grade_key ON public.grade_bands USING btree (role_group, grade)",
+        "index_name": "grade_bands_role_group_grade_key",
+        "schema_name": "public",
+        "table_name": "grade_bands"
+      },
+      {
+        "definition": "CREATE INDEX idx_login_attempts_code_ip_time ON public.login_attempts USING btree (employee_code, ip, attempted_at)",
+        "index_name": "idx_login_attempts_code_ip_time",
+        "schema_name": "public",
+        "table_name": "login_attempts"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX login_attempts_pkey ON public.login_attempts USING btree (id)",
+        "index_name": "login_attempts_pkey",
+        "schema_name": "public",
+        "table_name": "login_attempts"
+      },
+      {
+        "definition": "CREATE INDEX idx_sessions_token_hash ON public.sessions USING btree (token_hash)",
+        "index_name": "idx_sessions_token_hash",
+        "schema_name": "public",
+        "table_name": "sessions"
+      },
+      {
+        "definition": "CREATE INDEX idx_sessions_user_expires ON public.sessions USING btree (user_id, expires_at)",
+        "index_name": "idx_sessions_user_expires",
+        "schema_name": "public",
+        "table_name": "sessions"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)",
+        "index_name": "sessions_pkey",
+        "schema_name": "public",
+        "table_name": "sessions"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX sessions_token_hash_key ON public.sessions USING btree (token_hash)",
+        "index_name": "sessions_token_hash_key",
+        "schema_name": "public",
+        "table_name": "sessions"
+      },
+      {
+        "definition": "CREATE INDEX idx_teams_leader_id ON public.teams USING btree (leader_id)",
+        "index_name": "idx_teams_leader_id",
+        "schema_name": "public",
+        "table_name": "teams"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX teams_pkey ON public.teams USING btree (id)",
+        "index_name": "teams_pkey",
+        "schema_name": "public",
+        "table_name": "teams"
+      },
+      {
+        "definition": "CREATE INDEX idx_users_team_id ON public.users USING btree (team_id)",
+        "index_name": "idx_users_team_id",
+        "schema_name": "public",
+        "table_name": "users"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX users_employee_code_active_idx ON public.users USING btree (employee_code) WHERE (is_active = true)",
+        "index_name": "users_employee_code_active_idx",
+        "schema_name": "public",
+        "table_name": "users"
+      },
+      {
+        "definition": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+        "index_name": "users_pkey",
+        "schema_name": "public",
+        "table_name": "users"
+      }
+    ],
+    "policies": [
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "ai_summaries_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "ai_summaries",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "audit_logs_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "audit_logs",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "criteria_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "criteria",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "criteria_groups_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "criteria_groups",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "criterion_audiences_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "criterion_audiences",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "criterion_levels_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "criterion_levels",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "evaluation_periods_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "evaluation_periods",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "evaluation_responses_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "evaluation_responses",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "evaluation_rounds_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "evaluation_rounds",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "evaluations_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "evaluations",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "grade_bands_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "grade_bands",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "teams_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "teams",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policy_name": "users_select_only",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "schema_name": "public",
+        "table_name": "users",
+        "with_check": null
+      }
+    ],
+    "roles": [
+      {
+        "bypass_rls": false,
+        "can_login": false,
+        "inherit": true,
+        "role_name": "anon",
+        "superuser": false
+      },
+      {
+        "bypass_rls": false,
+        "can_login": false,
+        "inherit": true,
+        "role_name": "authenticated",
+        "superuser": false
+      },
+      {
+        "bypass_rls": true,
+        "can_login": false,
+        "inherit": true,
+        "role_name": "service_role",
+        "superuser": false
+      }
+    ],
+    "routine_privileges": [
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "handle_updated_at",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "handle_updated_at",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "EXECUTE",
+        "routine_name": "create_evaluation_period_atomic",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "EXECUTE",
+        "routine_name": "delete_empty_evaluation_period_atomic",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "EXECUTE",
+        "routine_name": "handle_updated_at",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "EXECUTE",
+        "routine_name": "save_evaluation_round_transaction",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "EXECUTE",
+        "routine_name": "save_evaluation_round_transaction_active_only",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "create_evaluation_period_atomic",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "delete_empty_evaluation_period_atomic",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "handle_updated_at",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "save_evaluation_round_transaction",
+        "routine_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "EXECUTE",
+        "routine_name": "save_evaluation_round_transaction_active_only",
+        "routine_schema": "public"
+      }
+    ],
+    "schemas": [
+      "public"
+    ],
+    "table_privileges": [
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "DELETE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "INSERT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "REFERENCES",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "SELECT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRIGGER",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "TRUNCATE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": "YES",
+        "privilege_type": "UPDATE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "DELETE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "INSERT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "REFERENCES",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "SELECT",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRIGGER",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "TRUNCATE",
+        "table_name": "users",
+        "table_schema": "public"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": "NO",
+        "privilege_type": "UPDATE",
+        "table_name": "users",
+        "table_schema": "public"
+      }
+    ],
+    "tables": [
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "ai_summaries",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "ai_usage",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "audit_logs",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "chat_reports",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "chat_usage",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "criteria",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "criteria_groups",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "criterion_audiences",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "criterion_levels",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "evaluation_periods",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "evaluation_responses",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "evaluation_rounds",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "evaluations",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "grade_bands",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "login_attempts",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "sessions",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "teams",
+        "table_schema": "public"
+      },
+      {
+        "owner": "postgres",
+        "relkind": "r",
+        "rls_enabled": true,
+        "rls_forced": false,
+        "table_name": "users",
+        "table_schema": "public"
+      }
+    ],
+    "triggers": [
+      {
+        "definition": "CREATE TRIGGER set_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION handle_updated_at()",
+        "schema_name": "public",
+        "table_name": "users",
+        "trigger_name": "set_updated_at"
+      }
+    ]
+  },
+  "source_artifact": {
+    "path": "p99m1t01-catalog-refresh-v2.json",
+    "row_data": "excluded",
+    "sha256": "99cf57ca6f69b02e86def267dded04b73057349dee04b2def14cf3ff6c10db38"
+  }
+}
