@@ -97,7 +97,7 @@ Changes: Add missing behavioral migration/rollback assertions; preflight eligibl
 Constraints: No production apply, token generation or bulk credential reset. If repair requires a new migration path, amend owns before Runner dispatch.
 DoD: `node scripts/verify-release.mjs --suite legacy-password-setup`; real DB valid/zero/repeated/abort/rollback matrix; preserve credentials and exact counts; root gates and fresh review.
 
-### [ ] [#P98M2T07] Unify self-change credential state and session revocation
+### [x] [#P98M2T07] Unify self-change credential state and session revocation
 ```yaml
 task:
   id: P98M2T07

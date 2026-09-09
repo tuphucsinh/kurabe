@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { UserCircle, KeyRound, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import { UserCircle, KeyRound, ShieldCheck, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeams } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
-import { changePassword, getAccountStatus } from '@/actions/account';
+import {
+  changePassword,
+  getAccountStatus,
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  type AccountStatusResult,
+} from '@/actions/account';
 
 const ROLE_BADGE: Record<string, string> = {
   Manager: 'bg-indigo-100 text-indigo-700',
@@ -28,20 +35,32 @@ export default function AccountTab() {
   const { data: teams = [] } = useTeams(user);
   const { toast } = useToast();
 
-  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [accountStatus, setAccountStatus] = useState<AccountStatusResult | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Kiểm tra user đã đặt mật khẩu chưa (chỉ cần biết null hay không — KHÔNG lộ hash, server-side)
+  // Kiểm tra user đã đặt mật khẩu chưa và có yêu cầu setup token không (server-side, KHÔNG lộ hash)
   useEffect(() => {
     let cancelled = false;
     if (!user) return;
     (async () => {
-      const res = await getAccountStatus();
-      if (!cancelled) {
-        setHasPassword(res.hasPassword);
+      try {
+        const res = await getAccountStatus();
+        if (!cancelled) {
+          setAccountStatus(res);
+        }
+      } catch {
+        if (!cancelled) {
+          setAccountStatus({ hasPassword: false, setupRequired: false });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingStatus(false);
+        }
       }
     })();
     return () => {
@@ -53,31 +72,60 @@ export default function AccountTab() {
 
   const handleSubmit = async () => {
     if (!user) return;
+    setErrorMessage(null);
 
-    if (!newPassword || newPassword.length < 6) {
-      toast('Mật khẩu mới phải có ít nhất 6 ký tự.', 'error');
+    // Tài khoản đang yêu cầu setup token không được phép tự đổi trực tiếp
+    if (accountStatus?.setupRequired || !accountStatus?.hasPassword) {
+      const msg = 'Tài khoản đang yêu cầu thiết lập mật khẩu qua mã xác thực một lần do Quản lý cung cấp. Vui lòng sử dụng trang thiết lập mật khẩu.';
+      setErrorMessage(msg);
+      toast(msg, 'error');
       return;
     }
+
+    if (!oldPassword) {
+      const msg = 'Vui lòng nhập mật khẩu cũ.';
+      setErrorMessage(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      const msg = `Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`;
+      setErrorMessage(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    if (newPassword.length > MAX_PASSWORD_LENGTH) {
+      const msg = `Mật khẩu không được vượt quá ${MAX_PASSWORD_LENGTH} ký tự.`;
+      setErrorMessage(msg);
+      toast(msg, 'error');
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
-      toast('Mật khẩu xác nhận không khớp.', 'error');
-      return;
-    }
-    if (hasPassword && !oldPassword) {
-      toast('Vui lòng nhập mật khẩu cũ.', 'error');
+      const msg = 'Mật khẩu xác nhận không khớp.';
+      setErrorMessage(msg);
+      toast(msg, 'error');
       return;
     }
 
     setIsSaving(true);
     try {
-      const result = await changePassword(hasPassword ? oldPassword : null, newPassword);
+      const result = await changePassword(oldPassword, newPassword, confirmPassword);
       if (result.success) {
-        toast(hasPassword ? 'Đã đổi mật khẩu thành công.' : 'Đã đặt mật khẩu thành công.', 'success');
+        toast('Đã đổi mật khẩu thành công.', 'success');
         setOldPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        setHasPassword(true);
+        setErrorMessage(null);
       } else {
-        toast(result.error || 'Lỗi khi lưu mật khẩu.', 'error');
+        const msg = result.error || 'Lỗi khi lưu mật khẩu.';
+        setErrorMessage(msg);
+        toast(msg, 'error');
+        if (result.code === 'SETUP_REQUIRED') {
+          setAccountStatus({ hasPassword: true, setupRequired: true });
+        }
       }
     } finally {
       setIsSaving(false);
@@ -116,71 +164,110 @@ export default function AccountTab() {
         </div>
       </div>
 
-      {/* Đổi mật khẩu */}
+      {/* Quản lý mật khẩu */}
       <div className="bg-surface-raised rounded-2xl border border-outline-soft/60 shadow-sm p-6">
         <h3 className="text-sm font-bold text-ink uppercase tracking-wide mb-4 flex items-center gap-2">
           <KeyRound className="w-4 h-4 text-brand" />
-          {hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu'}
+          {accountStatus?.setupRequired || !accountStatus?.hasPassword ? 'Thiết lập mật khẩu' : 'Đổi mật khẩu'}
         </h3>
-        <p className="text-sm text-ink-muted mb-4">
-          {hasPassword
-            ? 'Đổi mật khẩu đăng nhập của bạn. Mật khẩu cũ được yêu cầu để xác minh.'
-            : 'Tài khoản của bạn chưa có mật khẩu. Đặt mật khẩu để sẵn sàng khi hệ thống bật đăng nhập bằng mật khẩu.'}
-        </p>
 
-        <div className="space-y-4 max-w-md">
-          {hasPassword && (
-            <div>
-              <label htmlFor="old-password" className="block text-sm font-medium text-ink mb-1">
-                Mật khẩu cũ
-              </label>
-              <input
-                id="old-password"
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Nhập mật khẩu cũ"
-                className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
-              />
+        {isLoadingStatus ? (
+          <div className="flex items-center gap-3 py-6 text-sm text-ink-muted">
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
+            <span>Đang tải thông tin xác thực tài khoản...</span>
+          </div>
+        ) : accountStatus?.setupRequired || !accountStatus?.hasPassword ? (
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-ink space-y-3">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm text-ink">Yêu cầu thiết lập mật khẩu ban đầu</p>
+                <p className="text-sm text-ink-muted mt-1">
+                  Tài khoản của bạn đang yêu cầu thiết lập mật khẩu qua mã xác thực một lần do Quản lý cung cấp. Vui lòng sử dụng trang thiết lập mật khẩu để hoàn tất.
+                </p>
+              </div>
             </div>
-          )}
-          <div>
-            <label htmlFor="new-password" className="block text-sm font-medium text-ink mb-1">
-              Mật khẩu mới
-            </label>
-            <input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Ít nhất 6 ký tự"
-              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
-            />
+            <div className="pt-2">
+              <Link
+                href="/setup-password"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-mid shadow-sm shadow-brand/20 transition-all active:scale-95"
+              >
+                <span>Đi tới trang Thiết lập mật khẩu</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
+        ) : (
           <div>
-            <label htmlFor="confirm-password" className="block text-sm font-medium text-ink mb-1">
-              Xác nhận mật khẩu mới
-            </label>
-            <input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Nhập lại mật khẩu mới"
-              className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
-            />
-          </div>
+            <p className="text-sm text-ink-muted mb-4">
+              Đổi mật khẩu đăng nhập của bạn. Mật khẩu cũ được yêu cầu để xác minh và bảo vệ tài khoản.
+            </p>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-mid shadow-sm shadow-brand/20 transition-all active:scale-95 disabled:opacity-50"
-          >
-            <ShieldCheck size={16} />
-            {isSaving ? 'Đang lưu...' : hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu'}
-          </button>
-        </div>
+            {errorMessage && (
+              <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-sm flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label htmlFor="old-password" className="block text-sm font-medium text-ink mb-1">
+                  Mật khẩu cũ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="old-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu cũ"
+                  className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-ink mb-1">
+                  Mật khẩu mới <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Từ 6 đến 72 ký tự"
+                  className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-ink mb-1">
+                  Xác nhận mật khẩu mới <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Nhập lại mật khẩu mới"
+                  className="w-full px-4 py-2.5 rounded-xl border border-outline-soft text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand text-ink bg-surface-raised"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-mid shadow-sm shadow-brand/20 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <ShieldCheck size={16} />
+                {isSaving ? 'Đang lưu...' : 'Đổi mật khẩu'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

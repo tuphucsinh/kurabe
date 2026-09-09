@@ -735,7 +735,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      change_password_transaction: {
+        Args: {
+          p_user_id: string
+          p_expected_password_hash: string
+          p_new_password_hash: string
+          p_current_session_token_hash?: string | null
+        }
+        Returns: {
+          user_id: string
+          revoked_sessions: number
+        }[]
+      }
+      complete_password_setup_transaction: {
+        Args: {
+          p_token_hash: string
+          p_password_hash: string
+        }
+        Returns: {
+          user_id: string
+        }[]
+      }
+      reset_password_transaction: {
+        Args: {
+          p_user_id: string
+          p_token_hash: string
+          p_expires_at: string
+        }
+        Returns: {
+          token_id: string
+          user_id: string
+          expires_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -874,4 +906,9 @@ export interface PasswordSetupTokenRecord {
   token_hash: string
   expires_at: string
   used_at: string | null
+}
+
+export interface CredentialChangeRecord {
+  user_id: string
+  revoked_sessions: number
 }
