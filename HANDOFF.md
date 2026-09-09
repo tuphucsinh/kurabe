@@ -9,4 +9,5 @@
 - Temporary passwordless compatibility remains accepted; strict activation still needs separate owner approval and setup/delivery/schema/session gates.
 - No production DB mutation, deploy, push, or credential mutation was performed; disposable local DB resources were cleaned after verification.
 - Owner's modified `AGENTS.md` remains outside control commits and must be preserved byte-for-byte.
-- Next: reconcile the DAG and select the next READY task; production rollout remains separately approval-gated.
+- P98M2T03 exact candidate passes real Chrome 18/18, full tests 40/40, lint/typecheck/build and secret scan; fresh CONTROLLED review is pending.
+- Next: reconcile the candidate review and publish only after an independent PASS; production rollout remains separately approval-gated.

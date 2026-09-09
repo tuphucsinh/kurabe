@@ -12,7 +12,7 @@ import { upsertUserAction } from '@/actions/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, Evaluation, Team } from '@/types';
 import DataTable, { Column } from '@/components/ui/DataTable';
-import { Search, Filter, Plus, Edit2, FileText, History, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw } from 'lucide-react';
+import { Search, Filter, Plus, Edit2, FileText, History, ChevronDown, Users, Trash2, Upload, Loader2, Download, KeyRound, RefreshCw, Copy, Check, ExternalLink, Clock, X } from 'lucide-react';
 import { parseEmployeeExcel, downloadSampleExcel } from '@/lib/import';
 import { resetPassword } from '@/actions/account';
 import Link from 'next/link';
@@ -92,6 +92,24 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   const isManager = effectiveViewer?.role === 'Manager';
   const isLeader = effectiveViewer?.role === 'Leader';
 
+  // Transient setup token handoff for Manager (in-memory only, no URL or storage)
+  const [tokenHandoff, setTokenHandoff] = useState<{
+    employeeName: string;
+    token: string;
+    expiresAt: string;
+  } | null>(null);
+  const [isTokenCopied, setIsTokenCopied] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && tokenHandoff) {
+        setTokenHandoff(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tokenHandoff]);
+
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentPeriodId = currentPeriod?.id;
@@ -138,6 +156,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setUserBatchError(null);
         setIsModalOpen(false);
         setEditingEmployee(null);
+        setTokenHandoff(null);
 
         if (!effectiveViewer) {
           setIsInitialLoading(false);
@@ -456,7 +475,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     const confirmed = await confirm({
       title: 'Đặt lại mật khẩu',
-      message: `Đặt lại mật khẩu của "${name}"? Mật khẩu sẽ chuyển về TRỐNG — nhân viên sẽ tự đặt mật khẩu mới từ Cài đặt → Tài khoản.`,
+      message: `Đặt lại mật khẩu của "${name}"? Thao tác này sẽ tạo một mã thiết lập mật khẩu một lần (hiệu lực 30 phút) và thu hồi toàn bộ phiên đăng nhập hiện tại của nhân viên.`,
       confirmText: 'Đặt lại',
       variant: 'warning',
     });
@@ -465,9 +484,40 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     const result = await resetPassword(id);
     if (result.success) {
-      toast(`Đã đặt lại mật khẩu cho ${name}.`, 'success');
+      setTokenHandoff({
+        employeeName: name,
+        token: result.setupToken,
+        expiresAt: result.expiresAt,
+      });
+      setIsTokenCopied(false);
+      toast(`Đã tạo mã thiết lập mật khẩu cho ${name}. Vui lòng chuyển mã cho nhân viên.`, 'success');
     } else {
       toast(result.error || 'Lỗi khi đặt lại mật khẩu.', 'error');
+    }
+  };
+
+  const handleCopySetupToken = async () => {
+    if (!tokenHandoff) return;
+    try {
+      await navigator.clipboard.writeText(tokenHandoff.token);
+      setIsTokenCopied(true);
+      setTimeout(() => setIsTokenCopied(false), 2000);
+    } catch {
+      const input = document.getElementById('setup-token-input') as HTMLInputElement | null;
+      if (input) {
+        input.select();
+        setIsTokenCopied(true);
+        setTimeout(() => setIsTokenCopied(false), 2000);
+      }
+    }
+  };
+
+  const formatExpiryDisplay = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' (' + date.toLocaleDateString('vi-VN') + ')';
+    } catch {
+      return isoString;
     }
   };
 
@@ -722,7 +772,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
               type="button"
               onClick={() => handleResetPassword(item.id, item.name)}
               className="p-2 text-ink-muted hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-              title="Đặt lại mật khẩu (về trống)"
+              title="Đặt lại mật khẩu (tạo mã thiết lập)"
             >
               <KeyRound size={18} />
             </button>
@@ -1070,6 +1120,101 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         }
         teams={teams}
       />
+
+      {/* Transient Setup Token Handoff Modal (In-memory only, no URL query or storage persistence) */}
+      {tokenHandoff && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="handoff-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTokenHandoff(null);
+          }}
+        >
+          <div className="relative w-full max-w-lg bg-surface-raised rounded-2xl border border-outline-soft shadow-2xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-soft/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h3 id="handoff-dialog-title" className="text-base font-bold text-ink">
+                    Mã thiết lập mật khẩu một lần
+                  </h3>
+                  <p className="text-xs text-ink-muted">
+                    Nhân viên: <strong className="text-ink">{tokenHandoff.employeeName}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTokenHandoff(null)}
+                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-colors"
+                aria-label="Đóng hộp thoại"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+              Hãy sao chép mã dưới đây và gửi trực tiếp cho nhân viên. Nhân viên sẽ tự truy cập trang thiết lập mật khẩu để nhập mã và đặt mật khẩu mới.
+            </p>
+
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+              <Clock size={16} className="shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold">Thời hạn hiệu lực:</span> 30 phút (hết hạn lúc {formatExpiryDisplay(tokenHandoff.expiresAt)}). Mã chỉ sử dụng được 1 lần và sẽ tự động vô hiệu hóa sau khi đổi hoặc khi Quản lý đặt lại lần nữa.
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="setup-token-input" className="block text-xs font-bold uppercase tracking-wider text-ink-muted">
+                Mã thiết lập (Setup Token):
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="setup-token-input"
+                  type="text"
+                  readOnly
+                  value={tokenHandoff.token}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                  aria-label="Mã thiết lập mật khẩu"
+                  className="w-full font-mono text-xs p-2.5 rounded-xl bg-surface-muted border border-outline-soft text-ink select-all focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopySetupToken}
+                  className="shrink-0 px-3.5 py-2.5 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand-mid transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                  aria-label="Sao chép mã thiết lập"
+                >
+                  {isTokenCopied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{isTokenCopied ? 'Đã chép' : 'Sao chép'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-outline-soft/60">
+              <Link
+                href="/setup-password"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-brand bg-brand-soft hover:bg-brand/20 transition-colors"
+              >
+                <ExternalLink size={15} />
+                <span>Mở trang thiết lập mật khẩu</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setTokenHandoff(null)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-ink-muted hover:text-ink hover:bg-surface-muted transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

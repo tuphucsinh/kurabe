@@ -25,7 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading || isLoggingOut) return;
 
-    if (!user && pathname !== '/login') {
+    if (!user && pathname !== '/login' && pathname !== '/setup-password') {
       router.push('/login');
     } else if (user && pathname === '/login') {
       if (isIndividualRole(user.role)) {
@@ -49,9 +49,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setIsSidebarOpen(false);
   }
 
-  // Trang login luôn full-screen (không sidebar) — tránh hiện sidebar + login card
-  // trong 1-2s sau khi set session trước khi redirect dashboard.
-  if (pathname === '/login') {
+  // Trang login và setup-password luôn full-screen (không sidebar)
+  if (pathname === '/login' || pathname === '/setup-password') {
     return (
       <main className="flex-1 w-full">
         <PageTransition>{children}</PageTransition>

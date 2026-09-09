@@ -67,7 +67,7 @@ Changes: Implement local-only target/DB identity guards, synthetic minimal auth/
 Constraints: No new hosted Supabase project, production DB clone, daemon or real credentials; environment installation requires separate approval. Minimal fixture is not full-schema parity proof.
 DoD: `node tests/verification-harness.test.mjs`; `node scripts/verify-release.mjs --suite harness`; `node scripts/scan-source-secrets.mjs`. Demonstrate actual DB rollback and actual browser assertion, deliberate failure/forbidden remote target detection, no fixture residue; root gates.
 
-### [ ] [#P98M2T03] Close setup route and Manager token handoff
+### [x] [#P98M2T03] Close setup route and Manager token handoff
 ```yaml
 task:
   id: P98M2T03
