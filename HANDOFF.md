@@ -10,4 +10,5 @@
 - No production DB mutation, deploy, push, or credential mutation was performed; disposable local DB resources were cleaned after verification.
 - Owner's modified `AGENTS.md` remains outside control commits and must be preserved byte-for-byte.
 - P98M2T03 published at `54d070eeca564eafcc1803c342ffcfecdd95834a` after real Chrome 18/18, full tests, lint/typecheck/build, secret scan, and fresh CONTROLLED review PASS.
-- Next: reconcile the Phase 98 DAG and select the next READY task; production rollout remains separately approval-gated.
+- P98M2T04 real-local legacy setup matrix passes 25/25 plus root gates; fresh CONTROLLED review is pending.
+- Next: reconcile T04 review and continue the Phase 98 DAG; production rollout remains separately approval-gated.

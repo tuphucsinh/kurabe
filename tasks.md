@@ -82,7 +82,7 @@ Changes: Add bounded token form/confirmation and safe public route exception; Ma
 Constraints: No auto-email/SMS/paid service; sharing remains manual owner-authorized channel. No broad unauthenticated AppLayout bypass; preserve composition/mobile keyboard behavior.
 DoD: `node scripts/verify-release.mjs --suite password-setup`; real browser valid/expired/used/invalid/reset-again cases, no token in logs/referrer/storage, no redirect loop, mobile/keyboard/error/retry; root gates.
 
-### [ ] [#P98M2T04] Qualify existing legacy setup migration, do not reimplement blindly
+### [x] [#P98M2T04] Qualify existing legacy setup migration, do not reimplement blindly
 ```yaml
 task:
   id: P98M2T04
