@@ -6,7 +6,7 @@
 - Owner requests all remaining phases decomposed now. This explicitly replaces the old active-phase-only WBS restriction, NOT execution/production approval gates.
 - `tasks.md` is the sole WBS/DAG; this file owns phase outcomes/invariants. No duplicate WBS in other plans.
 - Canonical Git proves integrated source, not deployed behavior. Current live catalog/runtime evidence proves live state; migration comments do not.
-- Planning approval includes local control-plane commits, temporarily preserving/restoring the owner's dirty AGENTS.md; no push, deploy, app implementation or production mutation.
+- Earlier planning approval included local control-plane commits while preserving the owner's dirty `AGENTS.md`. The current owner instruction now authorizes Mika-only execution of remaining source/local tasks; push, deploy, app-to-production rollout and production mutation retain exact approval/readback gates.
 
 ## Current evidence and limitations
 

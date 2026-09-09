@@ -1,5 +1,10 @@
 # Decisions Log
 
+## Current execution boundary
+
+- Owner authorizes Mika to execute the remaining WBS directly without Runner. Dependency-coupled tasks stay serial; each candidate still requires independent verification, and each CONTROLLED task retains its fresh review gate.
+- Local/source implementation may proceed without waiting for production permission. Production, credentials, permissions, paid/external actions, GitHub settings, deploy and irreversible lifecycle actions still require their exact approval, rollback and readback gates.
+
 ## Release-hardening replan — source baseline 53b83f1
 
 - Owner requests full remaining WBS now: phases 98–102 and retained 96E, superseding active-phase-only planning. Historical IDs/statuses remain unchanged; planning does not authorize implementation or external actions.

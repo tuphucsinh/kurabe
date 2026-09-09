@@ -2,9 +2,9 @@
 
 ## Execution contract
 
-- Owner-approved full decomposition of phases 98–102 + retained 96E. Planning only; no dispatch, push, deploy or live mutation authorized by this file.
+- Owner-approved full decomposition of phases 98–102 + retained 96E. Current owner instruction authorizes Mika-only execution of remaining in-scope tasks; push, deploy, live mutation and other protected actions retain their exact approval gates.
 - Current replan baseline `4ab6a1d0061725908849456d7a50e15aa870673a`; preserved control predecessor `4cdef146d74c2c8d2074ea02eea279fb86a4e7b3`; historical planning seed `53b83f1`; active policy is owner's working AGENTS.md mika-v3. Master phase authority: `.ai/MASTER_PLAN.md`.
-- IDs/statuses inherited below are preserved, not newly certified. New tasks `[ ]`; future phases dependency-gated. All task contracts refreshed from current integrated source before dispatch.
+- IDs/statuses inherited below are preserved unless independently reconciled below; pending tasks remain dependency-gated. All task contracts are refreshed from current integrated source before execution.
 - New paths in owns are planned deliverables, not claims that files already exist. Recheck path inventory and applied migration names before dispatch; no placeholder files are created during planning.
 - GLOBAL HOLD: P98M2T05 remains BLOCKED after fresh production schema drift/collision preflight. Current product mode is OPTIONAL_PASSWORD; password-capable infrastructure may roll out, but strict enforcement and bulk legacy setup marking remain deferred until explicit owner go-live approval. P98M2T09 forensic reconciliation must PASS, then P98M2T10 must be implemented, independently verified and freshly reviewed before P98M2T05 may receive a new production preflight. Existing P98M2T08 remains DONE and must not be reopened; legacy workspace provenance remains preserved.
 - Runtime state READY means registered, not approved/runnable. `depends + owns + locks + state + approval` govern dispatch; shared ownership serializes, no heuristic parallel flags.
@@ -127,7 +127,7 @@ Changes: Atomic bounded account+trusted-network throttle, explicit trusted-proxy
 Constraints: No live header trust/security config change without approval; unchanged valid compatibility login semantics.
 DoD: `node scripts/verify-release.mjs --suite login-rate-limit`; spoofed-header/account rotation, DB count/insert failure, concurrent threshold, recovery expiry, existing password suite; root gates.
 
-### [ ] [#P98M2T09] Forensic reconcile production login_attempts schema
+### [x] [#P98M2T09] Forensic reconcile production login_attempts schema
 ```yaml
 task:
   id: P98M2T09
