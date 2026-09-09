@@ -14,7 +14,7 @@
 - Prior source audit reported local static/test checks. This planning revision does not rerun or independently certify those results; require fresh exact-candidate root gates at implementation. In-memory transpilation is not the normal npm wrapper or DB/browser evidence.
 - Historical build evidence is in HANDOFF/state; audit did not rerun build/browser/DB integration.
 - Prior registry bulk advisory check reported no production-subset findings and dev browserslist/@babel/core findings. Treat as dated audit leads, not a current clean bill; require current full npm audit/vendor verification, including SheetJS tarball coverage limits.
-- Production URL: https://lykiv.vercel.app. Current deployment SHA, effective flags, RLS/grants/RPC definitions and ledger need fresh verification. Insufficient data.
+- Production URL: https://lykiv.vercel.app. P98M2T05 fresh preflight recorded deployment/source drift and a pre-existing `public.login_attempts` schema/grant collision; no production mutation occurred. The redacted baseline is retained at `/home/pi5/hermes-artifacts/kurabe-execution/p98m2t05-preflight-baseline.json`; T09 must replace it with a complete forensic fingerprint before T10/T05.
 - `AGENTS.md` has owner changes; six legacy workspace paths are retained in recovery state, not proven clean by `git worktree list`.
 - Dependency evidence drift: P98M1T02 pending despite completed dependants; P98M2T04 commit `9321c57` exists while task pending. Preserve status/evidence and reconcile before dispatch, never infer DoD from commit titles.
 - Release verdict: NEEDS_FIX / NOT RELEASE-HARDENED. Temporary passwordless testing is accepted, not an incident to silently disable and not a completed production-hardening gate.
@@ -59,11 +59,11 @@ Reuse phases 98–102, existing CI and tests; no big-bang rewrite. Bring minimal
 
 State: ACTIVE planning; execution STOP until separately requested.
 
-Scope: reconcile catalog/workspaces and prior pending evidence; qualify safe DB/browser/secret wrappers; finish setup UI and token handoff; unify credential state/session policy; harden login throttle; qualify existing legacy/evaluator migrations; approved auth/framework/evaluator production rollout.
+Scope: reconcile catalog/workspaces and prior pending evidence; qualify safe DB/browser/secret wrappers; finish setup UI and token handoff; unify credential state/session policy; harden login throttle; forensically reconcile the pre-existing production `public.login_attempts` schema; implement and qualify a bounded local reconciliation migration; qualify existing legacy/evaluator migrations; approved auth/framework/evaluator production rollout.
 
-Gate: real reset/setup/login and session matrix in both flag modes; invalid/expired/used tokens; self-change transition; quota failure/concurrency; NULL/wrong evaluator deny. Focused and root checks, real browser, real isolated PostgreSQL, fresh CONTROLLED review. Live release predicates require approved deployment/catalog readback, not source comments.
+Gate: real reset/setup/login and session matrix in both flag modes; invalid/expired/used tokens; self-change transition; quota failure/concurrency; NULL/wrong evaluator deny; complete T09 production fingerprint; T10 clean/current-like/collision local PostgreSQL matrix; focused and root checks, real browser, fresh CONTROLLED review. Live release predicates require approved deployment/catalog readback, not source comments.
 
-Rollback: preserve compatibility until transition approval, paired code/schema rollback preserving newly set credentials; no blanket NULL password reset. Production mismatch stops; only pre-reviewed rollback may run.
+Rollback: preserve compatibility until transition approval; T10 uses exact fingerprint/provenance-guarded reverse SQL with no row deletion or table recreation; P98M2T05 retains paired code/schema rollback preserving newly set credentials and no blanket NULL password reset. Production mismatch stops; only pre-reviewed rollback may run.
 
 ## Phase 99 — Business integrity, grading, read scope and freshness
 

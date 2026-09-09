@@ -8,6 +8,12 @@
 - Source DAG does not wait for production permission. Prefer one final reviewed release window for ordered auth/evaluator/remaining cutover; each live action retains its own approval, rollback and readback.
 - Canonical plan and WBS are authorities; old log entries below are historical decisions/evidence, not a current runtime certification. P98M1T02/P98M2T04 evidence drift and legacy workspaces stay held for reconciliation; no task ticked by this replan.
 
+## Phase 98 production schema-collision replan — canonical source `4cdef146d74c2c8d2074ea02eea279fb86a4e7b3`
+
+- Keep `P98M2T08 = DONE`, `P98M2T05 = BLOCKED`, and production mutation = NONE. Do not reopen the reviewed/local P98M2T08 contract because the live collision is pre-existing schema/provenance drift.
+- Insert `P98M2T09 → P98M2T10 → P98M2T05`. T09 is Mika-only, read-only production forensic reconciliation with a stable redacted fingerprint and fresh Reviewer PASS; T10 is the only implementation candidate and remains local/disposable until separately approved.
+- T10 must preserve `public.login_attempts` rows, avoid DROP/RECREATE and broad rewrites, fail closed on any fingerprint/grant/policy mismatch before mutation, and prove clean/current-like/collision behavior with an exact rollback candidate. P98M2T05 must run a completely fresh production preflight after T10; the prior snapshot is historical evidence only.
+
 | # | Ngày | Quyết định | Lý do |
 |---|---|---|---|
 | 1 | 2026-04-27 | Chọn **TailwindCSS** thay Vanilla CSS | Tối ưu tốc độ vibe-code với AI, utility-first giảm context switching |

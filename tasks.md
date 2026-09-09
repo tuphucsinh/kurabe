@@ -3,10 +3,10 @@
 ## Execution contract
 
 - Owner-approved full decomposition of phases 98–102 + retained 96E. Planning only; no dispatch, push, deploy or live mutation authorized by this file.
-- Source baseline `53b83f1`; active policy is owner's working AGENTS.md mika-v3. Master phase authority: `.ai/MASTER_PLAN.md`.
+- Current replan baseline `4cdef146d74c2c8d2074ea02eea279fb86a4e7b3`; historical planning seed `53b83f1`; active policy is owner's working AGENTS.md mika-v3. Master phase authority: `.ai/MASTER_PLAN.md`.
 - IDs/statuses inherited below are preserved, not newly certified. New tasks `[ ]`; future phases dependency-gated. All task contracts refreshed from current integrated source before dispatch.
 - New paths in owns are planned deliverables, not claims that files already exist. Recheck path inventory and applied migration names before dispatch; no placeholder files are created during planning.
-- GLOBAL HOLD: P98M1T02 evidence/dependency reconciliation and legacy workspace provenance must be resolved before new application dispatch. Existing P98M2T04 source must be reconciled, not overwritten.
+- GLOBAL HOLD: P98M2T05 remains BLOCKED after fresh production schema drift/collision preflight. P98M2T09 forensic reconciliation must PASS, then P98M2T10 must be implemented, independently verified and freshly reviewed before P98M2T05 may receive a new production preflight. Existing P98M2T08 remains DONE and must not be reopened; legacy workspace provenance remains preserved.
 - Runtime state READY means registered, not approved/runnable. `depends + owns + locks + state + approval` govern dispatch; shared ownership serializes, no heuristic parallel flags.
 - All implementation DoD includes wiring, behavioral tests, Mika independent verify, exact candidate diff/secret checks and root gates `npm run test && npm run lint && npm run typecheck && npm run build && git diff --check`. CONTROLLED also fresh selected review PASS. These are future execution checks, not claims from this planning commit.
 - Proposed commands supplied by P98M1T03: `node scripts/verify-release.mjs --suite <name>`; suite names below are exact contracts. Unknown/missing/zero-case suites MUST exit nonzero. Each consumer owns its matching suite file. Wrapper loads DB `tests/integration/<name>.mjs`, browser `tests/browser/<name>.mjs`, or operational `tests/operations/<name>.mjs`, and never silently substitutes a mock for real DB/browser evidence.
@@ -127,19 +127,60 @@ Changes: Atomic bounded account+trusted-network throttle, explicit trusted-proxy
 Constraints: No live header trust/security config change without approval; unchanged valid compatibility login semantics.
 DoD: `node scripts/verify-release.mjs --suite login-rate-limit`; spoofed-header/account rotation, DB count/insert failure, concurrent threshold, recovery expiry, existing password suite; root gates.
 
+### [ ] [#P98M2T09] Forensic reconcile production login_attempts schema
+```yaml
+task:
+  id: P98M2T09
+  tier: CONTROLLED
+  depends: [P98M1T02, P98M2T08]
+  owns: []
+  locks: [KURABE_PRODUCTION, AUTH_LOGIN_CONTRACT, KURABE_CONTROL_RECONCILE]
+```
+Goal: Produce an exact, redacted production fingerprint and reconciliation plan for the pre-existing `public.login_attempts` collision without changing production or reopening P98M2T08.
+Interface: Immutable forensic artifact under `/home/pi5/hermes-artifacts/kurabe-execution/`, property-by-property `COMPATIBLE|NEEDS_RECONCILE|UNKNOWN` matrix, source reader/writer inventory, provenance result, and bounded T10 reconciliation contract.
+Current context: Fresh P98M2T05 preflight found `public.login_attempts` already present with non-reviewed shape/grants; reviewed P98M2T08 contract is `supabase/migrations/20260907000200_login_rate_limit.sql`, `db/rollback-login-rate-limit.sql`, `src/lib/login-rate-limit.ts`, `src/actions/auth.ts`, and `tests/integration/login-rate-limit.mjs`.
+Changes: Mika-only read the live `pg_catalog`/`information_schema` contract, constraints, indexes, grants, RLS/policies, owner, triggers, dependencies, aggregate row/data-shape statistics, migration ledger and function provenance; trace every canonical source reader/writer and classify direct browser/authenticated access versus server/service-role access; compare exact production shape with the reviewed P98M2T08 contract; inspect Git history/blame for migration provenance; write only redacted evidence and the proposed fail-closed reconciliation plan.
+Constraints: Read-only production access only; no DDL/DML, grants, policy changes, env changes, deploy, restart, fixture credential change, cleanup, source edits or task reopen. Never expose raw rows, secrets, tokens, connection strings or employee identifiers. Any unavailable catalog predicate remains `UNKNOWN` and blocks T10.
+DoD:
+- Fresh project-identity and canonical-source readback plus a complete redacted catalog query manifest/output covering columns/types/defaults/nullability, PK/FK/check constraints, indexes/definitions, table/sequence/function grants, RLS enabled/forced state, policies, owner, triggers, dependent functions/views, row count and non-sensitive shape statistics, migration ledger and Git provenance.
+- Every required property is explicitly `COMPATIBLE`, `NEEDS_RECONCILE`, or `UNKNOWN`; exact production fingerprint is stable and hash-verified; no unsupported inference from source comments.
+- Canonical source inventory proves all `login_attempts` readers/writers, including `src/lib/login-rate-limit.ts`, auth call paths, retention/perf/operational SQL, and direct browser/authenticated versus service-role reachability.
+- Exact diff against the reviewed P98M2T08 schema/function/grant/RLS contract identifies preserved rows and each required reconciliation delta; unexpected collision states are explicitly fail-closed.
+- Fresh independent Reviewer returns `PASS` on the forensic evidence and T10 plan; evidence path and review path are retained. No production or canonical source mutation occurs.
+
+### [ ] [#P98M2T10] Bounded login_attempts reconciliation migration
+```yaml
+task:
+  id: P98M2T10
+  tier: CONTROLLED
+  depends: [P98M2T09]
+  owns: [supabase/migrations/20260909000100_p98_reconcile_login_attempts.sql, db/rollback-p98-reconcile-login-attempts.sql, tests/integration/login-attempts-reconciliation.mjs]
+  locks: [AUTH_SCHEMA_CONTRACT, KURABE_SCHEMA_BASELINE, MACHINE_EXCLUSIVE]
+```
+Goal: Implement a reversible, fail-closed candidate that reconciles the exact T09 production fingerprint to the reviewed P98M2T08 `login_attempts` contract while preserving existing rows and runtime behavior.
+Interface: New forward migration, exact reverse candidate, and real-PostgreSQL integration suite; P98M2T08 migration/source/tests remain unchanged and DONE.
+Current context: T09 is the sole live contract authority. The candidate must account for both a clean database with no table and the exact current-production-like baseline; if T09 cannot prove a safe delta, amend/block rather than guess.
+Changes: Add exact precondition checks against the T09 fingerprint; converge clean and exact current-production-like baselines to one reviewed final contract; preserve rows; add/alter only proven-required objects; keep no `DROP`/recreate, destructive rename or broad rewrite; harden grants/RLS only where T09 source evidence proves the current runtime path is service-role/server-side and unaffected; include exact provenance markers and a rollback candidate guarded against ownership/fingerprint mismatch.
+Constraints: Candidate-only local/disposable PostgreSQL work; no production DB connection, deploy, push, env/permission change, broad data update/delete, manual fix-forward, T08 reopen, or cleanup outside declared outputs. Unexpected collision baseline must raise before any mutation and leave zero partial mutation. A T09 `UNKNOWN` or changed fingerprint blocks implementation.
+DoD:
+- `node scripts/verify-release.mjs --suite login-attempts-reconciliation` passes focused real-PostgreSQL cases for clean baseline convergence, exact current-production-like convergence with row preservation, and unexpected collision fail-closed/zero-partial-mutation; rollback and provenance checks are exercised.
+- Mika independently verifies exact candidate BASE_SHA, owned-only diff, `git diff --check`, secret scan, focused suite, `npm run test`, `npm run lint`, `npm run typecheck`, and `npm run build`; no tracked or untracked residue outside declared disposable outputs.
+- Fresh selected CONTROLLED Reviewer returns `PASS` against the exact candidate, T09 fingerprint/reconciliation plan, rollback and evidence; candidate remains unchanged and clean.
+- Canonical publish is Mika-only and occurs only after all gates; no production mutation/deploy/push is part of T10.
+
 ### [ ] [#P98M2T05] Approved auth/framework production rollout
 ```yaml
 task:
   id: P98M2T05
   tier: CONTROLLED
-  depends: [P98M1T01, P98M1T02, P98M2T04, P98M2T08]
+  depends: [P98M1T01, P98M1T02, P98M2T04, P98M2T08, P98M2T09, P98M2T10]
   owns: []
   locks: [KURABE_PRODUCTION, AUTH_ROLLOUT]
 ```
 Goal: Mika-only exact code/schema/UI deployment with safe strict activation.
-Current context: Prior source candidate review is not live schema evidence; production remains passwordless test exception until owner approves transition.
-Changes: Freeze reviewed SHA, fresh catalog, exact ordered migration manifest, recoverable backup and paired rollback; verify setup delivery before flag change. Apply only approved steps, read back deployment/RPC/ledger/flag behavior, safe exact-ID auth canary.
-Constraints: Explicit owner approval required for deployment, credentials/state and strict activation; abort on drift. No broad NULL reset on rollback; preserve new credentials.
+Current context: Prior source candidate review is not live schema evidence; the last P98M2T05 preflight is blocked by the pre-existing `public.login_attempts` collision. P98M2T09 and P98M2T10 must be PASS and canonical before a fresh production preflight; no prior catalog/baseline may be reused.
+Changes: Freeze reviewed SHA, rerun fresh source/deployment/catalog readback, validate the T10 reconciliation fingerprint and exact ordered migration manifest, recoverable backup and paired rollback; verify setup delivery before flag change. Apply only approved steps, read back deployment/RPC/ledger/flag behavior, safe exact-ID auth canary.
+Constraints: Explicit owner approval required for deployment, credentials/state and strict activation; abort on any fresh drift. No broad NULL reset on rollback; preserve new credentials. T08 remains DONE and is not reopened.
 DoD: All root/local auth+DB+browser gates and fresh candidate review PASS; owner-approved exact deployment/SQL command manifest with exit outputs, source SHA/ledger/flags/auth matrix readback and rollback proof. Missing command/approval => BLOCKED, never fabricated CLI.
 
 ### [ ] [#P98M3T02] Approved evaluator NULL-safety rollout and RPC canary
