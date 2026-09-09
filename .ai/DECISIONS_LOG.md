@@ -14,6 +14,14 @@
 - Insert `P98M2T09 → P98M2T10 → P98M2T05`. T09 is Mika-only, read-only production forensic reconciliation with a stable redacted fingerprint and fresh Reviewer PASS; T10 is the only implementation candidate and remains local/disposable until separately approved.
 - T10 must preserve `public.login_attempts` rows, avoid DROP/RECREATE and broad rewrites, fail closed on any fingerprint/grant/policy mismatch before mutation, and prove clean/current-like/collision behavior with an exact rollback candidate. P98M2T05 must run a completely fresh production preflight after T10; the prior snapshot is historical evidence only.
 
+## Phase 98 product decision — OPTIONAL_PASSWORD
+
+- Owner-confirmed current mode: `OPTIONAL_PASSWORD`; strict password go-live is deferred because Kurabe is not yet in official operation.
+- Phase 98 may deploy password-capable infrastructure and compatible application wiring, but must preserve legacy/beta login for `password_hash IS NULL`, require the correct password for non-NULL hashes, and keep `KURABE_REQUIRE_PASSWORD_LOGIN` effectively false.
+- Classification: setup schema/tokens, setup/reset RPCs, secure individual reset/setup, configured-account credential change, session revocation, and login rate limiting are `APPLY_NOW_OPTIONAL`; P98M2T04 bulk marking of NULL-password users as setup-required, forced setup, global NULL-password rejection, strict activation, and `KURABE_REQUIRE_PASSWORD_LOGIN=true` are `DEFER_TO_STRICT_GO_LIVE`.
+- Canonical source-contract test PASS verifies A–F and proves `absent == false == OPTIONAL`, exact `true == STRICT`; no P98M2T11 compatibility task is required.
+- Preserve `P98M2T08 = DONE`, `P98M2T05 = BLOCKED`, `production mutation = NONE`, and the dependency chain `P98M2T09 → P98M2T10 → P98M2T05`. Strict rollout requires a later explicit owner decision and separate WBS.
+
 | # | Ngày | Quyết định | Lý do |
 |---|---|---|---|
 | 1 | 2026-04-27 | Chọn **TailwindCSS** thay Vanilla CSS | Tối ưu tốc độ vibe-code với AI, utility-first giảm context switching |

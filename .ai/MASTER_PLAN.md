@@ -15,6 +15,7 @@
 - Historical build evidence is in HANDOFF/state; audit did not rerun build/browser/DB integration.
 - Prior registry bulk advisory check reported no production-subset findings and dev browserslist/@babel/core findings. Treat as dated audit leads, not a current clean bill; require current full npm audit/vendor verification, including SheetJS tarball coverage limits.
 - Production URL: https://lykiv.vercel.app. P98M2T05 fresh preflight recorded deployment/source drift and a pre-existing `public.login_attempts` schema/grant collision; no production mutation occurred. The redacted baseline is retained at `/home/pi5/hermes-artifacts/kurabe-execution/p98m2t05-preflight-baseline.json`; T09 must replace it with a complete forensic fingerprint before T10/T05.
+- Phase 98 product mode is `CURRENT_AUTH_MODE=OPTIONAL_PASSWORD`; `PASSWORD_CAPABLE_INFRASTRUCTURE` may be deployed while `STRICT_PASSWORD_GO_LIVE=DEFERRED`. `KURABE_REQUIRE_PASSWORD_LOGIN` must be effectively false in Phase 98; absent is accepted only because canonical source/tests prove `absent == false == OPTIONAL`.
 - `AGENTS.md` has owner changes; six legacy workspace paths are retained in recovery state, not proven clean by `git worktree list`.
 - Dependency evidence drift: P98M1T02 pending despite completed dependants; P98M2T04 commit `9321c57` exists while task pending. Preserve status/evidence and reconcile before dispatch, never infer DoD from commit titles.
 - Release verdict: NEEDS_FIX / NOT RELEASE-HARDENED. Temporary passwordless testing is accepted, not an incident to silently disable and not a completed production-hardening gate.
@@ -33,6 +34,15 @@
 10. Cache keys include period, viewer and effective authorization dimensions; mutations invalidate all related views. Period/filter/header/data/exports agree through loading, rapid changes, failure and retry.
 11. No optimization without before/after benefit; no new cache/PPR/virtualization/service just because possible. Keep approved composition/assets; fix accessibility and error states without redesign.
 12. Production/security permissions/external commitments require explicit approval; exact backup/rollback, candidate review and readback. No broad cleanup, force-push, automatic feature expansion.
+
+## Phase 98 product decision — OPTIONAL_PASSWORD
+
+- `CURRENT_AUTH_MODE=OPTIONAL_PASSWORD`; `STRICT_PASSWORD_GO_LIVE=DEFERRED` because Kurabe is not yet in official operation. `password_hash IS NULL` remains usable through the legacy/beta flow without forced setup; `password_hash IS NOT NULL` requires the correct password and cannot be bypassed.
+- `KURABE_REQUIRE_PASSWORD_LOGIN` has a source-enforced exact gate: absent and `false` use OPTIONAL behavior; exact `true` is STRICT behavior. Phase 98 must not activate `true` or mutate an absent flag merely for cosmetic explicitness.
+- Completed password artifacts are classified as follows: `P98M2T01` password setup schema/tokens = `APPLY_NOW_OPTIONAL`; `P98M2T02` setup/reset RPCs and session revocation = `APPLY_NOW_OPTIONAL`; `P98M2T03` setup/reset application flow = `APPLY_NOW_OPTIONAL`; `P98M2T04` bulk marking NULL-password users as setup-required = `DEFER_TO_STRICT_GO_LIVE`; `P98M2T06` compatibility login = `APPLY_NOW_OPTIONAL`; `P98M2T07` configured-account credential change and other-session revocation = `APPLY_NOW_OPTIONAL`; `P98M2T08` login rate limiting = `APPLY_NOW_OPTIONAL`.
+- Individual secure reset/setup actions may transition one account from NULL to a bcrypt hash and then enforce that account's password. No bulk force setup, shared/default password, global NULL-password lockout, or strict env activation belongs in Phase 98.
+- Canonical source-contract evidence covers A–F: optional legacy login, correct configured-password login, missing/wrong configured-password rejection, secure setup/reset, and post-setup password enforcement. No bounded compatibility task is required; do not create P98M2T11.
+- Strict password enforcement is deferred until the owner explicitly declares real go-live; then create a separate preflight → setup/remaining-NULL inventory → optional mark/setup-required → strict flag → smoke/postflight plan. Do not mix that future rollout into Phase 98.
 
 ## History retained (not re-dispatched)
 
