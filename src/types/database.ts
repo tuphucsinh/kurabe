@@ -756,6 +756,45 @@ export type Database = {
           user_id: string
         }[]
       }
+      check_login_rate_limit: {
+        Args: {
+          p_employee_code: string
+          p_ip: string
+          p_window_seconds?: number
+          p_max_account_attempts?: number
+          p_max_ip_attempts?: number
+        }
+        Returns: {
+          allowed: boolean
+          account_attempts: number
+          ip_attempts: number
+          locked_by: string | null
+          retry_after_seconds: number
+        }[]
+      }
+      clear_login_attempts: {
+        Args: {
+          p_employee_code: string
+          p_ip?: string | null
+        }
+        Returns: number
+      }
+      record_failed_login_transaction: {
+        Args: {
+          p_employee_code: string
+          p_ip: string
+          p_window_seconds?: number
+          p_max_account_attempts?: number
+          p_max_ip_attempts?: number
+        }
+        Returns: {
+          allowed: boolean
+          account_attempts: number
+          ip_attempts: number
+          locked_by: string | null
+          retry_after_seconds: number
+        }[]
+      }
       reset_password_transaction: {
         Args: {
           p_user_id: string
@@ -911,4 +950,11 @@ export interface PasswordSetupTokenRecord {
 export interface CredentialChangeRecord {
   user_id: string
   revoked_sessions: number
+}
+
+export interface LoginAttemptRecord {
+  id: string
+  employee_code: string
+  ip: string
+  attempted_at: string
 }

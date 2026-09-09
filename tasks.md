@@ -112,7 +112,7 @@ Changes: Require existing-password proof for configured accounts; setup-required
 Constraints: Do not silently treat accepted passwordless session as stronger identity proof; preserve compat login behavior; no plaintext DB/logs.
 DoD: `node scripts/verify-release.mjs --suite credential-change`; concurrent change/reset, wrong proof, token expired/used, compat→strict, current/other-session matrix and zero partial writes; root gates.
 
-### [ ] [#P98M2T08] Make login throttling fail-safe and proxy-aware
+### [x] [#P98M2T08] Make login throttling fail-safe and proxy-aware
 ```yaml
 task:
   id: P98M2T08

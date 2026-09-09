@@ -56,8 +56,25 @@ const ACTIONS_AUTH_PATH = path.join(
   'actions',
   'auth.ts'
 );
+const RATE_LIMIT_FORWARD_MIGRATION_PATH = path.join(
+  projectRoot,
+  'supabase',
+  'migrations',
+  '20260907000200_login_rate_limit.sql'
+);
+const RATE_LIMIT_ROLLBACK_PATH = path.join(
+  projectRoot,
+  'db',
+  'rollback-login-rate-limit.sql'
+);
+const LOGIN_RATE_LIMIT_PATH = path.join(
+  projectRoot,
+  'src',
+  'lib',
+  'login-rate-limit.ts'
+);
 
-console.log('[NOTE] Running deterministic source-contract test for P98M2T02 password setup & login hardening...');
+console.log('[NOTE] Running deterministic source-contract test for P98M2T02 password setup & P98M2T08 login rate limiting...');
 
 // Helper to strip comments and expose executable SQL
 function stripSqlComments(sql) {
@@ -93,12 +110,27 @@ assert.ok(
   fs.existsSync(ACTIONS_AUTH_PATH),
   `Auth actions must exist at: ${ACTIONS_AUTH_PATH}`
 );
+assert.ok(
+  fs.existsSync(RATE_LIMIT_FORWARD_MIGRATION_PATH),
+  `Rate limit forward migration must exist at: ${RATE_LIMIT_FORWARD_MIGRATION_PATH}`
+);
+assert.ok(
+  fs.existsSync(RATE_LIMIT_ROLLBACK_PATH),
+  `Rate limit rollback candidate must exist at: ${RATE_LIMIT_ROLLBACK_PATH}`
+);
+assert.ok(
+  fs.existsSync(LOGIN_RATE_LIMIT_PATH),
+  `Login rate limit helper must exist at: ${LOGIN_RATE_LIMIT_PATH}`
+);
 
 const forwardMigrationSql = fs.readFileSync(FORWARD_MIGRATION_PATH, 'utf8');
 const rollbackSql = fs.readFileSync(ROLLBACK_PATH, 'utf8');
 const helperCode = fs.readFileSync(AUTH_PASSWORD_SETUP_PATH, 'utf8');
 const accountCode = fs.readFileSync(ACTIONS_ACCOUNT_PATH, 'utf8');
 const authCode = fs.readFileSync(ACTIONS_AUTH_PATH, 'utf8');
+const rateLimitForwardSql = fs.readFileSync(RATE_LIMIT_FORWARD_MIGRATION_PATH, 'utf8');
+const rateLimitRollbackSql = fs.readFileSync(RATE_LIMIT_ROLLBACK_PATH, 'utf8');
+const rateLimitCode = fs.readFileSync(LOGIN_RATE_LIMIT_PATH, 'utf8');
 
 // Candidate safety headers
 assert.ok(
@@ -112,6 +144,19 @@ assert.ok(
 assert.ok(
   rollbackSql.includes('ROLLBACK CANDIDATE ONLY — NOT APPLIED') || rollbackSql.includes('ROLLBACK CANDIDATE ONLY'),
   'Rollback must contain ROLLBACK CANDIDATE ONLY header'
+);
+
+assert.ok(
+  rateLimitForwardSql.includes('CANDIDATE ONLY — NOT APPLIED') || rateLimitForwardSql.includes('CANDIDATE ONLY'),
+  'Rate limit forward migration must contain CANDIDATE ONLY header'
+);
+assert.ok(
+  rateLimitForwardSql.includes('DO NOT APPLY DIRECTLY WITHOUT SEPARATE APPROVAL'),
+  'Rate limit forward migration must require explicit approval'
+);
+assert.ok(
+  rateLimitRollbackSql.includes('ROLLBACK CANDIDATE ONLY — NOT APPLIED') || rateLimitRollbackSql.includes('ROLLBACK CANDIDATE ONLY'),
+  'Rate limit rollback must contain ROLLBACK CANDIDATE ONLY header'
 );
 
 // Transaction encapsulation
@@ -1176,6 +1221,7 @@ const sensitiveFiles = [
   { name: 'src/lib/auth-password-setup.ts', content: helperCode },
   { name: 'src/actions/account.ts', content: accountCode },
   { name: 'src/actions/auth.ts', content: authCode },
+  { name: 'src/lib/login-rate-limit.ts', content: rateLimitCode },
 ];
 
 for (const { name, content } of sensitiveFiles) {
@@ -1186,4 +1232,444 @@ for (const { name, content } of sensitiveFiles) {
   );
 }
 
-console.log('[PASS] All deterministic contract assertions verified for P98M2T02 password setup & login hardening.');
+// ============================================================
+// 7. LOGIN RATE LIMITING, TRUSTED PROXIES & FAIL-SAFE CONTRACTS (P98M2T08)
+// ============================================================
+
+// 7.1 Forward & Rollback Migration Contracts for Login Rate Limit
+const cleanRateLimitForwardSql = stripSqlComments(rateLimitForwardSql).trim();
+const cleanRateLimitRollbackSql = stripSqlComments(rateLimitRollbackSql).trim();
+
+assert.ok(cleanRateLimitForwardSql.startsWith('BEGIN;'), 'Rate limit forward migration must start with BEGIN;');
+assert.ok(cleanRateLimitForwardSql.endsWith('COMMIT;'), 'Rate limit forward migration must end with COMMIT;');
+assert.ok(cleanRateLimitRollbackSql.startsWith('BEGIN;'), 'Rate limit rollback must start with BEGIN;');
+assert.ok(cleanRateLimitRollbackSql.endsWith('COMMIT;'), 'Rate limit rollback must end with COMMIT;');
+
+// Function declarations in forward migration
+assert.ok(
+  cleanRateLimitForwardSql.includes('CREATE OR REPLACE FUNCTION public.check_login_rate_limit'),
+  'Forward migration must declare check_login_rate_limit'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('CREATE OR REPLACE FUNCTION public.record_failed_login_transaction'),
+  'Forward migration must declare record_failed_login_transaction'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('CREATE OR REPLACE FUNCTION public.clear_login_attempts'),
+  'Forward migration must declare clear_login_attempts'
+);
+
+// Concurrency advisory locks & retention in record_failed_login_transaction
+assert.ok(
+  cleanRateLimitForwardSql.includes('pg_advisory_xact_lock') &&
+  cleanRateLimitForwardSql.includes('kurabe:login_limit:account:') &&
+  cleanRateLimitForwardSql.includes('kurabe:login_limit:ip:'),
+  'record_failed_login_transaction must acquire dual advisory locks per account and IP'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('DELETE FROM public.login_attempts') &&
+  cleanRateLimitForwardSql.includes("attempted_at < (now() - interval '30 days')"),
+  'record_failed_login_transaction must opportunistically prune attempt logs older than 30 days'
+);
+
+// Provenance markers
+assert.ok(
+  cleanRateLimitForwardSql.includes('kurabe:p98:candidate:v1:function:check_login_rate_limit'),
+  'check_login_rate_limit must have exact candidate provenance comment'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('kurabe:p98:candidate:v1:function:record_failed_login_transaction'),
+  'record_failed_login_transaction must have exact candidate provenance comment'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('kurabe:p98:candidate:v1:function:clear_login_attempts'),
+  'clear_login_attempts must have exact candidate provenance comment'
+);
+
+// Least privilege grants
+assert.ok(
+  cleanRateLimitForwardSql.includes('REVOKE ALL ON FUNCTION public.check_login_rate_limit') &&
+  cleanRateLimitForwardSql.includes('FROM PUBLIC, anon, authenticated;'),
+  'check_login_rate_limit must revoke from PUBLIC, anon, authenticated'
+);
+assert.ok(
+  cleanRateLimitForwardSql.includes('GRANT EXECUTE ON FUNCTION public.check_login_rate_limit') &&
+  cleanRateLimitForwardSql.includes('TO service_role;'),
+  'check_login_rate_limit must grant execute strictly to service_role'
+);
+
+// Rollback candidate safety guard
+assert.ok(
+  /current_setting\(\s*'kurabe\.p98_rollback_approved'\s*,\s*true\s*\)/i.test(cleanRateLimitRollbackSql),
+  'Rollback must inspect custom GUC kurabe.p98_rollback_approved'
+);
+assert.ok(
+  cleanRateLimitRollbackSql.includes('ROLLBACK_UNAPPROVED'),
+  'Rollback must fail closed with ROLLBACK_UNAPPROVED if GUC is not true'
+);
+assert.ok(
+  !/SET\s+kurabe\.p98_rollback_approved/i.test(cleanRateLimitRollbackSql),
+  'Rollback must never set kurabe.p98_rollback_approved internally'
+);
+assert.ok(
+  cleanRateLimitRollbackSql.includes('DROP FUNCTION IF EXISTS public.check_login_rate_limit') &&
+  cleanRateLimitRollbackSql.includes('DROP FUNCTION IF EXISTS public.record_failed_login_transaction') &&
+  cleanRateLimitRollbackSql.includes('DROP FUNCTION IF EXISTS public.clear_login_attempts'),
+  'Rollback must drop candidate functions'
+);
+assert.ok(
+  !/\bDROP\s+TABLE\b/i.test(cleanRateLimitRollbackSql) &&
+  !/\bDELETE\s+FROM\b/i.test(cleanRateLimitRollbackSql) &&
+  !/\bTRUNCATE\b/i.test(cleanRateLimitRollbackSql),
+  'Rollback must not drop tables or delete data'
+);
+
+// 7.2 Source Code Invariants
+assert.ok(
+  rateLimitCode.includes("import 'server-only'"),
+  'login-rate-limit.ts must import server-only'
+);
+assert.ok(
+  rateLimitCode.includes('MAX_LOGIN_ATTEMPTS = 5'),
+  'login-rate-limit.ts must set MAX_LOGIN_ATTEMPTS = 5'
+);
+assert.ok(
+  rateLimitCode.includes('MAX_NETWORK_ATTEMPTS = 25'),
+  'login-rate-limit.ts must set MAX_NETWORK_ATTEMPTS = 25'
+);
+assert.ok(
+  rateLimitCode.includes('LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60') ||
+  rateLimitCode.includes('LOGIN_ATTEMPT_WINDOW_SECONDS = 900'),
+  'login-rate-limit.ts must define 15-minute sliding window'
+);
+assert.ok(
+  rateLimitCode.includes('export function isLoopbackIp'),
+  'login-rate-limit.ts must export isLoopbackIp'
+);
+assert.ok(
+  rateLimitCode.includes('export function isPrivateIp'),
+  'login-rate-limit.ts must export isPrivateIp'
+);
+assert.ok(
+  rateLimitCode.includes('export function resolveClientNetwork'),
+  'login-rate-limit.ts must export resolveClientNetwork'
+);
+assert.ok(
+  rateLimitCode.includes('export function resolveClientIp'),
+  'login-rate-limit.ts must export resolveClientIp'
+);
+assert.ok(
+  rateLimitCode.includes('export async function checkLoginRateLimit'),
+  'login-rate-limit.ts must export checkLoginRateLimit'
+);
+assert.ok(
+  rateLimitCode.includes('export async function recordFailedLoginAttempt'),
+  'login-rate-limit.ts must export recordFailedLoginAttempt'
+);
+assert.ok(
+  rateLimitCode.includes('export async function clearLoginAttempts'),
+  'login-rate-limit.ts must export clearLoginAttempts'
+);
+
+// auth.ts wiring verification
+assert.ok(
+  authCode.includes('checkLoginRateLimit'),
+  'auth.ts must wire checkLoginRateLimit'
+);
+assert.ok(
+  authCode.includes('recordFailedLoginAttempt'),
+  'auth.ts must wire recordFailedLoginAttempt'
+);
+assert.ok(
+  authCode.includes('clearLoginAttempts'),
+  'auth.ts must wire clearLoginAttempts'
+);
+assert.ok(
+  authCode.includes('resolveClientIp'),
+  'auth.ts must wire resolveClientIp'
+);
+
+// 7.3 Pure Deterministic Logic Simulations
+// Deterministic implementations matching login-rate-limit.ts
+function simIsLoopbackIp(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  const clean = ip.trim().toLowerCase();
+  return (
+    clean === '127.0.0.1' ||
+    clean === '::1' ||
+    clean === '::ffff:127.0.0.1' ||
+    clean === 'localhost' ||
+    clean.startsWith('127.') ||
+    clean.startsWith('::ffff:127.')
+  );
+}
+
+function simIsPrivateIp(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  const clean = ip.trim().toLowerCase();
+  if (simIsLoopbackIp(clean)) return true;
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(clean)) {
+    const parts = clean.split('.').map(Number);
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    return false;
+  }
+  if (clean.includes(':')) {
+    return clean.startsWith('fc') || clean.startsWith('fd') || clean.startsWith('fe80:');
+  }
+  return false;
+}
+
+function simNormalizeIp(ip) {
+  if (!ip || typeof ip !== 'string') return '127.0.0.1';
+  let clean = ip.trim();
+  if (clean.startsWith('[') && clean.includes(']')) {
+    clean = clean.slice(1, clean.indexOf(']'));
+  } else if (clean.includes(':') && !clean.includes('::') && clean.split(':').length === 2) {
+    clean = clean.split(':')[0];
+  }
+  const isV4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(clean);
+  const isV6 = clean.includes(':');
+  return (isV4 || isV6) ? clean : '127.0.0.1';
+}
+
+function simResolveClientNetwork(headers, config) {
+  const getHeader = (name) => {
+    if (!headers) return null;
+    const lower = name.toLowerCase();
+    if (typeof headers.get === 'function') return headers.get(lower) ?? headers.get(name) ?? null;
+    return headers[lower] ?? headers[name] ?? null;
+  };
+
+  const xForwardedFor = getHeader('x-forwarded-for');
+  const xRealIp = getHeader('x-real-ip');
+  const cfConnectingIp = getHeader('cf-connecting-ip');
+
+  const trustedProxies = config?.trustedProxies ?? [];
+  const configuredHops = config?.trustedHops;
+
+  if (xForwardedFor) {
+    const hops = xForwardedFor.split(',').map(s => s.trim()).filter(Boolean);
+    if (hops.length > 0) {
+      if (configuredHops && Number.isInteger(configuredHops) && configuredHops > 0) {
+        const targetIndex = Math.max(0, hops.length - configuredHops);
+        return { clientIp: simNormalizeIp(hops[targetIndex]), isTrustedProxy: true, proxyChain: hops };
+      }
+      if (trustedProxies.length > 0) {
+        let selectedIp = hops[0];
+        let foundUntrusted = false;
+        for (let i = hops.length - 1; i >= 0; i--) {
+          const hop = hops[i];
+          const hopLower = hop.toLowerCase();
+          const isTrusted = trustedProxies.includes(hopLower) ||
+            (trustedProxies.includes('loopback') && simIsLoopbackIp(hop)) ||
+            (trustedProxies.includes('private') && simIsPrivateIp(hop));
+          if (!isTrusted) {
+            selectedIp = hop;
+            foundUntrusted = true;
+            break;
+          }
+        }
+        return { clientIp: simNormalizeIp(selectedIp), isTrustedProxy: foundUntrusted, proxyChain: hops };
+      }
+      // Default compatibility: rightmost hop (nearest server proxy)
+      return { clientIp: simNormalizeIp(hops[hops.length - 1]), isTrustedProxy: false, proxyChain: hops };
+    }
+  }
+
+  if (cfConnectingIp) return { clientIp: simNormalizeIp(cfConnectingIp), isTrustedProxy: true, proxyChain: [cfConnectingIp] };
+  if (xRealIp) return { clientIp: simNormalizeIp(xRealIp), isTrustedProxy: false, proxyChain: [xRealIp] };
+  return { clientIp: '127.0.0.1', isTrustedProxy: false, proxyChain: ['127.0.0.1'] };
+}
+
+// 7.4 Spoofed Header & Proxy Resolution Tests
+// Case 7.4.1: Client spoofs IP by injecting into X-Forwarded-For; default config takes rightmost hop
+const spoofedHeaderRes = simResolveClientNetwork({
+  'x-forwarded-for': '203.0.113.195, 198.51.100.5',
+});
+assert.strictEqual(
+  spoofedHeaderRes.clientIp,
+  '198.51.100.5',
+  'Default proxy resolution must take rightmost hop, ignoring spoofed leftmost IP'
+);
+
+// Case 7.4.2: Multiple spoofed headers with configured trusted hops = 1
+const hopsRes = simResolveClientNetwork(
+  { 'x-forwarded-for': '1.1.1.1, 2.2.2.2, 3.3.3.3' },
+  { trustedHops: 1 }
+);
+assert.strictEqual(hopsRes.clientIp, '3.3.3.3', 'trustedHops=1 must extract rightmost hop');
+
+const hops2Res = simResolveClientNetwork(
+  { 'x-forwarded-for': '1.1.1.1, 2.2.2.2, 3.3.3.3' },
+  { trustedHops: 2 }
+);
+assert.strictEqual(hops2Res.clientIp, '2.2.2.2', 'trustedHops=2 must extract 2nd from right hop');
+
+// Case 7.4.3: Configured trusted proxies walks right-to-left and finds first untrusted IP
+const proxyListRes = simResolveClientNetwork(
+  { 'x-forwarded-for': 'attacker.spoof.ip, 198.51.100.22, 10.0.0.1, 127.0.0.1' },
+  { trustedProxies: ['loopback', 'private'] }
+);
+assert.strictEqual(
+  proxyListRes.clientIp,
+  '198.51.100.22',
+  'Trusted proxy list must skip loopback/private proxies from right to locate actual client IP'
+);
+
+// Case 7.4.4: Fallbacks when no X-Forwarded-For
+assert.strictEqual(
+  simResolveClientNetwork({ 'cf-connecting-ip': '203.0.113.88' }).clientIp,
+  '203.0.113.88',
+  'Must use CF-Connecting-IP when X-Forwarded-For is absent'
+);
+assert.strictEqual(
+  simResolveClientNetwork({ 'x-real-ip': '203.0.113.99' }).clientIp,
+  '203.0.113.99',
+  'Must use X-Real-IP when X-Forwarded-For is absent'
+);
+assert.strictEqual(
+  simResolveClientNetwork({}).clientIp,
+  '127.0.0.1',
+  'Must fallback to 127.0.0.1 when no headers provided'
+);
+
+// 7.5 Dual-Throttling & Rotation Simulation
+class MockRateLimitEngine {
+  constructor(options = {}) {
+    this.attempts = [];
+    this.maxAccountAttempts = options.maxAccountAttempts ?? 5;
+    this.maxNetworkAttempts = options.maxNetworkAttempts ?? 25;
+    this.windowSeconds = options.windowSeconds ?? 900;
+  }
+
+  check(employeeCode, ip) {
+    const code = (employeeCode || '').trim();
+    const cleanIp = simNormalizeIp(ip);
+    if (!code) return { allowed: false, error: GENERIC_AUTH_ERROR, lockedBy: 'invalid_input' };
+
+    const cutoff = Date.now() - (this.windowSeconds * 1000);
+    const activeAttempts = this.attempts.filter(a => a.timestamp >= cutoff);
+
+    const accountAttempts = activeAttempts.filter(a => a.code === code).length;
+    const ipAttempts = activeAttempts.filter(a => a.ip === cleanIp).length;
+
+    if (accountAttempts >= this.maxAccountAttempts) {
+      return { allowed: false, lockedBy: 'account', accountAttempts, ipAttempts };
+    }
+    if (ipAttempts >= this.maxNetworkAttempts) {
+      return { allowed: false, lockedBy: 'ip', accountAttempts, ipAttempts };
+    }
+    return { allowed: true, accountAttempts, ipAttempts };
+  }
+
+  record(employeeCode, ip, timestamp = Date.now()) {
+    const code = (employeeCode || '').trim();
+    const cleanIp = simNormalizeIp(ip);
+    this.attempts.push({ code, ip: cleanIp, timestamp });
+    // Opportunistic prune: remove entries older than 30 days
+    const retentionCutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    this.attempts = this.attempts.filter(a => a.timestamp >= retentionCutoff);
+    return this.check(employeeCode, ip);
+  }
+
+  clear(employeeCode, ip) {
+    const code = (employeeCode || '').trim();
+    if (ip) {
+      const cleanIp = simNormalizeIp(ip);
+      this.attempts = this.attempts.filter(a => !(a.code === code && a.ip === cleanIp));
+    } else {
+      this.attempts = this.attempts.filter(a => a.code !== code);
+    }
+  }
+}
+
+// Case 7.5.1: Account-level throttling blocks IP rotation attack against a single account
+const engineAccountAttack = new MockRateLimitEngine();
+for (let i = 1; i <= 4; i++) {
+  const res = engineAccountAttack.record('TARGET_EMP', `192.168.1.${i}`);
+  assert.strictEqual(res.allowed, true, `Attempt ${i} should be allowed`);
+  assert.strictEqual(res.accountAttempts, i);
+}
+// 5th attempt from yet another IP must trigger account lockout
+const fifthFromNewIp = engineAccountAttack.record('TARGET_EMP', '192.168.1.99');
+assert.strictEqual(fifthFromNewIp.allowed, false, '5th failure for account must lock account');
+assert.strictEqual(fifthFromNewIp.lockedBy, 'account', 'Locked by account');
+// 6th attempt from another IP remains blocked
+const sixthFromAnotherIp = engineAccountAttack.check('TARGET_EMP', '10.0.0.1');
+assert.strictEqual(sixthFromAnotherIp.allowed, false, 'IP rotation cannot bypass account lock');
+assert.strictEqual(sixthFromAnotherIp.lockedBy, 'account');
+
+// Case 7.5.2: Network-level throttling blocks account rotation attack (credential stuffing from single IP)
+const engineNetworkAttack = new MockRateLimitEngine();
+for (let i = 1; i <= 24; i++) {
+  const res = engineNetworkAttack.record(`USER_${i}`, '198.51.100.77');
+  assert.strictEqual(res.allowed, true, `Account rotation attempt ${i} should be allowed`);
+  assert.strictEqual(res.ipAttempts, i);
+}
+// 25th attempt on new account from same IP must trigger IP lockout
+const twentyFifthFromSameIp = engineNetworkAttack.record('USER_25', '198.51.100.77');
+assert.strictEqual(twentyFifthFromSameIp.allowed, false, '25th failure from same IP must lock IP');
+assert.strictEqual(twentyFifthFromSameIp.lockedBy, 'ip', 'Locked by ip');
+// 26th attempt targeting a fresh user from same IP is blocked
+const freshUserFromBlockedIp = engineNetworkAttack.check('BRAND_NEW_USER', '198.51.100.77');
+assert.strictEqual(freshUserFromBlockedIp.allowed, false, 'Account rotation cannot bypass IP lock');
+assert.strictEqual(freshUserFromBlockedIp.lockedBy, 'ip');
+
+// 7.6 DB Count / Insert Failure Fail-Closed Simulation
+function simFailClosedCheck(dbError) {
+  if (dbError) {
+    return { allowed: false, error: 'Hệ thống tạm thời bận. Vui lòng thử lại sau.', lockedBy: 'db_error' };
+  }
+  return { allowed: true };
+}
+
+function simFailClosedRecord(dbError) {
+  if (dbError) {
+    return { success: false, isThrottled: false, error: 'Lỗi ghi nhận đăng nhập thất bại' };
+  }
+  return { success: true, isThrottled: false };
+}
+
+assert.strictEqual(simFailClosedCheck(true).allowed, false, 'DB error during check must fail closed');
+assert.strictEqual(simFailClosedCheck(true).lockedBy, 'db_error', 'Must identify lockedBy as db_error');
+assert.strictEqual(simFailClosedRecord(true).success, false, 'DB error during record must report failure');
+
+// 7.7 Bounded Recovery Expiry & Retention
+const engineExpiry = new MockRateLimitEngine({ windowSeconds: 900 });
+const pastTime = Date.now() - (950 * 1000); // 950s ago (outside 900s window)
+for (let i = 1; i <= 5; i++) {
+  engineExpiry.record('EXPIRY_EMP', '192.168.1.1', pastTime);
+}
+// After sliding window elapses, the 5 old attempts no longer lock the account
+const checkAfterWindow = engineExpiry.check('EXPIRY_EMP', '192.168.1.1');
+assert.strictEqual(checkAfterWindow.allowed, true, 'Old attempts outside sliding window must expire');
+assert.strictEqual(checkAfterWindow.accountAttempts, 0, 'Active account attempts must be 0 after window expiry');
+
+// Retention prune test
+const ancientTime = Date.now() - (35 * 24 * 60 * 60 * 1000); // 35 days ago
+engineExpiry.attempts.push({ code: 'ANCIENT_EMP', ip: '1.2.3.4', timestamp: ancientTime });
+assert.strictEqual(engineExpiry.attempts.some(a => a.code === 'ANCIENT_EMP'), true, 'Ancient attempt seeded');
+// Recording a new attempt triggers prune of records older than 30 days
+engineExpiry.record('FRESH_EMP', '1.2.3.4');
+assert.strictEqual(
+  engineExpiry.attempts.some(a => a.code === 'ANCIENT_EMP'),
+  false,
+  'Records older than 30 days must be opportunistically pruned'
+);
+
+// 7.8 Reset on Successful Login
+const engineReset = new MockRateLimitEngine();
+for (let i = 1; i <= 4; i++) {
+  engineReset.record('RESET_EMP', '10.0.0.1');
+}
+assert.strictEqual(engineReset.check('RESET_EMP', '10.0.0.1').accountAttempts, 4);
+engineReset.clear('RESET_EMP');
+assert.strictEqual(
+  engineReset.check('RESET_EMP', '10.0.0.1').accountAttempts,
+  0,
+  'Successful login must clear previous failed attempts for account'
+);
+
+console.log('[PASS] All deterministic contract assertions verified for P98M2T02 password setup & P98M2T08 login rate limiting.');

@@ -12,10 +12,15 @@ import {
   type CompletePasswordSetupResult,
   type ResetPasswordResult,
 } from '@/lib/auth-password-setup';
+import {
+  resolveClientIp,
+  checkLoginRateLimit,
+  recordFailedLoginAttempt,
+  clearLoginAttempts,
+  THROTTLED_ERROR_MESSAGE,
+} from '@/lib/login-rate-limit';
 import type { User } from '@/types';
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 phút
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 ngày
 // Fixed valid bcrypt hash for dummy comparison on accounts without active normal password
 // (avoids timing and state leakage; contains no raw password).
@@ -28,37 +33,36 @@ export async function loginAction(
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {
     const headerStore = await headers();
-    const rawIp = headerStore.get('x-forwarded-for') || headerStore.get('x-real-ip') || 'unknown';
-    const ip = rawIp.split(',')[0].trim();
+    const ip = resolveClientIp(headerStore);
     const cleanCode = (employeeCode || '').trim();
 
-    // 1. Rate-limit login: đếm login_attempts thất bại của (mã NV, IP) trong 15 phút
-    const window15m = new Date(Date.now() - LOGIN_ATTEMPT_WINDOW_MS).toISOString();
-    const { count: failCount } = await supabaseAdmin
-      .from('login_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('employee_code', cleanCode)
-      .eq('ip', ip)
-      .gte('attempted_at', window15m);
-
-    if ((failCount ?? 0) >= MAX_LOGIN_ATTEMPTS) {
+    // 1. Rate-limit login: kiểm tra giới hạn thất bại nguyên tử theo tài khoản và mạng tin cậy (15 phút)
+    const rateLimit = await checkLoginRateLimit(cleanCode, ip);
+    if (!rateLimit.allowed) {
       return {
         success: false,
-        error: 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.',
+        error: rateLimit.error || THROTTLED_ERROR_MESSAGE,
       };
     }
 
     // 2. Tìm user theo mã nhân viên
-    const { data: user } = await supabaseAdmin
+    const { data: user, error: userLookupError } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('employee_code', cleanCode)
       .eq('is_active', true)
       .maybeSingle();
 
+    if (userLookupError) {
+      return {
+        success: false,
+        error: toClientError(userLookupError, 'Hệ thống tạm thời bận. Vui lòng thử lại sau.'),
+      };
+    }
+
     if (!user) {
       // Ghi nhận lần thử thất bại
-      await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+      await recordFailedLoginAttempt(cleanCode, ip);
       return { success: false, error: GENERIC_AUTH_ERROR };
     }
 
@@ -81,7 +85,7 @@ export async function loginAction(
       const valid = await bcrypt.compare(passwordCandidate, targetHash);
       if (isSetupIncomplete || !valid || !password) {
         // Ghi nhận lần thử thất bại
-        await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+        await recordFailedLoginAttempt(cleanCode, ip);
         return { success: false, error: GENERIC_AUTH_ERROR };
       }
     } else if (user.password_hash) {
@@ -89,17 +93,13 @@ export async function loginAction(
       const valid = await bcrypt.compare(passwordCandidate, user.password_hash);
       if (!valid || !password) {
         // Ghi nhận lần thử thất bại
-        await supabaseAdmin.from('login_attempts').insert({ employee_code: cleanCode, ip });
+        await recordFailedLoginAttempt(cleanCode, ip);
         return { success: false, error: GENERIC_AUTH_ERROR };
       }
     }
 
-    // 4. Đăng nhập thành công -> Xóa attempts cũ của (mã NV, IP)
-    await supabaseAdmin
-      .from('login_attempts')
-      .delete()
-      .eq('employee_code', cleanCode)
-      .eq('ip', ip);
+    // 4. Đăng nhập thành công -> Xóa attempts cũ của tài khoản
+    await clearLoginAttempts(cleanCode);
 
     // 5. Tạo session token ngẫu nhiên 256-bit (64 hex chars)
     const token = crypto.randomBytes(32).toString('hex');
