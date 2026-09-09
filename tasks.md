@@ -198,7 +198,7 @@ Changes: Reverify exact SQL and grants locally with harness; fresh review and ap
 Constraints: Serial after stable auth rollout, explicit approval, no business evaluation writes; mismatch => STOP/pre-reviewed rollback.
 DoD: `node tests/p98-evaluator-auth.test.mjs`; real DB tests via qualified harness and exact approved live SQL/RPC manifest evidence; NULL/wrong reject, assigned unaffected, no residual fixture or unapproved DB delta.
 
-## Phase 99 — planned, dependency-gated
+## Phase 99 — active, dependency-gated
 
 ### [x] [#P99M1T01] Reproducible complete DB baseline and migration replay
 ```yaml
