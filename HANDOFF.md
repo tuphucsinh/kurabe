@@ -1,6 +1,6 @@
 # HANDOFF — Kurabe QAQC
 
-- Canonical HEAD after P98M2T10 publish: `9646834885527ff2db2a14e3e49020bb996a8b32`; protected dirty `AGENTS.md` remains untouched.
+- T10 published commit: `9646834885527ff2db2a14e3e49020bb996a8b32`; current canonical closure HEAD: `63f2c204bc2576b07249426f58c016147a5650ab`; protected dirty `AGENTS.md` remains untouched.
 - `P98M2T08 = DONE` at reviewed source `2d40813650ed67c8717d0685b08a544f283cde48`; do not reopen it.
 - `P98M2T05 = READY_FOR_OWNER_APPROVAL`; production mutation = NONE. Current mode is `OPTIONAL_PASSWORD`; strict enforcement is deferred until explicit owner go-live approval.
 - Fresh P98M2T05 preflight found pre-existing `public.login_attempts` schema/grant/provenance drift; prior baseline is historical only.
