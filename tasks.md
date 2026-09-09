@@ -148,7 +148,7 @@ DoD:
 - Exact diff against the reviewed P98M2T08 schema/function/grant/RLS contract identifies preserved rows and each required reconciliation delta; unexpected collision states are explicitly fail-closed.
 - Fresh independent Reviewer returns `PASS` on the forensic evidence and T10 plan; evidence path and review path are retained. No production or canonical source mutation occurs.
 
-### [ ] [#P98M2T10] Bounded login_attempts reconciliation migration
+### [x] [#P98M2T10] Bounded login_attempts reconciliation migration
 ```yaml
 task:
   id: P98M2T10
