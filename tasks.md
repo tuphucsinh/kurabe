@@ -215,7 +215,7 @@ Changes: Derive reviewed baseline from authorized redacted catalog+tracked SQL, 
 Constraints: No production clone/PII or rewriting applied history. Bootstrap cannot target non-disposable DB; unknown catalog predicate blocks parity claim.
 DoD: `node scripts/verify-release.mjs --suite db-bootstrap`; empty→full schema, repeat setup, ordered forward replay and normalized expected-catalog match; DB identity refusal tests; root gates.
 
-### [ ] [#P99M2T01] Preserve historical evaluations during personnel changes
+### [x] [#P99M2T01] Preserve historical evaluations during personnel changes
 ```yaml
 task:
   id: P99M2T01

@@ -47,123 +47,166 @@ function assertLeadershipSlot(
   }
 }
 
+type PersonnelSyncResult = {
+  updatedEvaluations: number;
+  updatedRounds: number;
+  errors: string[];
+};
+
+type ActiveEvaluationRow = { id: string; employee_id: string };
+type ActiveUserSubjectRow = { id: string; role: string; team_id: string | null; subleader_id: string | null };
+type ActiveRoundRow = { id: string; evaluation_id: string; round: number };
+
 /**
- * Đồng bộ evaluation + round 1 theo role/team MỚI của user sau khi đổi chức vụ.
- * - Cập nhật employee_role trên mọi evaluation của user (role là thuộc tính người, không phụ thuộc kỳ)
- * - Round 1: Employee → gán SubLeader team (nếu team có); Leader/SubLeader/Manager → SELF
- * - KHÔNG đụng round đã submit (giữ lịch sử)
+ * Đồng bộ snapshot personnel chỉ trong kỳ active và workflow chưa submit.
+ * Historical/closed/submitted rows bị lọc trước query; DB guard vẫn là lớp
+ * authoritative cuối cùng cho race close/submit.
  */
-async function syncEvaluationsAfterUsersChange(users: User[]): Promise<void> {
-  if (users.length === 0) return;
-  try {
-    // 0. Đồng bộ teams.leader_id theo role hiện tại (rule: Leader = role user)
-    //    - user thành Leader → set leader_id của team = user.id
-    //    - user bị hạ khỏi Leader → xóa leader_id nếu đang trỏ tới user
-    for (const user of users) {
-      if (!user.teamId) continue;
-      if (user.role === 'Leader') {
-        await supabaseAdmin.from('teams').update({ leader_id: user.id }).eq('id', user.teamId);
-      } else {
-        await supabaseAdmin
-          .from('teams')
-          .update({ leader_id: null })
-          .eq('id', user.teamId)
-          .eq('leader_id', user.id); // chỉ xóa nếu đang là leader của team này
-      }
-    }
+async function syncEvaluationsAfterUsersChange(users: User[]): Promise<PersonnelSyncResult> {
+  const result: PersonnelSyncResult = { updatedEvaluations: 0, updatedRounds: 0, errors: [] };
+  if (users.length === 0) return result;
 
-    // 1. Đồng bộ employee_role và team_id trên mọi evaluation (giá trị khác nhau per user)
-    for (const user of users) {
-      await supabaseAdmin
-        .from('evaluations')
-        .update({
-          employee_role: user.role,
-          team_id: user.teamId || null,
-        })
-        .eq('employee_id', user.id);
-    }
-
-    // 2. Tải 1 lần cho cả batch: toàn bộ user active + map leader chỉ định
-    //    (map fetched SAU bước 0 để phản ánh leader_id mới sync)
-    const [{ data: allUsers }, teamLeaderIds] = await Promise.all([
-      supabaseAdmin
-        .from('users')
-        .select('id, role, team_id, subleader_id')
-        .eq('is_active', true),
-      loadTeamLeaderIds(supabaseAdmin),
-    ]);
-    const subjects: EvaluationSubject[] = (allUsers || []).map(u => ({
-      id: u.id,
-      role: parseRole(u.role),
-      teamId: u.team_id || null,
-      subleaderId: u.subleader_id || null,
-    }));
-
-    const userById = new Map(users.map(u => [u.id, u]));
-    const flowByRole = new Map<Role, ReturnType<typeof getEvaluationFlow>>();
-
-    // 3. Tải evaluations + rounds MỘT query cho cả batch (C4 — hết N+1 từng evaluation)
-    const { data: evs } = await supabaseAdmin
-      .from('evaluations')
-      .select('id, employee_id')
-      .in('employee_id', users.map(u => u.id));
-    if (!evs || evs.length === 0) return;
-
-    const { data: rounds } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .select('id, evaluation_id, round, status, submitted_at')
-      .in('evaluation_id', evs.map(e => e.id))
-      .order('round');
-    if (!rounds) return;
-
-    // 4. Resolve evaluator rồi GOM update theo evaluator — batch .in() thay vì 1 update/round
-    const updatesByKey = new Map<string, { evaluatorId: string | null; evaluatorRole: Role; roundIds: string[] }>();
-    for (const r of rounds) {
-      if (r.status === 'Submitted' || r.submitted_at) continue; // đã submit → giữ nguyên
-
-      const ev = evs.find(e => e.id === r.evaluation_id);
-      const user = ev ? userById.get(ev.employee_id) : undefined;
-      if (!user) continue;
-
-      let flow = flowByRole.get(user.role);
-      if (!flow) {
-        flow = getEvaluationFlow(user.role);
-        flowByRole.set(user.role, flow);
-      }
-      const step = flow.find(s => s.round === r.round);
-      if (!step) continue;
-
-      const subject: EvaluationSubject = {
-        id: user.id,
-        role: user.role,
-        teamId: user.teamId || null,
-        subleaderId: user.subleaderId || null,
-      };
-      const evaluator = resolveEvaluatorFromList(step.evaluator, subject, subjects, teamLeaderIds);
-
-      const key = `${evaluator?.id || 'none'}::${evaluator?.role || step.evaluator}`;
-      const bucket = updatesByKey.get(key) || {
-        evaluatorId: evaluator?.id || null,
-        evaluatorRole: parseRole(evaluator?.role || step.evaluator),
-        roundIds: [],
-      };
-      bucket.roundIds.push(r.id);
-      updatesByKey.set(key, bucket);
-    }
-
-    for (const bucket of updatesByKey.values()) {
-      await supabaseAdmin
-        .from('evaluation_rounds')
-        .update({
-          evaluator_id: bucket.evaluatorId,
-          evaluator_role: bucket.evaluatorRole,
-        })
-        .in('id', bucket.roundIds);
-    }
-  } catch (err) {
-    // Sync là best-effort: không làm hỏng upsert user đã thành công
-    console.error('syncEvaluationsAfterUsersChange error:', err);
+  // 0. Đồng bộ teams.leader_id theo role hiện tại (không phải historical snapshot).
+  for (const user of users) {
+    if (!user.teamId) continue;
+    const teamQuery = user.role === 'Leader'
+      ? supabaseAdmin.from('teams').update({ leader_id: user.id }).eq('id', user.teamId)
+      : supabaseAdmin
+        .from('teams')
+        .update({ leader_id: null })
+        .eq('id', user.teamId)
+        .eq('leader_id', user.id);
+    const { error } = await teamQuery;
+    if (error) result.errors.push('team snapshot sync failed');
   }
+
+  // 1. Resolve the canonical active period before touching any evaluation.
+  const { data: activePeriods, error: periodError } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select('id')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(2);
+  if (periodError) {
+    result.errors.push('active period lookup failed');
+    return result;
+  }
+  if (!activePeriods || activePeriods.length === 0) return result;
+  if (activePeriods.length !== 1) {
+    result.errors.push('active period cardinality invalid');
+    return result;
+  }
+  const activePeriodId = activePeriods[0].id;
+
+  // 2. Only current NotStarted/Draft evaluations may receive personnel snapshots.
+  const { data: evs, error: evaluationsError } = await supabaseAdmin
+    .from('evaluations')
+    .select('id, employee_id')
+    .in('employee_id', users.map((user) => user.id))
+    .eq('period_id', activePeriodId)
+    .in('status', ['NotStarted', 'Draft']);
+  if (evaluationsError) {
+    result.errors.push('active evaluation lookup failed');
+    return result;
+  }
+  const activeEvaluations = (evs || []) as ActiveEvaluationRow[];
+  if (activeEvaluations.length === 0) return result;
+
+  const userById = new Map(users.map((user: User) => [user.id, user] as [string, User]));
+  for (const evaluation of activeEvaluations) {
+    const user = userById.get(evaluation.employee_id);
+    if (!user) continue;
+    const { data: updated, error } = await supabaseAdmin
+      .from('evaluations')
+      .update({ employee_role: user.role, team_id: user.teamId || null })
+      .eq('id', evaluation.id)
+      .eq('period_id', activePeriodId)
+      .in('status', ['NotStarted', 'Draft'])
+      .select('id');
+    if (error) {
+      result.errors.push('active evaluation snapshot update failed');
+    } else {
+      result.updatedEvaluations += updated?.length || 0;
+    }
+  }
+
+  // 3. Resolve current evaluators only for those active, unsubmitted records.
+  const [{ data: allUsers, error: usersError }, teamLeaderIds] = await Promise.all([
+    supabaseAdmin
+      .from('users')
+      .select('id, role, team_id, subleader_id')
+      .eq('is_active', true),
+    loadTeamLeaderIds(supabaseAdmin),
+  ]);
+  if (usersError) {
+    result.errors.push('active personnel lookup failed');
+    return result;
+  }
+  const activeUsers = (allUsers || []) as ActiveUserSubjectRow[];
+  const subjects: EvaluationSubject[] = activeUsers.map((user: ActiveUserSubjectRow) => ({
+    id: user.id,
+    role: parseRole(user.role),
+    teamId: user.team_id || null,
+    subleaderId: user.subleader_id || null,
+  }));
+  const flowByRole = new Map<Role, ReturnType<typeof getEvaluationFlow>>();
+  const { data: rounds, error: roundsError } = await supabaseAdmin
+    .from('evaluation_rounds')
+    .select('id, evaluation_id, round, status, submitted_at')
+    .in('evaluation_id', activeEvaluations.map((evaluation) => evaluation.id))
+    .in('status', ['NotStarted', 'Draft'])
+    .is('submitted_at', null)
+    .order('round');
+  if (roundsError) {
+    result.errors.push('active round lookup failed');
+    return result;
+  }
+
+  const updatesByKey = new Map<string, { evaluatorId: string | null; evaluatorRole: Role; roundIds: string[] }>();
+  const activeRounds = (rounds || []) as ActiveRoundRow[];
+  for (const round of activeRounds) {
+    const evaluation = activeEvaluations.find((item: ActiveEvaluationRow) => item.id === round.evaluation_id);
+    const user = evaluation ? userById.get(evaluation.employee_id) : undefined;
+    if (!user) continue;
+    let flow = flowByRole.get(user.role);
+    if (!flow) {
+      flow = getEvaluationFlow(user.role);
+      flowByRole.set(user.role, flow);
+    }
+    const step = flow.find((item) => item.round === round.round);
+    if (!step) continue;
+    const evaluator = resolveEvaluatorFromList(step.evaluator, {
+      id: user.id,
+      role: user.role,
+      teamId: user.teamId || null,
+      subleaderId: user.subleaderId || null,
+    }, subjects, teamLeaderIds);
+    const key = `${evaluator?.id || 'none'}::${evaluator?.role || step.evaluator}`;
+    const bucket = updatesByKey.get(key) || {
+      evaluatorId: evaluator?.id || null,
+      evaluatorRole: parseRole(evaluator?.role || step.evaluator),
+      roundIds: [],
+    };
+    bucket.roundIds.push(round.id);
+    updatesByKey.set(key, bucket);
+  }
+
+  for (const bucket of updatesByKey.values()) {
+    const { data: updated, error } = await supabaseAdmin
+      .from('evaluation_rounds')
+      .update({ evaluator_id: bucket.evaluatorId, evaluator_role: bucket.evaluatorRole })
+      .in('id', bucket.roundIds)
+      .in('status', ['NotStarted', 'Draft'])
+      .is('submitted_at', null)
+      .select('id');
+    if (error) {
+      result.errors.push('active round snapshot update failed');
+    } else {
+      result.updatedRounds += updated?.length || 0;
+    }
+  }
+
+  return result;
 }
 
 function revalidateUserPaths() {
@@ -178,7 +221,7 @@ function revalidateUserPaths() {
 
 export async function upsertUserAction(
   user: Partial<User>
-): Promise<{ success: boolean; user?: User; error?: string }> {
+): Promise<{ success: boolean; user?: User; error?: string; warning?: string }> {
   const auth = await requireRole(['Manager', 'Leader']);
   if (auth.error !== null) return { success: false, error: auth.error };
 
@@ -222,6 +265,7 @@ export async function upsertUserAction(
     }
   }
 
+  let syncWarning: string | undefined;
   try {
     let isNewUser = true;
     if (user.id) {
@@ -275,7 +319,11 @@ export async function upsertUserAction(
 
     // Đổi chức vụ/team/SubLeader → đồng bộ evaluation + round 1 theo flow mới
     if (user.role || user.teamId || user.subleaderId !== undefined) {
-      await syncEvaluationsAfterUsersChange([saved]);
+      const syncResult = await syncEvaluationsAfterUsersChange([saved]);
+      if (syncResult.errors.length > 0) {
+        console.error('personnel evaluation snapshot sync rejected:', syncResult.errors);
+        syncWarning = 'Hồ sơ đã lưu; một phần đồng bộ đánh giá bị từ chối vì workflow đã khóa.';
+      }
     }
 
     // Nếu user mới → gọi ensureEvaluationsForUsers (admin) nội bộ
@@ -297,7 +345,7 @@ export async function upsertUserAction(
 
     revalidateUserPaths();
 
-    return { success: true, user: saved };
+    return { success: true, user: saved, ...(syncWarning ? { warning: syncWarning } : {}) };
   } catch (error: unknown) {
     return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu nhân viên.') };
   }
@@ -305,10 +353,11 @@ export async function upsertUserAction(
 
 export async function upsertUsersAction(
   users: Partial<User>[]
-): Promise<{ success: boolean; users?: User[]; error?: string }> {
+): Promise<{ success: boolean; users?: User[]; error?: string; warning?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { success: false, error: auth.error };
 
+  let syncWarning: string | undefined;
   try {
     if (!users || users.length === 0) {
       return { success: true, users: [] };
@@ -370,7 +419,11 @@ export async function upsertUsersAction(
       }
     }
     if (usersToSync.length > 0) {
-      await syncEvaluationsAfterUsersChange(usersToSync);
+      const syncResult = await syncEvaluationsAfterUsersChange(usersToSync);
+      if (syncResult.errors.length > 0) {
+        console.error('personnel evaluation snapshot batch sync rejected:', syncResult.errors);
+        syncWarning = 'Hồ sơ đã lưu; một phần đồng bộ đánh giá bị từ chối vì workflow đã khóa.';
+      }
     }
 
     // Tự tạo evaluation cho các user mới
@@ -395,7 +448,7 @@ export async function upsertUsersAction(
 
     revalidateUserPaths();
 
-    return { success: true, users: saved };
+    return { success: true, users: saved, ...(syncWarning ? { warning: syncWarning } : {}) };
   } catch (error: unknown) {
     return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu hàng loạt nhân viên.') };
   }

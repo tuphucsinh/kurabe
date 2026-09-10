@@ -19,6 +19,20 @@ export interface EvaluationHistoryResult {
   entries: EvaluationHistoryEntry[];
 }
 
+function buildHistoricalTarget(target: User, evaluation: Evaluation): User {
+  const firstRound = evaluation.rounds.find((round) => round.round === 1);
+  return {
+    ...target,
+    // Access to a historical record follows the captured evaluation graph,
+    // not the employee's current role/team/subleader assignment.
+    role: evaluation.employeeRole,
+    teamId: evaluation.teamId,
+    subleaderId: firstRound?.evaluatorRole === 'SubLeader'
+      ? firstRound.evaluatorId || null
+      : target.subleaderId,
+  };
+}
+
 /**
  * Đọc lịch sử đánh giá đã hoàn tất của một nhân viên (server-only).
  *
@@ -61,15 +75,6 @@ export async function getEvaluationHistoryAdmin(
 
   const target = mapUserFromDb(targetData);
 
-  // Phân quyền theo team đối với Leader/SubLeader
-  if (viewer.role !== 'Manager' && viewer.id !== employeeId) {
-    if (viewer.role === 'Leader' || viewer.role === 'SubLeader') {
-      if (!viewer.teamId || target.teamId !== viewer.teamId) {
-        return { target: null, entries: [] };
-      }
-    }
-  }
-
   // 3. Query evaluations đã Approved thuộc các kỳ đã closed
   const { data: evalRows, error: evalError } = await supabaseAdmin
     .from('evaluations')
@@ -87,12 +92,12 @@ export async function getEvaluationHistoryAdmin(
   }
 
   // 4. Chuẩn bị context phân quyền cho canViewEvaluation
-  let allUsersContext: User[] = [target];
+  let allUsersContextBase: User[] = [target];
   if (viewer.role === 'Leader' || viewer.role === 'SubLeader') {
     // Giữ đủ context user trong cùng team để matchesEvaluatorSelector không deny
     // sai do thiếu quan hệ subleader/team; context này không được trả về client.
     const teamUsers = await getUsersAdmin(viewer);
-    allUsersContext = [
+    allUsersContextBase = [
       ...teamUsers.filter((user) => user.id !== target.id),
       target,
     ];
@@ -116,7 +121,13 @@ export async function getEvaluationHistoryAdmin(
       continue;
     }
 
-    // Kiểm tra quyền xem chi tiết evaluation của viewer
+    const historicalTarget = buildHistoricalTarget(target, evaluation);
+    const allUsersContext = [
+      ...allUsersContextBase.filter((user) => user.id !== historicalTarget.id),
+      historicalTarget,
+    ];
+
+    // Kiểm tra quyền theo graph đã capture trong evaluation/round snapshots.
     if (!canViewEvaluation(viewer, evaluation, allUsersContext)) {
       continue;
     }
