@@ -101,9 +101,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] bg-surface-raised/80 backdrop-blur-xl border-t border-outline-soft/80 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-around z-40 px-2 pb-[env(safe-area-inset-bottom,0px)] print:hidden">
         <button
+          id="mobile-menu-trigger"
           type="button"
           onClick={() => setIsSidebarOpen(true)}
           aria-label="Mở menu"
+          aria-controls="mobile-sidebar"
+          aria-expanded={isSidebarOpen}
           className="relative flex flex-col items-center justify-center w-14 h-12 text-ink-muted hover:text-ink transition-all duration-300"
         >
           <Menu size={24} />

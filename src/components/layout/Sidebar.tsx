@@ -34,6 +34,49 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const mobileDrawerRef = useRef<HTMLElement>(null);
+  const wasMobileDrawerOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (wasMobileDrawerOpenRef.current) {
+        document.getElementById('mobile-menu-trigger')?.focus();
+      }
+      wasMobileDrawerOpenRef.current = false;
+      return;
+    }
+    wasMobileDrawerOpenRef.current = true;
+    const drawer = mobileDrawerRef.current;
+    if (!drawer) return;
+    const trigger = document.getElementById('mobile-menu-trigger');
+    const focusable = () => Array.from(drawer.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ));
+    const first = focusable()[0];
+    first?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+        trigger?.focus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (!elements.length) return;
+      const current = document.activeElement;
+      const index = elements.indexOf(current as HTMLElement);
+      if (event.shiftKey && (index <= 0 || index === -1)) {
+        event.preventDefault();
+        elements[elements.length - 1].focus();
+      } else if (!event.shiftKey && index === elements.length - 1) {
+        event.preventDefault();
+        elements[0].focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const isManager = user?.role === 'Manager';
   const teamsHref = isManager ? '/teams' : user?.teamId ? `/teams/${user.teamId}` : '/teams';
@@ -90,6 +133,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {/* Sidebar */}
               <m.aside 
+                id="mobile-sidebar"
+                ref={mobileDrawerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menu điều hướng"
                 initial={{ x: '-100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
@@ -237,7 +285,9 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         </div>
         {isMobile && (
           <button 
+            type="button"
             onClick={onClose}
+            aria-label="Đóng menu"
             className="text-white/70 hover:text-white p-1 hover:bg-white/10 rounded-full transition-colors"
           >
             <X size={24} />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { m, AnimatePresence, LazyMotion, domAnimation } from 'framer-motion';
 import { AlertTriangle, Trash2, Info } from 'lucide-react';
 
@@ -20,9 +20,12 @@ const ConfirmContext = createContext<((options: ConfirmOptions) => Promise<boole
 
 export function ConfirmDialogProvider({ children }: { children: React.ReactNode }) {
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
+      returnFocusRef.current = document.activeElement as HTMLElement | null;
       setConfirmState({ ...options, resolve });
     });
   }, []);
@@ -32,6 +35,34 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
       confirmState.resolve(value);
       setConfirmState(null);
     }
+  }, [confirmState]);
+
+  useEffect(() => {
+    if (!confirmState) {
+      returnFocusRef.current?.focus();
+      return;
+    }
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    ));
+    focusable()[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (!elements.length) return;
+      const index = elements.indexOf(document.activeElement as HTMLElement);
+      if (event.shiftKey && (index <= 0 || index === -1)) {
+        event.preventDefault();
+        elements[elements.length - 1].focus();
+      } else if (!event.shiftKey && index === elements.length - 1) {
+        event.preventDefault();
+        elements[0].focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [confirmState]);
 
   // Handle Escape key
@@ -61,6 +92,11 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               />
               <m.div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-dialog-title"
+              aria-describedby="confirm-dialog-message"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -77,10 +113,10 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
                    <Info size={24} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-bold text-ink mb-1">
+                  <h3 id="confirm-dialog-title" className="text-lg font-bold text-ink mb-1">
                     {confirmState.title}
                   </h3>
-                  <p className="text-ink-muted leading-relaxed">
+                  <p id="confirm-dialog-message" className="text-ink-muted leading-relaxed">
                     {confirmState.message}
                   </p>
                 </div>

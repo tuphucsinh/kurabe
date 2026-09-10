@@ -11,6 +11,8 @@ export default function PeriodSelector() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstOptionRef = useRef<HTMLButtonElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const [mounted, setMounted] = useState(false);
 
@@ -30,6 +32,20 @@ export default function PeriodSelector() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    firstOptionRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const handleToggle = () => {
     if (!isOpen && dropdownRef.current) {
@@ -70,7 +86,13 @@ export default function PeriodSelector() {
   return (
     <div className="px-3 py-2 border-t border-white/10" ref={dropdownRef}>
       <button
+        ref={triggerRef}
+        type="button"
         onClick={handleToggle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls="period-flyout-menu"
+        aria-label={`Chọn kỳ đánh giá, kỳ hiện tại ${currentPeriod.year}`}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all duration-200 group"
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -89,6 +111,8 @@ export default function PeriodSelector() {
       {mounted && isOpen && createPortal(
         <div 
           id="period-flyout-menu"
+          role="listbox"
+          aria-label="Các kỳ đánh giá"
           style={dropdownStyle}
           className="bg-brand backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 md:slide-in-from-left-2 duration-200"
         >
@@ -103,6 +127,10 @@ export default function PeriodSelector() {
               return (
                 <button
                   key={period.id}
+                  ref={period.id === allPeriods[0]?.id ? firstOptionRef : undefined}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
                   onClick={() => {
                     setCurrentPeriod(period);
                     setIsOpen(false);
