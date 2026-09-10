@@ -14,28 +14,30 @@
  * - Redacted output stored in tests/perf/perf-report.json
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 
 // --- 1. Environment & Target Validation ---
 const EXPECTED_BASE_URL = 'https://lykiv.vercel.app';
+const LOCAL_FIXTURE_MODE = process.env.KURABE_BENCHMARK_MODE === 'local-fixture';
 const baseUrl = process.env.KURABE_BENCHMARK_BASE_URL;
-if (!baseUrl || baseUrl.trim() !== EXPECTED_BASE_URL) {
-  throw new Error(`CRITICAL: KURABE_BENCHMARK_BASE_URL must be explicitly set to '${EXPECTED_BASE_URL}'. Current: '${baseUrl}'`);
-}
-
 const employeeCode = process.env.KURABE_BENCHMARK_EMPLOYEE_CODE;
-if (!employeeCode || !employeeCode.trim()) {
-  throw new Error('CRITICAL: KURABE_BENCHMARK_EMPLOYEE_CODE environment variable is required.');
-}
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('CRITICAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for session verification and cleanup.');
+if (!LOCAL_FIXTURE_MODE) {
+  if (!baseUrl || baseUrl.trim() !== EXPECTED_BASE_URL) {
+    throw new Error(`CRITICAL: KURABE_BENCHMARK_BASE_URL must be explicitly set to '${EXPECTED_BASE_URL}'. Current: '${baseUrl}'`);
+  }
+  if (!employeeCode || !employeeCode.trim()) {
+    throw new Error('CRITICAL: KURABE_BENCHMARK_EMPLOYEE_CODE environment variable is required.');
+  }
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('CRITICAL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for session verification and cleanup.');
+  }
 }
 
 const TARGET_ROUTES = ['/dashboard', '/employees', '/reports'];
@@ -152,6 +154,12 @@ class CDPClient {
       this.eventListeners.set(method, []);
     }
     this.eventListeners.get(method).push(callback);
+  }
+
+  off(method, callback) {
+    const listeners = this.eventListeners.get(method);
+    if (!listeners) return;
+    this.eventListeners.set(method, listeners.filter((listener) => listener !== callback));
   }
 
   close() {
@@ -642,7 +650,196 @@ async function runBenchmark() {
   console.log('================================================================');
 }
 
-runBenchmark().catch((err) => {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function startLocalFixtureServer() {
+  const allowedRoutes = new Set(TARGET_ROUTES);
+  const server = http.createServer((request, response) => {
+    const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+    const route = requestUrl.pathname;
+    const role = requestUrl.searchParams.get('fixtureRole') || '';
+    const validRole = role === 'worker' || role === 'manager';
+    if (route === '/app.js') {
+      const body = `(() => {
+        const complete = () => {
+          const marker = document.getElementById('data-complete');
+          if (marker) marker.textContent = 'complete';
+          document.body.dataset.complete = 'true';
+          performance.mark('fixture-data-complete');
+        };
+        window.__fixtureErrors = [];
+        setTimeout(complete, 18);
+      })();`;
+      response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=600' });
+      response.end(body);
+      return;
+    }
+    if (route === '/app.css') {
+      response.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'public, max-age=600' });
+      response.end('body{margin:0;font-family:system-ui,sans-serif}main{padding:24px}.hero{min-height:120px;background:#e8f0ff;padding:16px}');
+      return;
+    }
+    if (route === '/favicon.ico') {
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+    if (!allowedRoutes.has(route) || !validRole) {
+      response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      response.end('not found');
+      return;
+    }
+    const body = `<!doctype html><html><head><meta charset="utf-8"><title>Kurabe local performance fixture</title><link rel="stylesheet" href="/app.css"></head><body data-route="${route}" data-role="${role}" data-complete="false"><main><section class="hero"><h1>${route} fixture</h1><p>role=${role}</p></section><p id="data-complete">loading</p></main><script src="/app.js"></script></body></html>`;
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    response.end(body);
+  });
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      resolve({ server, baseUrl: `http://127.0.0.1:${address.port}` });
+    });
+  });
+}
+
+async function waitForDevToolsPort(portFile) {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(portFile)) {
+      const lines = fs.readFileSync(portFile, 'utf8').trim().split('\n');
+      if (lines.length >= 2 && Number.isInteger(Number(lines[0]))) return Number(lines[0]);
+    }
+    await sleep(100);
+  }
+  throw new Error('Local fixture Chrome DevTools port did not become ready.');
+}
+
+function summarizeValues(values) {
+  const numeric = values.filter((value) => typeof value === 'number' && Number.isFinite(value));
+  if (numeric.length === 0) return { sampleCount: 0, min: null, max: null, mean: null, median: null, spreadPercent: null, aggregation: 'unavailable', value: null };
+  const sorted = [...numeric].sort((a, b) => a - b);
+  const median = sorted.length === 1 ? sorted[0] : (sorted[0] + sorted[sorted.length - 1]) / 2;
+  const mean = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
+  const spreadPercent = median === 0 ? 0 : ((sorted[sorted.length - 1] - sorted[0]) / median) * 100;
+  const useMedian = spreadPercent > 5;
+  const round = (value) => Math.round(value * 10) / 10;
+  return {
+    sampleCount: numeric.length,
+    min: round(sorted[0]),
+    max: round(sorted[sorted.length - 1]),
+    mean: round(mean),
+    median: round(median),
+    spreadPercent: round(spreadPercent),
+    aggregation: useMedian ? 'median' : 'mean',
+    value: round(useMedian ? median : mean),
+  };
+}
+
+async function runLocalFixtureBenchmark() {
+  const { server, baseUrl: fixtureUrl } = await startLocalFixtureServer();
+  const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurabe-local-perf-chrome-'));
+  const chrome = spawn('/usr/bin/google-chrome-stable', [
+    '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`,
+    '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
+    '--disable-dev-shm-usage', '--disable-extensions', '--disable-gpu', '--disable-popup-blocking',
+    '--disable-sync', '--metrics-recording-only', '--no-sandbox', '--password-store=basic',
+    '--use-mock-keychain', '--window-size=1440,900', 'about:blank',
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  chrome.stderr.on('data', () => {});
+  const portFile = path.join(profileDir, 'DevToolsActivePort');
+  let cdp = null;
+  const browserErrors = [];
+  const runs = [];
+  const viewports = [{ name: 'mobile', width: 390, height: 844 }, { name: 'desktop', width: 1440, height: 900 }];
+  const roles = ['worker', 'manager'];
+  const browserVersion = spawnSync('/usr/bin/google-chrome-stable', ['--version'], { encoding: 'utf8' }).stdout.trim();
+  try {
+    const devToolsPort = await waitForDevToolsPort(portFile);
+    const targets = await (await fetch(`http://127.0.0.1:${devToolsPort}/json/list`)).json();
+    const pageTarget = targets.find((target) => target.type === 'page');
+    if (!pageTarget) throw new Error('Local fixture Chrome page target missing.');
+    cdp = new CDPClient(pageTarget.webSocketDebuggerUrl);
+    await cdp.connect();
+    await cdp.send('Page.enable');
+    await cdp.send('Network.enable');
+    await cdp.send('Runtime.enable');
+    await cdp.send('Log.enable');
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      window.__fixtureLcp = null;
+      try { new PerformanceObserver((list) => { const entries = list.getEntries(); if (entries.length) window.__fixtureLcp = entries[entries.length - 1].startTime; }).observe({ type: 'largest-contentful-paint', buffered: true }); } catch {}
+    ` });
+    cdp.on('Log.entryAdded', (payload) => { if (payload.entry?.level === 'error') browserErrors.push({ type: 'log', text: String(payload.entry.text || '').slice(0, 240) }); });
+    cdp.on('Runtime.consoleAPICalled', (payload) => { if (payload.type === 'error') browserErrors.push({ type: 'console', text: payload.args?.map((arg) => arg.value || arg.description || '').join(' ').slice(0, 240) }); });
+    cdp.on('Network.loadingFailed', (payload) => browserErrors.push({ type: 'network', text: String(payload.errorText || 'loading failed').slice(0, 240) }));
+
+    for (const viewport of viewports) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.name === 'mobile' });
+      for (const role of roles) {
+        for (const route of TARGET_ROUTES) {
+          for (const state of ['cold', 'warm']) {
+            for (let sample = 1; sample <= 2; sample += 1) {
+              const errorStart = browserErrors.length;
+              if (state === 'cold') await cdp.send('Network.clearBrowserCache');
+              let documentStatus = null;
+              const documentHandler = (payload) => {
+                if (payload.type === 'Document' && payload.response?.url?.startsWith(fixtureUrl)) documentStatus = payload.response.status;
+              };
+              cdp.on('Network.responseReceived', documentHandler);
+              await cdp.send('Page.navigate', { url: `${fixtureUrl}${route}?fixtureRole=${role}&viewport=${viewport.name}` });
+              let complete = false;
+              for (let attempt = 0; attempt < 100; attempt += 1) {
+                const stateResult = await cdp.send('Runtime.evaluate', { expression: `document.readyState === 'complete' && document.body?.dataset.complete === 'true'`, returnByValue: true });
+                if (stateResult.result?.value === true) { complete = true; break; }
+                await sleep(20);
+              }
+              await sleep(30);
+              const measurement = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+                const nav = performance.getEntriesByType('navigation')[0];
+                const paints = performance.getEntriesByType('paint');
+                const fcp = paints.find((entry) => entry.name === 'first-contentful-paint');
+                const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+                const lcp = window.__fixtureLcp ?? (lcpEntries.length ? lcpEntries[lcpEntries.length - 1].startTime : null);
+                const completeEntry = performance.getEntriesByName('fixture-data-complete')[0];
+                const resources = performance.getEntriesByType('resource');
+                return { route: document.body?.dataset.route, role: document.body?.dataset.role, complete: document.body?.dataset.complete === 'true', ttfb: nav ? nav.responseStart - nav.startTime : null, fcp: fcp?.startTime ?? null, lcp, domContentLoaded: nav ? nav.domContentLoadedEventEnd - nav.startTime : null, load: nav ? nav.loadEventEnd - nav.startTime : null, dataComplete: completeEntry?.startTime ?? null, resourceBytes: resources.reduce((sum, entry) => sum + (entry.transferSize || entry.encodedBodySize || 0), 0), resourceCount: resources.length };
+              })()` });
+              cdp.off('Network.responseReceived', documentHandler);
+              const value = measurement.result?.value;
+              if (!complete || documentStatus !== 200 || value?.route !== route || value?.role !== role || value?.complete !== true) throw new Error(`Local fixture incomplete route=${route} role=${role} viewport=${viewport.name} state=${state}`);
+              const runErrors = browserErrors.slice(errorStart);
+              runs.push({ route, role, viewport: viewport.name, state, sample, status: documentStatus, ...value, browserErrors: runErrors });
+            }
+          }
+        }
+      }
+    }
+    const expectedRuns = TARGET_ROUTES.length * viewports.length * roles.length * 2 * 2;
+    if (runs.length !== expectedRuns) throw new Error(`Expected ${expectedRuns} local samples, got ${runs.length}`);
+    if (runs.some((run) => run.browserErrors.length > 0)) throw new Error(`Local performance fixture recorded browser/runtime/network errors: ${JSON.stringify(browserErrors.slice(0, 5))}`);
+    const summary = {};
+    for (const run of runs) {
+      const key = `${run.route}|${run.viewport}|${run.role}|${run.state}`;
+      if (!summary[key]) summary[key] = { route: run.route, viewport: run.viewport, role: run.role, state: run.state, sampleCount: 0, metrics: {} };
+      const item = summary[key]; item.sampleCount += 1;
+      for (const metric of ['ttfb', 'fcp', 'lcp', 'domContentLoaded', 'load', 'dataComplete', 'resourceBytes', 'resourceCount']) item.metrics[metric] = [...(item.metrics[metric] || []), run[metric]];
+    }
+    for (const item of Object.values(summary)) for (const [metric, values] of Object.entries(item.metrics)) item.metrics[metric] = summarizeValues(values);
+    const candidateSha = process.env.KURABE_PERF_CANDIDATE_SHA || 'WORKTREE_BASE';
+    const report = { schema: 'kurabe-performance-baseline/v1', provenance: { mode: 'local-fixture', target: 'loopback-only', candidateSha, browser: browserVersion, command: 'node scripts/verify-release.mjs --suite performance-baseline', routes: TARGET_ROUTES, viewports, roles, samplesPerPoint: 2, unauthorizedRouteSamples: 0 }, limitations: ['Synthetic local fixture is not authenticated production data.', 'live_browser=NOT_RUN_AUTH_REQUIRED', 'real_provider=NOT_RUN_NO_CREDENTIALS'], runs, summary: Object.values(summary) };
+    if (process.env.KURABE_PERF_WRITE_REPORT !== '0') fs.writeFileSync(REPORT_FILE, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    console.log(`LOCAL_PERF_PASS runs=${runs.length} routes=${TARGET_ROUTES.length} viewports=${viewports.length} roles=${roles.length} samples=2`);
+    console.log(`LOCAL_PERF_REPORT ${REPORT_FILE}`);
+  } finally {
+    if (cdp) cdp.close();
+    try { chrome.kill('SIGTERM'); } catch {}
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch {}
+    await new Promise((resolve) => server.close(() => resolve()));
+  }
+}
+
+(LOCAL_FIXTURE_MODE ? runLocalFixtureBenchmark() : runBenchmark()).catch((err) => {
   console.error('\nBenchmark Fatal Error:', err);
   process.exit(1);
 });

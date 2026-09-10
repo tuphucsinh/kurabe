@@ -375,7 +375,7 @@ DoD: `npm ci && npm run test && npm run lint && npm run typecheck && npm run bui
 
 ## Phase 101 — planned / measured optimization
 
-### [ ] [#P101M1T01] Reproducible performance baseline and route matrix
+### [x] [#P101M1T01] Reproducible performance baseline and route matrix
 ```yaml
 task:
   id: P101M1T01
