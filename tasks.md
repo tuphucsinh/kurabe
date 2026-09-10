@@ -245,7 +245,7 @@ Changes: Transactional single/batch personnel changes with idempotency/concurren
 Constraints: No DB work inside browser; no implicit role defaults on partial updates; preserve submitted/Closed snapshots and approved multiple-SubLeader policy.
 DoD: `node scripts/verify-release.mjs --suite personnel-transaction`; failures at each write, duplicate/concurrent Leader, cross-team/inactive/wrong-role SubLeader, role/team moves, zero/multiple Active, no orphan/audit false-success; root gates.
 
-### [ ] [#P99M3T01] Atomic versioned grade bands and authoritative scoring
+### [x] [#P99M3T01] Atomic versioned grade bands and authoritative scoring
 ```yaml
 task:
   id: P99M3T01
