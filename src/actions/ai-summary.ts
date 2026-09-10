@@ -8,7 +8,7 @@ import { getUsersAdmin } from '@/lib/db/users-admin';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
-import { boundAIText, MAX_AI_PROMPT_CHARS } from '@/lib/ai-governance';
+import { boundAIText, boundAITextWithMeta, MAX_AI_PROMPT_CHARS, buildAIPayload } from '@/lib/ai-governance';
 import { assertEvaluationPeriodActive } from '@/lib/db/evaluation-period-write-guard';
 
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
@@ -34,7 +34,7 @@ export async function getPeriodSummary(periodId: string): Promise<{ summary?: st
  */
 export async function generatePeriodSummary(
   periodId: string
-): Promise<{ summary?: string; error?: string }> {
+): Promise<{ summary?: string; partial?: boolean; coverageLabel?: string; error?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
@@ -52,7 +52,7 @@ export async function generatePeriodSummary(
   try {
     const [evaluations, users] = await Promise.all([
       getEvaluationsByPeriodAdmin(periodId, auth.user),
-      getUsersAdmin(),
+      getUsersAdmin(auth.user),
     ]);
 
     const userMap = new Map(users.map((u) => [u.id, u]));
@@ -80,31 +80,16 @@ export async function generatePeriodSummary(
       };
     });
 
-    const instructions = `Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:
-1. Tổng quan: số nhân sự đã đánh giá, phân bổ xếp loại (S/A/AB/B/C/D), điểm trung bình.
-2. Điểm nổi bật: nhân sự có điểm cao nhất (mã NV), điểm yếu cần lưu ý (mã NV, xếp loại thấp).
-3. Xu hướng nhận xét chung từ các ghi chú (nếu có).
-4. Gợi ý hành động cho quản lý (1-2 ý).`;
+    const instructions = `Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:\n1. Tổng quan: số nhân sự đã đánh giá, phân bổ xếp loại (S/A/AB/B/C/D), điểm trung bình.\n2. Điểm nổi bật: nhân sự có điểm cao nhất (mã NV), điểm yếu cần lưu ý (mã NV, xếp loại thấp).\n3. Xu hướng nhận xét chung từ các ghi chú (nếu có).\n4. Gợi ý hành động cho quản lý (1-2 ý).`;
 
     const dataHeader = `Dữ liệu đánh giá QAQC kỳ (đã ẩn danh hóa — mã NV thay tên):`;
     const promptPrefix = `${instructions}\n\n${dataHeader}\n`;
 
-    // Khớp deterministically các dòng JSON hoàn chỉnh trong giới hạn MAX_AI_PROMPT_CHARS
-    const fittedRows: typeof rows = [];
-    for (const row of rows) {
-      const candidate = [...fittedRows, row];
-      const candidateJson = JSON.stringify(candidate, null, 1);
-      const fullPrompt = `${promptPrefix}${candidateJson}`;
-      if (fullPrompt.length <= MAX_AI_PROMPT_CHARS) {
-        fittedRows.push(row);
-      } else {
-        break;
-      }
-    }
-
-    const prompt = `${promptPrefix}${JSON.stringify(fittedRows, null, 1)}`;
-    const boundedPrompt = boundAIText(prompt, MAX_AI_PROMPT_CHARS);
-    const summary = await callAI(boundedPrompt, { maxTokens: 800 });
+    // Use buildAIPayload for deterministic coverage-aware payload construction.
+    // Returns coverage metadata so callers can disclose partial status honestly.
+    const { payload, coverageMeta } = buildAIPayload(promptPrefix, rows, MAX_AI_PROMPT_CHARS);
+    const boundedPrompt = boundAITextWithMeta(payload, MAX_AI_PROMPT_CHARS, 'characters');
+    const summary = await callAI(boundedPrompt.text, { maxTokens: 800 });
     if (!summary) return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
 
     // P96T05: Closed-period write firewall — guard period exact active again before upsert
@@ -129,7 +114,13 @@ export async function generatePeriodSummary(
     }
 
     revalidatePath('/reports');
-    return { summary };
+    return {
+      summary,
+      partial: coverageMeta.truncated || boundedPrompt.coverageMeta.truncated,
+      coverageLabel: boundedPrompt.coverageMeta.truncated
+        ? boundedPrompt.coverageMeta.coverageLabel
+        : coverageMeta.coverageLabel,
+    };
   } catch (err) {
     console.error('generatePeriodSummary error');
     return { error: toClientError(err, 'Lỗi khi tạo tóm tắt. Vui lòng thử lại.') };

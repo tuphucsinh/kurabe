@@ -35,6 +35,7 @@ interface MessageItem {
   message: string;
   status: 'draft' | 'saving' | 'saved' | 'error';
   error?: string;
+  coverageLabel?: string;
 }
 
 export default function BatchResultMessageModal({ periodId }: BatchResultMessageModalProps) {
@@ -121,7 +122,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
 
     let offset = 0;
     const limit = 5;
-    const allGeneratedMap = new Map<string, { message?: string; ok: boolean; error?: string }>();
+    const allGeneratedMap = new Map<string, { message?: string; ok: boolean; error?: string; coverageLabel?: string }>();
 
     try {
       while (true) {
@@ -142,6 +143,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
               message: item.message,
               ok: item.ok,
               error: item.error,
+              coverageLabel: item.payloadCoverage?.truncated ? item.payloadCoverage.coverageLabel : undefined,
             });
           });
 
@@ -161,6 +163,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                   message: gen.message,
                   status: 'draft',
                   error: undefined,
+                  coverageLabel: gen.coverageLabel,
                 };
               } else {
                 return {
@@ -216,7 +219,13 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
         setMessagesList((prev) =>
           prev.map((m) =>
             m.evaluationId === item.evaluationId
-              ? { ...m, message: res.message!, status: 'draft', error: undefined }
+              ? {
+                  ...m,
+                  message: res.message!,
+                  status: 'draft',
+                  error: undefined,
+                  coverageLabel: res.payloadCoverage?.truncated ? res.payloadCoverage.coverageLabel : undefined,
+                }
               : m
           )
         );
@@ -526,6 +535,12 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
                           )}
                         </div>
                       </div>
+
+                      {item.coverageLabel && (
+                        <div className="mb-3 rounded-xl border border-outline-soft bg-brand-soft px-3 py-2 text-xs text-ink-muted">
+                          Phạm vi AI: {item.coverageLabel}. Đây là bản nháp một phần; kiểm tra trước khi lưu.
+                        </div>
+                      )}
 
                       {/* Message Content */}
                       <div className="space-y-2">

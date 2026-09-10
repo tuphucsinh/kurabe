@@ -20,6 +20,7 @@ export default function AiSummaryCard({
   const { toast } = useToast();
   const [summary, setSummary] = useState(() => initialSummary || '');
   const [createdAt, setCreatedAt] = useState(() => initialCreatedAt || '');
+  const [coverageLabel, setCoverageLabel] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(() => !initialSummary && !!periodId);
 
@@ -63,6 +64,7 @@ export default function AiSummaryCard({
       const result = await generatePeriodSummary(periodId);
       if (result.summary) {
         setSummary(result.summary);
+        setCoverageLabel(result.partial ? result.coverageLabel || 'Dữ liệu đầu vào đã được rút gọn.' : '');
         setCreatedAt(new Date().toISOString());
         toast('Đã tạo tóm tắt bằng AI.', 'success');
       } else {
@@ -116,6 +118,11 @@ export default function AiSummaryCard({
         ) : summary ? (
           <div className="prose prose-sm max-w-none bg-surface-raised/70 rounded-2xl border border-outline-soft p-5">
             <div className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{summary}</div>
+            {coverageLabel && (
+              <div className="mt-3 rounded-xl border border-outline-soft bg-brand-soft px-3 py-2 text-xs text-ink-muted">
+                Phạm vi AI: {coverageLabel}. Không coi đây là bản tổng hợp đầy đủ nếu còn dữ liệu chưa đưa vào payload.
+              </div>
+            )}
             <div className="mt-4 pt-3 border-t border-outline-soft flex items-center gap-1.5 text-[11px] text-ink-muted">
               <ShieldCheck size={12} />
               Nội dung do AI tổng hợp từ dữ liệu đánh giá (đã ẩn danh hóa) — số liệu gốc vẫn là nguồn chính thức.

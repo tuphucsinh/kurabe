@@ -11,7 +11,10 @@ import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { buildEmployeeContext, buildEvaluationStatus } from '@/lib/ai-context';
 import {
   boundAIText,
+  boundAITextWithMeta,
+  detectPromptInjection,
   sanitizeAIHistory,
+  toAIPseudonym,
   MAX_AI_IMAGE_BASE64_CHARS,
   MAX_AI_REPORT_HISTORY_CHARS,
 } from '@/lib/ai-governance';
@@ -116,8 +119,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
     const teamMap = new Map(teams.map((t) => [t.id, t.name]));
 
     interface EmpDelta {
-      name: string;
-      shortName: string;
+      pseudonym: string;
       role: string;
       teamName: string;
       roundsStr: string;
@@ -131,8 +133,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
 
     for (const ev of evaluations) {
       const emp = userMap.get(ev.employeeId);
-      const fullName = emp?.name || 'Không xác định';
-      const shortName = fullName.split(/\s+/).pop() || fullName;
+      const pseudonym = emp ? toAIPseudonym(emp.id, emp.employeeCode) : 'NV-unknown';
       const teamName = (emp?.teamId && teamMap.get(emp.teamId)) || 'Chung';
       const role = roleLabel(ev.employeeRole || emp?.role || 'Employee');
 
@@ -161,8 +162,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       }
 
       empList.push({
-        name: fullName,
-        shortName,
+        pseudonym,
         role,
         teamName,
         roundsStr,
@@ -185,11 +185,11 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       .slice(0, 5);
 
     const incText = increases.length
-      ? increases.map((x) => `${x.shortName} (+${x.delta})`).join(', ')
+      ? increases.map((x) => `${x.pseudonym} (+${x.delta})`).join(', ')
       : 'không có';
 
     const decText = decreases.length
-      ? decreases.map((x) => `${x.shortName} (${x.delta})`).join(', ')
+      ? decreases.map((x) => `${x.pseudonym} (${x.delta})`).join(', ')
       : 'không có';
 
     // Nhóm tổng hợp (membersCount & approved count)
@@ -229,7 +229,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
     // Điểm nhân viên tóm tắt
     const empScoreList = empList
       .filter((e) => e.roundsStr)
-      .map((e) => `${e.shortName}(${e.roundsStr}${e.grade ? ` ${e.grade}` : ''})`)
+      .map((e) => `${e.pseudonym}(${e.roundsStr}${e.grade ? ` ${e.grade}` : ''})`)
       .join(', ');
 
     let summary = `Dữ liệu chi tiết cho câu hỏi so sánh/tìm kiếm (Kỳ ${periodName}): ${empList.length} NV (${roleStr}). TĂNG: ${incText}. GIẢM: ${decText}. Nhóm: ${teamStr}. Xếp loại: ${gradeStr || 'chưa có'}. Điểm NV: ${empScoreList}.`;
@@ -393,6 +393,10 @@ async function prepareChatContext(
     return { ok: false, error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
   }
 
+  if (detectPromptInjection(question)) {
+    return { ok: false, error: `Câu hỏi chứa chỉ dẫn không an toàn, ${addr} vui lòng viết lại ngắn gọn hơn ạ.` };
+  }
+
   if (!isAIConfigured()) {
     return { ok: false, error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
   }
@@ -416,6 +420,9 @@ async function prepareChatContext(
   }
 
   const history = sanitizeAIHistory(input.history);
+  if (history.some((message) => detectPromptInjection(message.text))) {
+    return { ok: false, error: `Lịch sử hội thoại chứa chỉ dẫn không an toàn, ${addr} vui lòng bắt đầu lại ạ.` };
+  }
   const userInfo = `Thông tin người hỏi: tên = ${auth.user?.name || 'không rõ'}, giới tính = ${auth.user?.gender === 'Nam' ? 'Nam' : 'Nữ'}, chức vụ = ${roleLabel(role)}, chức danh = ${(auth.user?.description || '').trim() || 'chưa có'}, nhóm = ${requesterTeam?.name || 'Chưa có nhóm'}${requesterEval ? `, trạng thái đánh giá của ${addr}: ${requesterEval}` : ''}; trang đang mở = ${page}.${pageContext}${empContext.text}`;
 
   let historySection = '';
@@ -532,7 +539,10 @@ export async function chatReportErrorAction(input: {
     return { reply: `Hôm nay ${addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé. Em vẫn theo dõi và sẽ phản hồi sớm ạ.` };
   }
 
-  const boundedQuestion = boundAIText(input.question, 2000);
+  if (detectPromptInjection(input.question)) {
+    return { error: `Nội dung báo lỗi chứa chỉ dẫn không an toàn, ${addr} vui lòng mô tả lại sự cố ạ.` };
+  }
+  const boundedQuestion = boundAITextWithMeta(input.question, 2000, 'characters').text;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_HOME_CHANNEL;

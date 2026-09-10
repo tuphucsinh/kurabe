@@ -1,5 +1,6 @@
 // Helper thuần (KHÔNG phải server action) — prompt soạn thông báo kết quả cá nhân hóa.
 // Tách khỏi actions/ai.ts vì file 'use server' không được export hàm non-async (Turbopack).
+import type { AIPayloadCoverage } from '@/lib/ai-governance';
 
 export interface ResultPromptInput {
   employeeCode: string;
@@ -12,6 +13,7 @@ export interface ResultPromptInput {
   notesSummary: string;
   summaryNotes: string;
   periodName: string;
+  payloadCoverage?: AIPayloadCoverage;
 }
 
 /**
@@ -30,7 +32,11 @@ export function buildResultPrompt(input: ResultPromptInput): string {
   // Tên cá nhân hóa: lấy TÊN CUỐI (vd "Hoàng Thị Trang" → "Trang"); fallback "Nhân viên"
   const firstName = input.name ? input.name.trim().split(/\s+/).pop() || '' : '';
 
-  return `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):
+  const coverageNotice = input.payloadCoverage?.truncated
+    ? `\n- PHẠM VI DỮ LIỆU: ${input.payloadCoverage.coverageLabel}. Không được khẳng định đã xem toàn bộ dữ liệu.\n`
+    : '';
+
+  return `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):${coverageNotice}
 - Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
 - CHI TIẾT TIÊU CHUẨN VÒNG CUỐI (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
 ${detailText}

@@ -15,6 +15,7 @@ import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
+import { detectPromptInjection, boundAIText, boundAITextWithMeta, MAX_AI_PROMPT_CHARS, type AIPayloadCoverage } from '@/lib/ai-governance';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -66,18 +67,90 @@ export async function draftResultMessageAction(input: {
   notesSummary: string;
   summaryNotes: string;
   periodName: string;
-}): Promise<{ message?: string; error?: string }> {
+}): Promise<{ message?: string; payloadCoverage?: AIPayloadCoverage; error?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
+  // Governance: detect prompt-injection in client-supplied HR text fields.
+  // notesSummary and summaryNotes are evaluator notes — advisory, not trusted.
+  if (
+    detectPromptInjection(input.notesSummary) ||
+    detectPromptInjection(input.summaryNotes) ||
+    detectPromptInjection(input.periodName)
+  ) {
+    return { error: 'Dữ liệu đầu vào không hợp lệ.' };
+  }
+
+  // Resolve the target and all score/criteria fields from the requester-visible DB
+  // scope. Client values remain only a selector and are never placed in the prompt.
+  const { data: visiblePeriods } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select('id, name, year')
+    .order('year', { ascending: false });
+  const period = (visiblePeriods || []).find((candidate) => `${candidate.name} (${candidate.year})` === input.periodName);
+  if (!period) return { error: 'Không tìm thấy kỳ đánh giá hợp lệ.' };
+  const [evaluations, users, criteriaGroups] = await Promise.all([
+    getEvaluationsByPeriodAdmin(period.id, auth.user),
+    getUsersAdmin(auth.user),
+    getAllCriteriaGroups(),
+  ]);
+  const employee = users.find((candidate) => candidate.employeeCode === input.employeeCode);
+  const evaluation = employee ? evaluations.find((candidate) => candidate.employeeId === employee.id) : undefined;
+  if (!employee || !evaluation) return { error: 'Không tìm thấy dữ liệu đánh giá hợp lệ.' };
+
+  const rounds = evaluation.rounds || [];
+  const lastRound =
+    [...rounds].sort((a, b) => b.round - a.round).find((round) => (round.totalScore || 0) > 0) ||
+    rounds[rounds.length - 1];
+  if (!lastRound) return { error: 'Phiếu đánh giá chưa có dữ liệu để soạn thông báo.' };
+
+  const allCriteria = criteriaGroups.flatMap((group) => group.criteria);
+  const criteriaDetail = allCriteria
+    .filter((criterion) => lastRound.scores?.[criterion.id] !== undefined)
+    .map((criterion) => {
+      const levelIndex = lastRound.selectedLevelIndexes?.[criterion.id] ?? 0;
+      return {
+        code: criterion.code,
+        name: criterion.name,
+        points: Number(lastRound.scores?.[criterion.id]) || 0,
+        levelLabel: criterion.levels?.[levelIndex]?.label || '',
+      };
+    });
+  const previousComments = rounds
+    .filter((round) => round.round < (lastRound.round ?? 0))
+    .map((round) => boundAIText(round.comment, 500))
+    .filter(Boolean);
+  const criteriaMap = new Map(allCriteria.map((criterion) => [criterion.id, criterion]));
+  const notesSummary = Object.entries(lastRound.notes || {})
+    .filter(([, value]) => value && value.trim())
+    .slice(0, 3)
+    .map(([criterionId, value]) => `${criteriaMap.get(criterionId)?.code || ''}: ${boundAIText(value, 200)}`)
+    .join(' | ');
+  const summaryNotes = boundAIText(lastRound.comment, 500) || previousComments.join(' | ');
+  if (detectPromptInjection(notesSummary) || detectPromptInjection(summaryNotes)) {
+    return { error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
+  }
+
   const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'draftResultMessage');
   if (!aiQuota.allowed) return { error: aiQuota.error };
 
-  const prompt = buildResultPrompt(input);
-  const message = await callAI(prompt, { maxTokens: 800, temperature: 0.7 });
+  const prompt = buildResultPrompt({
+    employeeCode: employee.employeeCode || '',
+    name: employee.name || '',
+    role: evaluation.employeeRole || employee.role || '',
+    totalScore: evaluation.finalScore ?? lastRound.totalScore ?? 0,
+    grade: evaluation.finalGrade ?? lastRound.grade ?? '',
+    criteriaDetail,
+    previousComments,
+    notesSummary,
+    summaryNotes,
+    periodName: `${period.name} (${period.year})`,
+  });
+  const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
+  const message = await callAI(bounded.text, { maxTokens: 800, temperature: 0.7 });
   if (!message) return aiError();
-  return { message };
+  return { message, payloadCoverage: bounded.coverageMeta };
 }
 
 /**
@@ -128,6 +201,8 @@ export interface GenerateResultChunkItem {
   message?: string;
   ok: boolean;
   error?: string;
+  /** Coverage metadata for this row's payload — present when ok=true. */
+  payloadCoverage?: AIPayloadCoverage;
 }
 
 /**
@@ -157,7 +232,7 @@ export async function generateResultMessagesChunkAction(input: {
   try {
     const [evaluations, users, criteriaGroups] = await Promise.all([
       getEvaluationsByPeriodAdmin(input.periodId, auth.user),
-      getUsersAdmin(),
+      getUsersAdmin(auth.user),
       getAllCriteriaGroups(),
     ]);
 
@@ -181,6 +256,7 @@ export async function generateResultMessagesChunkAction(input: {
     const items: GenerateResultChunkItem[] = await Promise.all(
       chunk.map(async (ev) => {
         try {
+          // Server-resolved employee data: use DB record, not client-provided fields.
           const employee = userMap.get(ev.employeeId);
           const rounds = ev.rounds || [];
           const lastRound =
@@ -203,26 +279,33 @@ export async function generateResultMessagesChunkAction(input: {
 
           const previousComments = rounds
             .filter((r) => r.round < (lastRound?.round ?? 0))
-            .map((r) => r.comment || '')
+            .map((r) => boundAIText(r.comment, 500))
             .filter(Boolean);
 
-          const notesSummary = Object.entries(lastRound?.notes || {})
+          const rawNotesSummary = Object.entries(lastRound?.notes || {})
             .filter(([, v]) => v && v.trim())
             .slice(0, 3)
             .map(([k, v]) => {
               const c = criteriaMap.get(k);
-              return `${c?.code || ''} ${c?.name || ''}: ${v}`;
+              return `${c?.code || ''} ${c?.name || ''}: ${boundAIText(v, 200)}`;
             })
             .filter(Boolean)
             .join(' | ');
 
-          const summaryNotes =
-            lastRound?.comment || rounds.map((r) => r.comment).filter(Boolean).join(' | ');
+          const rawSummaryNotes =
+            boundAIText(lastRound?.comment, 500) ||
+            rounds.map((r) => boundAIText(r.comment, 300)).filter(Boolean).join(' | ');
+
+          // Governance: fail-closed on injection in evaluator notes (server-side data).
+          if (detectPromptInjection(rawNotesSummary) || detectPromptInjection(rawSummaryNotes)) {
+            return { evaluationId: ev.id, ok: false, error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
+          }
 
           const totalScore = ev.finalScore ?? lastRound?.totalScore ?? 0;
           const grade = ev.finalGrade ?? lastRound?.grade ?? '';
 
           const prompt = buildResultPrompt({
+            // Use server-resolved employee data — ignore client-provided name/role.
             employeeCode: employee?.employeeCode || '',
             name: employee?.name || '',
             role: ev.employeeRole || employee?.role || '',
@@ -230,14 +313,15 @@ export async function generateResultMessagesChunkAction(input: {
             grade,
             criteriaDetail,
             previousComments,
-            notesSummary,
-            summaryNotes,
+            notesSummary: rawNotesSummary,
+            summaryNotes: rawSummaryNotes,
             periodName,
           });
 
-          const message = await callAI(prompt, { maxTokens: 800, temperature: 0.7 });
+          const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
+          const message = await callAI(bounded.text, { maxTokens: 800, temperature: 0.7 });
           if (message) {
-            return { evaluationId: ev.id, message, ok: true };
+            return { evaluationId: ev.id, message, ok: true, payloadCoverage: bounded.coverageMeta };
           } else {
             return { evaluationId: ev.id, ok: false, error: 'AI không phản hồi' };
           }
@@ -274,7 +358,7 @@ export async function generateResultMessagesChunkAction(input: {
  */
 export async function generatePeriodMinutesAction(input: {
   periodId: string;
-}): Promise<{ minutes?: string; periodName?: string; error?: string }> {
+}): Promise<{ minutes?: string; periodName?: string; payloadCoverage?: AIPayloadCoverage; error?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
@@ -287,7 +371,7 @@ export async function generatePeriodMinutesAction(input: {
     const [d, periodSummaryRes, users, periodRes] = await Promise.all([
       getDashboardData(input.periodId),
       getPeriodSummary(input.periodId),
-      getUsersAdmin(),
+      getUsersAdmin(auth.user),
       supabaseAdmin
         .from('evaluation_periods')
         .select('id, name, year, status')
@@ -331,6 +415,9 @@ export async function generatePeriodMinutesAction(input: {
       .join('\n');
 
     const summaryContent = periodSummaryRes.summary || 'Chưa có tóm tắt tổng hợp trước đó.';
+    if (detectPromptInjection(summaryContent)) {
+      return { error: 'Tóm tắt kỳ chứa nội dung không hợp lệ.' };
+    }
 
     const prompt = `Bạn là thư ký/trợ lý nhân sự chuyên nghiệp của công ty. Hãy soạn BIÊN BẢN KẾT THÚC KỲ ĐÁNH GIÁ NĂNG LỰC QAQC (${periodName}).
 Văn phong: Tiếng Việt, chính thức, trang trọng, cô đọng, khách quan (~250-350 từ).
@@ -357,12 +444,13 @@ CẤU TRÚC BIÊN BẢN (đầy đủ các phần rõ ràng):
 
 YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ ràng, chuẩn phong cách biên bản hành chính doanh nghiệp.`;
 
-    const minutes = await callAI(prompt, { maxTokens: 1200, temperature: 0.4 });
+    const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
+    const minutes = await callAI(bounded.text, { maxTokens: 1200, temperature: 0.4 });
     if (!minutes) {
       return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
     }
 
-    return { minutes, periodName };
+    return { minutes, periodName, payloadCoverage: bounded.coverageMeta };
   } catch (err: unknown) {
     return { error: toClientError(err, 'Lỗi tạo biên bản kết thúc kỳ. Vui lòng thử lại.') };
   }

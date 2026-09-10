@@ -23,6 +23,7 @@ interface PeriodMinutesModalProps {
 export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [minutes, setMinutes] = useState('');
+  const [coverageLabel, setCoverageLabel] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
@@ -65,6 +66,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
         toast(res.error, 'error');
       } else if (res.minutes) {
         setMinutes(res.minutes);
+        setCoverageLabel(res.payloadCoverage?.truncated ? res.payloadCoverage.coverageLabel : '');
         toast('Đã soạn biên bản kết thúc kỳ thành công.', 'success');
       }
     } catch (err) {
@@ -219,6 +221,11 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
                   </span>
                 )}
               </div>
+              {coverageLabel && (
+                <div className="rounded-xl border border-outline-soft bg-brand-soft px-3 py-2 text-xs text-ink-muted">
+                  Phạm vi AI: {coverageLabel}. Biên bản là dự thảo và không đại diện cho phần dữ liệu đã bị rút gọn.
+                </div>
+              )}
 
               <textarea
                 value={minutes}

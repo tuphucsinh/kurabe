@@ -97,7 +97,8 @@ export async function callAI(
   if (!apiKey) return null;
 
   const rawBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
-  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS);
+  const devException = process.env.AI_HTTP_DEV_EXCEPTION === 'true';
+  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS, devException);
   if (!providerCheck.allowed) {
     console.error('callAI provider rejected:', {
       hostname: providerCheck.hostname,
@@ -211,7 +212,8 @@ export async function callAIVision(
   }
 
   const rawBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
-  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS);
+  const devException = process.env.AI_HTTP_DEV_EXCEPTION === 'true';
+  const providerCheck = validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS, devException);
   if (!providerCheck.allowed) {
     console.error('callAIVision provider rejected:', {
       hostname: providerCheck.hostname,

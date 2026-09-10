@@ -7,6 +7,7 @@ import { matchEmployeeCandidates, roleLabel } from '@/lib/vi-text';
 import { getActivePeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getEvaluationByEmployeeAdmin } from '@/lib/db/evaluations-admin';
 import { EvaluationRound } from '@/types';
+import { toAIPseudonym } from '@/lib/ai-governance';
 
 function firstName(name?: string | null): string {
   const n = (name || '').trim();
@@ -91,7 +92,7 @@ export async function buildEmployeeContext(
         if (!u) continue;
         const team = u.teamId ? await getTeamByIdAdmin(u.teamId, requester).catch(() => null) : null;
         const title = (u.description || '').trim() || '';
-        listed.push(`${u.name} (nhóm ${team?.name || 'Chưa có nhóm'}, chức vụ ${roleLabel(u.role)}${title ? `, chức danh ${title}` : ''})`);
+        listed.push(`${toAIPseudonym(u.id, u.employeeCode)} (nhóm ${team?.name || 'Chưa có nhóm'}, chức vụ ${roleLabel(u.role)}${title ? `, chức danh ${title}` : ''})`);
       }
       return {
         kind: 'multiple',
@@ -106,10 +107,9 @@ export async function buildEmployeeContext(
       if (csAll.length > 0) {
         const u = all.find((x) => x.id === csAll[0].id);
         if (u && u.teamId !== requester.teamId) {
-          const fName = firstName(u.name) || '(tên chưa rõ)';
           return {
             kind: 'different_team',
-            text: `\nNgười được nhắc (${fName}) không cùng nhóm với ${addrOf(requester.gender)} — không tư vấn thông tin của người này.`,
+            text: `\nNgười được nhắc không cùng nhóm với ${addrOf(requester.gender)} — không tư vấn thông tin của người này.`,
           };
         }
       }

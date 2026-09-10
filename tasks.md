@@ -328,7 +328,7 @@ Changes: Atomic reservation with request identity/window/retention, bounded retr
 Constraints: No real model billing; avoid double-reserving batch calls; any additional caller edits require owns refresh.
 DoD: `node scripts/verify-release.mjs --suite ai-quota`; concurrency at threshold, retries, provider timeout/cancel, DB failure, retention and no extra allowed requests; root gates.
 
-### [ ] [#P100M1T02] Scoped AI payload, provider and coverage governance
+### [x] [#P100M1T02] AI payload, provider and coverage governance
 ```yaml
 task:
   id: P100M1T02
