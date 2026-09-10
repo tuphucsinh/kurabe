@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/database';
+import { Database, Json } from '@/types/database';
 import type { Grade } from '@/types';
 import { parseGrade } from '@/lib/parsers';
 
@@ -8,98 +8,98 @@ export type GradeBand = {
   grade: Grade;
   minScore: number | null;
   maxScore: number | null;
+  sortOrder?: number;
 };
 
 export type GradeBands = {
   leader: GradeBand[];
   staff: GradeBand[];
   worker: GradeBand[];
+  version?: number;
+  versionId?: string;
+  checksum?: string;
 };
 
-// Fallback hardcode — NGUỒN DUY NHẤT của thang mặc định (D4: gộp từ src/data/criteria.ts).
-// KHÔNG BAO GIỜ throw; DB lỗi/chưa nạp → dùng bản này.
+export type GradeBandsSnapshot = GradeBands & {
+  version: number;
+  versionId: string;
+  checksum: string;
+};
+
+// Bootstrap-only values for the synchronous first render. Server scoring never
+// silently falls back after an authoritative DB load has been attempted.
 const HARDCODED_BANDS: GradeBands = {
   leader: [
-    { grade: 'S', minScore: 170, maxScore: null },
-    { grade: 'A', minScore: 160, maxScore: 169 },
-    { grade: 'AB', minScore: 130, maxScore: 159 },
-    { grade: 'B', minScore: 100, maxScore: 129 },
-    { grade: 'C', minScore: 70, maxScore: 99 },
-    { grade: 'D', minScore: null, maxScore: 69 },
+    { grade: 'S', minScore: 170, maxScore: null, sortOrder: 0 },
+    { grade: 'A', minScore: 160, maxScore: 169, sortOrder: 1 },
+    { grade: 'AB', minScore: 130, maxScore: 159, sortOrder: 2 },
+    { grade: 'B', minScore: 100, maxScore: 129, sortOrder: 3 },
+    { grade: 'C', minScore: 70, maxScore: 99, sortOrder: 4 },
+    { grade: 'D', minScore: null, maxScore: 69, sortOrder: 5 },
   ],
   staff: [
-    { grade: 'S', minScore: 155, maxScore: null },
-    { grade: 'A', minScore: 145, maxScore: 154 },
-    { grade: 'AB', minScore: 115, maxScore: 144 },
-    { grade: 'B', minScore: 90, maxScore: 114 },
-    { grade: 'C', minScore: 60, maxScore: 89 },
-    { grade: 'D', minScore: null, maxScore: 59 },
+    { grade: 'S', minScore: 155, maxScore: null, sortOrder: 0 },
+    { grade: 'A', minScore: 145, maxScore: 154, sortOrder: 1 },
+    { grade: 'AB', minScore: 115, maxScore: 144, sortOrder: 2 },
+    { grade: 'B', minScore: 90, maxScore: 114, sortOrder: 3 },
+    { grade: 'C', minScore: 60, maxScore: 89, sortOrder: 4 },
+    { grade: 'D', minScore: null, maxScore: 59, sortOrder: 5 },
   ],
   worker: [
-    { grade: 'S', minScore: 155, maxScore: null },
-    { grade: 'A', minScore: 145, maxScore: 154 },
-    { grade: 'AB', minScore: 115, maxScore: 144 },
-    { grade: 'B', minScore: 90, maxScore: 114 },
-    { grade: 'C', minScore: 60, maxScore: 89 },
-    { grade: 'D', minScore: null, maxScore: 59 },
+    { grade: 'S', minScore: 155, maxScore: null, sortOrder: 0 },
+    { grade: 'A', minScore: 145, maxScore: 154, sortOrder: 1 },
+    { grade: 'AB', minScore: 115, maxScore: 144, sortOrder: 2 },
+    { grade: 'B', minScore: 90, maxScore: 114, sortOrder: 3 },
+    { grade: 'C', minScore: 60, maxScore: 89, sortOrder: 4 },
+    { grade: 'D', minScore: null, maxScore: 59, sortOrder: 5 },
   ],
 };
 
-// Module cache — dùng chung cho client lẫn server trong cùng runtime
-let cachedBands: GradeBands | null = null;
+let cachedSnapshot: GradeBandsSnapshot | null = null;
 
-/** Đọc dải điểm sync: cache-first, fallback hardcode (app không bao giờ vỡ khi chưa load/DB lỗi). */
 export function getGradeBandsSync(): GradeBands {
-  return cachedBands ?? HARDCODED_BANDS;
+  return cachedSnapshot ?? HARDCODED_BANDS;
 }
 
-/** Load dải điểm từ DB (bảng grade_bands), set module cache. Lỗi/thiếu bảng → giữ fallback. */
+function parseSnapshot(value: Json): GradeBandsSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('P99M3T01_CONFIG_UNAVAILABLE');
+  const record = value as Record<string, Json>;
+  if (typeof record.version !== 'number' || typeof record.version_id !== 'string' || typeof record.checksum !== 'string' || !Array.isArray(record.bands)) {
+    throw new Error('P99M3T01_CONFIG_UNAVAILABLE');
+  }
+  const bands: GradeBands = { leader: [], staff: [], worker: [], version: record.version, versionId: record.version_id, checksum: record.checksum };
+  for (const item of record.bands) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('P99M3T01_CONFIG_UNAVAILABLE');
+    const row = item as Record<string, Json>;
+    const group = row.role_group;
+    if (group !== 'leader' && group !== 'staff' && group !== 'worker') throw new Error('P99M3T01_CONFIG_UNAVAILABLE');
+    bands[group].push({
+      grade: parseGrade(row.grade),
+      minScore: typeof row.min_score === 'number' ? row.min_score : null,
+      maxScore: typeof row.max_score === 'number' ? row.max_score : null,
+      sortOrder: typeof row.sort_order === 'number' ? row.sort_order : undefined,
+    });
+  }
+  if (bands.leader.length !== 6 || bands.staff.length !== 6 || bands.worker.length !== 6) throw new Error('P99M3T01_CONFIG_UNAVAILABLE');
+  return bands as GradeBandsSnapshot;
+}
+
+export async function loadGradeBandsSnapshotFromDb(
+  db: SupabaseClient<Database> = supabase
+): Promise<GradeBandsSnapshot> {
+  const { data, error } = await db.rpc('get_active_grade_config');
+  if (error || !data) throw new Error(`P99M3T01_CONFIG_UNAVAILABLE: ${error?.message ?? 'empty response'}`);
+  const snapshot = parseSnapshot(data);
+  cachedSnapshot = snapshot;
+  return snapshot;
+}
+
 export async function loadGradeBandsFromDb(
   db: SupabaseClient<Database> = supabase
 ): Promise<GradeBands> {
-  try {
-    const { data, error } = await db
-      .from('grade_bands')
-      .select('role_group, grade, min_score, max_score, sort_order')
-      .order('sort_order', { ascending: true });
-
-    if (error) {
-      // Bảng chưa tồn tại (migration chưa chạy) hoặc lỗi khác → fallback
-      return cachedBands ?? HARDCODED_BANDS;
-    }
-
-    if (!data || data.length === 0) {
-      return cachedBands ?? HARDCODED_BANDS;
-    }
-
-    const bands: GradeBands = { leader: [], staff: [], worker: [] };
-    for (const row of data) {
-      if (row.role_group === 'leader' || row.role_group === 'staff' || row.role_group === 'worker') {
-        bands[row.role_group].push({
-          grade: parseGrade(row.grade),
-          minScore: row.min_score,
-          maxScore: row.max_score,
-        });
-      } else {
-        console.warn(`[grade-bands] Bỏ qua role_group không hợp lệ từ DB: ${JSON.stringify(row.role_group)}`);
-      }
-    }
-
-    // Validate đủ 6 grade/group — thiếu thì fallback group đó (tránh mất grade khi seed lỗi)
-    for (const group of ['leader', 'staff', 'worker'] as const) {
-      if (bands[group].length !== 6) {
-        bands[group] = HARDCODED_BANDS[group];
-      }
-    }
-
-    cachedBands = bands;
-    return bands;
-  } catch {
-    return cachedBands ?? HARDCODED_BANDS;
-  }
+  return loadGradeBandsSnapshotFromDb(db);
 }
 
-/** Xóa cache (gọi sau khi save để lần đọc tới lấy dữ liệu mới). */
 export function invalidateGradeBandsCache() {
-  cachedBands = null;
+  cachedSnapshot = null;
 }

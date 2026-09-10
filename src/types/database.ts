@@ -254,6 +254,7 @@ export type Database = {
           evaluator_id: string | null
           evaluator_role: string
           grade: string | null
+          grade_config_version_id: string | null
           id: string
           notes: Json | null
           round: number
@@ -270,6 +271,7 @@ export type Database = {
           evaluator_id?: string | null
           evaluator_role: string
           grade?: string | null
+          grade_config_version_id?: string | null
           id?: string
           notes?: Json | null
           round: number
@@ -286,6 +288,7 @@ export type Database = {
           evaluator_id?: string | null
           evaluator_role?: string
           grade?: string | null
+          grade_config_version_id?: string | null
           id?: string
           notes?: Json | null
           round?: number
@@ -533,6 +536,7 @@ export type Database = {
           min_score: number | null
           role_group: string
           sort_order: number
+          version_id: string
         }
         Insert: {
           created_at?: string | null
@@ -542,6 +546,7 @@ export type Database = {
           min_score?: number | null
           role_group: string
           sort_order?: number
+          version_id: string
         }
         Update: {
           created_at?: string | null
@@ -551,6 +556,34 @@ export type Database = {
           min_score?: number | null
           role_group?: string
           sort_order?: number
+          version_id?: string
+        }
+        Relationships: []
+      }
+      grade_band_versions: {
+        Row: {
+          checksum: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          version_no: number
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          version_no: number
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          version_no?: number
         }
         Relationships: []
       }
@@ -811,6 +844,17 @@ export type Database = {
         Args: {
           p_users: Json
           p_team?: Json | null
+        }
+        Returns: Json
+      }
+      get_active_grade_config: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      save_grade_config: {
+        Args: {
+          p_bands: Json
+          p_expected_version: number
         }
         Returns: Json
       }

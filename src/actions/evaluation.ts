@@ -110,16 +110,16 @@ export async function saveEvaluationRound(
 
     const canonical = validationResult.data;
 
-    // 2. Tính toán điểm và grade theo role người được đánh giá bằng canonical data
-    // Nạp thang điểm từ DB trước khi tính — nếu không server dùng fallback hardcode cũ
-    await ensureServerGradeBands();
+    // 2. Tính toán điểm và grade theo đúng snapshot authoritative đã load.
+    // Không được tính bằng fallback module khi DB/config unavailable.
+    const gradeSnapshot = await ensureServerGradeBands();
 
     const tempRound: Partial<EvaluationRound> = {
       scores: canonical.scores,
       evaluatorRole: evaluation.employeeRole,
     };
     
-    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
+    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound, gradeSnapshot);
 
     const now = new Date().toISOString();
     const nextStep = canonical.isSubmit ? getNextEvaluationStep(evaluation.employeeRole, round) : null;
@@ -201,11 +201,12 @@ export async function saveEvaluationRound(
       comment: canonical.comment,
       total_score: totalScore,
       grade: grade,
-      status: canonical.isSubmit ? 'Submitted' : 'Draft'
+      status: canonical.isSubmit ? 'Submitted' : 'Draft',
     };
 
     if (canonical.isSubmit) {
       updateData.submitted_at = now;
+      updateData.grade_config_version_id = gradeSnapshot.versionId;
     }
 
     const roundQuery = supabaseAdmin
@@ -471,14 +472,14 @@ export async function initializeEvaluationRoundDraft(
 
     const canonical = validationResult.data;
 
-    await ensureServerGradeBands();
+    const gradeSnapshot = await ensureServerGradeBands();
 
     const tempRound: Partial<EvaluationRound> = {
       scores: canonical.scores,
       evaluatorRole: evaluation.employeeRole,
     };
 
-    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound);
+    const { totalScore, grade } = calculateRoundScore(tempRound as EvaluationRound, gradeSnapshot);
 
     const now = new Date().toISOString();
     const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);

@@ -35,6 +35,8 @@ function buildRows(bands: GradeBands): Row[] {
         grade: band.grade,
         minScore: band.minScore,
         maxScore: band.maxScore,
+        sortOrder: band.sortOrder,
+        version: bands.version,
       });
     }
   }
