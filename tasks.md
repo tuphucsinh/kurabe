@@ -260,7 +260,7 @@ Changes: Runtime exact unique role/grade sets, finite supported score domain, th
 Constraints: Do not alter historical grades, valid scoring boundaries or introduce a new policy; corrupted legacy config needs explicit correction approval, not auto-normalization.
 DoD: `node scripts/verify-release.mjs --suite grade-config`; duplicate/missing/unknown/NaN/infinite/gap/null boundaries, concurrent config/submit, DB failure and no partial replacement; existing grade-match tests; root gates.
 
-### [ ] [#P99M3T02] Atomic criteria/audiences/levels with historical version reads
+### [x] [#P99M3T02] Atomic criteria/audiences/levels with historical version reads
 ```yaml
 task:
   id: P99M3T02
