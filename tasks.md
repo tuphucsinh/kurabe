@@ -290,7 +290,7 @@ Changes: Enumerate callers/tables/RPCs from source+approved catalog; serverize n
 Constraints: Inventory revealing consumers outside owns => amend contract before dispatch, not broad edit. No live revoke in this task.
 DoD: `node scripts/verify-release.mjs --suite read-boundaries`; five-role allow/deny, direct anon REST and RPC negative cases, cookie forgery, cross-team assigned evaluator cases, no-secret client bundle; root gates.
 
-### [ ] [#P99M4T02] Period/filter freshness and Compare mutation invalidation
+### [x] [#P99M4T02] Period/filter freshness and Compare mutation invalidation
 ```yaml
 task:
   id: P99M4T02
@@ -305,7 +305,13 @@ Changes: Single server-resolved navigation/refresh contract for period selection
 Constraints: No cookie authority over Active-only writes; no cache keyed only by period; no indiscriminate full-page reload as hidden optimization.
 DoD: `node scripts/verify-release.mjs --suite period-freshness`; switch periods on resident Dashboard/Reports, rapid switches/failed reads, team filter/back-forward, save/return→Compare inside stale window, five-role scope; root gates.
 
-## Phase 100 — planned
+### Phase 99 closure — source/local release-hardening sweep
+
+- `P99 = DONE` for non-production source/local execution at canonical `bb45e2e4e7a36596a7364d263cf1ef06cda1aaa0`; data integrity, historical correctness, local RLS/authz contracts, transaction safety, config/version pinning, DB reproducibility, period freshness, and focused/root gates are PASS.
+- `OPEN_P0 = 0`; `OPEN_P1 = 0`. P99M3T02 INFO advisories and P99M4T02 browser-auth limitation remain explicitly carried to P102/release evidence; they are not release blockers for this local phase closure.
+- Production migration/apply, deployment, runtime catalog readback, and P98 owner gates remain separate approval work; `PRODUCTION_MUTATION = NONE`.
+
+## Phase 100 — active, dependency-gated
 
 ### [ ] [#P100M1T01] Atomic AI/chat quota and failure accounting
 ```yaml

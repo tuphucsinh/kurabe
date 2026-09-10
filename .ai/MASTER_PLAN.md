@@ -77,7 +77,7 @@ Rollback: preserve compatibility until transition approval; T10 uses exact finge
 
 ## Phase 99 — Business integrity, grading, read scope and freshness
 
-State: PLANNED / dependency-gated on Phase 98 source and harness, not production deployment. Full WBS prepared, not dispatched.
+State: CLOSED for non-production source/local execution at canonical `bb45e2e4e7a36596a7364d263cf1ef06cda1aaa0`; production migration/apply and runtime catalog readback remain separately owner-gated.
 
 Scope: reconstruct complete bootstrap from approved catalog and tracked migrations; preserve historical snapshots; atomic user/team/evaluator/init graph; authoritative SubLeader validation; transactional versioned criteria/grade configuration and grading reads; inventory/serverize sensitive reads plus least privilege; period switching, async Reports params and Compare invalidation.
 
@@ -85,9 +85,11 @@ Gate: clean bootstrap/replay + drift report; failure-injection and concurrent mu
 
 Rollback: new forward migrations with exact reverse contract; preserve old versions/snapshots, no rewriting already-applied legacy files; no live revoke before consumer cutover qualification.
 
+Closure: P99M1T01, P99M2T01, P99M2T02, P99M3T01, P99M3T02, P99M4T01, and P99M4T02 are canonically published with focused/root/local evidence and required CONTROLLED reviews. P99M3T02 INFO advisories and P99M4T02 `live_browser=NOT_RUN_AUTH_REQUIRED` remain explicit P102/release residuals. `OPEN_P0=0`, `OPEN_P1=0`, `PRODUCTION_MUTATION=NONE`.
+
 ## Phase 100 — AI governance, security headers and dependencies
 
-State: PLANNED / dependency-gated on Phase 99.
+State: ACTIVE / dependency-gated on the closed Phase 99 source/local baseline.
 
 Scope: atomic AI/chat quota; scoped minimal payload and coverage disclosure; provider/retention approval contract; report-only → enforced CSP canary; framework middleware/proxy compatibility only if current docs and runtime tests require it; dev/transitive advisory remediation.
 
