@@ -390,7 +390,7 @@ Changes: Add explicit local candidate mode using qualified fixtures/harness; pre
 Constraints: No real login/session cleanup by default, no invented fixtures represented as production counts; same build/runtime/data for comparisons.
 DoD: `node scripts/verify-release.mjs --suite performance-baseline`; root checks; actual Chrome samples, Lighthouse preset and spread rule, evidence completeness/zero unauthorized-route samples.
 
-### [ ] [#P101M2T01] Reduce Dashboard/Reports request and payload cost
+### [x] [#P101M2T01] Reduce Dashboard/Reports request and payload cost
 ```yaml
 task:
   id: P101M2T01
