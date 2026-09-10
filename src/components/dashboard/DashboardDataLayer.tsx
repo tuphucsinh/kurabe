@@ -12,6 +12,21 @@ interface DashboardDataLayerProps {
   periodId: string;
 }
 
+function hydrateRecentActivities(
+  data: DashboardHeavyData,
+  userNameById: Record<string, string>
+): DashboardHeavyData {
+  return {
+    ...data,
+    recentActivities: data.recentActivities.map((activity) => ({
+      ...activity,
+      employeeName: userNameById[activity.employeeId] || activity.employeeName,
+      evaluatorName: userNameById[activity.evaluatorId] || activity.evaluatorName,
+    })),
+    userNameById,
+  };
+}
+
 export default function DashboardDataLayer({
   viewer,
   periodId,
@@ -84,6 +99,12 @@ export default function DashboardDataLayer({
       setLightState((prev) => ({ ...prev, isLoading: true, error: null }));
       setHeavyState((prev) => ({ ...prev, isLoading: true, error: null }));
 
+      // These requests have independent server-side authorization and data sources.
+      // Start heavy immediately; wait for light only to hydrate its display names.
+      const heavyPromise = getDashboardHeavyData(targetPeriodId, {}).then(
+        (data) => ({ ok: true as const, data }),
+        (error) => ({ ok: false as const, error })
+      );
       let userNameMap: Record<string, string> = {};
 
       try {
@@ -112,9 +133,29 @@ export default function DashboardDataLayer({
         });
       }
 
-      await fetchHeavy(targetPeriodId, currentReqId, userNameMap);
+      const heavyOutcome = await heavyPromise;
+      if (currentReqId !== reqIdRef.current) return;
+      if (!heavyOutcome.ok) {
+        setHeavyState({
+          isLoading: false,
+          error: heavyOutcome.error instanceof Error ? heavyOutcome.error.message : 'Lỗi kết nối máy chủ',
+          data: null,
+        });
+      } else if (!heavyOutcome.data) {
+        setHeavyState({
+          isLoading: false,
+          error: 'Không thể tải dữ liệu phân tích chi tiết',
+          data: null,
+        });
+      } else {
+        setHeavyState({
+          isLoading: false,
+          error: null,
+          data: hydrateRecentActivities(heavyOutcome.data, userNameMap),
+        });
+      }
     },
-    [fetchHeavy]
+    []
   );
 
   useEffect(() => {

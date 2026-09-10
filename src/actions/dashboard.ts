@@ -33,6 +33,8 @@ export interface DashboardTeamStatusItem {
 
 export interface DashboardRecentActivityItem {
   id: string;
+  employeeId: string;
+  evaluatorId: string;
   employeeName: string;
   evaluatorName: string;
   status: string;
@@ -196,6 +198,8 @@ export async function getDashboardHeavyData(
 
         return {
           id: evaluation.id,
+          employeeId: evaluation.employeeId,
+          evaluatorId: latestRound?.evaluatorId || '',
           employeeName: employeeName || 'Unknown',
           evaluatorName: evaluatorName || 'Unknown',
           status: evaluation.status,
@@ -250,6 +254,8 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
 
         return {
           id: evaluation.id,
+          employeeId: evaluation.employeeId,
+          evaluatorId: latestRound?.evaluatorId || '',
           employeeName: employee?.name || 'Unknown',
           evaluatorName: evaluator?.name || 'Unknown',
           status: evaluation.status,
