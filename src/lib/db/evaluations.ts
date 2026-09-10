@@ -1,6 +1,5 @@
-import { supabase } from '../supabase';
 import { Evaluation, EvaluationPeriod, EvaluationRound, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
-import { DatabaseError } from '../errors';
+
 import { canViewEvaluation } from '@/data/workflow';
 import { Tables } from '@/types/database';
 import { splitRoundNotes } from '@/lib/round-level-selection';
@@ -9,36 +8,6 @@ import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/
 type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
 type DbEvaluation = Tables<'evaluations'> & { evaluation_rounds?: DbRound[] };
-
-export async function getPeriods(): Promise<EvaluationPeriod[]> {
-  const { data, error } = await supabase
-    .from('evaluation_periods')
-    .select('*')
-    .order('year', { ascending: false });
-
-  if (error) {
-    throw new DatabaseError('Error fetching periods', error);
-  }
-
-  return (data || []).map(mapPeriodFromDb);
-}
-
-export async function getActivePeriod(): Promise<EvaluationPeriod | null> {
-  const { data, error } = await supabase
-    .from('evaluation_periods')
-    .select('*')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw new DatabaseError('Error fetching active period', error);
-  }
-
-  return mapPeriodFromDb(data);
-}
 
 export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: User | null, allUsers?: User[]): Evaluation[] {
   if (!viewer) return [];
@@ -54,28 +23,6 @@ const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {
  * Giải kỳ hiện tại cho trang server: id ưu tiên (cookie) → kỳ Active → kỳ mới nhất.
  * Tối đa 2 query (thay 3 query tuần tự cũ — C5). Lỗi → null, không làm vỡ page.
  */
-export async function resolveCurrentPeriod(preferredId?: string): Promise<EvaluationPeriod | null> {
-  try {
-    if (preferredId) {
-      const { data } = await supabase
-        .from('evaluation_periods')
-        .select('*')
-        .eq('id', preferredId)
-        .maybeSingle();
-      if (data) return mapPeriodFromDb(data);
-    }
-    // 1 query lấy tất cả theo năm giảm dần — ưu tiên Active, không có thì kỳ mới nhất
-    const { data } = await supabase
-      .from('evaluation_periods')
-      .select('*')
-      .order('year', { ascending: false });
-    if (!data || data.length === 0) return null;
-    return mapPeriodFromDb(data.find((p) => p.status === 'active') || data[0]);
-  } catch {
-    return null;
-  }
-}
-
 // Helpers
 export function mapPeriodFromDb(db: DbPeriod): EvaluationPeriod {
   return {

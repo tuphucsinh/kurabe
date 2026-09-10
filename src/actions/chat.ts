@@ -3,8 +3,7 @@
 import { requireRole } from '@/lib/auth';
 import { callAI, callAIVision, isAIConfigured } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { getActivePeriod } from '@/lib/db/evaluations';
-import { getEvaluationByEmployeeAdmin, getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
+import { getEvaluationByEmployeeAdmin, getEvaluationsByPeriodAdmin, getActivePeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getDashboardData } from '@/actions/dashboard';
 import { getUsersAdmin, getUserByIdAdmin } from '@/lib/db/users-admin';
 import { getTeamByIdAdmin, getTeamsAdmin } from '@/lib/db/teams-admin';
@@ -272,7 +271,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     // /evaluations/{id}
     const evMatch = (pathname || '').match(/^\/evaluations\/([0-9a-f-]{36})$/);
     if (evMatch) {
-      const period = await getActivePeriod();
+      const period = await getActivePeriodAdmin(user);
       const ev = await getEvaluationByEmployeeAdmin(evMatch[1], period?.id, user);
       if (ev) {
         const submitted = (ev.rounds || []).filter((r) => r.status === 'Submitted' || r.submittedAt);
@@ -292,7 +291,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     }
     // /dashboard — CHỈ Manager (getDashboardData không scope)
     if (pathname.startsWith('/dashboard') && role === 'Manager') {
-      const period = await getActivePeriod();
+      const period = await getActivePeriodAdmin(user);
       if (period) {
         const d = await getDashboardData(period.id);
         if (d) {
@@ -305,7 +304,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     }
     // /reports — CHỈ Manager (dùng getDashboardData — số liệu tổng hợp)
     if (pathname.startsWith('/reports') && role === 'Manager') {
-      const period = await getActivePeriod();
+      const period = await getActivePeriodAdmin(user);
       if (period) {
         const d = await getDashboardData(period.id);
         if (d) {

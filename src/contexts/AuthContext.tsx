@@ -2,10 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, EvaluationPeriod } from '@/types';
-import { supabase } from '@/lib/supabase';
-import { mapPeriodFromDb } from '@/lib/db/evaluations';
 import { loginAction, logoutAction } from '@/actions/auth';
-import { getCurrentUserAction } from '@/actions/read';
+import { getCurrentUserAction, getPeriodsAction } from '@/actions/read';
 
 interface AuthContextType {
   user: User | null;
@@ -36,14 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const savedPeriodId = localStorage.getItem('selected_period_id');
         
-        // 1. Load all periods (evaluation_periods giữ anon-read)
-        const { data: periodsData } = await supabase
-          .from('evaluation_periods')
-          .select('*')
-          .order('year', { ascending: false })
-          .order('created_at', { ascending: false });
-        
-        const periods = (periodsData || []).map(mapPeriodFromDb);
+        // 1. Load periods through an authenticated server action.
+        const periods = await getPeriodsAction();
         let targetPeriod = null;
 
         // 2. Determine current period
@@ -58,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // 3. Load authenticated user via server action (supabaseAdmin)
+        // 3. Load authenticated user via server action
         const loadedUser = await getCurrentUserAction();
         
         // Batch state updates and check isInitialized to prevent Strict Mode double-render

@@ -4,7 +4,7 @@ import { User } from '@/types';
 import { getUsersAdmin, getUserByIdAdmin, getAllUsersAdmin } from '@/lib/db/users-admin';
 import { getTeamByIdAdmin } from '@/lib/db/teams-admin';
 import { matchEmployeeCandidates, roleLabel } from '@/lib/vi-text';
-import { getActivePeriod } from '@/lib/db/evaluations';
+import { getActivePeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getEvaluationByEmployeeAdmin } from '@/lib/db/evaluations-admin';
 import { EvaluationRound } from '@/types';
 
@@ -27,7 +27,7 @@ function roundStatusLabel(r: EvaluationRound): string {
 export async function buildEvaluationStatus(employeeId: string, requester?: User | null): Promise<string> {
   try {
     if (!requester || !employeeId) return '';
-    const period = await getActivePeriod();
+    const period = await getActivePeriodAdmin(requester);
     if (!period) return '';
     const ev = await getEvaluationByEmployeeAdmin(employeeId, period.id, requester);
     if (!ev || !Array.isArray(ev.rounds) || ev.rounds.length === 0) return '';

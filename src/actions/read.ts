@@ -11,7 +11,10 @@ import {
   getEvaluationSummariesByEmployeeIdsAdmin,
   getEvaluationByIdAdmin, 
   getEvaluationByEmployeeAdmin, 
-  getEvaluationHistoryByEmployeeAdmin 
+  getEvaluationHistoryByEmployeeAdmin,
+  getPeriodsAdmin,
+  getActivePeriodAdmin,
+  getPeriodByIdAdmin,
 } from '@/lib/db/evaluations-admin';
 import { 
   getUsersAdmin, 
@@ -27,7 +30,7 @@ import {
 } from '@/lib/db/teams-admin';
 import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
-import { getPeriods } from '@/lib/db/evaluations';
+
 
 export type AuditRow = {
   id: string;
@@ -48,6 +51,24 @@ export async function getCurrentUserAction(): Promise<User | null> {
     return null;
   }
   return auth.user;
+}
+
+export async function getPeriodsAction(): Promise<EvaluationPeriod[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return [];
+  return getPeriodsAdmin(auth.user);
+}
+
+export async function getActivePeriodAction(): Promise<EvaluationPeriod | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return null;
+  return getActivePeriodAdmin(auth.user);
+}
+
+export async function getPeriodByIdAction(id: string): Promise<EvaluationPeriod | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null) return null;
+  return getPeriodByIdAdmin(id, auth.user);
 }
 
 /**
@@ -315,7 +336,7 @@ export async function getEvaluationPageDataAction(
   const [employeeRes, evalRes, periodsRes] = await Promise.allSettled([
     getUserByIdAdmin(employeeId, auth.user),
     getEvaluationByEmployeeAdmin(employeeId, periodId, auth.user),
-    getPeriods(),
+    getPeriodsAdmin(auth.user),
   ]);
 
   if (employeeRes.status === 'fulfilled') {

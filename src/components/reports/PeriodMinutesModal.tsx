@@ -14,6 +14,7 @@ import {
 import { generatePeriodMinutesAction } from '@/actions/ai';
 import { usePeriods } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PeriodMinutesModalProps {
   periodId: string;
@@ -25,7 +26,8 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
-  const { data: periods = [] } = usePeriods();
+  const { user } = useAuth();
+  const { data: periods = [] } = usePeriods(user);
 
   const currentPeriod = periods.find((p) => p.id === periodId);
   const periodName = currentPeriod ? `${currentPeriod.name} (${currentPeriod.year})` : 'Kỳ đánh giá';

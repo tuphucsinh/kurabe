@@ -1,14 +1,13 @@
 'use client';
 
-import { mapPeriodFromDb } from './db/evaluations';
-import { getEvaluationsAction, getUsersAction, getTeamsAction } from '@/actions/read';
+import { getEvaluationsAction, getUsersAction, getTeamsAction, getPeriodByIdAction } from '@/actions/read';
 import { getAllCriteriaGroups } from './db/criteria';
 import { User, Team } from '@/types';
-import { supabase } from './supabase';
+
 
 /**
  * Xuất dữ liệu đánh giá của một kỳ ra file Excel.
- * Dùng getEvaluationsAction, getUsersAction, getTeamsAction (server actions, supabaseAdmin) để đọc an toàn.
+ * Dùng các Server Actions được phân quyền để đọc an toàn.
  */
 export async function exportEvaluationsToExcel(
   periodId: string,
@@ -24,11 +23,10 @@ export async function exportEvaluationsToExcel(
       getUsersAction(),
       getTeamsAction(),
       getAllCriteriaGroups(),
-      supabase.from('evaluation_periods').select('*').eq('id', periodId).single()
+      getPeriodByIdAction(periodId)
     ]);
 
-    const period = periodData.data ? mapPeriodFromDb(periodData.data) : null;
-    const periodName = period ? period.name : 'KyDanhGia';
+    const periodName = periodData ? periodData.name : 'KyDanhGia';
 
     const userMap = new Map<string, User>(users.map(u => [u.id, u]));
     const teamMap = new Map<string, Team>(teams.map(t => [t.id, t]));

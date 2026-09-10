@@ -1,9 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  getPeriods, 
-  getActivePeriod
-} from '@/lib/db/evaluations';
-import { 
   getEvaluationsAction, 
   getEvaluationSummariesAction,
   getEvaluationByIdAction,
@@ -21,7 +17,9 @@ import {
   getEvaluationPageDataAction,
   EvaluationPageData,
   getEvaluationComparePageDataAction,
-  EvaluationComparePageData
+  EvaluationComparePageData,
+  getPeriodsAction,
+  getActivePeriodAction,
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
@@ -169,8 +167,8 @@ export const useDeleteTeam = () => {
 
 
 // Periods & Evaluations
-export const usePeriods = () => useQuery({ queryKey: ['periods'], queryFn: getPeriods, staleTime: 10 * 60 * 1000 });
-export const useActivePeriod = () => useQuery({ queryKey: ['active-period'], queryFn: getActivePeriod, staleTime: 10 * 60 * 1000 });
+export const usePeriods = (requester?: User | null) => useQuery({ queryKey: ['periods', requester?.id], queryFn: getPeriodsAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
+export const useActivePeriod = (requester?: User | null) => useQuery({ queryKey: ['active-period', requester?.id], queryFn: getActivePeriodAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
 
 export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
   queryKey: ['evaluations', periodId, user?.id],

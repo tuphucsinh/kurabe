@@ -1,13 +1,64 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { Evaluation, EvaluationRound, EvaluationRoundStatus, User } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, EvaluationRoundStatus, User } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { canViewEvaluation } from '@/data/workflow';
-import { mapEvaluationFromDb, filterEvaluationsForViewer } from '@/lib/db/evaluations';
+import { mapEvaluationFromDb, filterEvaluationsForViewer, mapPeriodFromDb } from '@/lib/db/evaluations';
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
 import { isIndividualRole } from '@/lib/role-policy';
 import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
+
+const PERIOD_SELECT = 'id, year, name, status, created_by, created_at, closed_at, target_rate, target_grade';
+
+export async function getPeriodsAdmin(requester?: User | null): Promise<EvaluationPeriod[]> {
+  if (!requester) return [];
+  const { data, error } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select(PERIOD_SELECT)
+    .order('year', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new DatabaseError('Error fetching periods (admin)', error);
+  return (data || []).map(mapPeriodFromDb);
+}
+
+export async function getActivePeriodAdmin(requester?: User | null): Promise<EvaluationPeriod | null> {
+  if (!requester) return null;
+  const { data, error } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select(PERIOD_SELECT)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new DatabaseError('Error fetching active period (admin)', error);
+  return data ? mapPeriodFromDb(data) : null;
+}
+
+export async function getPeriodByIdAdmin(id: string, requester?: User | null): Promise<EvaluationPeriod | null> {
+  if (!id || !requester) return null;
+  const { data, error } = await supabaseAdmin
+    .from('evaluation_periods')
+    .select(PERIOD_SELECT)
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new DatabaseError('Error fetching period (admin)', error);
+  return data ? mapPeriodFromDb(data) : null;
+}
+
+export async function resolveCurrentPeriodAdmin(preferredId?: string, requester?: User | null): Promise<EvaluationPeriod | null> {
+  if (!requester) return null;
+  try {
+    if (preferredId) {
+      const preferred = await getPeriodByIdAdmin(preferredId, requester);
+      if (preferred) return preferred;
+    }
+    const periods = await getPeriodsAdmin(requester);
+    return periods.find((period) => period.status === 'Active') || periods[0] || null;
+  } catch {
+    return null;
+  }
+}
 
 /** Context SubLeader cho canViewEvaluation: stub User {id, subleaderId} của các NV mình quản. */
 async function getSubLeaderViewContextAdmin(user: User): Promise<User[] | undefined> {

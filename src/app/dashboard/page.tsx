@@ -2,7 +2,7 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth';
-import { resolveCurrentPeriod } from '@/lib/db/evaluations';
+import { resolveCurrentPeriodAdmin as resolveCurrentPeriod } from '@/lib/db/evaluations-admin';
 import { isIndividualRole } from '@/lib/role-policy';
 import type { EvaluationPeriod } from '@/types';
 import DashboardShell from '@/components/dashboard/DashboardShell';
@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   // Giải kỳ hiện tại: cookie → kỳ Active → kỳ mới nhất (helper chung — C5)
   const preferredPeriodId = (await cookies()).get('selected_period_id')?.value;
-  const currentPeriod: EvaluationPeriod | null = await resolveCurrentPeriod(preferredPeriodId);
+  const currentPeriod: EvaluationPeriod | null = await resolveCurrentPeriod(preferredPeriodId, viewer);
   const periodId = currentPeriod?.id || '';
   const periodYear = currentPeriod?.year;
   const periodName = currentPeriod?.name;

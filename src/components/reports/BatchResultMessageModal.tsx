@@ -45,7 +45,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
 
   const { data: evaluations = [], isLoading: isEvalsLoading } = useEvaluations(periodId, user);
   const { data: users = [], isLoading: isUsersLoading } = useUsers(user);
-  const { data: periods = [] } = usePeriods();
+  const { data: periods = [] } = usePeriods(user);
   const { data: teams = [] } = useTeams(user);
 
   const currentPeriod = periods.find((p) => p.id === periodId);
