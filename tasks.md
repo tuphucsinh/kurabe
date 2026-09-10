@@ -275,7 +275,7 @@ Changes: Atomic versioned criterion/group/audience/level/default-index update, s
 Constraints: Existing history without snapshot is explicitly legacy/unknown; no fabricated historical labels or recalculation. UI non-goal redesign.
 DoD: `node scripts/verify-release.mjs --suite criteria-config`; step failures, concurrent toggle/edit/submit, empty/invalid levels and indices, soft-delete, unchanged Closed/history, snapshot read regression; root gates.
 
-### [ ] [#P99M4T01] Sensitive read inventory, serverization and least privilege candidate
+### [x] [#P99M4T01] Sensitive read inventory, serverization and least privilege candidate
 ```yaml
 task:
   id: P99M4T01
