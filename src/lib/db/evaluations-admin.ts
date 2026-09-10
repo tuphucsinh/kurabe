@@ -11,12 +11,19 @@ import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
 
 /** Context SubLeader cho canViewEvaluation: stub User {id, subleaderId} của các NV mình quản. */
 async function getSubLeaderViewContextAdmin(user: User): Promise<User[] | undefined> {
-  if (user.role !== 'SubLeader') return undefined;
+  if (user.role !== 'SubLeader' || !user.teamId) return undefined;
   const { data: subEmployees } = await supabaseAdmin
     .from('users')
-    .select('id, subleader_id')
-    .eq('subleader_id', user.id);
-  return (subEmployees || []).map(u => ({ id: u.id, subleaderId: u.subleader_id } as User));
+    .select('id, role, team_id, is_active, subleader_id')
+    .eq('subleader_id', user.id)
+    .eq('team_id', user.teamId)
+    .eq('is_active', true);
+  return (subEmployees || []).map((u: { id: string; role: string; team_id: string | null; subleader_id: string | null }) => ({
+    id: u.id,
+    role: parseRole(u.role),
+    teamId: u.team_id || '',
+    subleaderId: u.subleader_id,
+  } as User));
 }
 
 /**

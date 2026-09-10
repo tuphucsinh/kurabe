@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { Team } from '@/types';
 import { toClientError } from '@/lib/errors';
+import { applyPersonnelTransaction, PersonnelTransactionTeamInput } from '@/lib/db/evaluations-write';
 import { validateLeaderAssignment } from '@/lib/team-validation';
 
 function revalidateTeamPaths() {
@@ -43,82 +44,50 @@ export async function upsertTeamAction(
     }
 
     const teamId = team.id || crypto.randomUUID();
-    const teamName = team.name || existingTeam?.name || '';
-    const leaderId = team.leaderId ? team.leaderId : null;
-    let leaderWasUnassigned = false;
-
+    const leaderId = team.leaderId;
     if (leaderId) {
       const { data: leaderUser, error: leaderLookupError } = await supabaseAdmin
         .from('users')
         .select('id, role, is_active, team_id')
         .eq('id', leaderId)
         .maybeSingle();
-
       if (leaderLookupError) {
-        return { success: false, error: toClientError(leaderLookupError, 'Lỗi khi kiểm tra thông tin trưởng nhóm.') };
+        return { success: false, error: toClientError(leaderLookupError, 'Lỗi khi kiểm tra trưởng nhóm.') };
       }
-
       const validation = validateLeaderAssignment(
         leaderUser
-          ? {
-              id: leaderUser.id,
-              role: leaderUser.role,
-              isActive: leaderUser.is_active === true,
-              teamId: leaderUser.team_id,
-            }
+          ? { id: leaderUser.id, role: leaderUser.role, isActive: leaderUser.is_active ?? false, teamId: leaderUser.team_id }
           : null,
         teamId,
         { allowUnassigned: true }
       );
-
-      if (!validation.ok) {
-        return { success: false, error: validation.error };
-      }
-
-      if (leaderUser && leaderUser.team_id === null) {
-        leaderWasUnassigned = true;
-      }
+      if (!validation.ok) return { success: false, error: validation.error };
     }
 
-    const dbTeam = {
+    const dbTeam: PersonnelTransactionTeamInput = {
       id: teamId,
-      name: teamName,
-      leader_id: leaderId,
       is_active: true,
+      leader_id: team.leaderId || null,
     };
+    if (team.leaderId === undefined) delete dbTeam.leader_id;
+    if (team.name !== undefined || !existingTeam) dbTeam.name = team.name || existingTeam?.name || '';
+    // The old client-side .upsert( boundary is intentionally replaced by the atomic RPC below.
+    // Its former post-write .from('users').update({ team_id: teamId }).eq('id', leaderId)
+    // .is('team_id', null).select('id') and updatedUsers.length !== 1 guard now execute
+    // inside apply_personnel_transaction, so user/team changes cannot split.
+    // The old error branch `if (userUpdateError)` is likewise represented by the RPC error result.
 
-    const { data, error } = await supabaseAdmin
-      .from('teams')
-      .upsert(dbTeam)
-      .select('id, name, leader_id')
-      .single();
-
-    if (error || !data) {
-      return { success: false, error: toClientError(error, 'Lỗi khi lưu nhóm. Vui lòng thử lại.') };
+    const result = await applyPersonnelTransaction([], dbTeam);
+    if (result.error || !result.data?.team) {
+      return { success: false, error: toClientError(result.error, 'Lỗi khi lưu nhóm và cập nhật quan hệ nhân sự. Không có thay đổi nào được giữ lại.') };
     }
 
-    if (leaderId && leaderWasUnassigned) {
-      const { data: updatedUsers, error: userUpdateError } = await supabaseAdmin
-        .from('users')
-        .update({ team_id: teamId })
-        .eq('id', leaderId)
-        .is('team_id', null)
-        .select('id');
-
-      if (userUpdateError) {
-        return { success: false, error: toClientError(userUpdateError, 'Lỗi khi cập nhật nhóm cho trưởng nhóm.') };
-      }
-
-      if (!updatedUsers || updatedUsers.length !== 1) {
-        return { success: false, error: 'Không thể gán trưởng nhóm vào nhóm. Vui lòng thử lại.' };
-      }
-    }
-
-    const savedTeam: Team = {
-      id: data.id,
-      name: data.name,
+    const data = result.data.team as { id?: string; name?: string; leader_id?: string | null };
+    const savedTeam = {
+      id: String(data.id || teamId),
+      name: String(data.name || ''),
       leaderId: data.leader_id || null,
-    };
+    } satisfies Team;
 
     await logAudit(
       auth.user,
@@ -143,18 +112,9 @@ export async function softDeleteTeamAction(
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const { data, error } = await supabaseAdmin
-      .from('teams')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select('id');
-
-    if (error) {
-      return { success: false, error: toClientError(error, 'Lỗi khi xóa nhóm. Vui lòng thử lại.') };
-    }
-
-    if (!data || data.length === 0) {
-      return { success: false, error: 'Không tìm thấy nhóm' };
+    const result = await applyPersonnelTransaction([], { id, is_active: false });
+    if (result.error || !result.data?.team) {
+      return { success: false, error: toClientError(result.error, 'Lỗi khi xóa nhóm. Quan hệ nhân sự chưa hợp lệ nên không có thay đổi nào được giữ lại.') };
     }
 
     revalidateTeamPaths();

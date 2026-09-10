@@ -53,12 +53,13 @@ function matchesEvaluatorSelector(
   if (selector === 'SubLeader') {
     if (evaluator.role !== 'SubLeader') return false;
     let subleaderId: string | null | undefined = 'subleaderId' in target ? (target as User).subleaderId : undefined;
+    const targetTeamId = target.teamId;
     if (!subleaderId && 'employeeId' in target && allUsers) {
       const targetUser = allUsers.find(u => u.id === target.employeeId);
       subleaderId = targetUser?.subleaderId;
     }
     if (!subleaderId) return false;
-    return subleaderId === evaluator.id;
+    return subleaderId === evaluator.id && evaluator.teamId === targetTeamId;
   }
 
   if (selector === 'Leader') {

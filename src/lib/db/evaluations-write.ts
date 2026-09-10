@@ -157,4 +157,40 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
   return result;
 }
 
+export type PersonnelTransactionUserInput = Record<string, Json | undefined>;
+export type PersonnelTransactionTeamInput = Record<string, Json | undefined>;
+
+export type PersonnelTransactionResult = {
+  users: Array<Record<string, unknown>>;
+  team: Record<string, unknown> | null;
+  initialized_users: number;
+  active_period_id: string | null;
+};
+
+/**
+ * Atomic personnel/team/evaluation graph boundary. The database RPC owns
+ * validation, locking, snapshot updates, and new-user evaluation initialisation;
+ * callers must not perform a compensating write after this returns an error.
+ */
+export async function applyPersonnelTransaction(
+  users: PersonnelTransactionUserInput[],
+  team: PersonnelTransactionTeamInput | null = null
+): Promise<{ data: PersonnelTransactionResult | null; error: Error | null }> {
+  const { data, error } = await supabaseAdmin.rpc('apply_personnel_transaction', {
+    p_users: users as unknown as Json,
+    p_team: team as unknown as Json | null,
+  });
+
+  if (error) return { data: null, error: new Error(error.message) };
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { data: null, error: new Error('Atomic personnel transaction returned an invalid result.') };
+  }
+
+  const result = data as unknown as PersonnelTransactionResult;
+  if (!Array.isArray(result.users) || typeof result.initialized_users !== 'number') {
+    return { data: null, error: new Error('Atomic personnel transaction returned an incomplete result.') };
+  }
+  return { data: result, error: null };
+}
+
 export type { RoundNumber };

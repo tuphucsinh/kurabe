@@ -807,6 +807,13 @@ export type Database = {
           expires_at: string
         }[]
       }
+      apply_personnel_transaction: {
+        Args: {
+          p_users: Json
+          p_team?: Json | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

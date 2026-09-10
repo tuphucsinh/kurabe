@@ -230,7 +230,7 @@ Changes: Gate indirect writes by canonical Active/current workflow inside DB; pr
 Constraints: No retroactive repair of real history without separate approved mapping; no deleting old rounds; future config snapshot task extends same invariant.
 DoD: `node scripts/verify-release.mjs --suite personnel-history`; hash Closed graph before/after change role/team/SubLeader; same with concurrent submit/close and failure injection; root gates.
 
-### [ ] [#P99M2T02] Atomic personnel/team/init and validated leadership relations
+### [x] [#P99M2T02] Atomic personnel/team/init and validated leadership relations
 ```yaml
 task:
   id: P99M2T02

@@ -13,7 +13,7 @@ import { selectValidLeader, Candidate } from './team-validation';
 export async function loadTeamLeaderIds(
   db: SupabaseClient<Database> = supabaseAdmin
 ): Promise<Record<string, string | null>> {
-  const { data } = await db.from('teams').select('id, leader_id');
+  const { data } = await db.from('teams').select('id, leader_id').eq('is_active', true);
   const map: Record<string, string | null> = {};
   for (const t of data || []) {
     map[t.id] = t.leader_id ?? null;
@@ -56,6 +56,7 @@ export async function resolveEvaluatorFromDb(
       subleaderId = user?.subleader_id;
     }
 
+    if (!subject.teamId) return null;
     if (subleaderId) {
       const { data: subLeader } = await supabaseAdmin
         .from('users')
@@ -63,6 +64,7 @@ export async function resolveEvaluatorFromDb(
         .eq('id', subleaderId)
         .eq('role', 'SubLeader')
         .eq('is_active', true)
+        .eq('team_id', subject.teamId)
         .maybeSingle();
 
       if (subLeader) {
@@ -145,7 +147,10 @@ export function resolveEvaluatorFromList(
   if (selector === 'SubLeader') {
     if (!subject.subleaderId) return null;
     const subLeader = allUsers.find(u =>
-      u.id === subject.subleaderId && u.role === 'SubLeader'
+      u.id === subject.subleaderId
+      && u.role === 'SubLeader'
+      && u.isActive !== false
+      && u.teamId === subject.teamId
     );
     return subLeader ? { id: subLeader.id, role: subLeader.role } : null;
   }
