@@ -453,16 +453,22 @@ export type Database = {
           id: string
           user_id: string
           created_at: string | null
+          request_id: string | null
+          status: string
         }
         Insert: {
           id?: string
           user_id: string
           created_at?: string | null
+          request_id?: string | null
+          status?: string
         }
         Update: {
           id?: string
           user_id?: string
           created_at?: string | null
+          request_id?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -904,18 +910,24 @@ export type Database = {
           action: string
           created_at: string
           id: string
+          request_id: string | null
+          status: string
           user_id: string
         }
         Insert: {
           action?: string
           created_at?: string
           id?: string
+          request_id?: string | null
+          status?: string
           user_id: string
         }
         Update: {
           action?: string
           created_at?: string
           id?: string
+          request_id?: string | null
+          status?: string
           user_id?: string
         }
         Relationships: [
@@ -933,6 +945,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_quota_reserve: {
+        Args: {
+          p_kind: string
+          p_user_id: string
+          p_request_id: string
+          p_window_seconds?: number
+          p_max_requests?: number
+          p_retention_days?: number
+          p_action?: string
+        }
+        Returns: {
+          allowed: boolean
+          error: string | null
+        }[]
+      }
+      ai_quota_consume: {
+        Args: {
+          p_kind: string
+          p_user_id: string
+          p_request_id: string
+        }
+        Returns: {
+          consumed: boolean
+          error: string | null
+        }[]
+      }
+      ai_quota_refund: {
+        Args: {
+          p_kind: string
+          p_user_id: string
+          p_request_id: string
+        }
+        Returns: {
+          refunded: boolean
+          error: string | null
+        }[]
+      }
       change_password_transaction: {
         Args: {
           p_user_id: string

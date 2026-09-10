@@ -313,7 +313,7 @@ DoD: `node scripts/verify-release.mjs --suite period-freshness`; switch periods 
 
 ## Phase 100 — active, dependency-gated
 
-### [ ] [#P100M1T01] Atomic AI/chat quota and failure accounting
+### [x] [#P100M1T01] Atomic AI/chat quota and failure accounting
 ```yaml
 task:
   id: P100M1T01

@@ -16,11 +16,9 @@ import {
   MAX_AI_REPORT_HISTORY_CHARS,
 } from '@/lib/ai-governance';
 import { User } from '@/types';
+import { reserveChatQuota, consumeChatQuota, refundChatQuota } from '@/lib/ai-limit';
 import fs from 'node:fs';
 import path from 'node:path';
-
-const CHAT_LIMIT = 15;
-const CHAT_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 giờ
 
 function pageName(pathname: string): string {
   if (pathname.includes('/dashboard')) return 'bảng điều khiển';
@@ -99,25 +97,6 @@ ${baseRules}
 
 ${baseRules}
 11. ${Addr} là ${role === 'Worker' ? 'Công nhân' : 'Nhân viên'}: CHỈ trả lời về hướng dẫn xem kết quả đánh giá của bản thân, giải thích thắc mắc quy trình cơ bản và cách đổi mật khẩu. KHÔNG hỗ trợ các thao tác quản lý, chấm điểm hay phân tích nâng cao — nếu ${addr} hỏi ngoài phạm vi, khéo léo từ chối và gợi ý liên hệ SubLeader hoặc Manager.`;
-}
-
-async function countRecent(userId: string): Promise<number> {
-  try {
-    const since = new Date(Date.now() - CHAT_WINDOW_MS).toISOString();
-    const { count, error } = await supabaseAdmin
-      .from('chat_usage')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', since);
-    if (error) {
-      console.error('countRecent DB error:', error.message);
-      return CHAT_LIMIT; // fail-close: nếu lỗi DB, chặn thay vì cho qua
-    }
-    return count ?? 0;
-  } catch {
-    console.error('countRecent exception');
-    return CHAT_LIMIT; // fail-close
-  }
 }
 
 /**
@@ -387,6 +366,8 @@ interface ChatPrepared {
   user: User | null;
   question: string;
   prompt: string;
+  /** Request identity của reservation quota — dùng cho consume/refund sau provider call. */
+  requestId: string;
 }
 
 /**
@@ -412,20 +393,8 @@ async function prepareChatContext(
     return { ok: false, error: `Câu hỏi hơi dài, ${addr} rút gọn lại giúp em ạ.` };
   }
 
-  const recent = await countRecent(userId);
-  if (recent >= CHAT_LIMIT) {
-    return { ok: false, error: `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.` };
-  }
-
   if (!isAIConfigured()) {
     return { ok: false, error: `Tính năng trợ lý chưa sẵn sàng, ${addr} vui lòng thử lại sau ạ.` };
-  }
-
-  // Reserve slot: ghi nhận usage TRƯỚC khi gọi AI (tránh race condition / burn quota)
-  const { error: reserveErr } = await supabaseAdmin.from('chat_usage').insert({ user_id: userId });
-  if (reserveErr) {
-    console.error('chat_usage reserve error:', reserveErr.message);
-    return { ok: false, error: `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.` };
   }
 
   const page = pageName(input.pathname || '');
@@ -462,7 +431,26 @@ async function prepareChatContext(
     ? `${statusPriorityInstruction}\n\n${basePrompt}`
     : basePrompt;
 
-  return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt } };
+  // Reserve only after all pre-provider context work succeeds. A context/DB
+  // failure therefore cannot burn a quota slot that was never sent to AI.
+  const reservation = await reserveChatQuota(userId);
+  if (!reservation.allowed) {
+    console.error('chat quota reserve denied:', reservation.error);
+    return {
+      ok: false,
+      error:
+        reservation.error === 'LIMIT_REACHED'
+          ? `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.`
+          : `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.`,
+    };
+  }
+  const requestId = reservation.requestId;
+  if (!requestId) {
+    console.error('chat quota reserve returned no request id');
+    return { ok: false, error: `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.` };
+  }
+
+  return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt, requestId } };
 }
 
 export async function chatAskAction(input: {
@@ -472,7 +460,7 @@ export async function chatAskAction(input: {
 }): Promise<{ reply?: string; error?: string }> {
   const prepared = await prepareChatContext(input, { maxQuestionLength: 500 });
   if (!prepared.ok) return { error: prepared.error };
-  const { role, addr, user, prompt } = prepared.data;
+  const { role, addr, user, prompt, userId, requestId } = prepared.data;
 
   const reply = await callAI(prompt, {
     system: buildSystem(role, user?.gender),
@@ -480,8 +468,14 @@ export async function chatAskAction(input: {
     temperature: 0.4,
   });
   if (!reply) {
+    // Provider timeout/cancel/failure trước khi có output → hoàn lại slot
+    const refund = await refundChatQuota(userId, requestId);
+    if (!refund.ok) console.error('chat quota refund failed:', refund.error);
     return { error: `Em chưa trả lời được lúc này, ${addr} thử lại sau nhé.` };
   }
+  // Có output → consume terminal (không refund được nữa)
+  const consumed = await consumeChatQuota(userId, requestId);
+  if (!consumed.ok) console.error('chat quota consume failed:', consumed.error);
   return { reply };
 }
 
@@ -499,11 +493,19 @@ export async function chatAskWithScreenshotAction(input: {
 
   const prepared = await prepareChatContext(input);
   if (!prepared.ok) return { error: prepared.error };
-  const { role, addr, Addr, user, prompt } = prepared.data;
+  const { role, addr, Addr, user, prompt, userId, requestId } = prepared.data;
 
   const system = buildSystem(role, user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
   const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 800, system });
-  if (!reply) return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
+  if (!reply) {
+    // Provider timeout/cancel/failure trước khi có output → hoàn lại slot
+    const refund = await refundChatQuota(userId, requestId);
+    if (!refund.ok) console.error('chat quota refund failed:', refund.error);
+    return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
+  }
+  // Có output → consume terminal (không refund được nữa)
+  const consumed = await consumeChatQuota(userId, requestId);
+  if (!consumed.ok) console.error('chat quota consume failed:', consumed.error);
   return { reply };
 }
 
