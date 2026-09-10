@@ -437,7 +437,7 @@ DoD: `node scripts/verify-release.mjs --suite responsive-accessibility`; 390x844
 
 ## Phase 102 — planned / release closure
 
-### [ ] [#P102M1T01] Enforce real verification in existing CI
+### [x] [#P102M1T01] Enforce real verification in existing CI
 ```yaml
 task:
   id: P102M1T01
