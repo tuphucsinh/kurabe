@@ -10,6 +10,7 @@ import { run as runBrowserHarness } from './browser/harness.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const verifyScript = path.join(projectRoot, 'scripts/verify-release.mjs');
+const testRunnerScript = path.join(projectRoot, 'scripts/run-tests.mjs');
 const scannerScript = path.join(projectRoot, 'scripts/scan-source-secrets.mjs');
 const cleanFixture = path.join(projectRoot, 'tests/fixtures/release/security/clean-source.mjs');
 const seededFixture = path.join(projectRoot, 'tests/fixtures/release/security/seeded-secret.env');
@@ -55,6 +56,17 @@ try {
 const unknownSuite = runNode(verifyScript, ['--suite', 'does-not-exist']);
 assert.notEqual(unknownSuite.status, 0, 'unknown suite command must fail nonzero');
 assert.match(`${unknownSuite.stdout}${unknownSuite.stderr}`, /unknown or zero-case suite/);
+
+const failureProbe = path.join(projectRoot, 'tests', '00-run-tests-failure-probe.test.mjs');
+try {
+  fs.writeFileSync(failureProbe, "console.error('FIRST_USEFUL_FAILURE'); process.exit(23);\n", 'utf8');
+  const runnerFailure = runNode(testRunnerScript);
+  assert.equal(runnerFailure.status, 23, 'test runner must preserve the first child exit status');
+  assert.match(`${runnerFailure.stdout}${runnerFailure.stderr}`, /FIRST_USEFUL_FAILURE/);
+  assert.doesNotMatch(`${runnerFailure.stdout}${runnerFailure.stderr}`, /=== RUN tests\/verification-harness\.test\.mjs ===/);
+} finally {
+  fs.rmSync(failureProbe, { force: true });
+}
 
 const forbiddenRemoteTarget = await assert.rejects(
   () => runDatabaseHarness({ options: { dbHost: '198.51.100.10', dbName: 'kurabe_harness' } }),

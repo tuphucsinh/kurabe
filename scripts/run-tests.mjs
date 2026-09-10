@@ -63,10 +63,11 @@ function runTestFile(testRelPath) {
     });
     if (res.status === 0 && !res.error) {
       console.log(`=== PASS ${testRelPath} ===`);
-      return true;
+      return { ok: true, status: 0 };
     }
-    console.error(`=== FAIL ${testRelPath} (exit ${res.status ?? (res.error ? 'ERR' : 1)}) ===`);
-    return false;
+    const status = res.status ?? 1;
+    console.error(`=== FAIL ${testRelPath} (exit ${status}) ===`);
+    return { ok: false, status };
   }
 
   if (testRelPath.endsWith('.test.ts')) {
@@ -74,7 +75,7 @@ function runTestFile(testRelPath) {
       console.error(`\nError: Local tsc executable not found at "${localTscBin}".`);
       console.error('Please run "npm ci" to install local dependencies. Fallback to npx/network is disabled.');
       console.error(`=== FAIL ${testRelPath} (missing local tsc) ===`);
-      return false;
+      return { ok: false, status: 1 };
     }
 
     if (!fs.existsSync(testBuildDir)) {
@@ -106,7 +107,7 @@ function runTestFile(testRelPath) {
     } catch (err) {
       console.error(`Error: Failed to write temporary test tsconfig at "${tempConfigPath}":`, err.message);
       console.error(`=== FAIL ${testRelPath} (config write failed) ===`);
-      return false;
+      return { ok: false, status: 1 };
     }
 
     const tscArgs = ['-p', tempConfigPath];
@@ -132,7 +133,7 @@ function runTestFile(testRelPath) {
 
     if (!compileRes || compileRes.status !== 0 || compileRes.error) {
       console.error(`=== FAIL ${testRelPath} (compilation failed) ===`);
-      return false;
+      return { ok: false, status: compileRes?.status ?? 1 };
     }
 
     // Support runtime resolution of @/* aliases in emitted CommonJS code
@@ -158,7 +159,7 @@ function runTestFile(testRelPath) {
     if (!emittedJs) {
       console.error(`Error: Could not locate compiled JS output for ${testRelPath} under ${testBuildDir}`);
       console.error(`=== FAIL ${testRelPath} (missing emitted JS) ===`);
-      return false;
+      return { ok: false, status: 1 };
     }
 
     const nodePath = process.env.NODE_PATH
@@ -176,15 +177,16 @@ function runTestFile(testRelPath) {
 
     if (runRes.status === 0 && !runRes.error) {
       console.log(`=== PASS ${testRelPath} ===`);
-      return true;
+      return { ok: true, status: 0 };
     }
 
-    console.error(`=== FAIL ${testRelPath} (exit ${runRes.status ?? (runRes.error ? 'ERR' : 1)}) ===`);
-    return false;
+    const status = runRes.status ?? 1;
+    console.error(`=== FAIL ${testRelPath} (exit ${status}) ===`);
+    return { ok: false, status };
   }
 
   console.error(`Warning: Unrecognized test extension for ${testRelPath}`);
-  return false;
+  return { ok: false, status: 1 };
 }
 
 function main() {
@@ -210,15 +212,19 @@ function main() {
   let passed = 0;
   let failed = 0;
   const failedList = [];
+  let firstFailureStatus = 0;
 
   try {
     for (const test of tests) {
       const ok = runTestFile(test);
-      if (ok) {
+      if (ok.ok) {
         passed++;
       } else {
         failed++;
         failedList.push(test);
+        firstFailureStatus = ok.status;
+        console.error(`Stopping after first failure: ${test} (preserving exit ${firstFailureStatus})`);
+        break;
       }
     }
   } finally {
@@ -240,9 +246,9 @@ function main() {
   console.log('='.repeat(60));
 
   if (failed > 0) {
-    process.exit(1);
+    process.exitCode = firstFailureStatus || 1;
+    return;
   }
-  process.exit(0);
 }
 
 main();
