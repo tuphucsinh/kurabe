@@ -89,7 +89,7 @@ Closure: P99M1T01, P99M2T01, P99M2T02, P99M3T01, P99M3T02, P99M4T01, and P99M4T0
 
 ## Phase 100 — AI governance, security headers and dependencies
 
-State: ACTIVE / P100M1T01 and P100M1T02 published with CONTROLLED PASS/HIGH; P100M2T01 is the next dependency-ready task.
+- State: ACTIVE / P100M1T01, P100M1T02, and P100M2T01 published with CONTROLLED PASS/HIGH; P100M2T02 is the next dependency-ready task.
 
 Scope: atomic AI/chat quota; scoped minimal payload and coverage disclosure; provider/retention approval contract; report-only → enforced CSP canary; framework middleware/proxy compatibility only if current docs and runtime tests require it; dev/transitive advisory remediation.
 

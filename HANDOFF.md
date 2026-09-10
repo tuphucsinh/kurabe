@@ -1,15 +1,15 @@
 # HANDOFF — Kurabe QAQC
 
-- `P99 = DONE`; `P100M1T01` and `P100M1T02` are published at `ae6c33e7c5596b9be7d629bd9fe8def3f19bc934` and `fb13053ab5b4e1196b163397ec9f2882ce4738fa`.
-- P99M4T02 CONTROLLED review = `PASS/HIGH`; period freshness 8 cases, root 40/40, lint/typecheck/build, diff-check and secret scan PASS; authenticated live browser remains `NOT_RUN_AUTH_REQUIRED`.
-- P99M3T02 INFO advisories and P99M4T02 browser limitation are retained for P102/release evidence; no P0/P1 open.
-- `P100M1T01` and `P100M1T02` CONTROLLED reviews = `PASS/HIGH`, publish-safe; quota suite 11 cases and AI governance suite 10 cases; root 40/40, lint/typecheck/build/secret scan PASS.
-- `P100M2T01` is current READY task; Phase 100 remains active and dependency-gated on published T02.
+- Canonical `main` = `cefa192c4752f7de32142a23838b221e6d7f2fc3`; protected pre-existing `AGENTS.md` remains the only dirty path.
+- `P99 = DONE`; `OPEN_P0=0`; `OPEN_P1=0`; P99 INFO/browser limitations remain explicit P102 residuals.
+- `P100M1T01` and `P100M1T02` are published with CONTROLLED `PASS/HIGH` reviews.
+- `P100M2T01` is published at `cefa192c4752f7de32142a23838b221e6d7f2fc3`, review `PASS/HIGH`, `publish_safe=true`.
+- P100M2T01 evidence: `/home/pi5/hermes-artifacts/kurabe-execution/p100m2t01-candidate-evidence.json`.
+- P100M2T01 review: `/home/pi5/hermes-artifacts/kurabe-execution/p100m2t01-controlled-review.json`.
+- Next READY task: `P100M2T02` dependency advisory remediation with reproducible lockfile; Phase 100 remains active.
+- Phase 101 and Phase 102 remain dependency-gated; no new task is created outside the canonical DAG.
 - `P98M2T05 = READY_FOR_OWNER_APPROVAL`; `PASSWORD_MODE=OPTIONAL`; strict enforcement remains deferred.
 - `PRODUCTION_MUTATION=NONE`; no deploy, push, production DB/env/credential change, or strict-password activation.
-- T01 evidence/review: `/home/pi5/hermes-artifacts/kurabe-execution/p100m1t01-quota-candidate-verification.json`; `/home/pi5/hermes-artifacts/kurabe-execution/p100m1t01-controlled-review.json`.
-- T02 evidence/review: `/home/pi5/hermes-artifacts/kurabe-execution/p100m1t02-ai-governance-candidate-verification.json`; `/home/pi5/hermes-artifacts/kurabe-execution/p100m1t02-controlled-review.json`.
-- Protected pre-existing dirty `AGENTS.md` remains untouched and must not be staged or committed.
-- P99M4T02 verification evidence: `/home/pi5/hermes-artifacts/kurabe-execution/p99m4t02-period-freshness-verification.json`.
-- P99M4T02 review evidence: `/home/pi5/hermes-artifacts/kurabe-execution/p99m4t02-controlled-review.json`.
+- Authenticated live browser remains `NOT_RUN_AUTH_REQUIRED`; real provider remains `NOT_RUN_NO_CREDENTIALS`.
+- Protected `AGENTS.md` is untouched, unstaged, and uncommitted; preserve it on every canonical operation.
 - Six legacy unregistered workspace roots remain preserved; do not delete or infer cleanliness.
