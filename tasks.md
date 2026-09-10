@@ -266,7 +266,7 @@ task:
   id: P99M3T02
   tier: CONTROLLED
   depends: [P99M3T01]
-  owns: [src/actions/criteria.ts, src/lib/db/criteria.ts, src/lib/db/criteria-admin.ts, src/lib/db/evaluation-history-admin.ts, src/lib/db/evaluations.ts, src/lib/db/evaluations-admin.ts, src/lib/db/evaluations-write.ts, src/lib/evaluation-transaction-rpc.ts, src/actions/evaluation.ts, src/actions/read.ts, src/hooks/use-db.ts, src/app/criteria/page.tsx, src/types/database.ts, src/types/index.ts, supabase/migrations/20260907000600_criteria_config_version.sql, db/rollback-criteria-config-version.sql, tests/integration/criteria-config.mjs]
+  owns: [src/actions/criteria.ts, src/lib/db/criteria.ts, src/lib/db/criteria-admin.ts, src/lib/db/evaluation-history-admin.ts, src/lib/db/evaluations.ts, src/lib/db/evaluations-admin.ts, src/lib/db/evaluations-write.ts, src/lib/evaluation-transaction-rpc.ts, src/actions/evaluation.ts, src/actions/read.ts, src/hooks/use-db.ts, src/app/criteria/page.tsx, src/types/database.ts, src/types/index.ts, tests/evaluation-transaction-rpc.test.ts, supabase/migrations/20260907000600_criteria_config_version.sql, db/rollback-criteria-config-version.sql, tests/integration/criteria-config.mjs]
   locks: [SCORING_CONFIG]
 ```
 Goal: No delete-old/insert-new partial levels and no changing historical scoring semantics.
