@@ -93,6 +93,7 @@ export type Database = {
           criterion_id: string
           description: string | null
           id: string
+          is_active: boolean
           label: string
           points: number
           sort_order: number | null
@@ -101,6 +102,7 @@ export type Database = {
           criterion_id: string
           description?: string | null
           id?: string
+          is_active?: boolean
           label: string
           points: number
           sort_order?: number | null
@@ -127,16 +129,19 @@ export type Database = {
         Row: {
           audience: string
           created_at: string | null
+          is_active: boolean
           criterion_id: string
         }
         Insert: {
           audience: string
           created_at?: string | null
+          is_active?: boolean
           criterion_id: string
         }
         Update: {
           audience?: string
           created_at?: string | null
+          is_active?: boolean
           criterion_id?: string
         }
         Relationships: [
@@ -256,6 +261,7 @@ export type Database = {
           grade: string | null
           grade_config_version_id: string | null
           id: string
+          criteria_config_version_id: string | null
           notes: Json | null
           round: number
           scores: Json | null
@@ -273,6 +279,7 @@ export type Database = {
           grade?: string | null
           grade_config_version_id?: string | null
           id?: string
+          criteria_config_version_id?: string | null
           notes?: Json | null
           round: number
           scores?: Json | null
@@ -290,6 +297,7 @@ export type Database = {
           grade?: string | null
           grade_config_version_id?: string | null
           id?: string
+          criteria_config_version_id?: string | null
           notes?: Json | null
           round?: number
           scores?: Json | null
@@ -587,6 +595,163 @@ export type Database = {
         }
         Relationships: []
       }
+      criteria_config_versions: {
+        Row: {
+          checksum: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          version_no: number
+        }
+        Insert: {
+          checksum: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          version_no: number
+        }
+        Update: {
+          checksum?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          version_no?: number
+        }
+        Relationships: []
+      }
+      criteria_group_versions: {
+        Row: {
+          code: string
+          group_id: string
+          name: string
+          short_name: string | null
+          sort_order: number
+          version_id: string
+        }
+        Insert: {
+          code: string
+          group_id: string
+          name: string
+          short_name?: string | null
+          sort_order?: number
+          version_id: string
+        }
+        Update: {
+          code?: string
+          group_id?: string
+          name?: string
+          short_name?: string | null
+          sort_order?: number
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "criteria_group_versions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "criteria_config_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      criterion_versions: {
+        Row: {
+          applies_to: string | null
+          code: string
+          default_level_index: number | null
+          description: string | null
+          group_id: string
+          name: string
+          sort_order: number
+          version_id: string
+          weight: number | null
+          criterion_id: string
+        }
+        Insert: {
+          applies_to?: string | null
+          code: string
+          default_level_index?: number | null
+          description?: string | null
+          group_id: string
+          name: string
+          sort_order?: number
+          version_id: string
+          weight?: number | null
+          criterion_id: string
+        }
+        Update: {
+          applies_to?: string | null
+          code?: string
+          default_level_index?: number | null
+          description?: string | null
+          group_id?: string
+          name?: string
+          sort_order?: number
+          version_id?: string
+          weight?: number | null
+          criterion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "criterion_versions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "criteria_config_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      criterion_level_versions: {
+        Row: {
+          description: string | null
+          label: string
+          level_id: string
+          points: number
+          criterion_id: string
+          sort_order: number
+          version_id: string
+        }
+        Insert: {
+          description?: string | null
+          label: string
+          level_id: string
+          points: number
+          criterion_id: string
+          sort_order?: number
+          version_id: string
+        }
+        Update: {
+          description?: string | null
+          label?: string
+          level_id?: string
+          points?: number
+          criterion_id?: string
+          sort_order?: number
+          version_id?: string
+        }
+        Relationships: []
+      }
+      criterion_audience_versions: {
+        Row: {
+          audience: string
+          criterion_id: string
+          version_id: string
+        }
+        Insert: {
+          audience: string
+          criterion_id: string
+          version_id: string
+        }
+        Update: {
+          audience?: string
+          criterion_id?: string
+          version_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -854,6 +1019,17 @@ export type Database = {
       save_grade_config: {
         Args: {
           p_bands: Json
+          p_expected_version: number
+        }
+        Returns: Json
+      }
+      get_active_criteria_config: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      save_criteria_config: {
+        Args: {
+          p_config: Json
           p_expected_version: number
         }
         Returns: Json

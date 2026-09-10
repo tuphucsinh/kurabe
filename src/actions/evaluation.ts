@@ -154,6 +154,7 @@ export async function saveEvaluationRound(
         submittedAt: now,
         nextStep,
         nextEvaluator,
+        criteriaConfigVersionId: criteriaResult.versionId,
       });
 
       const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
@@ -202,6 +203,7 @@ export async function saveEvaluationRound(
       total_score: totalScore,
       grade: grade,
       status: canonical.isSubmit ? 'Submitted' : 'Draft',
+      criteria_config_version_id: criteriaResult.versionId,
     };
 
     if (canonical.isSubmit) {
@@ -289,6 +291,7 @@ export async function saveEvaluationRound(
           total_score: 0,
           grade: 'Pending',
           status: 'NotStarted',
+          criteria_config_version_id: criteriaResult.versionId,
           created_at: now
         };
 

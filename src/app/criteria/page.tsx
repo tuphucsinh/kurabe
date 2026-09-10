@@ -142,7 +142,7 @@ export default function CriteriaPage() {
     }
 
     updateCriterionAudiences.mutate(
-      { criterionId: criterion.id, audiences: newAudiences },
+      { criterionId: criterion.id, audiences: newAudiences, expectedVersion: criterion.configVersion },
       {
         onSuccess: () => {
           toast('Cập nhật đối tượng áp dụng thành công.', 'success');
@@ -174,7 +174,8 @@ export default function CriteriaPage() {
   const handleSaveCriterion = (criterion: Criterion, groupId: string) => {
     upsertCriterion.mutate({
       criterion,
-      groupId
+      groupId,
+      expectedVersion: groups.find((group) => group.id === groupId)?.configVersion,
     }, {
       onSuccess: () => toast('Cập nhật tiêu chí thành công!', 'success'),
       onError: () => toast('Lỗi cập nhật tiêu chí.', 'error')
@@ -182,7 +183,10 @@ export default function CriteriaPage() {
   };
 
   const handleSaveGroup = (group: { id: string; code: string; name: string; shortName: string }) => {
-    upsertGroup.mutate(group, {
+    upsertGroup.mutate({
+      group,
+      expectedVersion: editingGroup?.configVersion ?? groups[0]?.configVersion,
+    }, {
       onSuccess: () => toast('Cập nhật nhóm tiêu chí thành công!', 'success'),
       onError: () => toast('Lỗi cập nhật nhóm tiêu chí.', 'error')
     });
@@ -197,7 +201,7 @@ export default function CriteriaPage() {
       variant: 'danger'
     });
     if (confirmed) {
-      deleteGroup(id, {
+      deleteGroup({ id, expectedVersion: activeGroup?.configVersion }, {
         onSuccess: () => toast('Đã xóa nhóm tiêu chí.', 'success'),
         onError: () => toast('Lỗi xóa nhóm tiêu chí.', 'error')
       });
@@ -212,7 +216,8 @@ export default function CriteriaPage() {
       variant: 'danger'
     });
     if (confirmed) {
-      deleteCriterion(id, {
+      const criterion = currentCriteria.flatMap((group) => group.criteria).find((item) => item.id === id);
+      deleteCriterion({ id, expectedVersion: criterion?.configVersion }, {
         onSuccess: () => toast('Đã xóa tiêu chí.', 'success'),
         onError: () => toast('Lỗi xóa tiêu chí.', 'error')
       });
@@ -227,7 +232,8 @@ export default function CriteriaPage() {
         confirmText: 'Bỏ chọn',
       });
       if (confirmed) {
-        updateDefaultLevel.mutate({ criterionId, levelIndex: null }, {
+        const criterion = currentCriteria.flatMap((group) => group.criteria).find((item) => item.id === criterionId);
+        updateDefaultLevel.mutate({ criterionId, levelIndex: null, expectedVersion: criterion?.configVersion }, {
           onSuccess: () => toast('Đã bỏ chọn mức mặc định.', 'success'),
           onError: () => toast('Lỗi bỏ chọn mức mặc định.', 'error')
         });
@@ -240,7 +246,8 @@ export default function CriteriaPage() {
       confirmText: 'Đặt mặc định',
     });
     if (confirmed) {
-      updateDefaultLevel.mutate({ criterionId, levelIndex }, {
+      const criterion = currentCriteria.flatMap((group) => group.criteria).find((item) => item.id === criterionId);
+      updateDefaultLevel.mutate({ criterionId, levelIndex, expectedVersion: criterion?.configVersion }, {
         onSuccess: () => toast('Đã đặt mức mặc định.', 'success'),
         onError: () => toast('Lỗi đặt mức mặc định.', 'error')
       });

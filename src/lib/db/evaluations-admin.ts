@@ -117,10 +117,10 @@ export async function getEvaluationsByPeriodAdmin(
 }
 
 const EVALUATION_SUMMARY_SELECT =
-  'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, return_note, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, submitted_at, created_at)';
+  'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, return_note, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, grade_config_version_id, criteria_config_version_id, submitted_at, created_at)';
 
 const EVALUATION_BATCH_SUMMARY_SELECT =
-  'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, submitted_at, created_at)';
+  'id, period_id, employee_id, employee_role, team_id, current_round, status, final_grade, final_score, result_message, created_at, updated_at, evaluation_rounds(id, evaluation_id, round, evaluator_id, evaluator_role, status, total_score, grade, grade_config_version_id, criteria_config_version_id, submitted_at, created_at)';
 
 type DbRoundSummary = {
   id: string;
@@ -131,6 +131,8 @@ type DbRoundSummary = {
   status: string;
   total_score: number | null;
   grade: string | null;
+  grade_config_version_id: string | null;
+  criteria_config_version_id: string | null;
   submitted_at: string | null;
   created_at: string | null;
 };
@@ -193,6 +195,9 @@ function mapRoundSummaryFromDb(db: DbRoundSummary): EvaluationRound {
     additionalComment: undefined,
     submittedAt: db.submitted_at || undefined,
     createdAt: db.created_at || '',
+    gradeConfigVersionId: db.grade_config_version_id,
+    criteriaConfigVersionId: db.criteria_config_version_id,
+    criteriaSnapshotState: db.criteria_config_version_id ? 'authoritative' : 'legacy_unknown',
   };
 }
 

@@ -130,6 +130,9 @@ function mapRoundFromDb(db: DbRound): EvaluationRound {
     additionalComment: db.additional_comment || undefined,
     submittedAt: db.submitted_at || undefined,
     createdAt: db.created_at || '',
+    gradeConfigVersionId: db.grade_config_version_id,
+    criteriaConfigVersionId: db.criteria_config_version_id,
+    criteriaSnapshotState: db.criteria_config_version_id ? 'authoritative' : 'legacy_unknown',
   };
 }
 

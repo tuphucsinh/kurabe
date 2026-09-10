@@ -18,6 +18,7 @@ export interface EvaluationRoundTransactionRpcArgs {
   p_next_evaluator_role: string | null;
   p_next_status: string | null;
   p_is_final: boolean;
+  p_criteria_config_version_id: string;
 }
 
 export interface BuildEvaluationRoundTransactionRpcInput {
@@ -36,6 +37,7 @@ export interface BuildEvaluationRoundTransactionRpcInput {
   submittedAt?: string;
   nextStep?: EvaluationNextStep | null;
   nextEvaluator?: { id: string; role: Role } | null;
+  criteriaConfigVersionId: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export function buildEvaluationRoundTransactionRpcArgs(
     submittedAt,
     nextStep,
     nextEvaluator,
+    criteriaConfigVersionId,
   } = input;
 
   const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
@@ -87,5 +90,6 @@ export function buildEvaluationRoundTransactionRpcArgs(
     p_next_evaluator_role: isSubmit && !isFinal && nextEvaluator ? nextEvaluator.role : null,
     p_next_status: isSubmit && nextStep ? nextStep.status : null,
     p_is_final: isFinal,
+    p_criteria_config_version_id: criteriaConfigVersionId,
   };
 }

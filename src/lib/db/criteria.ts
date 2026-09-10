@@ -1,165 +1,111 @@
 import { supabase } from '../supabase';
-import { CriteriaGroup, Role } from '@/types';
+import { CriteriaGroup, Criterion, Role } from '@/types';
 import { DatabaseError } from '../errors';
-import { Tables } from '@/types/database';
-import {
-  isCriterionAudience,
-  mapAudiencesToRoles,
-  decodeLegacyAppliesToRoles,
-} from '../criteria-applicability';
+import { isCriterionAudience, mapAudiencesToRoles, decodeLegacyAppliesToRoles, CriterionAudience } from '../criteria-applicability';
 
-type DbCriterionLevel = Tables<'criterion_levels'>;
-type DbCriterionAudience = Tables<'criterion_audiences'>;
-type DbCriterionRow = Tables<'criteria'> & {
-  criterion_levels?: DbCriterionLevel[];
-  criterion_audiences?: Pick<DbCriterionAudience, 'audience'>[];
+type ConfigLevel = {
+  id: string;
+  criterion_id?: string;
+  points: number;
+  label: string;
+  description?: string | null;
+  sort_order: number;
 };
-type DbCriteriaGroup = Tables<'criteria_groups'> & {
-  criteria?: DbCriterionRow[];
+type ConfigCriterion = {
+  id: string;
+  group_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  applies_to?: string | null;
+  audiences: string[];
+  weight?: number | null;
+  default_level_index?: number | null;
+  sort_order: number;
+  levels: ConfigLevel[];
 };
+type ConfigGroup = {
+  id: string;
+  code: string;
+  name: string;
+  short_name?: string | null;
+  sort_order: number;
+  criteria: ConfigCriterion[];
+};
+export type CriteriaConfig = {
+  version: number;
+  version_id: string;
+  checksum: string;
+  groups: ConfigGroup[];
+};
+
+function parseConfig(value: unknown): CriteriaConfig {
+  if (!value || typeof value !== 'object') throw new DatabaseError('Invalid criteria configuration');
+  const raw = value as Record<string, unknown>;
+  if (!Number.isSafeInteger(raw.version) || typeof raw.version_id !== 'string' || !Array.isArray(raw.groups)) {
+    throw new DatabaseError('Invalid criteria configuration');
+  }
+  return raw as unknown as CriteriaConfig;
+}
+
+export async function getActiveCriteriaConfig(): Promise<CriteriaConfig> {
+  const { data, error } = await supabase.rpc('get_active_criteria_config');
+  if (error) throw new DatabaseError('Error fetching active criteria configuration', error);
+  return parseConfig(data);
+}
+
+function mapCriterion(c: ConfigCriterion, config: CriteriaConfig): Criterion {
+  const audiences = c.audiences.filter(isCriterionAudience) as CriterionAudience[];
+  return {
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    description: c.description || undefined,
+    appliesTo: audiences.length > 0 ? mapAudiencesToRoles(audiences) : decodeLegacyAppliesToRoles(c.applies_to || null),
+    levels: (c.levels || []).slice().sort((a, b) => a.sort_order - b.sort_order).map((level) => ({
+      points: level.points,
+      label: level.label,
+      description: level.description || undefined,
+    })),
+    groupId: c.group_id,
+    weight: c.weight ?? 0,
+    defaultLevelIndex: c.default_level_index ?? undefined,
+    sortOrder: c.sort_order,
+    configVersion: config.version,
+    configVersionId: config.version_id,
+  };
+}
+
+function mapGroup(group: ConfigGroup, config: CriteriaConfig): CriteriaGroup {
+  return {
+    id: group.id,
+    code: group.code,
+    name: group.name,
+    shortName: group.short_name || '',
+    sortOrder: group.sort_order,
+    configVersion: config.version,
+    configVersionId: config.version_id,
+    criteria: (group.criteria || [])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order || a.code.localeCompare(b.code))
+      .map((criterion) => mapCriterion(criterion, config)),
+  };
+}
 
 export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
-  const { data, error } = await supabase
-    .from('criteria_groups')
-    .select(`
-      id,
-      code,
-      name,
-      short_name,
-      sort_order,
-      is_active,
-      criteria (
-        id,
-        code,
-        name,
-        description,
-        applies_to,
-        weight,
-        default_level_index,
-        sort_order,
-        group_id,
-        is_active,
-        criterion_audiences (
-          audience
-        ),
-        criterion_levels (
-          id,
-          criterion_id,
-          points,
-          label,
-          description,
-          sort_order
-        )
-      )
-    `)
-    .eq('is_active', true)
-    .eq('criteria.is_active', true)
-    .order('sort_order');
-
-  if (error) {
-    throw new DatabaseError('Error fetching criteria groups', error);
-  }
-
-  return (data || []).map(mapGroupFromDb);
+  const config = await getActiveCriteriaConfig();
+  return config.groups.map((group) => mapGroup(group, config));
 }
 
 export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | null> {
-  const { data, error } = await supabase
-    .from('criteria_groups')
-    .select(`
-      id,
-      code,
-      name,
-      short_name,
-      sort_order,
-      is_active,
-      criteria (
-        id,
-        code,
-        name,
-        description,
-        applies_to,
-        weight,
-        default_level_index,
-        sort_order,
-        group_id,
-        is_active,
-        criterion_audiences (
-          audience
-        ),
-        criterion_levels (
-          id,
-          criterion_id,
-          points,
-          label,
-          description,
-          sort_order
-        )
-      )
-    `)
-    .eq('id', id)
-    .eq('is_active', true)
-    .eq('criteria.is_active', true)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw new DatabaseError('Error fetching criteria group', error);
-  }
-
-  return mapGroupFromDb(data);
+  const config = await getActiveCriteriaConfig();
+  const group = config.groups.find((candidate) => candidate.id === id);
+  return group ? mapGroup(group, config) : null;
 }
 
 export async function getCriteriaForRole(role: Role): Promise<CriteriaGroup[]> {
-  const allGroups = await getAllCriteriaGroups();
-  
-  // Filter criteria trong từng group dựa trên appliesTo
-  return allGroups.map(group => ({
-    ...group,
-    criteria: group.criteria.filter(c => c.appliesTo.includes(role))
-  })).filter(group => group.criteria.length > 0);
-}
-
-// Helpers
-function mapCriterionAppliesTo(c: DbCriterionRow): Role[] {
-  // If relation rows exist, map them canonically to Criterion.appliesTo
-  if (c.criterion_audiences && c.criterion_audiences.length > 0) {
-    const validAudiences = c.criterion_audiences
-      .map(a => a.audience)
-      .filter(isCriterionAudience);
-
-    if (validAudiences.length > 0) {
-      return mapAudiencesToRoles(validAudiences);
-    }
-  }
-
-  // Fallback for pre-activation window before criterion_audiences rows are populated
-  return decodeLegacyAppliesToRoles(c.applies_to);
-}
-
-function mapGroupFromDb(dbGroup: DbCriteriaGroup): CriteriaGroup {
-  return {
-    id: dbGroup.id,
-    code: dbGroup.code,
-    name: dbGroup.name,
-    shortName: dbGroup.short_name || '',
-    criteria: (dbGroup.criteria || [])
-      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      .map(c => ({
-        id: c.id,
-        code: c.code,
-        name: c.name,
-        description: c.description || undefined,
-        appliesTo: mapCriterionAppliesTo(c),
-        weight: c.weight || 0,
-        defaultLevelIndex: c.default_level_index ?? undefined,
-        levels: (c.criterion_levels || [])
-          .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-          .map(l => ({
-            points: l.points,
-            label: l.label,
-            description: l.description || undefined
-          }))
-      }))
-  };
+  const groups = await getAllCriteriaGroups();
+  return groups
+    .map((group) => ({ ...group, criteria: group.criteria.filter((criterion) => criterion.appliesTo.includes(role)) }))
+    .filter((group) => group.criteria.length > 0);
 }

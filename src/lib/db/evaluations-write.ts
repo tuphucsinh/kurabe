@@ -6,6 +6,7 @@ import { TablesInsert, Json } from '@/types/database';
 import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
 import { parseRole } from '@/lib/parsers';
+import { loadAuthoritativeCriteriaForRole } from './criteria-admin';
 import {
   assertEvaluationPeriodActive,
   CLOSED_PERIOD_WRITE_ERROR,
@@ -91,6 +92,12 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
     }
 
     const flow = getEvaluationFlow(user.role);
+    const criteriaConfig = await loadAuthoritativeCriteriaForRole(user.role);
+    if (!criteriaConfig.success) {
+      result.errors.push(criteriaConfig.error);
+      result.skipped++;
+      continue;
+    }
     const firstStep = flow[0];
     const evaluator = resolveEvaluatorFromList(firstStep.evaluator, {
       id: user.id,
@@ -139,6 +146,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       total_score: 0,
       grade: 'Pending',
       status: 'NotStarted',
+      criteria_config_version_id: criteriaConfig.versionId,
       created_at: now,
     };
     const { error: rError } = await supabaseAdmin

@@ -228,8 +228,8 @@ export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: get
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (group: Partial<CriteriaGroup>) => {
-      const res = await upsertCriteriaGroupAction(group);
+    mutationFn: async ({ group, expectedVersion }: { group: Partial<CriteriaGroup>; expectedVersion?: number }) => {
+      const res = await upsertCriteriaGroupAction(group, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật nhóm tiêu chí');
       return res.group;
     },
@@ -242,8 +242,8 @@ export const useUpsertCriteriaGroup = () => {
 export const useDeleteCriteriaGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await deleteCriteriaGroupAction(id);
+    mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
+      const res = await deleteCriteriaGroupAction(id, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi xóa nhóm tiêu chí');
       return res;
     },
@@ -257,8 +257,8 @@ export const useDeleteCriteriaGroup = () => {
 export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ criterion, groupId }: { criterion: Partial<Criterion>; groupId: string }) => {
-      const res = await upsertCriterionAction(criterion, groupId);
+    mutationFn: async ({ criterion, groupId, expectedVersion }: { criterion: Partial<Criterion>; groupId: string; expectedVersion?: number }) => {
+      const res = await upsertCriterionAction(criterion, groupId, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật tiêu chí');
       return res.criterion;
     },
@@ -271,8 +271,8 @@ export const useUpsertCriterion = () => {
 export const useDeleteCriterion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await deleteCriterionAction(id);
+    mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
+      const res = await deleteCriterionAction(id, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi xóa tiêu chí');
       return res;
     },
@@ -286,8 +286,8 @@ export const useDeleteCriterion = () => {
 export const useUpdateDefaultLevel = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ criterionId, levelIndex }: { criterionId: string; levelIndex: number | null }) => {
-      const res = await updateDefaultLevelAction(criterionId, levelIndex);
+    mutationFn: async ({ criterionId, levelIndex, expectedVersion }: { criterionId: string; levelIndex: number | null; expectedVersion?: number }) => {
+      const res = await updateDefaultLevelAction(criterionId, levelIndex, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật mức mặc định');
       return res;
     },
@@ -300,8 +300,8 @@ export const useUpdateDefaultLevel = () => {
 export const useUpdateCriterionAudiences = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ criterionId, audiences }: { criterionId: string; audiences: CriterionAudience[] }) => {
-      const res = await updateCriterionAudiencesAction(criterionId, audiences);
+    mutationFn: async ({ criterionId, audiences, expectedVersion }: { criterionId: string; audiences: CriterionAudience[]; expectedVersion?: number }) => {
+      const res = await updateCriterionAudiencesAction(criterionId, audiences, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật đối tượng áp dụng');
       return res;
     },

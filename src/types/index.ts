@@ -67,6 +67,9 @@ export interface EvaluationRound {
   additionalComment?: string;
   submittedAt?: string;
   createdAt: string;
+  gradeConfigVersionId?: string | null;
+  criteriaConfigVersionId?: string | null;
+  criteriaSnapshotState?: 'authoritative' | 'legacy_unknown';
 }
 
 export interface Evaluation {
@@ -92,7 +95,12 @@ export interface CriteriaLevel {
   description?: string;
 }
 
-export interface Criterion {
+export interface CriteriaVersionMetadata {
+  configVersion?: number;
+  configVersionId?: string;
+}
+
+export interface Criterion extends CriteriaVersionMetadata {
   id: string;
   code: string;
   name: string;
@@ -112,4 +120,6 @@ export interface CriteriaGroup {
   shortName: string;
   criteria: Criterion[];
   sortOrder?: number;
+  configVersion?: number;
+  configVersionId?: string;
 }

@@ -35,6 +35,7 @@ const PROJECT_ROOT = process.cwd();
     },
     totalScore: 25,
     grade: 'B',
+    criteriaConfigVersionId: 'criteria-version-1111',
     submittedAt: '2026-08-24T12:00:00.000Z',
     nextStep: null,
     nextEvaluator: null,
@@ -50,6 +51,7 @@ const PROJECT_ROOT = process.cwd();
   assert.equal(args.p_comment, 'Bản nháp vòng 1');
   assert.equal(args.p_total_score, 25);
   assert.equal(args.p_grade, 'B');
+  assert.equal(args.p_criteria_config_version_id, 'criteria-version-1111');
   assert.equal(args.p_is_submit, false);
   assert.equal(args.p_submitted_at, '2026-08-24T12:00:00.000Z');
 
@@ -84,6 +86,7 @@ const PROJECT_ROOT = process.cwd();
     },
     totalScore: 40,
     grade: 'A',
+    criteriaConfigVersionId: 'criteria-version-2222',
     submittedAt: '2026-08-24T13:00:00.000Z',
     nextStep: {
       round: 2,
@@ -122,6 +125,7 @@ const PROJECT_ROOT = process.cwd();
     },
     totalScore: 50,
     grade: 'S',
+    criteriaConfigVersionId: 'criteria-version-3333',
     submittedAt: '2026-08-24T14:00:00.000Z',
     nextStep: {
       round: 3,
@@ -159,6 +163,7 @@ const PROJECT_ROOT = process.cwd();
     },
     totalScore: 10,
     grade: 'C',
+    criteriaConfigVersionId: 'criteria-version-4444',
   };
 
   const args = buildEvaluationRoundTransactionRpcArgs(input);
