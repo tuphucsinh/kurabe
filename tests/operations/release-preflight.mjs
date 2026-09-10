@@ -27,8 +27,24 @@ function verifyRollbackContract(manifest) {
   assert.match(text, /BEGIN\s*;/i, 'rollback scripts must be transactional');
   for (const entry of manifest.filter((item) => item.rollback)) {
     assert.ok(fs.existsSync(path.join(rollbackDir, entry.rollback)), `missing mapped rollback ${entry.rollback}`);
+    assert.equal(entry.rollbackTarget, entry.filename, `rollback ${entry.rollback} must identify ${entry.filename}`);
   }
   return rollbackFiles.length;
+}
+
+function verifyPrivilegeOrder(manifest) {
+  let pairedMigrationCount = 0;
+  for (const item of manifest) {
+    const sql = fs.readFileSync(path.join(root, 'supabase/migrations', item.filename), 'utf8')
+      .replace(/--[^\r\n]*/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const grants = [...sql.matchAll(/^\s*GRANT\b/gim)].map((match) => match.index);
+    const revokes = [...sql.matchAll(/^\s*REVOKE\b/gim)].map((match) => match.index);
+    if (grants.length === 0 || revokes.length === 0) continue;
+    pairedMigrationCount += 1;
+    assert.ok(Math.min(...revokes) < Math.min(...grants), `${item.filename} must revoke broad execution before granting the narrow consumer role`);
+  }
+  assert.ok(pairedMigrationCount > 0, 'no migration contains a GRANT/REVOKE ordering pair');
 }
 
 export async function run() {
@@ -47,11 +63,9 @@ export async function run() {
     assert.match(rollbackText, /DROP|REVOKE|ALTER|CREATE OR REPLACE/i);
   });
   check('consumer-before-revoke ordering is recorded', () => {
-    const grants = manifest.map((item) => item.expectedCatalogDelta.functions.length + item.expectedCatalogDelta.tables.length).reduce((a, b) => a + b, 0);
-    assert.ok(grants >= 0, 'catalog delta must be deterministic');
-    const migrations = manifest.map((item) => fs.readFileSync(path.join(root, 'supabase/migrations', item.filename), 'utf8')).join('\n');
-    assert.match(migrations, /GRANT/i, 'forward package must expose consumers before privilege revoke');
-    assert.match(migrations, /REVOKE/i, 'forward package must include privilege revocation');
+    const catalogObjects = manifest.map((item) => item.expectedCatalogDelta.functions.length + item.expectedCatalogDelta.tables.length).reduce((a, b) => a + b, 0);
+    assert.ok(catalogObjects > 0, 'catalog delta must contain executable objects');
+    verifyPrivilegeOrder(manifest);
   });
   check('fault and cleanup evidence contracts are explicit', () => {
     const bootstrap = fs.readFileSync(path.join(root, 'scripts/db-bootstrap.mjs'), 'utf8');
@@ -63,7 +77,7 @@ export async function run() {
 
   const runtime = runtimeAvailability();
   if (runtime.status === 'BLOCKED_CAPABILITY') {
-    return { real: true, passed: false, status: runtime.status, capability: runtime.status, reason: runtime.reason, cases, manifest, target: 'preflight-no-runtime-contact' };
+    return { real: false, passed: false, status: runtime.status, capability: runtime.status, reason: runtime.reason, cases, manifest, target: 'preflight-no-runtime-contact' };
   }
 
   const child = spawnSync(process.execPath, [path.join(root, 'tests/integration/db-bootstrap.mjs')], {
@@ -71,7 +85,9 @@ export async function run() {
     env: { ...process.env, KURABE_RELEASE_DB_ENABLED: '1' },
   });
   if (child.status !== 0) {
-    throw new Error(`BLOCKED_CAPABILITY: disposable DB execution failed closed (exit=${child.status}); first failure=${String(child.stderr || child.stdout || '').trim()}`);
+    const firstFailure = String(child.stderr || child.stdout || '').split(/\r?\n/).map((line) => line.trim()).find(Boolean) || 'no diagnostic output';
+    const exit = child.error?.code === 'ETIMEDOUT' ? 'TIMEOUT' : (child.status ?? 'NO_EXIT_STATUS');
+    throw new Error(`BLOCKED_CAPABILITY: disposable DB execution failed closed (exit=${exit}); first failure=${firstFailure}`);
   }
   return { real: true, passed: true, status: 'EXECUTED', runtime, cases: [...cases, 'disposable PostgreSQL bootstrap and FK-safe teardown'], manifest, target: 'loopback-disposable-postgresql' };
 }
