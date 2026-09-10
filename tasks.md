@@ -343,7 +343,7 @@ Changes: Strict configured provider transport policy and explicit dev exception;
 Constraints: No sending HR data/real screenshots or paid call without approval; absent governance evidence remains blocked, not code PASS equivalent.
 DoD: `node scripts/verify-release.mjs --suite ai-governance-flow`; synthetic transport with prompt injection/cross-team/secret/truncation/oversized image cases; actual approved provider governance acceptance separately; root gates.
 
-### [ ] [#P100M2T01] CSP enforcement and framework boundary qualification
+### [x] [#P100M2T01] CSP enforcement and framework boundary qualification
 ```yaml
 task:
   id: P100M2T01

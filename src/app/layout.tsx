@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   description: "Webapp đánh giá nhân viên QAQC - Kurabe",
 };
 
+// A request-scoped CSP nonce requires dynamic rendering in Next.js 16.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

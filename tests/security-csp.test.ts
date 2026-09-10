@@ -30,6 +30,7 @@ function parseCspDirectives(csp: string): Map<string, string[]> {
   const cspProd = buildContentSecurityPolicy({
     supabaseUrl: 'https://example.supabase.co',
     production: true,
+    nonce: 'kurabe-test-nonce-1234567890',
   });
 
   const dirs = parseCspDirectives(cspProd);
@@ -41,11 +42,19 @@ function parseCspDirectives(csp: string): Map<string, string[]> {
   assert.deepEqual(dirs.get('frame-ancestors'), ["'none'"], "frame-ancestors must be 'none'");
   assert.deepEqual(dirs.get('form-action'), ["'self'"], "form-action must be 'self'");
 
-  // Production script-src: strictly 'self', NO unsafe-inline or unsafe-eval
-  assert.deepEqual(dirs.get('script-src'), ["'self'"], "production script-src must strictly be 'self'");
+  // Production scripts require an exact nonce and strict-dynamic; no unsafe fallback.
+  assert.deepEqual(
+    dirs.get('script-src'),
+    ["'self'", "'nonce-kurabe-test-nonce-1234567890'", "'strict-dynamic'"],
+    'production script-src must require the reviewed nonce and strict-dynamic'
+  );
 
   // Styles, assets, fonts, workers, manifests
-  assert.deepEqual(dirs.get('style-src'), ["'self'", "'unsafe-inline'"], "style-src must allow 'self' 'unsafe-inline'");
+  assert.deepEqual(
+    dirs.get('style-src'),
+    ["'self'", "'unsafe-inline'", "'nonce-kurabe-test-nonce-1234567890'"],
+    "style-src must preserve React/CSSOM compatibility and accept the exact nonce"
+  );
   assert.deepEqual(dirs.get('img-src'), ["'self'", 'data:', 'blob:'], "img-src must allow 'self' data: blob:");
   assert.deepEqual(dirs.get('font-src'), ["'self'", 'data:'], "font-src must allow 'self' data:");
   assert.deepEqual(dirs.get('worker-src'), ["'self'", 'blob:'], "worker-src must allow 'self' blob:");
@@ -89,6 +98,18 @@ function parseCspDirectives(csp: string): Map<string, string[]> {
   assert.equal(dirs.has('upgrade-insecure-requests'), false, 'development must not include upgrade-insecure-requests');
 }
 
+// 2b. Production without a nonce remains fail-closed (no unsafe script source).
+{
+  const cspProd = buildContentSecurityPolicy({
+    supabaseUrl: 'https://example.supabase.co',
+    production: true,
+  });
+  const dirs = parseCspDirectives(cspProd);
+  assert.deepEqual(dirs.get('script-src'), ["'self'"], 'production without nonce must fail closed to self-only scripts');
+  assert.equal(dirs.get('script-src')?.includes("'unsafe-inline'"), false, 'production script-src must never allow unsafe-inline');
+  assert.equal(dirs.get('script-src')?.includes("'unsafe-eval'"), false, 'production script-src must never allow unsafe-eval');
+}
+
 // 3. Connect-src behavior without Supabase URL
 {
   const cspNoUrl = buildContentSecurityPolicy({ production: false });
@@ -96,18 +117,54 @@ function parseCspDirectives(csp: string): Map<string, string[]> {
   assert.deepEqual(dirs.get('connect-src'), ["'self'"], "connect-src without supabaseUrl must be only 'self'");
 }
 
-// 4. URL Sanitization: trailing paths/query strings stripped to origin
+// 3b. HTTP is a bounded development-only exception for approved local hosts.
 {
-  const cspWithPath = buildContentSecurityPolicy({
-    supabaseUrl: 'https://project.supabase.co/rest/v1/users?select=*',
+  const localDev = parseCspDirectives(buildContentSecurityPolicy({
+    supabaseUrl: 'http://127.0.0.1:54321',
     production: false,
-  });
-  const dirs = parseCspDirectives(cspWithPath);
+  }));
   assert.deepEqual(
-    dirs.get('connect-src'),
-    ["'self'", 'https://project.supabase.co', 'wss://project.supabase.co'],
-    'connect-src must normalize URL to origin only (no subpaths or query strings)'
+    localDev.get('connect-src'),
+    ["'self'", 'http://127.0.0.1:54321', 'ws://127.0.0.1:54321'],
+    'development may connect to approved loopback HTTP'
   );
+
+  const publicHttp = parseCspDirectives(buildContentSecurityPolicy({
+    supabaseUrl: 'http://example.com',
+    production: false,
+  }));
+  assert.deepEqual(publicHttp.get('connect-src'), ["'self'"], 'development must reject public HTTP origins');
+
+  const productionHttp = parseCspDirectives(buildContentSecurityPolicy({
+    supabaseUrl: 'http://127.0.0.1:54321',
+    production: true,
+  }));
+  assert.deepEqual(productionHttp.get('connect-src'), ["'self'"], 'production must reject HTTP origins');
+}
+
+// 3c. Nonce input is reflected only when it is safely bounded.
+{
+  const invalidNonce = parseCspDirectives(buildContentSecurityPolicy({
+    production: true,
+    nonce: 'bad nonce\nwith-control',
+  }));
+  assert.deepEqual(invalidNonce.get('script-src'), ["'self'"], 'invalid nonce must fail closed without reflection');
+  assert.equal(invalidNonce.get('script-src')?.some(token => token.includes('bad')), false);
+}
+
+// 4. URL Sanitization: only an origin is trusted; path/query/hash/credentials are rejected.
+{
+  const invalidOriginInputs = [
+    'https://project.supabase.co/rest/v1',
+    'https://project.supabase.co?select=*',
+    'https://project.supabase.co#fragment',
+    'https://user:password@project.supabase.co',
+  ];
+  for (const input of invalidOriginInputs) {
+    const csp = buildContentSecurityPolicy({ supabaseUrl: input, production: false });
+    const dirs = parseCspDirectives(csp);
+    assert.deepEqual(dirs.get('connect-src'), ["'self'"], `connect-src must reject non-origin input: ${input}`);
+  }
 }
 
 // 5. URL Sanitization & Injection Prevention: Invalid URLs / Schemes / Newlines
