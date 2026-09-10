@@ -61,26 +61,27 @@ export function projectEmployeeTableItems(params: ProjectEmployeeTableItemsParam
   } = params;
 
   const resolvedUserMap = userMap ?? new Map(users.map((u) => [u.id, u]));
+  const teamById = new Map(teams.map((team) => [team.id, team]));
+  const teamNameOf = (u: User) =>
+    u.role === 'Manager' ? 'Toàn bộ bộ phận' : teamById.get(u.teamId)?.name ?? '';
+  const subNameOf = (u: User) =>
+    u.subleaderId ? subleaderMap[u.subleaderId] ?? resolvedUserMap.get(u.subleaderId)?.name ?? '' : '';
 
   return [...users]
     .sort((a, b) => {
       const dRole = getRoleRank(a.role) - getRoleRank(b.role);
       if (dRole !== 0) return dRole;
 
-      const teamNameOf = (u: User) =>
-        u.role === 'Manager' ? 'Toàn bộ bộ phận' : teams.find((t) => t.id === u.teamId)?.name ?? '';
       const dTeam = teamNameOf(a).localeCompare(teamNameOf(b), 'vi');
       if (dTeam !== 0) return dTeam;
 
-      const subNameOf = (u: User) =>
-        u.subleaderId ? subleaderMap[u.subleaderId] ?? resolvedUserMap.get(u.subleaderId)?.name ?? '' : '';
       const dSub = subNameOf(a).localeCompare(subNameOf(b), 'vi');
       if (dSub !== 0) return dSub;
 
       return a.name.localeCompare(b.name, 'vi');
     })
     .map((userItem) => {
-      const team = teams.find((t) => t.id === userItem.teamId);
+      const team = teamById.get(userItem.teamId);
       const rawEval = evaluationsMap[userItem.id] || null;
       const evalItem =
         rawEval && (!currentPeriodId || !rawEval.periodId || rawEval.periodId === currentPeriodId)
