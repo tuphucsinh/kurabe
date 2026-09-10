@@ -89,7 +89,7 @@ Closure: P99M1T01, P99M2T01, P99M2T02, P99M3T01, P99M3T02, P99M4T01, and P99M4T0
 
 ## Phase 100 — AI governance, security headers and dependencies
 
-- State: ACTIVE / P100M1T01, P100M1T02, and P100M2T01 published with CONTROLLED PASS/HIGH; P100M2T02 is published with clean full/production audits; P101M1T01 is next dependency-ready.
+- State: CLOSED for non-production source/local execution at canonical `a5e4b126226480e1863edd4da289c45041875d2a`; P100M1T01, P100M1T02, and P100M2T01 are published with CONTROLLED PASS/HIGH; P100M2T02 is published with clean full/production audits. Production/provider lanes remain approval-gated.
 
 Scope: atomic AI/chat quota; scoped minimal payload and coverage disclosure; provider/retention approval contract; report-only → enforced CSP canary; framework middleware/proxy compatibility only if current docs and runtime tests require it; dev/transitive advisory remediation.
 
@@ -99,7 +99,7 @@ Rollback: revert exact source/config version; keep prior CSP policy available; p
 
 ## Phase 101 — Measured performance and UI quality
 
-State: PLANNED / dependency-gated on Phase 100.
+State: ACTIVE / P101M1T01 published with local real-Chrome baseline; P101M2T01 is the next CONTROLLED measured optimization.
 
 Routes: dashboard, employees, reports, evaluation detail, compare, history, settings. Viewports: 390x844, 768x1024, 1440x900. Roles: Manager/Leader/SubLeader/Employee/Worker as route permits.
 
