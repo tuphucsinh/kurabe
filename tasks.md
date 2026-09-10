@@ -420,7 +420,7 @@ Changes: Profile transforms/query payload and rerenders; reuse stable projection
 Constraints: No virtualization or blanket memoization without benchmark; no broad decomposition by file length; contract drift outside owns stops dispatch.
 DoD: `node scripts/verify-release.mjs --suite detail-list-performance` and `--suite period-freshness`; all applicable roles/periods, cold/warm before-after plus save/return/history behavior; root gates.
 
-### [ ] [#P101M3T01] Responsive/accessibility residual closure
+### [x] [#P101M3T01] Responsive/accessibility residual closure
 ```yaml
 task:
   id: P101M3T01

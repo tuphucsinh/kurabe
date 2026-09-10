@@ -99,7 +99,7 @@ Rollback: revert exact source/config version; keep prior CSP policy available; p
 
 ## Phase 101 — Measured performance and UI quality
 
-State: ACTIVE / P101M1T01, P101M2T01, and P101M2T02 are published with local performance evidence and required gates; P101M3T01 is the next dependency-ready STANDARD UI closure.
+State: COMPLETE for non-production source/local execution / P101M1T01, P101M2T01, P101M2T02, and P101M3T01 are published with local performance evidence and required gates; P102M1T01 is next.
 
 Routes: dashboard, employees, reports, evaluation detail, compare, history, settings. Viewports: 390x844, 768x1024, 1440x900. Roles: Manager/Leader/SubLeader/Employee/Worker as route permits.
 
@@ -111,7 +111,7 @@ Gate: every retained optimization has measured net benefit, no correctness/secur
 
 ## Phase 102 — Integration, controlled rollout and closure
 
-State: PLANNED / dependency-gated on Phase 101.
+State: ACTIVE / P102M1T01 is dependency-ready; production rollout remains owner-gated.
 
 Scope: extend existing CI to behavior/DB/browser/secret gates; full role/workflow/error/concurrency matrix; plan exact remaining migration rollout; owner-approved GitHub branch settings/deploy; reconcile Phase 96E lifecycle gate; final source/catalog/ledger/docs evidence.
 
