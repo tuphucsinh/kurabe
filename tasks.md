@@ -281,7 +281,7 @@ task:
   id: P99M4T01
   tier: CONTROLLED
   depends: [P99M3T02]
-  owns: [src/actions/read.ts, src/lib/db/users-admin.ts, src/lib/db/teams-admin.ts, src/lib/db/evaluations-admin.ts, src/lib/db/evaluations.ts, src/contexts/AuthContext.tsx, src/hooks/use-db.ts, supabase/migrations/20260907000700_sensitive_read_grants.sql, db/rollback-sensitive-read-grants.sql, tests/integration/read-boundaries.mjs]
+  owns: [src/actions/read.ts, src/actions/chat.ts, src/lib/db/users-admin.ts, src/lib/db/teams-admin.ts, src/lib/db/evaluations-admin.ts, src/lib/db/evaluations.ts, src/lib/ai-context.ts, src/lib/export.ts, src/contexts/AuthContext.tsx, src/hooks/use-db.ts, src/app/dashboard/page.tsx, src/app/reports/page.tsx, supabase/migrations/20260907000700_sensitive_read_grants.sql, db/rollback-sensitive-read-grants.sql, tests/integration/read-boundaries.mjs]
   locks: [READ_AUTH_CONTRACT]
 ```
 Goal: No sensitive anon-read or cross-scope browser payload after qualified cutover.
