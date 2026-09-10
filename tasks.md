@@ -358,7 +358,7 @@ Changes: Use current official framework contract; implement nonce/hash-compatibl
 Constraints: Runtime security toggle/deployment requires approval; no unsafe-inline workaround to manufacture PASS; keep explicit rollback policy.
 DoD: `node scripts/verify-release.mjs --suite security-headers`; real browser login/setup/charts/export/print/hydration plus forged action/header negative cases and response header assertions; root gates.
 
-### [ ] [#P100M2T02] Dependency advisory remediation with reproducible lockfile
+### [x] [#P100M2T02] Dependency advisory remediation with reproducible lockfile
 ```yaml
 task:
   id: P100M2T02
