@@ -32,32 +32,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadAuth() {
       try {
-        const savedPeriodId = localStorage.getItem('selected_period_id');
-        
-        // 1. Load periods through an authenticated server action.
-        const periods = await getPeriodsAction();
-        let targetPeriod = null;
-
-        // 2. Determine current period
-        if (periods.length > 0) {
-          if (savedPeriodId) {
-            targetPeriod = periods.find(p => p.id === savedPeriodId);
-          }
-          
-          // Fallback to active period if no saved one or saved one not found
-          if (!targetPeriod) {
-            targetPeriod = periods.find(p => p.status === 'Active') || periods[0];
-          }
-        }
-
-        // 3. Load authenticated user via server action
+        // Resolve the viewer first; period metadata is never fetched for anonymous sessions.
         const loadedUser = await getCurrentUserAction();
+        const periods = loadedUser ? await getPeriodsAction() : [];
+        const savedPeriodId = localStorage.getItem('selected_period_id');
+        const targetPeriod = savedPeriodId
+          ? periods.find((period) => period.id === savedPeriodId)
+          : undefined;
+        const resolvedPeriod = targetPeriod || periods.find((period) => period.status === 'Active') || periods[0];
         
         // Batch state updates and check isInitialized to prevent Strict Mode double-render
         if (!isInitialized) {
           setAllPeriods(periods);
-          if (targetPeriod) {
-            setCurrentPeriodState(targetPeriod);
+          if (resolvedPeriod) {
+            setCurrentPeriodState(resolvedPeriod);
           }
           if (loadedUser) {
             setUser(loadedUser);
@@ -80,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isInitialized]);
 
   const setCurrentPeriod = (period: EvaluationPeriod) => {
+    if (!allPeriods.some((candidate) => candidate.id === period.id)) return;
     setCurrentPeriodState(period);
     localStorage.setItem('selected_period_id', period.id);
     document.cookie = `selected_period_id=${period.id}; path=/; max-age=31536000`; // 1 year expiry
@@ -92,6 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(res.user);
     localStorage.setItem('auth_user_id', res.user.id);
+    const periods = await getPeriodsAction();
+    const savedPeriodId = localStorage.getItem('selected_period_id');
+    const targetPeriod = periods.find((period) => period.id === savedPeriodId)
+      || periods.find((period) => period.status === 'Active')
+      || periods[0];
+    setAllPeriods(periods);
+    setCurrentPeriodState(targetPeriod || null);
     return res.user;
   };
 
@@ -101,7 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await logoutAction();
     } catch {}
     setUser(null);
+    setAllPeriods([]);
+    setCurrentPeriodState(null);
     localStorage.removeItem('auth_user_id');
+    localStorage.removeItem('selected_period_id');
+    document.cookie = 'selected_period_id=; path=/; max-age=0';
   };
 
   const isManager = user?.role === 'Manager';

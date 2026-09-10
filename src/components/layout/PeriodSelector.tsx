@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDown, Calendar, Check } from 'lucide-react';
 
 export default function PeriodSelector() {
   const { currentPeriod, allPeriods, setCurrentPeriod } = useAuth();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -104,6 +106,7 @@ export default function PeriodSelector() {
                   onClick={() => {
                     setCurrentPeriod(period);
                     setIsOpen(false);
+                    router.refresh();
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all border-b border-white/5 last:border-0 ${
                     isActive ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'

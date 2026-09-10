@@ -6,7 +6,7 @@ import { resolveCurrentPeriodAdmin as resolveCurrentPeriod } from '@/lib/db/eval
 import { isIndividualRole } from '@/lib/role-policy';
 import ReportsShell from '@/components/reports/ReportsShell';
 
-export default async function ReportsPage({ searchParams }: { searchParams: { team?: string } }) {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ team?: string | string[] }> }) {
   // Guard role: báo cáo toàn công ty — chỉ Manager/Leader (Phase 39). Employee/Worker chuyển về phiếu đánh giá.
   const viewer = await getSessionUser();
   if (!viewer || (viewer.role !== 'Manager' && viewer.role !== 'Leader')) {
@@ -21,9 +21,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: { te
   const period = await resolveCurrentPeriod(preferredPeriodId, viewer);
   const periodId = period?.id || '';
 
-  const team = searchParams?.team || 'all';
+  const params = await searchParams;
   // Teams metadata for light filter layer (fast scoped query)
   const teams = await getTeamsAdmin(viewer);
+  const requestedTeam = typeof params?.team === 'string' ? params.team : 'all';
+  const team = requestedTeam === 'all' || teams.some((candidate) => candidate.id === requestedTeam)
+    ? requestedTeam
+    : 'all';
 
   return (
     <ReportsShell

@@ -302,7 +302,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
       if (res.success) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id] }),
+          queryClient.invalidateQueries({ queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);
         if (isSubmit) {
@@ -346,7 +346,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
         toast('Đã trả lại đánh giá.', 'success');
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluation-by-employee', employeeId, periodId, user?.id] }),
+          queryClient.invalidateQueries({ queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id] }),
           queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
         ]);
         setReturnDialogOpen(false);
