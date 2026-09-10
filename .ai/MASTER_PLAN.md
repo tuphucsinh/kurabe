@@ -99,7 +99,7 @@ Rollback: revert exact source/config version; keep prior CSP policy available; p
 
 ## Phase 101 — Measured performance and UI quality
 
-State: ACTIVE / P101M1T01 and P101M2T01 published with local performance evidence and CONTROLLED PASS/HIGH; P101M2T02 is the next dependency-ready CONTROLLED optimization.
+State: ACTIVE / P101M1T01, P101M2T01, and P101M2T02 are published with local performance evidence and required gates; P101M3T01 is the next dependency-ready STANDARD UI closure.
 
 Routes: dashboard, employees, reports, evaluation detail, compare, history, settings. Viewports: 390x844, 768x1024, 1440x900. Roles: Manager/Leader/SubLeader/Employee/Worker as route permits.
 

@@ -405,7 +405,7 @@ Changes: Follow baseline bottleneck; bounded projections and independent fetches
 Constraints: No fixed byte budget invented before baseline; no cache bypass of RBAC, URL regression, new infrastructure or optimistic wrong-scope data.
 DoD: `node scripts/verify-release.mjs --suite dashboard-reports-performance` plus `--suite period-freshness`; same-baseline before/after requests/bytes/full-complete, no first-party errors or scope leak; root gates. Reject non-beneficial changes.
 
-### [ ] [#P101M2T02] Bound detail/compare/history and personnel render cost
+### [x] [#P101M2T02] Bound detail/compare/history and personnel render cost
 ```yaml
 task:
   id: P101M2T02
