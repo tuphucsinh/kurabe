@@ -1,12 +1,9 @@
 # HANDOFF — Kurabe audit replan candidate
 
-- Canonical HEAD is `b8cba70632ba640b7da940f7fb174e5b22248264` plus this control-plane handoff update; audit base `ef4008df0f0fa55706307b1b84fa19988e69a02a`, replan publication `1d005e563faeb8247647b0f98cb7190beb9299b3`.
-- Exact existing DAG remains registered under `.state/control.lock`; P102M3T01, P102M3T07, and P102M3T12 are canonical DONE; P102M3T13 is BLOCKED_CAPABILITY.
-- T07 published candidate `b8cba70632ba640b7da940f7fb174e5b22248264`; fresh reviewer PASS, reviewed SHA exact, no findings.
-- T07 gates: 42/42 tests, lint 0 errors/13 warnings, typecheck, synthetic build, source-secret scan, focused suites, and diff check PASS.
-- T13 has preserved implementation delta in `/home/pi5/projects/kurabe-task-wt/P102M3T13`; its authenticated bootstrap suite fails because local `supabase_db_kurabe`/role `anon` is unavailable.
-- T13 runner and Mika evidence: `/home/pi5/hermes-artifacts/kurabe-execution/P102M3T13-mika-blocker-evidence.json`, `/home/pi5/hermes-artifacts/kurabe-execution/P102M3T13-mika-verification.log`; no task failure or strike.
-- Protected pre-existing `AGENTS.md` remains untouched; no credential value, production mutation, deploy, or destructive cleanup occurred.
-- Audit limits remain: three delegated branches timed out; `INDEPENDENT_AUDIT=INCOMPLETE`, `INDEPENDENT_REVIEW=NOT_RUN`; timeout is not a finding or task failure.
-- No active reservations, publish turn, or T07 residue remain; T13 residue is intentional because its delta is not verified.
-- Next action: **Need approval** to provide an authentic local Supabase-compatible service, then resume T13 from its existing base/delta and rerun authenticated gates; do not replan or reset DAG.
+- Canonical observed HEAD is `116b300e3953bfc86480d1d4850c6d8548ea9a2a`; audit base `ef4008df0f0fa55706307b1b84fa19988e69a02a`, replan publication `1d005e563faeb8247647b0f98cb7190beb9299b3`.
+- Exact existing DAG remains unchanged; P102M3T01, P102M3T07, and P102M3T12 are canonical DONE; P102M3T13 remains `[ ]` pending candidate publication.
+- T13 preserved delta is at `/home/pi5/projects/kurabe-task-wt/P102M3T13`, base `177dbd7c4d12344cbab806d53b77ba9022d014a0`; real-DB integration (5 cases), authenticated Next browser (11 cases), root tests/lint/typecheck/build and secret scan are PASS.
+- T13 browser proof includes rendered DB read, Employee route/UI denial, zero unauthorized business delta, DB/session identity, broken-auth rejection, and post-run fixture/private-tree cleanup; exact evidence is under `/home/pi5/hermes-artifacts/kurabe-execution/`.
+- Disposable local Supabase stack, fixture rows, containers, ports, network and volumes are cleaned; no production mutation, credential access, deploy or broad cleanup occurred.
+- Protected pre-existing `AGENTS.md` remains untouched and unstaged. Audit limits remain `INDEPENDENT_AUDIT=INCOMPLETE`, `INDEPENDENT_REVIEW=NOT_RUN`; no new broad audit is opened.
+- Next action: snapshot exact T13 owned delta, build candidate from current canonical HEAD, obtain fresh CONTROLLED review, then publish/tick and continue the unchanged DAG.
