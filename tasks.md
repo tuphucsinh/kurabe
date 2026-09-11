@@ -198,7 +198,7 @@ Changes: read-only reconcile canonical→registered WTs→filesystem roots→sta
 Constraints: planning does not authorize process/service/state mutation; production/external quarantine never auto-cleared. Separate actionable owner decision from bookkeeping; must not block safe read-only audit merely because residue exists.
 DoD: `git status --short --branch`; `git worktree list --porcelain`; `git for-each-ref refs/heads refs/mika`; `ss -ltnp`; exact PID `ps -p <verified-pid> -o pid=,lstart=,args=` and /proc cwd; complete root/state inventory and evidence hashes. After approved mutation exact readback proves no active stale reservation, authoritative base matches canonical, retained paths/reasons explicit and no orphan current-run listener. Fresh independent operational evidence review, no fabricated cleanliness.
 
-### [ ] [#P102M3T13] Qualify reusable actual-Next authenticated local fixture lane
+### [x] [#P102M3T13] Qualify reusable actual-Next authenticated local fixture lane
 ```yaml
 task:
   id: P102M3T13

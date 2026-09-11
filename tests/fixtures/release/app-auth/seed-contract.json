@@ -1,0 +1,64 @@
+{
+  "format": "kurabe-app-auth-fixture/v1",
+  "task_id": "P102M3T13",
+  "source": {
+    "schema": "db/bootstrap/baseline.sql",
+    "database": "local-disposable-supabase-db",
+    "transport": "local-supabase-kong-rest",
+    "browser": "google-chrome-stable",
+    "ownership": "mika-owned-disposable-local-stack"
+  },
+  "runtime_env_contract": {
+    "ownership_flag": "KURABE_LOCAL_STACK_OWNED=1",
+    "required_variables": [
+      "KURABE_LOCAL_STACK_OWNED",
+      "KURABE_SUPABASE_URL",
+      "KURABE_SUPABASE_ANON_KEY",
+      "KURABE_SUPABASE_SERVICE_ROLE_KEY",
+      "KURABE_DB_HOST",
+      "KURABE_DB_PORT",
+      "KURABE_DB_NAME",
+      "KURABE_DB_USER",
+      "KURABE_DB_PASSWORD",
+      "KURABE_SUPABASE_STACK_NAME",
+      "KURABE_SUPABASE_NETWORK_ID"
+    ],
+    "loopback_enforced": true,
+    "production_targets_rejected": true
+  },
+  "seed_identity": {
+    "manager_user_id": "22222222-2222-4222-8222-222222222222",
+    "employee_user_id": "44444444-4444-4444-8444-444444444444",
+    "team_id": "11111111-1111-4111-8111-111111111111",
+    "period_id": "33333333-3333-4333-8333-333333333333",
+    "period_year": 2099,
+    "period_status": "active",
+    "evaluation_id": "55555555-5555-4555-8555-555555555555"
+  },
+  "boundary_contract": {
+    "anonymous_protected_route": "redirects-to-login",
+    "authenticated_role_denial": "redirects-to-individual-evaluation",
+    "invalid_rest_key": "401",
+    "broken_probe": "nonzero"
+  },
+  "residue_contract": {
+    "database": "exact-fixture-rows-deleted",
+    "sessions": "fixture-sessions-and-attempts-deleted",
+    "containers": "disposable-stack-preserved",
+    "next": "private-build-tree-removed",
+    "shared_next": "forbidden"
+  },
+  "evidence_contract": {
+    "evidence_path": "/home/pi5/hermes-artifacts/kurabe-execution/P102M3T13-authentic-local-supabase-evidence.json",
+    "redaction": "raw-credentials-and-tokens-forbidden",
+    "lifecycle_handles_recorded": [
+      "stack",
+      "seed",
+      "roleLogin",
+      "next",
+      "browser",
+      "readback",
+      "cleanup"
+    ]
+  }
+}
