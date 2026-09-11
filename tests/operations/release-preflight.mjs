@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildManifest } from '../integration/release-matrix.mjs';
+import { buildManifest, buildRollbackManifest } from '../integration/release-matrix.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const rollbackDir = path.join(root, 'db');
@@ -20,14 +20,16 @@ function runtimeAvailability() {
 }
 
 function verifyRollbackContract(manifest) {
-  const rollbackFiles = fs.readdirSync(rollbackDir).filter((name) => name.startsWith('rollback-') && name.endsWith('.sql')).sort();
+  const rollbackRecords = buildRollbackManifest();
+  const rollbackFiles = rollbackRecords.map((record) => record.name);
   assert.ok(rollbackFiles.length > 0, 'rollback package is empty');
   const text = rollbackFiles.map((name) => fs.readFileSync(path.join(rollbackDir, name), 'utf8')).join('\n');
   assert.match(text, /ROLLBACK_UNAPPROVED|approval|approved/i, 'rollback scripts must fail closed without pre-approval');
   assert.match(text, /BEGIN\s*;/i, 'rollback scripts must be transactional');
   for (const entry of manifest.filter((item) => item.rollback)) {
-    assert.ok(fs.existsSync(path.join(rollbackDir, entry.rollback)), `missing mapped rollback ${entry.rollback}`);
-    assert.equal(entry.rollbackTarget, entry.filename, `rollback ${entry.rollback} must identify ${entry.filename}`);
+    const record = rollbackRecords.find((item) => item.name === entry.rollback);
+    assert.ok(record, `missing mapped rollback ${entry.rollback}`);
+    assert.equal(entry.rollbackTarget, record.targetPath, `rollback ${entry.rollback} must identify ${entry.forwardPath}`);
   }
   return rollbackFiles.length;
 }
@@ -47,13 +49,32 @@ function verifyPrivilegeOrder(manifest) {
   assert.ok(pairedMigrationCount > 0, 'no migration contains a GRANT/REVOKE ordering pair');
 }
 
+function safeOutput(value) {
+  return String(value || '')
+    .replace(/(?:postgres(?:ql)?:\/\/)[^\s)]+/gi, '[redacted-db-target]')
+    .replace(/(?:password|secret|token|key)\s*[=:]\s*[^\s,;]+/gi, '$1=[redacted]');
+}
+
+function firstCausalFailure(child) {
+  const streams = [safeOutput(child.stderr), safeOutput(child.stdout)];
+  const lines = streams.flatMap((stream) => stream.split(/\r?\n/).map((line) => line.trim())).filter(Boolean);
+  return lines.find((line) => /(?:\b(?:ERROR|FATAL|FAIL|BLOCKED)\b|DB_BOOTSTRAP|Error:|exit=)/i.test(line) && !/\bwarning\b/i.test(line))
+    || lines[0]
+    || 'no diagnostic output';
+}
+
 export async function run() {
   const manifest = buildManifest();
-  check('ordered migration manifest has SHA-256 and catalog delta', () => {
+  check('ordered migration manifest has SHA-256 and authoritative catalog contract', () => {
     assert.equal(manifest[0].order, 1);
     for (const item of manifest) {
       assert.match(item.sha256, /^[a-f0-9]{64}$/);
-      assert.ok(item.expectedCatalogDelta && Array.isArray(item.expectedCatalogDelta.tables));
+      assert.equal(item.forwardPath, `supabase/migrations/${item.filename}`);
+      assert.deepEqual(item.authoritativeCatalog.predicate_keys, [
+        'extensions', 'schemas', 'tables', 'columns', 'constraints', 'indexes',
+        'policies', 'functions', 'triggers', 'roles', 'table_privileges', 'routine_privileges',
+      ]);
+      assert.match(item.authoritativeCatalog.expected_catalog_sha256, /^[a-f0-9]{64}$/);
     }
   });
   check('rollback mapping and pre-approved steps are fail-closed', () => {
@@ -63,8 +84,6 @@ export async function run() {
     assert.match(rollbackText, /DROP|REVOKE|ALTER|CREATE OR REPLACE/i);
   });
   check('consumer-before-revoke ordering is recorded', () => {
-    const catalogObjects = manifest.map((item) => item.expectedCatalogDelta.functions.length + item.expectedCatalogDelta.tables.length).reduce((a, b) => a + b, 0);
-    assert.ok(catalogObjects > 0, 'catalog delta must contain executable objects');
     verifyPrivilegeOrder(manifest);
   });
   check('fault and cleanup evidence contracts are explicit', () => {
@@ -85,14 +104,43 @@ export async function run() {
     env: { ...process.env, KURABE_RELEASE_DB_ENABLED: '1' },
   });
   if (child.status !== 0) {
-    const firstFailure = String(child.stderr || child.stdout || '').split(/\r?\n/).map((line) => line.trim()).find(Boolean) || 'no diagnostic output';
+    const firstFailure = firstCausalFailure(child);
     const exit = child.error?.code === 'ETIMEDOUT' ? 'TIMEOUT' : (child.status ?? 'NO_EXIT_STATUS');
     throw new Error(`BLOCKED_CAPABILITY: disposable DB execution failed closed (exit=${exit}); first failure=${firstFailure}`);
   }
-  return { real: true, passed: true, status: 'EXECUTED', runtime, cases: [...cases, 'disposable PostgreSQL bootstrap and FK-safe teardown'], manifest, target: 'loopback-disposable-postgresql' };
+  const stdout = safeOutput(child.stdout);
+  const stderr = safeOutput(child.stderr);
+  const observed = [stdout, stderr]
+    .flatMap((stream) => stream.split(/\r?\n/).map((line) => line.trim()))
+    .filter(Boolean);
+  return {
+    real: true,
+    passed: true,
+    status: 'EXECUTED',
+    runtime: {
+      ...runtime,
+      child_exit_code: child.status,
+      stdout,
+      stderr,
+      observed_lines: observed,
+    },
+    cases: [...cases, 'disposable PostgreSQL bootstrap and FK-safe teardown', 'db-bootstrap-output-captured'],
+    manifest,
+    target: 'loopback-disposable-postgresql',
+  };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try { const result = await run(); if (!result.passed) { console.error(`RELEASE_PREFLIGHT BLOCKED ${result.status} reason=${result.reason || result.runtime.reason}`); process.exitCode = 1; } else console.log(`RELEASE_PREFLIGHT ${result.status} cases=${result.cases.length} migrations=${result.manifest.length} reason=${result.reason || result.runtime.reason}`); }
+  try {
+    const result = await run();
+    if (!result.passed) {
+      console.error(`RELEASE_PREFLIGHT BLOCKED ${result.status} reason=${result.reason || result.runtime.reason}`);
+      process.exitCode = 1;
+    } else {
+      console.log(`RELEASE_PREFLIGHT ${result.status} cases=${result.cases.length} migrations=${result.manifest.length} reason=${result.reason || result.runtime.reason}`);
+      for (const testCase of result.cases) console.log(`  CASE ${testCase}`);
+      for (const line of result.runtime?.observed_lines || []) console.log(`  RUNTIME ${line}`);
+    }
+  }
   catch (error) { console.error(`RELEASE_PREFLIGHT FAIL ${error?.message || error}`); process.exitCode = 1; }
 }
