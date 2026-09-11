@@ -41,6 +41,8 @@ const ROLLBACK_TARGETS = Object.freeze({
 const PERSONNEL_FORWARD = 'supabase/migrations/20260907000400_personnel_transaction.sql';
 const PERSONNEL_HISTORY = 'supabase/migrations/20260907000300_personnel_history_guard.sql';
 const PERSONNEL_ROLLBACK = 'db/rollback-personnel-transaction.sql';
+const P96T03_ROLLBACK = 'db/rollback-p96t03-single-active-period.sql';
+const P96T03_INDEX_COMMENT = 'P96T03: Enforces at most one active evaluation period at any time';
 const SAFE_ENV = {
   PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   HOME: '/tmp', LANG: 'C', LC_ALL: 'C', PGPASSFILE: '/dev/null',
@@ -221,6 +223,25 @@ INSERT INTO public.users (id, employee_code, name, role, team_id, is_active, gen
     assert.equal(scalar(container.target, "SELECT count(*) FROM pg_proc WHERE oid=to_regprocedure('public.apply_personnel_transaction(jsonb,jsonb)');"), '0');
     assert.equal(scalar(container.target, "SELECT count(*) FROM pg_indexes WHERE indexname='idx_users_active_leader_team';"), '0');
     cases.push('rollback-approved-provenance-gated-runtime');
+
+    assert.equal(scalar(container.target, "SELECT count(*) FROM pg_indexes WHERE indexname='idx_evaluation_periods_single_active';"), '1', 'baseline must contain the P96T03 index before rollback testing');
+    const p96t03Unapproved = psqlResult(container.target, read(P96T03_ROLLBACK));
+    assert.notEqual(p96t03Unapproved.status, 0, 'P96T03 unapproved rollback must fail');
+    assert.match(`${p96t03Unapproved.stdout}\n${p96t03Unapproved.stderr}`, /ROLLBACK_UNAPPROVED/);
+    assert.equal(scalar(container.target, "SELECT count(*) FROM pg_indexes WHERE indexname='idx_evaluation_periods_single_active';"), '1');
+    cases.push('p96t03-rollback-unapproved-runtime-fail-closed');
+
+    psql(container.target, "COMMENT ON INDEX public.idx_evaluation_periods_single_active IS 'foreign:unrecognized';");
+    const p96t03Provenance = psqlResult(container.target, `SET kurabe.p96t03_rollback_approved='true';\n${read(P96T03_ROLLBACK)}`);
+    assert.notEqual(p96t03Provenance.status, 0, 'P96T03 provenance mismatch rollback must fail');
+    assert.match(`${p96t03Provenance.stdout}\n${p96t03Provenance.stderr}`, /PROVENANCE_MISMATCH/);
+    assert.equal(scalar(container.target, "SELECT count(*) FROM pg_indexes WHERE indexname='idx_evaluation_periods_single_active';"), '1');
+    cases.push('p96t03-rollback-provenance-mismatch-runtime-fail-closed');
+
+    psql(container.target, `COMMENT ON INDEX public.idx_evaluation_periods_single_active IS '${P96T03_INDEX_COMMENT}';`);
+    psql(container.target, `SET kurabe.p96t03_rollback_approved='true';\n${read(P96T03_ROLLBACK)}`);
+    assert.equal(scalar(container.target, "SELECT count(*) FROM pg_indexes WHERE indexname='idx_evaluation_periods_single_active';"), '0');
+    cases.push('p96t03-rollback-approved-provenance-gated-runtime');
   } finally {
     try { docker(['rm', '--force', container.name]); } catch { /* preserve the first useful test failure */ }
   }

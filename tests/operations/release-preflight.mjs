@@ -23,9 +23,19 @@ function verifyRollbackContract(manifest) {
   const rollbackRecords = buildRollbackManifest();
   const rollbackFiles = rollbackRecords.map((record) => record.name);
   assert.ok(rollbackFiles.length > 0, 'rollback package is empty');
-  const text = rollbackFiles.map((name) => fs.readFileSync(path.join(rollbackDir, name), 'utf8')).join('\n');
-  assert.match(text, /ROLLBACK_UNAPPROVED|approval|approved/i, 'rollback scripts must fail closed without pre-approval');
-  assert.match(text, /BEGIN\s*;/i, 'rollback scripts must be transactional');
+  for (const record of rollbackRecords) {
+    const text = fs.readFileSync(path.join(rollbackDir, record.name), 'utf8');
+    assert.match(text, /current_setting\([^)]*rollback[^)]*\)|rollback[^\r\n]*(?:approval|approved)/i, `${record.name} must fail closed without explicit approval`);
+    assert.match(text, /BEGIN\s*;/i, `${record.name} must be transactional`);
+    if (/\bDROP\s+(?:INDEX|FUNCTION)\b|\bCREATE\s+OR\s+REPLACE\s+FUNCTION\b/i.test(text)) {
+      assert.match(text, /pg_description|obj_description/i, `${record.name} must verify object provenance before changing an existing object`);
+    }
+  }
+  const p96t03 = rollbackRecords.find((record) => record.name === 'rollback-p96t03-single-active-period.sql');
+  assert.ok(p96t03, 'P96T03 rollback must be explicitly mapped');
+  const p96t03Text = fs.readFileSync(path.join(rollbackDir, p96t03.name), 'utf8');
+  assert.match(p96t03Text, /kurabe\.p96t03_rollback_approved/);
+  assert.match(p96t03Text, /P96T03: Enforces at most one active evaluation period at any time/);
   for (const entry of manifest.filter((item) => item.rollback)) {
     const record = rollbackRecords.find((item) => item.name === entry.rollback);
     assert.ok(record, `missing mapped rollback ${entry.rollback}`);
