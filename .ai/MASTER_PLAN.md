@@ -116,4 +116,4 @@ Disposable isolated outputs: `.tmp/testbuild`, `.tmp/verification`, `.next`, `ts
 
 ## Next gate
 
-Canonical plan publication and exact DAG registration are complete. P102M3T12 is verified with fresh independent review; P102M3T01 is the active AGY candidate at the registered base. Next: Mika verifies the unchanged T01 worktree after runner exit, then applies the CONTROLLED review/publish gate; no production/lifecycle mutation is implied.
+- Canonical plan publication and exact DAG registration are complete. P102M3T12 and P102M3T01 are canonical with fresh independent review evidence; P102M3T01 is published at `317c0ecfe0325540dd5117fe665e4c3e55ebdee4`. Next: recompute the existing DAG and continue the next READY non-production task; no production/lifecycle mutation is implied.

@@ -18,7 +18,7 @@ Every DB task supplies new forward migration + paired guarded rollback, disposab
 
 ## Phase 102 M3 — correctness and honest verification before release
 
-### [ ] [#P102M3T01] Fail-closed test/evidence and tracked-source secret contracts
+### [x] [#P102M3T01] Fail-closed test/evidence and tracked-source secret contracts
 ```yaml
 task:
   id: P102M3T01
