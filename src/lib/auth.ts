@@ -26,7 +26,7 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
 
     const { data: sessionData, error: sessionErr } = await supabaseAdmin
       .from('sessions')
-      .select('user_id, expires_at')
+      .select('user_id, expires_at, credential_revision')
       .eq('token_hash', tokenHash)
       .gt('expires_at', nowIso)
       .maybeSingle();
@@ -35,12 +35,13 @@ export const getSessionUser = cache(async (): Promise<User | null> => {
 
     const { data: userData, error: userErr } = await supabaseAdmin
       .from('users')
-      .select(USER_SELECT)
+      .select(`${USER_SELECT}, credential_revision`)
       .eq('id', sessionData.user_id)
       .eq('is_active', true)
       .maybeSingle();
 
     if (userErr || !userData) return null;
+    if (userData.credential_revision !== sessionData.credential_revision) return null;
     return mapUserFromDb(userData);
   } catch {
     return null;

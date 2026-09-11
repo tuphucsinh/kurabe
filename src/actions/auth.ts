@@ -9,6 +9,7 @@ import { toClientError } from '@/lib/errors';
 import { isOpaqueSessionToken } from '@/lib/session-token';
 import {
   completePasswordSetupCore,
+  executeIssueSessionRpc,
   type CompletePasswordSetupResult,
   type ResetPasswordResult,
 } from '@/lib/auth-password-setup';
@@ -48,7 +49,7 @@ export async function loginAction(
     // 2. Tìm user theo mã nhân viên
     const { data: user, error: userLookupError } = await supabaseAdmin
       .from('users')
-      .select('*')
+      .select('id, employee_code, name, role, team_id, join_date, avatar_url, created_at, is_active, subleader_id, description, gender, password_hash, password_setup_required, credential_revision')
       .eq('employee_code', cleanCode)
       .eq('is_active', true)
       .maybeSingle();
@@ -66,58 +67,62 @@ export async function loginAction(
       return { success: false, error: GENERIC_AUTH_ERROR };
     }
 
-    // 3. Kiểm tra mật khẩu
-    // Khi KURABE_REQUIRE_PASSWORD_LOGIN === 'true' (strict mode):
-    // Fail-closed nếu password_hash là NULL hoặc password_setup_required = true.
-    // Luôn thực thi đúng 1 lần bcrypt.compare cho mọi tài khoản active tồn tại:
-    // dùng hash thật nếu tài khoản có mật khẩu bình thường, ngược lại dùng dummy bcrypt hash cố định.
-    // Khi KURABE_REQUIRE_PASSWORD_LOGIN !== 'true' (mặc định compatibility mode):
-    // Khôi phục legacy behavior: tài khoản có password_hash = NULL đăng nhập không cần mật khẩu;
-    // tài khoản đã có password_hash vẫn bắt buộc nhập đúng mật khẩu.
+    // 3. Kiểm tra mật khẩu. NULL,false là tài khoản legacy chưa cấu hình;
+    // NULL,true là reset-pending và luôn phải đi qua one-time setup.
     const requirePasswordLogin = process.env.KURABE_REQUIRE_PASSWORD_LOGIN === 'true';
+    const isSetupPending = user.password_setup_required === true;
+    const configuredCredentialHash = user.password_hash;
+    const hasConfiguredCredential = configuredCredentialHash !== null && configuredCredentialHash !== undefined;
+    // Historical source contract: !user.password_hash || user.password_setup_required.
+    // Only NULL/undefined is legacy-unconfigured; a non-NULL invalid hash must fail closed.
+    const passwordHashMissingOrSetupPending = configuredCredentialHash === null
+      || configuredCredentialHash === undefined
+      || user.password_setup_required === true;
+    const passwordCandidate = typeof password === 'string' ? password : '';
+    let credentialValid = true;
 
     if (requirePasswordLogin) {
-      const storedHash = user.password_hash ?? DUMMY_BCRYPT_HASH;
-      const isSetupIncomplete = !user.password_hash || user.password_setup_required;
-      const targetHash = isSetupIncomplete ? DUMMY_BCRYPT_HASH : storedHash;
-      const passwordCandidate = typeof password === 'string' ? password : '';
-
-      const valid = await bcrypt.compare(passwordCandidate, targetHash);
-      if (isSetupIncomplete || !valid || !password) {
-        // Ghi nhận lần thử thất bại
+      const targetHash = passwordHashMissingOrSetupPending
+        ? DUMMY_BCRYPT_HASH
+        : (configuredCredentialHash ?? DUMMY_BCRYPT_HASH);
+      credentialValid = await bcrypt.compare(passwordCandidate, targetHash);
+      if (passwordHashMissingOrSetupPending || !credentialValid || !password) {
         await recordFailedLoginAttempt(cleanCode, ip);
         return { success: false, error: GENERIC_AUTH_ERROR };
       }
-    } else if (user.password_hash) {
-      const passwordCandidate = typeof password === 'string' ? password : '';
-      const valid = await bcrypt.compare(passwordCandidate, user.password_hash);
-      if (!valid || !password) {
-        // Ghi nhận lần thử thất bại
+    } else if (isSetupPending) {
+      // Optional legacy mode remains available only for never-configured accounts.
+      await recordFailedLoginAttempt(cleanCode, ip);
+      return { success: false, error: GENERIC_AUTH_ERROR };
+    } else if (hasConfiguredCredential) {
+      credentialValid = await bcrypt.compare(passwordCandidate, configuredCredentialHash ?? DUMMY_BCRYPT_HASH);
+      if (!credentialValid || !password) {
         await recordFailedLoginAttempt(cleanCode, ip);
         return { success: false, error: GENERIC_AUTH_ERROR };
       }
     }
 
-    // 4. Đăng nhập thành công -> Xóa attempts cũ của tài khoản
-    await clearLoginAttempts(cleanCode);
-
-    // 5. Tạo session token ngẫu nhiên 256-bit (64 hex chars)
+    // 4. Issue the session under the same user row lock used by reset/change/setup.
+    // The RPC rechecks the complete credential snapshot, so a stale proof cannot
+    // create a session after a concurrent credential revoke.
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+    const issueResult = await executeIssueSessionRpc(
+      user.id,
+      user.password_hash ?? null,
+      isSetupPending,
+      user.credential_revision,
+      tokenHash,
+      expiresAt
+    );
 
-    const { error: sessionError } = await supabaseAdmin.from('sessions').insert({
-      token_hash: tokenHash,
-      user_id: user.id,
-      expires_at: expiresAt,
-    });
-
-    if (sessionError) {
-      return {
-        success: false,
-        error: toClientError(sessionError, 'Lỗi tạo phiên đăng nhập. Vui lòng thử lại.'),
-      };
+    if (!issueResult.success) {
+      return { success: false, error: issueResult.error };
     }
+
+    // 5. Đăng nhập thành công -> Xóa attempts cũ của tài khoản
+    await clearLoginAttempts(cleanCode);
 
     // 6. Set cookie auth_session = TOKEN
     const proto = headerStore.get('x-forwarded-proto') || 'http';
@@ -138,27 +143,37 @@ export async function loginAction(
   }
 }
 
-export async function logoutAction(): Promise<{ success: boolean }> {
+export async function logoutAction(): Promise<{ success: boolean; error?: string }> {
+  let revokeError: unknown = null;
+  let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null;
+
   try {
-    const cookieStore = await cookies();
+    cookieStore = await cookies();
     const token = cookieStore.get('auth_session')?.value;
 
     if (isOpaqueSessionToken(token)) {
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      await supabaseAdmin.from('sessions').delete().eq('token_hash', tokenHash);
+      const { error } = await supabaseAdmin.from('sessions').delete().eq('token_hash', tokenHash);
+      if (error) revokeError = error;
     }
-
-    cookieStore.delete('auth_session');
-    return { success: true };
-  } catch {
-    // Fallback xóa cookie dù DB delete có trục trặc
-    try {
-      (await cookies()).delete('auth_session');
-    } catch {
-      // ignore
-    }
-    return { success: true };
+  } catch (error) {
+    revokeError = error;
   }
+
+  // Always clear the local cookie, even when server-side revocation failed.
+  try {
+    (cookieStore || (await cookies())).delete('auth_session');
+  } catch (error) {
+    if (!revokeError) revokeError = error;
+  }
+
+  if (revokeError) {
+    return {
+      success: false,
+      error: toClientError(revokeError, 'Không thể thu hồi phiên đăng nhập trên máy chủ. Cookie cục bộ đã được xóa.'),
+    };
+  }
+  return { success: true };
 }
 
 /**

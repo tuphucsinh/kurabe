@@ -15,34 +15,38 @@ import {
   validateBoundedPassword,
   MIN_PASSWORD_LENGTH,
   MAX_PASSWORD_LENGTH,
+  MAX_PASSWORD_BYTES,
   type ResetPasswordResult,
   type CompletePasswordSetupResult,
   type ChangePasswordResult,
 } from '@/lib/auth-password-setup';
 
-export interface AccountStatusResult {
-  hasPassword: boolean;
-  setupRequired: boolean;
-}
+export type AccountStatusResult =
+  | { success: true; hasPassword: boolean; setupRequired: boolean }
+  | { success: false; error: string };
 
 /**
  * Trả về trạng thái tài khoản: đã đặt mật khẩu chưa và có đang yêu cầu setup không (server-side, KHÔNG lộ hash).
  */
 export async function getAccountStatus(): Promise<AccountStatusResult> {
   const auth = await requireAuth();
-  if (auth.error !== null) return { hasPassword: false, setupRequired: false };
+  if (auth.error !== null) return { success: false, error: auth.error };
   try {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('users')
       .select('password_hash, password_setup_required')
       .eq('id', auth.user.id)
       .maybeSingle();
+    if (error || !data) {
+      return { success: false, error: 'Không thể tải trạng thái xác thực tài khoản. Vui lòng thử lại.' };
+    }
     return {
-      hasPassword: Boolean(data?.password_hash),
-      setupRequired: Boolean(data?.password_setup_required),
+      success: true,
+      hasPassword: data.password_hash !== null && data.password_hash !== undefined,
+      setupRequired: Boolean(data.password_setup_required),
     };
   } catch {
-    return { hasPassword: false, setupRequired: false };
+    return { success: false, error: 'Không thể tải trạng thái xác thực tài khoản. Vui lòng thử lại.' };
   }
 }
 
@@ -80,7 +84,7 @@ export async function changePassword(
     // 2. Đọc trạng thái xác thực hiện tại của user trong DB
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, is_active, password_hash, password_setup_required')
+      .select('id, is_active, password_hash, password_setup_required, credential_revision')
       .eq('id', userId)
       .maybeSingle();
 
@@ -132,7 +136,8 @@ export async function changePassword(
       userId,
       user.password_hash,
       newPasswordHash,
-      currentSessionTokenHash
+      currentSessionTokenHash,
+      user.credential_revision
     );
 
     if (!rpcResult.success) {
@@ -191,4 +196,3 @@ export async function completePasswordSetup(
 }
 
 export type { ResetPasswordResult, CompletePasswordSetupResult, ChangePasswordResult };
-export { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH };

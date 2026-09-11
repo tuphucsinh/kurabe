@@ -5,7 +5,10 @@ import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const MIN_PASSWORD_LENGTH = 6;
-export const MAX_PASSWORD_LENGTH = 72;
+/** bcrypt consumes at most 72 UTF-8 bytes, not 72 JavaScript string units. */
+export const MAX_PASSWORD_BYTES = 72;
+/** Compatibility alias for existing callers; the limit is bytes, not characters. */
+export const MAX_PASSWORD_LENGTH = MAX_PASSWORD_BYTES;
 export const SETUP_TOKEN_EXPIRY_MINUTES = 30;
 export const SETUP_TOKEN_MAX_AGE_MS = SETUP_TOKEN_EXPIRY_MINUTES * 60 * 1000;
 
@@ -25,8 +28,12 @@ export type ChangePasswordResult =
       code?: 'SETUP_REQUIRED' | 'WRONG_PROOF' | 'CONCURRENT_CONFLICT' | 'VALIDATION_ERROR' | 'SYSTEM_ERROR';
     };
 
+export type IssueSessionResult =
+  | { success: true }
+  | { success: false; error: string };
+
 /**
- * Validates bounded password constraints (minimum 6 characters, maximum 72 characters, matching confirmation).
+ * Validates bounded password constraints. bcrypt's maximum is measured in UTF-8 bytes.
  */
 export function validateBoundedPassword(
   newPassword: string,
@@ -41,16 +48,59 @@ export function validateBoundedPassword(
       error: `Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`,
     };
   }
-  if (newPassword.length > MAX_PASSWORD_LENGTH) {
+  if (Buffer.byteLength(newPassword, 'utf8') > MAX_PASSWORD_BYTES) {
     return {
       valid: false,
-      error: `Mật khẩu không được vượt quá ${MAX_PASSWORD_LENGTH} ký tự.`,
+      error: `Mật khẩu không được vượt quá ${MAX_PASSWORD_BYTES} byte UTF-8.`,
     };
   }
   if (confirmPassword !== undefined && confirmPassword !== newPassword) {
     return { valid: false, error: 'Mật khẩu xác nhận không khớp.' };
   }
   return { valid: true };
+}
+
+/**
+ * Atomically validates the credential snapshot and inserts a session while holding
+ * the target user's row lock. A login proof collected before reset/change cannot
+ * issue a session after the credential revision changes.
+ */
+export async function executeIssueSessionRpc(
+  userId: string,
+  expectedPasswordHash: string | null,
+  expectedSetupRequired: boolean,
+  expectedCredentialRevision: number,
+  tokenHash: string,
+  expiresAt: string
+): Promise<IssueSessionResult> {
+  try {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId || !Number.isInteger(expectedCredentialRevision) || expectedCredentialRevision < 0) {
+      return { success: false, error: 'Lỗi tạo phiên đăng nhập. Vui lòng thử lại.' };
+    }
+
+    const { error: rpcError } = await (supabaseAdmin.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: { message?: string } | null }>)(
+      'issue_session_transaction',
+      {
+        p_user_id: cleanUserId,
+        p_expected_password_hash: expectedPasswordHash,
+        p_expected_password_setup_required: expectedSetupRequired,
+        p_expected_credential_revision: expectedCredentialRevision,
+        p_token_hash: tokenHash,
+        p_expires_at: expiresAt,
+      }
+    );
+
+    if (rpcError) {
+      return { success: false, error: 'Thông tin xác thực đã thay đổi. Vui lòng đăng nhập lại.' };
+    }
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Lỗi tạo phiên đăng nhập. Vui lòng thử lại.' };
+  }
 }
 
 /**
@@ -107,6 +157,7 @@ export async function executePasswordResetRpc(userId: string): Promise<ResetPass
         p_user_id: cleanUserId,
         p_token_hash: tokenHash,
         p_expires_at: expiresAt,
+        p_expected_credential_revision: null,
       }
     );
 
@@ -141,7 +192,8 @@ export async function executeChangePasswordRpc(
   userId: string,
   expectedPasswordHash: string,
   newPasswordHash: string,
-  currentSessionTokenHash?: string | null
+  currentSessionTokenHash?: string | null,
+  expectedCredentialRevision?: number
 ): Promise<ChangePasswordResult> {
   try {
     const cleanUserId = (userId || '').trim();
@@ -159,6 +211,7 @@ export async function executeChangePasswordRpc(
         p_expected_password_hash: expectedPasswordHash,
         p_new_password_hash: newPasswordHash,
         p_current_session_token_hash: currentSessionTokenHash ?? null,
+        p_expected_credential_revision: expectedCredentialRevision ?? null,
       }
     );
 
@@ -262,6 +315,7 @@ export async function completePasswordSetupCore(
       {
         p_token_hash: tokenHash,
         p_password_hash: passwordHash,
+        p_expected_credential_revision: null,
       }
     );
 

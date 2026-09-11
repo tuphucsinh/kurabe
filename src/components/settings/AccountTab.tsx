@@ -9,10 +9,11 @@ import { useToast } from '@/components/ui/Toast';
 import {
   changePassword,
   getAccountStatus,
-  MIN_PASSWORD_LENGTH,
-  MAX_PASSWORD_LENGTH,
   type AccountStatusResult,
 } from '@/actions/account';
+
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_BYTES = 72;
 
 const ROLE_BADGE: Record<string, string> = {
   Manager: 'bg-indigo-100 text-indigo-700',
@@ -35,8 +36,9 @@ export default function AccountTab() {
   const { data: teams = [] } = useTeams(user);
   const { toast } = useToast();
 
-  const [accountStatus, setAccountStatus] = useState<AccountStatusResult | null>(null);
+  const [accountStatus, setAccountStatus] = useState<Extract<AccountStatusResult, { success: true }> | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -51,11 +53,18 @@ export default function AccountTab() {
       try {
         const res = await getAccountStatus();
         if (!cancelled) {
-          setAccountStatus(res);
+          if (res.success) {
+            setAccountStatus(res);
+            setStatusError(null);
+          } else {
+            setAccountStatus(null);
+            setStatusError(res.error);
+          }
         }
       } catch {
         if (!cancelled) {
-          setAccountStatus({ hasPassword: false, setupRequired: false });
+          setAccountStatus(null);
+          setStatusError('Không thể tải trạng thái xác thực tài khoản. Vui lòng thử lại.');
         }
       } finally {
         if (!cancelled) {
@@ -75,8 +84,8 @@ export default function AccountTab() {
     setErrorMessage(null);
 
     // Tài khoản đang yêu cầu setup token không được phép tự đổi trực tiếp
-    if (accountStatus?.setupRequired || !accountStatus?.hasPassword) {
-      const msg = 'Tài khoản đang yêu cầu thiết lập mật khẩu qua mã xác thực một lần do Quản lý cung cấp. Vui lòng sử dụng trang thiết lập mật khẩu.';
+    if (!accountStatus || accountStatus.setupRequired || !accountStatus.hasPassword) {
+      const msg = statusError || 'Tài khoản đang yêu cầu thiết lập mật khẩu qua mã xác thực một lần do Quản lý cung cấp. Vui lòng sử dụng trang thiết lập mật khẩu.';
       setErrorMessage(msg);
       toast(msg, 'error');
       return;
@@ -89,6 +98,7 @@ export default function AccountTab() {
       return;
     }
 
+    const passwordByteLength = new TextEncoder().encode(newPassword).length;
     if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
       const msg = `Mật khẩu mới phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`;
       setErrorMessage(msg);
@@ -96,8 +106,8 @@ export default function AccountTab() {
       return;
     }
 
-    if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      const msg = `Mật khẩu không được vượt quá ${MAX_PASSWORD_LENGTH} ký tự.`;
+    if (passwordByteLength > MAX_PASSWORD_BYTES) {
+      const msg = `Mật khẩu không được vượt quá ${MAX_PASSWORD_BYTES} byte UTF-8.`;
       setErrorMessage(msg);
       toast(msg, 'error');
       return;
@@ -124,7 +134,7 @@ export default function AccountTab() {
         setErrorMessage(msg);
         toast(msg, 'error');
         if (result.code === 'SETUP_REQUIRED') {
-          setAccountStatus({ hasPassword: true, setupRequired: true });
+          setAccountStatus({ success: true, hasPassword: true, setupRequired: true });
         }
       }
     } finally {
@@ -175,6 +185,10 @@ export default function AccountTab() {
           <div className="flex items-center gap-3 py-6 text-sm text-ink-muted">
             <Loader2 className="w-5 h-5 animate-spin text-brand" />
             <span>Đang tải thông tin xác thực tài khoản...</span>
+          </div>
+        ) : statusError ? (
+          <div role="alert" aria-live="assertive" className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-sm">
+            {statusError}
           </div>
         ) : accountStatus?.setupRequired || !accountStatus?.hasPassword ? (
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-ink space-y-3">

@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { completePasswordSetup } from '@/actions/account';
 
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_BYTES = 72;
+
 interface PasswordSetupFormProps {
   initialToken?: string;
 }
@@ -96,15 +99,16 @@ export default function PasswordSetupForm({ initialToken = '' }: PasswordSetupFo
       return;
     }
 
-    // 3. Password length validation
+    // 3. Password validation uses bcrypt's UTF-8 byte cap, not JS .length.
+    const passwordByteLength = new TextEncoder().encode(newPassword).length;
     if (!newPassword || newPassword.length < 6) {
       setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
       setErrorContext(null);
       return;
     }
 
-    if (newPassword.length > 72) {
-      setError('Mật khẩu không được vượt quá 72 ký tự.');
+    if (passwordByteLength > MAX_PASSWORD_BYTES) {
+      setError(`Mật khẩu không được vượt quá ${MAX_PASSWORD_BYTES} byte UTF-8.`);
       setErrorContext(null);
       return;
     }

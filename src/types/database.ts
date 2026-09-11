@@ -771,6 +771,7 @@ export type Database = {
           name: string
           password_hash: string | null
           password_setup_required: boolean
+          credential_revision: number
           role: string
           subleader_id: string | null
           team_id: string | null
@@ -787,6 +788,7 @@ export type Database = {
           name: string
           password_hash?: string | null
           password_setup_required?: boolean
+          credential_revision?: number
           role: string
           subleader_id?: string | null
           team_id?: string | null
@@ -803,6 +805,7 @@ export type Database = {
           name?: string
           password_hash?: string | null
           password_setup_required?: boolean
+          credential_revision?: number
           role?: string
           subleader_id?: string | null
           team_id?: string | null
@@ -824,6 +827,7 @@ export type Database = {
           id: string
           token_hash: string
           user_id: string
+          credential_revision: number
         }
         Insert: {
           created_at?: string
@@ -831,6 +835,7 @@ export type Database = {
           id?: string
           token_hash: string
           user_id: string
+          credential_revision?: number
         }
         Update: {
           created_at?: string
@@ -838,6 +843,7 @@ export type Database = {
           id?: string
           token_hash?: string
           user_id?: string
+          credential_revision?: number
         }
         Relationships: [
           {
@@ -982,12 +988,26 @@ export type Database = {
           error: string | null
         }[]
       }
+      issue_session_transaction: {
+        Args: {
+          p_user_id: string
+          p_expected_password_hash: string | null
+          p_expected_password_setup_required: boolean
+          p_expected_credential_revision: number
+          p_token_hash: string
+          p_expires_at: string
+        }
+        Returns: {
+          user_id: string
+        }[]
+      }
       change_password_transaction: {
         Args: {
           p_user_id: string
           p_expected_password_hash: string
           p_new_password_hash: string
           p_current_session_token_hash?: string | null
+          p_expected_credential_revision: number
         }
         Returns: {
           user_id: string
@@ -998,6 +1018,7 @@ export type Database = {
         Args: {
           p_token_hash: string
           p_password_hash: string
+          p_expected_credential_revision: number | null
         }
         Returns: {
           user_id: string
@@ -1047,6 +1068,7 @@ export type Database = {
           p_user_id: string
           p_token_hash: string
           p_expires_at: string
+          p_expected_credential_revision: number | null
         }
         Returns: {
           token_id: string
