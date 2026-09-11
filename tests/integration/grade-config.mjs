@@ -128,7 +128,7 @@ async function run() {
     assert.equal(psql(rollbackPort, secondPassword, "SELECT count(*) FROM information_schema.columns WHERE table_name='grade_band_versions';").out, '0');
     cases.push('approved-rollback-preserves-baseline-data');
 
-    return { real: true, passed: true, cases, target: 'disposable-postgresql-17' };
+    return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: 'disposable-postgresql-17' };
   } finally {
     command('docker', ['rm', '--force', first]);
     command('docker', ['rm', '--force', second]);

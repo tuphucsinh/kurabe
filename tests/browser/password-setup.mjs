@@ -603,6 +603,9 @@ export async function run({ rootDir = projectRoot, suite = 'password-setup', opt
 
     return {
       real: true,
+      passed: true,
+      tier: 'actual-Next-browser',
+      status: 'EXECUTED',
       cases: allCases,
       target: `loopback:${port}`,
     };

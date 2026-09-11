@@ -343,5 +343,5 @@ export async function run() {
   assertSourceContract();
   await runMainCases(cases);
   await runMigrationPreflightFailureCase(cases);
-  return { real: true, passed: true, cases, target: 'disposable-postgresql-17-loopback' };
+  return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: 'disposable-postgresql-17-loopback' };
 }

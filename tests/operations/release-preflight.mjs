@@ -106,7 +106,7 @@ export async function run() {
 
   const runtime = runtimeAvailability();
   if (runtime.status === 'BLOCKED_CAPABILITY') {
-    return { real: false, passed: false, status: runtime.status, capability: runtime.status, reason: runtime.reason, cases, manifest, target: 'preflight-no-runtime-contact' };
+    return { real: false, passed: false, tier: 'real-DB', status: runtime.status, capability: runtime.status, reason: runtime.reason, cases, manifest, target: 'preflight-no-runtime-contact' };
   }
 
   const child = spawnSync(process.execPath, [path.join(root, 'tests/integration/db-bootstrap.mjs')], {
@@ -126,6 +126,7 @@ export async function run() {
   return {
     real: true,
     passed: true,
+    tier: 'real-DB',
     status: 'EXECUTED',
     runtime: {
       ...runtime,

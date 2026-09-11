@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const rootDir = process.cwd();
-const testsDir = path.join(rootDir, 'tests');
+const testsDir = process.env.KURABE_TESTS_DIR ? path.resolve(rootDir, process.env.KURABE_TESTS_DIR) : path.join(rootDir, 'tests');
 const testBuildDir = path.join(rootDir, '.tmp', 'testbuild');
 const localTscBin = path.join(rootDir, 'node_modules', '.bin', 'tsc');
 
@@ -195,8 +195,8 @@ function main() {
   tests.sort((a, b) => a.localeCompare(b));
 
   if (tests.length === 0) {
-    console.log('No test files found matching *.test.mjs or *.test.ts.');
-    process.exit(0);
+    console.error('Error: No test files found matching *.test.mjs or *.test.ts (nonzero empty discovery required).');
+    process.exit(1);
   }
 
   // Pre-flight check for TypeScript tests
@@ -246,8 +246,7 @@ function main() {
   console.log('='.repeat(60));
 
   if (failed > 0) {
-    process.exitCode = firstFailureStatus || 1;
-    return;
+    process.exit(firstFailureStatus || 1);
   }
 }
 

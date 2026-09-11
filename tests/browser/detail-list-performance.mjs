@@ -538,6 +538,9 @@ export async function run() {
   return {
     real: true,
     passed: true,
+    tier: 'actual-Next-browser',
+    status: 'EXECUTED',
+    authenticated: false,
     target: 'loopback local fixture with real google-chrome-stable',
     cases: [
       'detail, compare, history, and employees routes: identical synthetic fixture/data',

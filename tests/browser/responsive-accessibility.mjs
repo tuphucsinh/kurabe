@@ -81,6 +81,6 @@ export async function run() {
       }
       cases += 3;
     }
-    return { real: true, target: `loopback fixture; Chrome ${viewports.map(([w,h]) => `${w}x${h}`).join(', ')}`, cases, screenshots };
+    return { real: true, passed: true, tier: 'actual-Next-browser', status: 'EXECUTED', target: `loopback fixture; Chrome ${viewports.map(([w,h]) => `${w}x${h}`).join(', ')}`, cases, screenshots };
   } finally { await new Promise(resolve => server.close(resolve)); }
 }

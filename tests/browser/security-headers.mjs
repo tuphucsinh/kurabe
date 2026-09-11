@@ -221,6 +221,9 @@ export async function run() {
     return {
       real: true,
       passed: true,
+      tier: 'actual-Next-browser',
+      status: 'EXECUTED',
+      authenticated: false,
       cases: [
         ...sourceCases,
         'loopback response emitted enforced CSP without report-only header',

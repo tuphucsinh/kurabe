@@ -139,7 +139,7 @@ export async function run() {
 
     cases.push(...sourceContractCases());
     assert.equal(cases.length, 14);
-    return { real: true, passed: true, cases, target: 'disposable-postgresql-17-read-boundaries' };
+    return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: 'disposable-postgresql-17-read-boundaries' };
   } finally {
     command('docker', ['rm', '--force', name]);
   }

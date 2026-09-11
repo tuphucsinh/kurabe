@@ -668,6 +668,9 @@ export async function run({ rootDir = projectRoot, suite = 'legacy-password-setu
 
   return {
     real: true,
+    passed: true,
+    tier: 'real-DB',
+    status: 'EXECUTED',
     cases: allCases,
     target: `loopback:${target.port}/${target.database}`,
   };

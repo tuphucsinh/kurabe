@@ -146,12 +146,12 @@ export async function run() {
 
   if (!fs.existsSync(chrome)) {
     const reason = 'BLOCKED_CAPABILITY: /usr/bin/google-chrome-stable is unavailable; no Chromium, mock browser, or synthetic PASS fallback is allowed.';
-    return { real: false, passed: false, status: 'BLOCKED_CAPABILITY', capability: 'BLOCKED_CAPABILITY', reason, cases, roles, target: 'no-browser-runtime' };
+    return { real: false, passed: false, tier: 'actual-Next-browser', status: 'BLOCKED_CAPABILITY', capability: 'BLOCKED_CAPABILITY', reason, cases, roles, target: 'no-browser-runtime' };
   }
 
   const browserResult = await runActualNextBrowser();
   assert.ok(browserResult.cases.length > 0);
-  return { real: true, passed: true, status: 'EXECUTED', cases: [...cases, ...browserResult.cases], roles, target: browserResult.target, authenticated: browserResult.authenticated };
+  return { real: true, passed: true, tier: 'actual-Next-browser', status: 'EXECUTED', cases: [...cases, ...browserResult.cases], roles, target: browserResult.target, authenticated: browserResult.authenticated };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

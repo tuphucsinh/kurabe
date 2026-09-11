@@ -88,6 +88,8 @@ export async function run() {
     return {
       real: true,
       passed: true,
+      tier: 'real-DB',
+      status: 'EXECUTED',
       cases,
       target: 'disposable-postgresql-17',
     };

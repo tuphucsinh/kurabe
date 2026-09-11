@@ -243,7 +243,7 @@ export async function run() {
     assert.equal(psql(rollbackPort, rollbackPassword, database, 'SELECT count(*) FROM public.criteria;').out, '2');
     cases.push('approved-rollback-removes-versioned-layer-preserves-baseline');
 
-    return { real: true, passed: true, cases, target: 'disposable-postgresql-17' };
+    return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: 'disposable-postgresql-17' };
   } finally {
     command('docker', ['rm', '--force', name]);
     command('docker', ['rm', '--force', rollbackName]);

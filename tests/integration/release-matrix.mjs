@@ -327,6 +327,7 @@ export async function run() {
   return {
     real: runtime.status === 'EXECUTED',
     passed: runtime.status === 'EXECUTED',
+    tier: runtime.status === 'EXECUTED' ? 'real-DB' : 'source-contract',
     status: runtime.status === 'EXECUTED' ? runtime.status : 'BLOCKED_CAPABILITY',
     runtime,
     database: database ? { real: database.real, passed: database.passed, target: database.target, cases: database.cases } : null,

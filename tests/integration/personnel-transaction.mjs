@@ -255,7 +255,7 @@ export async function run() {
   } finally {
     stopContainer(complete);
   }
-  return { real: true, passed: true, cases, target: 'disposable-postgresql-17-loopback' };
+  return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: 'disposable-postgresql-17-loopback' };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

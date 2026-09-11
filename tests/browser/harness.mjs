@@ -139,6 +139,9 @@ export async function run() {
     }
     return {
       real: true,
+      passed: true,
+      tier: 'actual-Next-browser',
+      status: 'EXECUTED',
       cases: ['loopback HTTP fixture served', 'google-chrome-stable DOM assertion'],
       target: `loopback:${port}`,
     };

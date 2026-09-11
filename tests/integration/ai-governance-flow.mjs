@@ -89,6 +89,9 @@ export async function run() {
   return {
     name: 'ai-governance-flow',
     mode: 'source-contract-synthetic',
+    tier: 'source-contract',
+    status: 'EXECUTED',
+    authenticated: false,
     cases,
     real: true,
     passed: true,

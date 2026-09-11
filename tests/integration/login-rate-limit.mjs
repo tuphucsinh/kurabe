@@ -1250,6 +1250,9 @@ export async function run({ rootDir = projectRoot, suite = 'login-rate-limit', o
 
   return {
     real: true,
+    passed: true,
+    tier: 'real-DB',
+    status: 'EXECUTED',
     cases: executedCases,
     target: `loopback:${target.port}/${target.database}`,
   };

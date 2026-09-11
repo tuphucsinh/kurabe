@@ -618,6 +618,9 @@ export async function run({ options = {} } = {}) {
 
   return {
     real: true,
+    passed: true,
+    tier: 'real-DB',
+    status: 'EXECUTED',
     cases: executedCases,
     target: `loopback:${target.port}/${target.database}`,
   };

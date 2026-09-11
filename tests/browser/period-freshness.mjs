@@ -63,6 +63,9 @@ export async function run() {
   return {
     real: true,
     passed: true,
+    tier: 'source-contract',
+    status: 'EXECUTED',
+    authenticated: false,
     cases: states,
     target: 'local-source-contract-period-freshness',
     live_browser: 'NOT_RUN_AUTH_REQUIRED',

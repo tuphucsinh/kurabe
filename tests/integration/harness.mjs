@@ -188,6 +188,9 @@ export async function run({ options = {} } = {}) {
 
   return {
     real: true,
+    passed: true,
+    tier: 'real-DB',
+    status: 'EXECUTED',
     cases: [
       'loopback database identity guard',
       'synthetic auth/evaluation transaction rollback',

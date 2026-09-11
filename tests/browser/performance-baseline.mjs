@@ -45,6 +45,9 @@ export function run({ rootDir }) {
   return {
     real: true,
     passed: true,
+    tier: 'actual-Next-browser',
+    status: 'EXECUTED',
+    authenticated: false,
     target: 'loopback local fixture with real google-chrome-stable/CDP',
     live_browser: 'NOT_RUN_AUTH_REQUIRED',
     real_provider: 'NOT_RUN_NO_CREDENTIALS',

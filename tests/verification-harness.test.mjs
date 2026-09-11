@@ -43,12 +43,13 @@ try {
   writeEvidence(evidencePath, {
     suite: 'harness',
     totalCases: 1,
-    reports: [{ modulePath: '/worktree/tests/integration/harness.mjs', count: 1, target: 'loopback:5432/kurabe_harness' }],
+    reports: [{ modulePath: '/worktree/tests/integration/harness.mjs', count: 1, tier: 'real-DB', target: 'loopback:5432/kurabe_harness', cases: ['case1'] }],
   });
   const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
   assert.equal(evidence.format, 'kurabe-release-evidence/v1');
   assert.equal(evidence.totalCases, 1);
   assert.equal(evidence.reports[0].target, 'loopback:5432/kurabe_harness');
+  assert.equal(evidence.reports[0].tier, 'real-DB');
 } finally {
   fs.rmSync(evidenceDir, { recursive: true, force: true });
 }
@@ -88,9 +89,19 @@ const defaultScan = runNode(scannerScript);
 assert.equal(defaultScan.status, 0, defaultScan.stderr);
 assert.match(defaultScan.stdout, /findings=0/);
 
-const browserReport = await runBrowserHarness();
-assert.equal(browserReport.real, true, 'browser suite must use a real Chrome process');
-assert.equal(browserReport.cases.length, 2);
+if (fs.existsSync('/usr/bin/google-chrome-stable')) {
+  const browserReport = await runBrowserHarness();
+  assert.equal(browserReport.real, true, 'browser suite must use a real Chrome process');
+  assert.equal(browserReport.passed, true);
+  assert.equal(browserReport.tier, 'actual-Next-browser');
+  assert.equal(browserReport.cases.length, 2);
+} else {
+  await assert.rejects(
+    () => runBrowserHarness(),
+    /LOCAL_BROWSER_GUARD: google-chrome-stable is required/,
+    'browser harness must fail closed when google-chrome-stable is unavailable'
+  );
+}
 
 const fixtureSql = fs.readFileSync(path.join(projectRoot, 'tests/fixtures/release/minimal-auth-evaluation.sql'), 'utf8');
 assert.match(fixtureSql, /auth_users/);

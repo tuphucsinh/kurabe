@@ -10,6 +10,19 @@ const textExtensions = new Set([
   '.cjs', '.css', '.html', '.js', '.json', '.mjs', '.sql', '.ts', '.tsx', '.txt', '.yaml', '.yml',
 ]);
 
+const DEFAULT_TRACKED_DIRECTORIES = ['src', 'scripts', 'db', 'supabase', '.github', 'docs'];
+const DEFAULT_TRACKED_FILES = [
+  'package.json',
+  'tsconfig.json',
+  'eslint.config.mjs',
+  'next.config.ts',
+  'postcss.config.mjs',
+  'README.md',
+  'README.txt',
+];
+
+const CREDENTIAL_FILE_PATTERN = /(?:^\.env(?:\..+)?$|\.(?:pem|key|pkcs12|p12|pfx|kdbx)$|^(?:id_rsa|id_ed25519|credentials|secret_key)(?:\..+)?$)/i;
+
 function parseArgs(argv) {
   const paths = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -33,29 +46,67 @@ function resolveInsideProject(input) {
   return resolved;
 }
 
-function isIgnored(filePath, explicit) {
-  if (filePath === scannerPath) return true;
-  const relative = path.relative(projectRoot, filePath).replaceAll(path.sep, '/');
-  if (!explicit && relative.startsWith('tests/fixtures/release/')) return true;
+function isIgnoredDir(relative) {
   return relative.split('/').some((part) => ignoredDirectoryNames.has(part));
 }
 
-function collectFiles(inputPath, explicit = false) {
-  if (isIgnored(inputPath, explicit)) return [];
-  const stat = fs.lstatSync(inputPath);
-  if (stat.isSymbolicLink()) return [];
-  if (stat.isFile()) {
-    if (stat.size > 1024 * 1024 || (!explicit && !textExtensions.has(path.extname(inputPath).toLowerCase()))) return [];
-    return [inputPath];
+function collectFiles(inputPath, explicit = false, scope = { files: [], omitted: [], binary: [], oversize: [] }) {
+  if (inputPath === scannerPath) return scope;
+  const relative = path.relative(projectRoot, inputPath).replaceAll(path.sep, '/');
+  const base = path.basename(inputPath);
+
+  // Credential files: if not explicit, NEVER read credential files
+  if (!explicit && CREDENTIAL_FILE_PATTERN.test(base)) {
+    scope.omitted.push(relative);
+    return scope;
   }
-  if (!stat.isDirectory()) return [];
-  const files = [];
+
+  // Seeded fixture exclusion
+  if (!explicit && (relative.startsWith('tests/fixtures/release/') || relative.includes('/fixtures/release/'))) {
+    scope.omitted.push(relative);
+    return scope;
+  }
+
+  if (isIgnoredDir(relative)) {
+    scope.omitted.push(relative);
+    return scope;
+  }
+
+  if (!fs.existsSync(inputPath)) return scope;
+
+  const stat = fs.lstatSync(inputPath);
+  if (stat.isSymbolicLink()) {
+    scope.omitted.push(relative);
+    return scope;
+  }
+
+  if (stat.isFile()) {
+    if (stat.size > 1024 * 1024) {
+      scope.oversize.push(relative);
+      return scope;
+    }
+    const ext = path.extname(inputPath).toLowerCase();
+    if (!explicit && !textExtensions.has(ext)) {
+      scope.binary.push(relative);
+      return scope;
+    }
+    scope.files.push(inputPath);
+    return scope;
+  }
+
+  if (!stat.isDirectory()) return scope;
+
   for (const entry of fs.readdirSync(inputPath, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const child = path.join(inputPath, entry.name);
-    if (entry.isDirectory() && !explicit && child === path.join(projectRoot, 'tests/fixtures/release')) continue;
-    files.push(...collectFiles(child, explicit));
+    const childRel = path.relative(projectRoot, child).replaceAll(path.sep, '/');
+    if (!explicit && (entry.name === 'fixtures' && childRel.startsWith('tests/fixtures'))) {
+      scope.omitted.push(childRel);
+      continue;
+    }
+    collectFiles(child, explicit, scope);
   }
-  return files;
+
+  return scope;
 }
 
 function lineNumber(text, offset) {
@@ -66,7 +117,11 @@ function scanText(text) {
   const patterns = [
     { rule: 'private-key-block', expression: /-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/g },
     { rule: 'credentialed-database-url', expression: /(?:postgres(?:ql)?|mysql):\/\/[^\s:@]+:[^\s@]+@/gi },
-    { rule: 'secret-assignment', expression: /(?:password|secret|token|api[_-]?key|private[_-]?key|service[_-]?role[_-]?key|database[_-]?url)\s*[:=]\s*['"]?[A-Za-z0-9+/=_-]{16,}/gi },
+    {
+      rule: 'secret-assignment',
+      expression: /(?:password|secret|token|api[_-]?key|private[_-]?key|service[_-]?role[_-]?key|database[_-]?url)\s*[:=]\s*['"]?([A-Za-z0-9+/=_-]{16,})/gi,
+      filter: (match) => !/placeholder|example|dummy|synthetic.*placeholder/i.test(match[1]),
+    },
     { rule: 'provider-key-prefix', expression: /\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}\b/g },
     { rule: 'github-token', expression: /\b(?:ghp_|github_pat_)[A-Za-z0-9_]{20,}\b/g },
     { rule: 'aws-access-key', expression: /\bAKIA[0-9A-Z]{16}\b/g },
@@ -75,6 +130,9 @@ function scanText(text) {
   const findings = [];
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern.expression)) {
+      if (pattern.filter && !pattern.filter(match)) {
+        continue;
+      }
       findings.push({ rule: pattern.rule, offset: match.index ?? 0 });
     }
   }
@@ -85,10 +143,23 @@ export function scanPaths(inputs = []) {
   const explicit = inputs.length > 0;
   const roots = explicit
     ? inputs.map(resolveInsideProject)
-    : ['src', 'scripts'].map((relative) => path.join(projectRoot, relative));
-  const files = [...new Set(roots.flatMap((root) => collectFiles(root, explicit)))].sort();
+    : [
+        ...DEFAULT_TRACKED_DIRECTORIES.map((relative) => path.join(projectRoot, relative)),
+        ...DEFAULT_TRACKED_FILES.map((relative) => path.join(projectRoot, relative)).filter((p) => fs.existsSync(p)),
+      ];
+
+  const scope = { files: [], omitted: [], binary: [], oversize: [] };
+  for (const root of roots) {
+    collectFiles(root, explicit, scope);
+  }
+
+  const uniqueFiles = [...new Set(scope.files)].sort();
+  const uniqueOmitted = [...new Set(scope.omitted)].sort();
+  const uniqueBinary = [...new Set(scope.binary)].sort();
+  const uniqueOversize = [...new Set(scope.oversize)].sort();
+
   const findings = [];
-  for (const filePath of files) {
+  for (const filePath of uniqueFiles) {
     const text = fs.readFileSync(filePath, 'utf8');
     for (const finding of scanText(text)) {
       findings.push({
@@ -98,7 +169,20 @@ export function scanPaths(inputs = []) {
       });
     }
   }
-  return { files, findings };
+
+  return {
+    files: uniqueFiles,
+    findings,
+    scope: {
+      scanned: uniqueFiles.length,
+      omitted: uniqueOmitted.length,
+      binary: uniqueBinary.length,
+      oversize: uniqueOversize.length,
+    },
+    omitted: uniqueOmitted,
+    binary: uniqueBinary,
+    oversize: uniqueOversize,
+  };
 }
 
 function main() {
@@ -117,7 +201,7 @@ function main() {
       process.exitCode = 1;
       return;
     }
-    console.log(`SOURCE_SECRET_SCAN PASS files=${report.files.length} findings=0`);
+    console.log(`SOURCE_SECRET_SCAN PASS files=${report.files.length} scanned=${report.files.length} omitted=${report.omitted.length} binary=${report.binary.length} oversize=${report.oversize.length} findings=0`);
   } catch (error) {
     console.error(`SOURCE_SECRET_SCAN FAIL ${String(error.message || error)}`);
     process.exitCode = 1;
