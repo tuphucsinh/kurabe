@@ -458,7 +458,7 @@ task:
   id: P102M1T02
   tier: CONTROLLED
   depends: [P102M1T01]
-  owns: [tests/integration/release-matrix.mjs, tests/browser/release-matrix.mjs, tests/operations/release-preflight.mjs]
+  owns: [db/rollback-p96t03-single-active-period.sql, tests/integration/release-matrix.mjs, tests/browser/release-matrix.mjs, tests/operations/release-preflight.mjs]
   locks: [MACHINE_EXCLUSIVE]
 ```
 Goal: Exact candidate proves full lifecycle and migration/cutover/rollback readiness.
