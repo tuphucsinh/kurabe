@@ -452,7 +452,7 @@ Changes: Wire isolated DB/browser fixtures and redacted secret scan into existin
 Constraints: No secrets/service role production credentials in CI; hosted runner costs or repository settings approval separate.
 DoD: `node tests/verification-harness.test.mjs`; local CI-equivalent full suite and deliberate failing assertion exits nonzero. Hosted run/required-check enforcement only claimed after approved remote readback.
 
-### [ ] [#P102M1T02] Full release integration and rollback package
+### [x] [#P102M1T02] Full release integration and rollback package
 ```yaml
 task:
   id: P102M1T02
