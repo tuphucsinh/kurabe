@@ -1,24 +1,24 @@
 # MASTER_PLAN — Kurabe QAQC
 
-## Authority / approved planning scope
+## Revision and authority
 
-- Revision: release-hardening replan, source baseline `53b83f1bc16539f4fe7188e78788ceaf11bceaba`.
-- Owner requests all remaining phases decomposed now. This explicitly replaces the old active-phase-only WBS restriction, NOT execution/production approval gates.
-- `tasks.md` is the sole WBS/DAG; this file owns phase outcomes/invariants. No duplicate WBS in other plans.
-- Canonical Git proves integrated source, not deployed behavior. Current live catalog/runtime evidence proves live state; migration comments do not.
-- Earlier planning approval included local control-plane commits while preserving the owner's dirty `AGENTS.md`. The current owner instruction now authorizes Mika-only execution of remaining source/local tasks; push, deploy, app-to-production rollout and production mutation retain exact approval/readback gates.
+Canonical audit replan, 2026-09-11. Published from observed baseline `ef4008df0f0fa55706307b1b84fa19988e69a02a`, branch `main`. **CANONICAL / EXECUTION_AUTHORIZED_FOR_NON_PRODUCTION / PRODUCTION_GATES_RETAINED**.
 
-## Current evidence and limitations
+Current request: execute the existing residual DAG continuously through all non-production tasks. Push, deploy, credentials, permissions, security settings, production and lifecycle mutation remain separately gated. Protected owner `AGENTS.md` remains byte-preserved and unstaged.
 
-- Canonical branch `main`; Next and eslint-config-next manifest `16.3.4`, React `19.2.4`.
-- Prior source audit reported local static/test checks. This planning revision does not rerun or independently certify those results; require fresh exact-candidate root gates at implementation. In-memory transpilation is not the normal npm wrapper or DB/browser evidence.
-- Historical build evidence is in HANDOFF/state; audit did not rerun build/browser/DB integration.
-- Prior registry bulk advisory check reported no production-subset findings and dev browserslist/@babel/core findings. Treat as dated audit leads, not a current clean bill; require current full npm audit/vendor verification, including SheetJS tarball coverage limits.
-- Production URL: https://lykiv.vercel.app. P98M2T05 fresh preflight recorded deployment/source drift and a pre-existing `public.login_attempts` schema/grant collision; no production mutation occurred. The redacted baseline is retained at `/home/pi5/hermes-artifacts/kurabe-execution/p98m2t05-preflight-baseline.json`; T09 must replace it with a complete forensic fingerprint before T10/T05.
-- Phase 98 product mode is `CURRENT_AUTH_MODE=OPTIONAL_PASSWORD`; `PASSWORD_CAPABLE_INFRASTRUCTURE` may be deployed while `STRICT_PASSWORD_GO_LIVE=DEFERRED`. `KURABE_REQUIRE_PASSWORD_LOGIN` must be effectively false in Phase 98; absent is accepted only because canonical source/tests prove `absent == false == OPTIONAL`.
-- `AGENTS.md` has owner changes; six legacy workspace paths are retained in recovery state, not proven clean by `git worktree list`.
-- Dependency evidence drift: P98M1T02 pending despite completed dependants; P98M2T04 commit `9321c57` exists while task pending. Preserve status/evidence and reconcile before dispatch, never infer DoD from commit titles.
-- Release verdict: NEEDS_FIX / NOT RELEASE-HARDENED. Temporary passwordless testing is accepted, not an incident to silently disable and not a completed production-hardening gate.
+`tasks.md` is the sole active WBS/DAG. This document owns outcomes, invariant policy and recorded completion history; `.ai/AUDIT_2026-09-11.md` owns this audit's findings/coverage. Archived plans/tasks are historical, never alternate execution authority.
+
+## Verdict and current evidence
+
+**SOURCE=NEEDS_FIX; ALL_LOGIC_CORRECT=NOT_PROVEN; OPTIMAL=NOT_PROVEN; PRODUCTION_READINESS=UNKNOWN.**
+
+Fresh isolated tracked-source export: npm test 40/40 files PASS; lint 0 errors/13 warnings; typecheck/build PASS; scanner 195 files/0 findings within default src/scripts scope; full/production npm registry audit 0 advisories. Logs and synthetic auth probes: `/home/pi5/hermes-artifacts/kurabe-audit-ef4008d/`. No real credentials copied; no production DB/browser/provider invoked. Canonical diff-check fails only on pre-existing protected AGENTS whitespace; keep that failure, do not call canonical clean.
+
+Reproduced in actual helper/action at mocked boundaries: bcrypt byte truncation; optional login after reset-pending state; stale credential/session issue seam. Reproduced harness acceptance: no tests exit 0; absent passed accepted. SQL/action source gaps: evaluation repeat-submit state downgrade, grading version propagation, personnel transaction scope, AI summary coverage persistence, rate-admission concurrency and redirect allowlist seam. See per-finding classification; source-backed race is not live PostgreSQL execution proof.
+
+Release evidence correction: prior release matrix reports include disposable DB cases but browser component combines guest navigation and source assertions. A five-role list is not five authenticated executions. Performance local-fixture results remain useful in their original tier, not whole-app optimality evidence. Existing recorded integrations remain historical, not re-opened IDs or newly re-certified completeness.
+
+Three delegated audit branches were attempted and timed out without usable output: auth/security, business logic, and frontend/performance. `INDEPENDENT_AUDIT=INCOMPLETE`; `INDEPENDENT_REVIEW=NOT_RUN`; timeout is neither a finding nor a task failure. Remaining full authenticated runtime, deployed schema/flags/CI enforcement, true provider, data-volume/performance matrix are UNKNOWN. Insufficient data. for an exhaustive correctness or production-optimality claim.
 
 ## Invariants
 
@@ -35,7 +35,7 @@
 11. No optimization without before/after benefit; no new cache/PPR/virtualization/service just because possible. Keep approved composition/assets; fix accessibility and error states without redesign.
 12. Production/security permissions/external commitments require explicit approval; exact backup/rollback, candidate review and readback. No broad cleanup, force-push, automatic feature expansion.
 
-## Phase 98 product decision — OPTIONAL_PASSWORD
+## Phase 98 product decision — OPTIONAL_PASSWORD (preserved)
 
 - `CURRENT_AUTH_MODE=OPTIONAL_PASSWORD`; `STRICT_PASSWORD_GO_LIVE=DEFERRED` because Kurabe is not yet in official operation. `password_hash IS NULL` remains usable through the legacy/beta flow without forced setup; `password_hash IS NOT NULL` requires the correct password and cannot be bypassed.
 - `KURABE_REQUIRE_PASSWORD_LOGIN` has a source-enforced exact gate: absent and `false` use OPTIONAL behavior; exact `true` is STRICT behavior. Phase 98 must not activate `true` or mutate an absent flag merely for cosmetic explicitness.
@@ -44,99 +44,76 @@
 - Canonical source-contract evidence covers A–F: optional legacy login, correct configured-password login, missing/wrong configured-password rejection, secure setup/reset, and post-setup password enforcement. No bounded compatibility task is required; do not create P98M2T11.
 - Strict password enforcement is deferred until the owner explicitly declares real go-live; then create a separate preflight → setup/remaining-NULL inventory → optional mark/setup-required → strict flag → smoke/postflight plan. Do not mix that future rollout into Phase 98.
 
-## History retained (not re-dispatched)
+Audit clarification for a proposed future candidate: distinguish never-configured legacy accounts from accounts intentionally reset; choose and approve the reset-pending transition explicitly, without global strict rollout or blanket NULL-account lockout. Local implementation plan does not authorize live credential semantics changes.
 
-| Phase | Recorded outcome / boundary |
+## Integrated history / safe document compaction
+
+Phases 32–93 historical DONE; 94 absorbed into 95; 95 staged-loading complete; 96 source/history retained with 96E live lifecycle paused; 97 history route integrated. None is newly re-certified by this audit.
+
+Phase 98 source/prerequisite task completions retained; only auth/evaluator live gates pending. Phases 99/100/101 remain recorded local-source integrations with residual defects/coverage now routed to P102M3, not blindly repeated. P102M1T01 and P102M1T02 are integrated, not “next”. P102 live cutover/final closure remain pending.
+
+The prior WBS has 31 recorded completed IDs. Full previous task/master/known-bug bytes are archived in `.ai/archive/*-pre-audit-ef4008d.md`. The proposed active queue omits their detail but preserves this ledger and all unresolved production gates. This is **historical document compaction**, not a new 100%-verified phase sweep or authorization to remove workspaces/state/evidence. Formal SWEEP/DONE remains blocked where new findings contradict original acceptance.
+
+| Recorded completed ID | Historical deliverable — not a fresh whole-product PASS |
 |---|---|
-| 32–93 | DONE historical foundation; not newly re-certified |
-| 94 | CLOSED, absorbed into 95 |
-| 95 | DONE staged detail/loading |
-| 96 | Implemented; previous production-applied record retained, live predicates rechecked before mutation |
-| 96E | PAUSED lifecycle/rollback execution; existing P96T10 evidence retained |
-| 97 | DONE history route; previous deployment provenance retained, no new live claim |
-| Repository reconciliation | Historical source split closed; new control/evidence drift handled separately |
+| P98M1T01 | Framework patch |
+| P98M2T01 | Password setup schema candidate |
+| P98M2T02 | Password reset/setup RPC and strict path |
+| P98M2T06 | Temporary passwordless compatibility |
+| P98M3T01 | Evaluator NULL-safety candidate |
+| P96T10 | Existing lifecycle baseline |
+| P98M1T02 | Reconcile production truth and retained task evidence |
+| P98M1T03 | Qualify isolated DB/browser/security verification lane |
+| P98M2T03 | Close setup route and Manager token handoff |
+| P98M2T04 | Qualify existing legacy setup migration, do not reimplement blindly |
+| P98M2T07 | Unify self-change credential state and session revocation |
+| P98M2T08 | Make login throttling fail-safe and proxy-aware |
+| P98M2T09 | Forensic reconcile production login_attempts schema |
+| P98M2T10 | Bounded login_attempts reconciliation migration |
+| P99M1T01 | Reproducible complete DB baseline and migration replay |
+| P99M2T01 | Preserve historical evaluations during personnel changes |
+| P99M2T02 | Atomic personnel/team/init and validated leadership relations |
+| P99M3T01 | Atomic versioned grade bands and authoritative scoring |
+| P99M3T02 | Atomic criteria/audiences/levels with historical version reads |
+| P99M4T01 | Sensitive read inventory, serverization and least privilege candidate |
+| P99M4T02 | Period/filter freshness and Compare mutation invalidation |
+| P100M1T01 | Atomic AI/chat quota and failure accounting |
+| P100M1T02 | AI payload, provider and coverage governance |
+| P100M2T01 | CSP enforcement and framework boundary qualification |
+| P100M2T02 | Dependency advisory remediation with reproducible lockfile |
+| P101M1T01 | Reproducible performance baseline and route matrix |
+| P101M2T01 | Reduce Dashboard/Reports request and payload cost |
+| P101M2T02 | Bound detail/compare/history and personnel render cost |
+| P101M3T01 | Responsive/accessibility residual closure |
+| P102M1T01 | Enforce real verification in existing CI |
+| P102M1T02 | Full release integration and rollback package |
 
-## Optimality decision / dependency topology
+## Chosen approach / integration topology
 
-Reuse phases 98–102, existing CI and tests; no big-bang rewrite. Bring minimal DB/browser harness qualification into Phase 98 before auth rollout; expand bootstrap and business integration in 99. Move grading and UI freshness to 99, not performance. Full future WBS is planned now but each contract must be refreshed against integrated inputs before execution.
+Reuse existing Next/React/Query/Supabase/versioned RPC architecture and existing wrappers. Fix authoritative transaction/auth/evidence seams; no rewrite, new dispatcher/cache/framework/service or feature phase. This is one bounded Optimality Check: authentic baseline + measured repair has materially better correctness/cost than speculative global optimization.
 
-- Source sequence: 98 source + qualified harness → 99 → 100 → 101 → 102 local integration. Production rollout is a separate approval lane; source integrity fixes do not wait for permission to deploy.
-- No deadlock: the Phase 98 harness validates a minimal disposable DB contract; it does not depend on Phase 99 complete schema bootstrap.
-- Dependencies gate execution, not permission. After local integration, prefer one approved release window grouping P98 auth/evaluator rollout and P102 remaining cutover, preserving their ordered checks. Early P98-only deployment is optional and needs separate owner approval. P102 cutover still depends on completed P98 rollout; no live gate is skipped.
-- Shared owns/locks serialize related tasks; verifier/build cap 1. Capacity is a ceiling, not a target.
+P102M3: fail-closed evidence → reusable actual-app authenticated fixture → session/admission and evaluation/personnel/config repair → persisted AI truth/provider boundary and client-scope freshness → combined real-app role matrix/CI → measured performance → fresh release/rollback package. Separate Mika-only stale-runtime/control reconciliation before any rollout. Detailed IDs/owns/locks/commands live only in tasks.md.
 
-## Phase 98 — Auth closure, evidence reconciliation and early verification
+Data path targets: rendered criteria/grade versions → action validation → exact-version transactional scoring/submit; server actor → locked actor/target scope → personnel graph; submitted historical results → bounded AI payload → persisted coverage → report/minutes readback; viewer/role/team/period → query identity → mutation invalidation → coherent render/export.
 
-State: ACTIVE planning; execution STOP until separately requested.
+UI: preserve existing authenticated dashboard/table/detail/report composition, labels and approved assets. Repair loading/error/empty/retry/stale scope before aesthetic changes. Layer ownership: shell belongs to route/layout; light summary and heavy table/chart belong to scoped data layers; each may finish later only with visible state and matching current generation. Measure shell-visible / first-light-visible / first-heavy-complete / full-complete, never count a skeleton/redirect as data-ready. Viewports 390x844, 768x1024, 1440x900; all five roles as actual route access permits.
 
-Scope: reconcile catalog/workspaces and prior pending evidence; qualify safe DB/browser/secret wrappers; finish setup UI and token handoff; unify credential state/session policy; harden login throttle; forensically reconcile the pre-existing production `public.login_attempts` schema; implement and qualify a bounded local reconciliation migration; qualify existing legacy/evaluator migrations; approved auth/framework/evaluator production rollout.
+## Release and rollback gates
 
-Gate: real reset/setup/login and session matrix in both flag modes; invalid/expired/used tokens; self-change transition; quota failure/concurrency; NULL/wrong evaluator deny; complete T09 production fingerprint; T10 clean/current-like/collision local PostgreSQL matrix; focused and root checks, real browser, fresh CONTROLLED review. Live release predicates require approved deployment/catalog readback, not source comments.
+Production path remains P98M2T05 → P98M3T02 → P102M2T01 → P96T11 → P96T12 → P96T13 → P102M2T02. Existing historical prerequisites are retained by ID; P98M2T05 additionally waits for new exact release package and state/runtime reconciliation. Any emergency rollback follows the approved complete run envelope without waiting for a failed success-path task to become DONE.
 
-Rollback: preserve compatibility until transition approval; T10 uses exact fingerprint/provenance-guarded reverse SQL with no row deletion or table recreation; P98M2T05 retains paired code/schema rollback preserving newly set credentials and no blanket NULL password reset. Production mismatch stops; only pre-reviewed rollback may run.
+Before production: exact reviewed candidate; fresh approved catalog/deployment/flags fingerprint; source/schema consumer compatibility ordering; byte backup; version/hash-bound rollback; owner approval covering credentials/permissions/settings/deploy/lifecycle. Changed candidate invalidates old release review. Missing live data fails closed. No global strict auth, no provider-governance acceptance, no CI-hosted enforcement implied by local green checks.
 
-## Phase 99 — Business integrity, grading, read scope and freshness
+## Project tooling / execution constraints
 
-State: CLOSED for non-production source/local execution at canonical `bb45e2e4e7a36596a7364d263cf1ef06cda1aaa0`; production migration/apply and runtime catalog readback remain separately owner-gated.
+Root commands: `npm run test`, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`; secret `node scripts/scan-source-secrets.mjs`; registry `npm audit --json`, `npm audit --omit=dev --json`; suites `node scripts/verify-release.mjs --suite <exact-suite>`. New suite/migration names in WBS are planned deliverables, never claimed existing. Wrong tier, zero cases, missing API/Chrome/DB => explicit capability block; no fake success.
 
-Scope: reconstruct complete bootstrap from approved catalog and tracked migrations; preserve historical snapshots; atomic user/team/evaluator/init graph; authoritative SubLeader validation; transactional versioned criteria/grade configuration and grading reads; inventory/serverize sensitive reads plus least privilege; period switching, async Reports params and Compare invalidation.
+Runner/integration roots `/home/pi5/projects/kurabe-task-wt` and `/home/pi5/projects/kurabe-integration-wt` are distinct planned roots to verify against current wrapper before dispatch. MAX_PARALLEL_RUNNERS=2, MAX_CANDIDATE_VERIFIERS=1, PUBLISH_REFRESH_TIMEOUT=300 seconds; MACHINE_EXCLUSIVE conflicts with all reservations. Discover CHROME_BIN; local fixture only by default. Production-targeting perf/session harness must not run by accident.
 
-Gate: clean bootstrap/replay + drift report; failure-injection and concurrent mutation/close tests; closed snapshot unchanged; no orphan/false success; invalid grade/relations rejected; no config fallback on writes; no cross-scope reads; UI period/team/data consistency and stale-cache regression tests. Actual RLS/grants enforcement also requires approved runtime apply/readback.
+Single Mika writer under `.state/control.lock` + atomic rename; exact PID/start/job liveness LIVE/DEAD/UNKNOWN before release of reservations. Historical state contains contradictory reservation/base/next_action; do not auto-clear in planning. Known roots include registered WTs plus legacy unregistered roots and audit copies; preserve unknown/evidence-bearing paths. Separate canonical Git, registered WT and filesystem-root cleanliness.
 
-Rollback: new forward migrations with exact reverse contract; preserve old versions/snapshots, no rewriting already-applied legacy files; no live revoke before consumer cutover qualification.
+Disposable isolated outputs: `.tmp/testbuild`, `.tmp/verification`, `.next`, `tsconfig.tsbuildinfo`. No serving .next rebuild. Routine artifacts `/home/pi5/hermes-artifacts/kurabe-execution/`; important canonical contracts live in repo. No new installs/runtime/service/settings permission is granted by this plan.
 
-Closure: P99M1T01, P99M2T01, P99M2T02, P99M3T01, P99M3T02, P99M4T01, and P99M4T02 are canonically published with focused/root/local evidence and required CONTROLLED reviews. P99M3T02 INFO advisories and P99M4T02 `live_browser=NOT_RUN_AUTH_REQUIRED` remain explicit P102/release residuals. `OPEN_P0=0`, `OPEN_P1=0`, `PRODUCTION_MUTATION=NONE`.
+## Next gate
 
-## Phase 100 — AI governance, security headers and dependencies
-
-- State: CLOSED for non-production source/local execution at canonical `e0fee8231b42f8610752ae0e84a018a9b9ab82bf`; P100M1T01, P100M1T02, and P100M2T01 are published with CONTROLLED PASS/HIGH; P100M2T02 is published with clean full/production audits. Production/provider lanes remain approval-gated.
-
-Scope: atomic AI/chat quota; scoped minimal payload and coverage disclosure; provider/retention approval contract; report-only → enforced CSP canary; framework middleware/proxy compatibility only if current docs and runtime tests require it; dev/transitive advisory remediation.
-
-Gate: concurrent quota cap, DB-failure handling; no cross-team identity disclosure; synthetic provider transport tests and owner governance acceptance; no hydration/chart/export/login regression under CSP; current full and production dependency audit with explicit tarball coverage limits. No paid live-model call implied.
-
-Rollback: revert exact source/config version; keep prior CSP policy available; provider switch/security changes approved separately. No waiver without owner/reason/expiry.
-
-## Phase 101 — Measured performance and UI quality
-
-State: COMPLETE for non-production source/local execution / P101M1T01, P101M2T01, P101M2T02, and P101M3T01 are published with local performance evidence and required gates; P102M1T01 is next.
-
-Routes: dashboard, employees, reports, evaluation detail, compare, history, settings. Viewports: 390x844, 768x1024, 1440x900. Roles: Manager/Leader/SubLeader/Employee/Worker as route permits.
-
-Order: qualified baseline → duplicate reads/roundtrips → projections/payload → light/heavy waterfall → measured render transforms/lazy-load → bounded accessibility/responsive cleanup. Preserve URL/back-forward semantics and viewer-aware invalidation.
-
-Evidence: same candidate/environment/data/sample method; cold/warm, query count/bytes, TTFB, shell-visible, first-light-visible, first-heavy-complete, full-complete and interaction latency. Lighthouse preset recorded first; at least two samples, median tie-break on >5-point spread. Do not compare development server to production build or empty unauthorized pages.
-
-Gate: every retained optimization has measured net benefit, no correctness/security/visual regression; no horizontal overflow or first-party errors. A non-beneficial candidate is abandoned with evidence, not marked completed merely to satisfy task count.
-
-## Phase 102 — Integration, controlled rollout and closure
-
-State: ACTIVE / P102M1T01 published with CI, disposable DB/browser, fail-closed and least-privilege evidence; P102M1T02 is next dependency-ready CONTROLLED release matrix.
-
-Scope: extend existing CI to behavior/DB/browser/secret gates; full role/workflow/error/concurrency matrix; plan exact remaining migration rollout; owner-approved GitHub branch settings/deploy; reconcile Phase 96E lifecycle gate; final source/catalog/ledger/docs evidence.
-
-Gate: P0 zero; P1 zero or explicitly accepted with owner/reason/expiry; canonical source and deployment linked; migration ledger/catalog match; DB/browser/root/security checks PASS; rollback evidence complete. No hidden waiver of Phase 96E: execute if approved, otherwise release remains gated until owner explicitly accepts omission.
-
-No new feature phase before release closure. Final docs use observed pre-closure SHA, not an impossible self-referential commit SHA.
-
-## Phase 96E — retained production lifecycle proof
-
-State: PAUSED, re-evaluated after P102M1T02. Preserve P96T10–P96T13 IDs. Approve complete run/rollback envelope before first mutation; rollback executes on failure as well as happy-path completion, never waits for failed test task to be marked DONE. Use exact IDs, FK-safe transaction, baseline hashes and no concurrent evaluator writes. Do not create test data on live during planning.
-
-## Deferred / owner-gated proposals (not executable project phases)
-
-Cloudflare Tunnel/Access; QI Gia dụng / SubLeader UAT org-data changes; expanded chat/new feature ideas. No invented implementation tasks for unspecified requirements or already-DONE phases.
-
-## Project tooling / execution policy
-
-- Root checks: `npm run test`, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`; dependency checks `npm audit --json` and `npm audit --omit=dev --json` in isolated lane.
-- Normal tests use `scripts/run-tests.mjs`; do not relabel in-memory audit tests as wrapper/DB/browser PASS.
-- New verification commands in tasks are PROPOSED deliverables of P98M1T03, not currently available tooling. P98M1T03 must implement and exercise them before consumers execute. Missing tool => BLOCKED_CAPABILITY, no stub PASS.
-- Browser: discovered `/usr/bin/google-chrome-stable`; synthetic local fixtures only by default. Existing tests/perf/benchmark-harness.mjs targets production and mutates sessions: never treat it as read-only.
-- Source secret scan: new scanner gate must report only paths/rule IDs, never secret values. No credential/env reads by Runner.
-- Proposed Runner root `/home/pi5/projects/kurabe-task-wt`; integration root `/home/pi5/projects/kurabe-integration-wt`; distinct task directories, no shared mutable .next or DB. These roots satisfy current Agy wrapper allowlists; verify wrapper capability before dispatch. Routine evidence stays under `/home/pi5/hermes-artifacts/kurabe-execution/`.
-- MAX_PARALLEL_RUNNERS=2; MAX_CANDIDATE_VERIFIERS=1; PUBLISH_REFRESH_TIMEOUT=300 seconds; MACHINE_EXCLUSIVE lock for whole-machine checks. No infrastructure installed by this plan.
-- Disposable outputs in isolated WT: `.tmp/testbuild`, `.tmp/verification`, `.next`, `tsconfig.tsbuildinfo`; evidence retained outside disposable cleanup with hashes. Never rebuild a serving .next.
-- Single Mika control writer; `.state/control.lock` plus atomic rename for state. Liveness: exact captured PID/start-time/job handle matched via `ps -p <pid> -o pid=,lstart=,args=` plus wrapper completion; matching live process=LIVE, confirmed exit=DEAD, ambiguous=UNKNOWN. Unknown reservations retained.
-- All external actions Mika-owned; Runner owns only code/test files. No task grants credentials, push, permissions, DB mutation or deploy without separate owner approval.
-- Each task includes wiring + matching tests. Keep stable IDs; no auto-sweep that removes unresolved dependencies; future task context revalidated immediately before dispatch.
+Canonical plan publication is complete. Next: atomically register the exact pending DAG under `control.lock`, then dispatch the current READY graph; no pending source/live task is marked complete by this control commit.
