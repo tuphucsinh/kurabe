@@ -19,19 +19,35 @@ import {
 // chỉ nhận Responses API (${base}/responses); /chat/completions trả HTTP 500 (deepseek-v4-flash reasoning
 // ngốn hết max_tokens → content rỗng với prompt dài).
 const DEFAULT_MODEL = 'gpt-5.6-luna';
+const DEFAULT_PROVIDER_BASE_URL = 'https://api.openai.com/v1';
 
 /**
  * Parse phản hồi chat/completions (OpenAI-compatible): choices[0].message.content.
  */
 function parseChatCompletionsOutput(data: unknown): { content: string | null; finishReason: string | null } {
   const d = data as {
-    choices?: Array<{ message?: { content?: unknown }; finish_reason?: unknown }>;
+    choices?: Array<{ message?: { content?: unknown; refusal?: unknown }; finish_reason?: unknown }>;
   } | null;
   const choice = d?.choices?.[0];
+  const refusal = choice?.message?.refusal;
+  if (refusal !== undefined && refusal !== null) {
+    return { content: null, finishReason: 'refused' };
+  }
   const text = choice?.message?.content;
   const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
   const content = typeof text === 'string' && text.trim() ? text.trim() : null;
   return { content, finishReason };
+}
+
+/**
+ * Only terminal, supported provider results may reach callers. Unsupported,
+ * incomplete, refused, filtered, tool-call, or failed results are fail-soft.
+ */
+function isUsableAIOutput(
+  result: { content: string | null; finishReason: string | null } | null
+): result is { content: string; finishReason: string | null } {
+  if (!result?.content) return false;
+  return result.finishReason === null || result.finishReason === 'stop' || result.finishReason === 'completed';
 }
 
 /**
@@ -86,7 +102,10 @@ function parseResponsesOutput(data: unknown): { content: string | null; finishRe
 }
 
 export function isAIConfigured(): boolean {
-  return Boolean(process.env.AI_API_KEY);
+  if (!process.env.AI_API_KEY?.trim()) return false;
+  const rawBaseUrl = process.env.AI_BASE_URL || DEFAULT_PROVIDER_BASE_URL;
+  const devException = process.env.AI_HTTP_DEV_EXCEPTION === 'true';
+  return validateAIProvider(rawBaseUrl, process.env.AI_ALLOWED_HOSTS, devException).allowed;
 }
 
 export async function callAI(
@@ -95,6 +114,7 @@ export async function callAI(
 ): Promise<string | null> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
+  if (!apiKey.trim()) return null;
 
   const rawBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
   const devException = process.env.AI_HTTP_DEV_EXCEPTION === 'true';
@@ -155,6 +175,7 @@ export async function callAI(
         },
         body: JSON.stringify(rawBody),
         signal: controller.signal,
+        redirect: 'error',
       });
 
       if (!res.ok) {
@@ -184,14 +205,14 @@ export async function callAI(
   // Lần 1: token đủ lớn
   const first = await attempt(maxTokens, '');
   if (first?.content && first.finishReason !== 'length') {
-    return first.content;
+    if (isUsableAIOutput(first)) return first.content;
   }
 
   // Lần 2 (retry): model reasoning có thể ngốn hết token hoặc bị cắt giữa chừng (finish_reason = "length").
   // Tăng token + nhấn mạnh trả lời ngắn trực tiếp.
   const second = await attempt(Math.max(2500, maxTokens * 2), ' TRẢ LỜI NGẮN GỌN TỐI ĐA 8 CÂU, KHÔNG PHÂN TÍCH.');
   if (second?.content && second.finishReason !== 'length') {
-    return second.content;
+    if (isUsableAIOutput(second)) return second.content;
   }
   return null;
 }
@@ -206,6 +227,7 @@ export async function callAIVision(
 ): Promise<string | null> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
+  if (!apiKey.trim()) return null;
 
   if (!imageBase64 || imageBase64.length > MAX_AI_IMAGE_BASE64_CHARS) {
     return null;
@@ -255,6 +277,7 @@ export async function callAIVision(
           temperature: 0.3,
         }),
         signal: controller.signal,
+        redirect: 'error',
       });
       if (!res.ok) {
         console.error('callAIVision HTTP error:', {
@@ -265,11 +288,7 @@ export async function callAIVision(
         return null;
       }
       const data = await res.json();
-      const choice = data?.choices?.[0];
-      const text = choice?.message?.content;
-      const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
-      const content = typeof text === 'string' && text.trim() ? text.trim() : null;
-      return { content, finishReason };
+      return parseChatCompletionsOutput(data);
     } catch {
       console.error('callAIVision request error:', {
         hostname: providerCheck.hostname,
@@ -286,13 +305,13 @@ export async function callAIVision(
   // Lần 1
   const first = await attempt(baseTokens, '');
   if (first?.content && first.finishReason !== 'length') {
-    return first.content;
+    if (isUsableAIOutput(first)) return first.content;
   }
 
   // Lần 2 (retry): tăng maxTokens (×1.5) + nhấn mạnh trả lời ngắn gọn
   const second = await attempt(Math.round(baseTokens * 1.5), 'TRẢ LỜI NGẮN GỌN, KHÔNG PHÂN TÍCH DÀI.');
   if (second?.content && second.finishReason !== 'length') {
-    return second.content;
+    if (isUsableAIOutput(second)) return second.content;
   }
   return null;
 }

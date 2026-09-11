@@ -108,7 +108,7 @@ Changes: derive latest submitted results using authoritative scoring/history sem
 Constraints: synthetic provider only; no HR payload, paid call or provider policy approval implied. No retroactive generated content edits; schema rollback preserves existing summaries.
 DoD: `node scripts/verify-release.mjs --suite ai-summary-truth`; drafts excluded, submitted zero retained, partial warning survives reload/minutes, legacy UNKNOWN, comment truncation, new-data stale summary and close/upsert race; rapid period switch and failed reads show no stale summary as new scope; G.
 
-### [ ] [#P102M3T07] AI egress redirect and response-boundary qualification
+### [x] [#P102M3T07] AI egress redirect and response-boundary qualification
 ```yaml
 task:
   id: P102M3T07

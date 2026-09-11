@@ -29,6 +29,34 @@ export async function run() {
     assert.match(ai, /AI_HTTP_DEV_EXCEPTION/);
     assert.match(ai, /validateAIProvider\(rawBaseUrl/);
   });
+  check('all AI transports reject redirects and non-2xx payloads', () => {
+    assert.equal((ai.match(/redirect: 'error'/g) || []).length, 2);
+    for (const status of [301, 302, 303, 307, 308]) {
+      assert.ok(status >= 300 && status < 400);
+    }
+    const guards = [...ai.matchAll(/if \(!res\.ok\) \{([\s\S]*?)\n\s*}\n\s*const data = await res\.json\(\);/g)];
+    assert.equal(guards.length, 2);
+    for (const guard of guards) {
+      assert.match(guard[1], /return null;/);
+      assert.doesNotMatch(guard[1], /res\.json|res\.text|res\.arrayBuffer/);
+    }
+  });
+  check('configuration failure precedes chat quota reservation', () => {
+    assert.match(ai, /isAIConfigured\(\): boolean[\s\S]*validateAIProvider\(rawBaseUrl/);
+    const prepareStart = chat.indexOf('async function prepareChatContext(');
+    const actionStart = chat.indexOf('export async function chatAskAction(');
+    const prepare = chat.slice(prepareStart, actionStart);
+    assert.ok(prepare.indexOf('if (!isAIConfigured())') >= 0);
+    assert.ok(prepare.indexOf('if (!isAIConfigured())') < prepare.indexOf('reserveChatQuota('));
+  });
+  check('unsupported incomplete and refused output is fail-soft across text and vision', () => {
+    assert.match(ai, /function isUsableAIOutput\(/);
+    assert.match(ai, /finishReason: 'refused'/);
+    assert.match(ai, /d\.status === 'incomplete'/);
+    assert.equal((ai.match(/parseChatCompletionsOutput\(data\)/g) || []).length, 2);
+    assert.equal((ai.match(/const second = await attempt\(/g) || []).length, 2);
+    assert.doesNotMatch(ai, /console\.(?:log|error)\([^;]*(?:res\.json|res\.text|response\.body|rawBody|data)/s);
+  });
   check('provider diagnostics do not include credentials', () => {
     assert.match(ai, /hostname: providerCheck\.hostname/);
     assert.doesNotMatch(ai, /console\.(?:log|error).*apiKey/);
