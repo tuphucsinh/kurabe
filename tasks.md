@@ -33,7 +33,7 @@ Changes: nonzero empty discovery; require passed===true and finite positive exec
 Constraints: preserve first exit status; no auto-fixing snapshots, env reads, secret values, or blanket test disabling. Existing suite-directory ownership permits only evidence-schema producer adaptation, not changes to application assertions, fixture semantics or business behavior. Existing suites must remain accurately classified; callers can intentionally require a stronger tier, but source-only producers must never masquerade as it.
 DoD: `node tests/verification-evidence-contract.test.mjs`; `node tests/verification-harness.test.mjs`; zero discovery, missing/null/false passed, NaN/zero/fractional cases, wrong tier, claimed auth without execution, unknown suite and seeded detection all reject; valid structured real-local and explicitly source-only results retain their actual scope; G.
 
-### [ ] [#P102M3T02] Credential lifecycle, byte-safe passwords and race-safe session issue/revoke
+### [x] [#P102M3T02] Credential lifecycle, byte-safe passwords and race-safe session issue/revoke
 ```yaml
 task:
   id: P102M3T02
