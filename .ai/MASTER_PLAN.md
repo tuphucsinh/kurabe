@@ -110,10 +110,10 @@ Root commands: `npm run test`, `npm run lint`, `npm run typecheck`, `npm run bui
 
 Runner/integration roots `/home/pi5/projects/kurabe-task-wt` and `/home/pi5/projects/kurabe-integration-wt` are distinct planned roots to verify against current wrapper before dispatch. MAX_PARALLEL_RUNNERS=2, MAX_CANDIDATE_VERIFIERS=1, PUBLISH_REFRESH_TIMEOUT=300 seconds; MACHINE_EXCLUSIVE conflicts with all reservations. Discover CHROME_BIN; local fixture only by default. Production-targeting perf/session harness must not run by accident.
 
-Single Mika writer under `.state/control.lock` + atomic rename; exact PID/start/job liveness LIVE/DEAD/UNKNOWN before release of reservations. Historical state contains contradictory reservation/base/next_action; do not auto-clear in planning. Known roots include registered WTs plus legacy unregistered roots and audit copies; preserve unknown/evidence-bearing paths. Separate canonical Git, registered WT and filesystem-root cleanliness.
+Single Mika writer under `.state/control.lock` + atomic rename; exact PID/start/job liveness LIVE/DEAD/UNKNOWN before release of reservations. Canonical registration and T12 reconciliation have completed under explicit execution authority; historical contradictory reservation/base/next_action evidence remains preserved, while current reservations are task-scoped. Known roots include registered WTs plus legacy unregistered roots and audit copies; preserve unknown/evidence-bearing paths. Separate canonical Git, registered WT and filesystem-root cleanliness.
 
 Disposable isolated outputs: `.tmp/testbuild`, `.tmp/verification`, `.next`, `tsconfig.tsbuildinfo`. No serving .next rebuild. Routine artifacts `/home/pi5/hermes-artifacts/kurabe-execution/`; important canonical contracts live in repo. No new installs/runtime/service/settings permission is granted by this plan.
 
 ## Next gate
 
-Canonical plan publication is complete. Next: atomically register the exact pending DAG under `control.lock`, then dispatch the current READY graph; no pending source/live task is marked complete by this control commit.
+Canonical plan publication and exact DAG registration are complete. P102M3T12 is verified with fresh independent review; P102M3T01 is the active AGY candidate at the registered base. Next: Mika verifies the unchanged T01 worktree after runner exit, then applies the CONTROLLED review/publish gate; no production/lifecycle mutation is implied.

@@ -183,7 +183,7 @@ Changes: exact ordered migration/source/rollback hashes; compatibility/consumer-
 Constraints: no production connection/apply, remote branch setting or real model. Do not mutate historical SQL to make preflight green; return any owned repair to originating task via amended DAG.
 DoD: `node scripts/verify-release.mjs --suite release-matrix`; `node scripts/verify-release.mjs --suite release-preflight`; `node scripts/verify-release.mjs --suite release-manifest-integrity`; npm audit full/production and vendor evidence; all exact hashes/deltas/paired rollback assertions, zero unexplained P0/P1, fresh CONTROLLED review on final candidate; G.
 
-### [ ] [#P102M3T12] Reconcile stale runtime/control/workspace ownership without discarding evidence
+### [x] [#P102M3T12] Reconcile stale runtime/control/workspace ownership without discarding evidence
 ```yaml
 task:
   id: P102M3T12
