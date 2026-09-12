@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
+import { invalidateRequesterQueries, scopedKey, useBatchUpsertUsers, useDeleteUser } from '@/hooks/use-db';
 import { getUsersBatchAction, getEvaluationSummariesBatchAction, getEmployeesPageDataAction } from '@/actions/read';
 import { mergeUserBatches } from '@/lib/employee-batch-helpers';
 import { projectEmployeeTableItems, type EmployeeTableItem } from '@/lib/employee-table-projection';
@@ -118,6 +118,10 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   const viewerId = effectiveViewer?.id ?? null;
   const viewerRole = effectiveViewer?.role ?? null;
   const viewerTeamId = effectiveViewer?.teamId ?? null;
+  const effectiveViewerRef = useRef(effectiveViewer);
+  useEffect(() => {
+    effectiveViewerRef.current = effectiveViewer;
+  }, [effectiveViewer]);
   const viewerScopeKey = `${viewerId ?? 'anonymous'}:${viewerRole ?? 'norole'}:${viewerTeamId ?? 'noteam'}`;
 
   // Track viewer state to handle logout / identity change / scope mismatch
@@ -223,7 +227,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     (nextOffset: number) => {
       if (!effectiveViewer) return;
       void queryClient.prefetchQuery({
-        queryKey: ['employee-batch', nextOffset, debouncedSearchTerm, teamFilter, roleFilter],
+        queryKey: scopedKey('employee-batch', [nextOffset, debouncedSearchTerm, teamFilter, roleFilter], effectiveViewer),
         queryFn: () =>
           getUsersBatchAction({
             offset: nextOffset,
@@ -459,7 +463,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       deleteUser(id, {
         onSuccess: () => {
           toast('Đã xóa nhân viên.', 'success');
-          queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
+          invalidateRequesterQueries(queryClient, 'employee-batch', effectiveViewerRef.current);
           loadInitialBatch();
         },
         onError: () => toast('Lỗi khi xóa nhân viên.', 'error'),
@@ -562,10 +566,10 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       const result = await upsertUserAction(payload);
       if (result.success) {
         toast('Cập nhật nhân viên thành công!', 'success');
-        queryClient.invalidateQueries({ queryKey: ['teams'] });
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-        queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
-        queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
+        invalidateRequesterQueries(queryClient, 'teams', effectiveViewerRef.current);
+        invalidateRequesterQueries(queryClient, 'users', effectiveViewerRef.current);
+        invalidateRequesterQueries(queryClient, 'employees-page-data', effectiveViewerRef.current);
+        invalidateRequesterQueries(queryClient, 'employee-batch', effectiveViewerRef.current);
         loadInitialBatch();
       } else {
         toast(result.error || 'Lỗi khi cập nhật nhân viên.', 'error');
@@ -614,7 +618,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       if (payloads.length > 0) {
         await batchUpsertUsers(payloads);
         toast(`Đã import thành công ${payloads.length} nhân viên.`, 'success');
-        queryClient.invalidateQueries({ queryKey: ['employee-batch'] });
+        invalidateRequesterQueries(queryClient, 'employee-batch', effectiveViewerRef.current);
         loadInitialBatch();
       }
 

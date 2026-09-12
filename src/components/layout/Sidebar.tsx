@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
+import { scopedKey } from '@/hooks/use-db';
 import { isIndividualRole, roleLabel } from '@/lib/role-policy';
 import { useToast } from '@/components/ui/Toast';
 import { getTeamsPageDataAction, getEvaluationPageDataAction } from '@/actions/read';
@@ -172,6 +173,7 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMobile }: SidebarContentProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const { logout, currentPeriod, isLoggingOut } = useAuth();
   const [isLogoutStarted, setIsLogoutStarted] = useState(false);
@@ -211,11 +213,11 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
 
     if (isIndividualRole(user.role)) {
       if (href === `/evaluations/${user.id}`) {
-        targetQueryKey = ['evaluation-page-data', user.id, undefined, user.id];
+        targetQueryKey = scopedKey('evaluation-page-data', [user.id, undefined], user);
         targetQueryFn = () => getEvaluationPageDataAction(user.id, undefined);
         targetStaleTime = 2 * 60 * 1000;
       } else if (user.teamId && href === `/teams/${user.teamId}`) {
-        targetQueryKey = ['teams-page-data', undefined, user.id, user.role, user.teamId];
+        targetQueryKey = scopedKey('teams-page-data', [undefined], user);
         targetQueryFn = () => getTeamsPageDataAction(undefined);
         targetStaleTime = 2 * 60 * 1000;
       }
@@ -228,7 +230,7 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
         (isLeaderOrSubLeader && user.teamId && href === `/teams/${user.teamId}`)
       ) {
         const periodId = isManager ? currentPeriod?.id : undefined;
-        targetQueryKey = ['teams-page-data', periodId, user.id, user.role, user.teamId];
+        targetQueryKey = scopedKey('teams-page-data', [periodId], user);
         targetQueryFn = () => getTeamsPageDataAction(periodId);
         targetStaleTime = 2 * 60 * 1000;
       }
@@ -363,9 +365,9 @@ function SidebarContent({ user, mainLinks, bottomLinks, isActive, onClose, isMob
             setIsLogoutStarted(true);
             onClose?.();
             // P69T01: cookie auth_session giờ httpOnly — KHÔNG xóa được bằng document.cookie.
-            // Phải qua logoutAction (server action xóa cookie) rồi full reload sang /login.
+            // Phải qua logoutAction (server action xóa cookie) rồi client-navigate sang /login.
             await logout();
-            window.location.replace('/login');
+            router.replace('/login');
           }}
           disabled={isLogoutStarted || isLoggingOut}
           aria-busy={isLogoutStarted || isLoggingOut}

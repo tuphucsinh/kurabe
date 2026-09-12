@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { User, EvaluationPeriod } from '@/types';
 import { loginAction, logoutAction } from '@/actions/auth';
 import { getCurrentUserAction, getPeriodsAction } from '@/actions/read';
@@ -21,13 +22,55 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const SCOPED_QUERY_FAMILIES = new Set([
+  'users',
+  'users-batch',
+  'employee-batch',
+  'user',
+  'team-users',
+  'employees-page-data',
+  'teams',
+  'team',
+  'teams-page-data',
+  'periods',
+  'active-period',
+  'evaluations',
+  'evaluation',
+  'evaluation-page-data',
+  'evaluation-compare-page-data',
+  'criteria',
+]);
+
+const isScopedQuery = ({ queryKey }: { queryKey: readonly unknown[] }) => (
+  typeof queryKey[0] === 'string'
+  && SCOPED_QUERY_FAMILIES.has(queryKey[0])
+  && queryKey.length >= 4
+);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [currentPeriod, setCurrentPeriodState] = useState<EvaluationPeriod | null>(null);
   const [allPeriods, setAllPeriods] = useState<EvaluationPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const previousScopeRef = useRef<string | null>(null);
+
+  const userId = user?.id ?? null;
+  const userRole = user?.role ?? null;
+  const userTeamId = user?.teamId ?? null;
+
+  useEffect(() => {
+    const currentScope = userId == null ? null : JSON.stringify([userId, userRole, userTeamId]);
+    const previousScope = previousScopeRef.current;
+    if (previousScope !== null && previousScope !== currentScope) {
+      void queryClient.cancelQueries({ predicate: isScopedQuery }).then(() => {
+        queryClient.removeQueries({ predicate: isScopedQuery });
+      });
+    }
+    previousScopeRef.current = currentScope;
+  }, [queryClient, userId, userRole, userTeamId]);
 
   useEffect(() => {
     async function loadAuth() {
@@ -102,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('auth_user_id');
     localStorage.removeItem('selected_period_id');
     document.cookie = 'selected_period_id=; path=/; max-age=0';
+    setIsLoggingOut(false);
   };
 
   const isManager = user?.role === 'Manager';

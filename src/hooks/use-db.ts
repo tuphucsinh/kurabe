@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   getEvaluationsAction, 
   getEvaluationSummariesAction,
@@ -38,36 +40,78 @@ import { CriterionAudience } from '@/lib/criteria-applicability';
 
 import { CriteriaGroup, Criterion, Team, User } from '@/types';
 
+const requesterScope = (requester?: User | null): readonly unknown[] => [
+  requester?.id,
+  requester?.role,
+  requester?.teamId,
+];
+
+export const scopedKey = (family: string, params: readonly unknown[], requester?: User | null) => [
+  family,
+  ...params,
+  ...requesterScope(requester),
+];
+
+const hasRequesterScope = (queryKey: readonly unknown[], requester?: User | null) => {
+  const scope = requesterScope(requester);
+  return requester?.id != null
+    && queryKey.length >= scope.length + 1
+    && queryKey.slice(-scope.length).every((value, index) => Object.is(value, scope[index]));
+};
+
+export const invalidateRequesterQueries = (queryClient: ReturnType<typeof useQueryClient>, family: string, requester?: User | null) => {
+  if (requester?.id == null) return;
+  queryClient.invalidateQueries({
+    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => queryKey[0] === family && hasRequesterScope(queryKey, requester),
+  });
+};
+
+const useRequesterRef = () => {
+  const { user } = useAuth();
+  const requesterRef = useRef<User | null>(user);
+  useEffect(() => {
+    requesterRef.current = user;
+  }, [user]);
+  return requesterRef;
+};
+
 // Users
 export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({
-  queryKey: ['users', requester?.id, options?.limit, options?.offset],
+  queryKey: scopedKey('users', [options?.limit, options?.offset], requester),
   queryFn: () => getUsersAction(options),
   staleTime: 5 * 60 * 1000,
   // Chưa load xong user (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
   enabled: requester != null
 });
 export const useUsersBatch = (requester?: User | null, options?: UsersBatchOptions) => useQuery({
-  queryKey: ['users-batch', requester?.id, options?.offset, options?.limit, options?.search, options?.teamId, options?.role],
+  queryKey: scopedKey('users-batch', [options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester),
   queryFn: () => getUsersBatchAction(options),
   staleTime: 2 * 60 * 1000,
   enabled: requester != null
 });
-export const useUser = (id: string) => useQuery({ queryKey: ['user', id], queryFn: () => getUserByIdAction(id), enabled: !!id });
-export const useTeamUsers = (teamId: string) => useQuery({ queryKey: ['team-users', teamId], queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId });
+export const useUser = (id: string) => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: scopedKey('user', [id], user), queryFn: () => getUserByIdAction(id), enabled: !!id && user != null });
+};
+export const useTeamUsers = (teamId: string) => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: scopedKey('team-users', [teamId], user), queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId && user != null });
+};
 
 export const useEmployeesPageData = (
   periodId?: string,
   options?: UsersBatchOptions,
   requester?: User | null
 ) => useQuery<EmployeesPageData>({
-  queryKey: ['employees-page-data', periodId, options?.offset, options?.limit, options?.search, options?.teamId, options?.role],
+  queryKey: scopedKey('employees-page-data', [periodId, options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester),
   queryFn: () => getEmployeesPageDataAction(periodId, options),
   staleTime: 2 * 60 * 1000,
-  enabled: requester !== undefined ? requester != null : true,
+  enabled: requester != null,
 });
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async (user: Partial<User>) => {
       const res = await upsertUserAction(user);
@@ -75,17 +119,18 @@ export const useUpsertUser = () => {
       return res.user;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
+      invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'evaluations', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
     },
   });
 };
 
 export const useBatchUpsertUsers = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async (users: Partial<User>[]) => {
       const res = await upsertUsersAction(users);
@@ -93,22 +138,27 @@ export const useBatchUpsertUsers = () => {
       return res.users;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
       // Đổi role có thể đổi leader_id → làm mới teams để trang /teams hiển thị ngay
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
+      invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'evaluations', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
     },
   });
 };
 
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: deleteUserAction,
+    mutationFn: async (id: string) => {
+      const result = await deleteUserAction(id);
+      if (!result.success) throw new Error(result.error || 'Lỗi khi xóa nhân viên');
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['employees-page-data'] });
+      invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
     },
   });
 };
@@ -116,25 +166,29 @@ export const useDeleteUser = () => {
 
 // Teams
 export const useTeams = (requester?: User | null) => useQuery({
-  queryKey: ['teams', requester?.id],
+  queryKey: scopedKey('teams', [], requester),
   queryFn: () => getTeamsAction(),
   staleTime: 5 * 60 * 1000,
   enabled: requester != null
 });
-export const useTeam = (id: string) => useQuery({ queryKey: ['team', id], queryFn: () => getTeamByIdAction(id), enabled: !!id });
+export const useTeam = (id: string) => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: scopedKey('team', [id], user), queryFn: () => getTeamByIdAction(id), enabled: !!id && user != null });
+};
 
 export const useTeamsPageData = (
   periodId?: string,
   requester?: User | null
 ) => useQuery<TeamsPageData>({
-  queryKey: ['teams-page-data', periodId, requester?.id, requester?.role, requester?.teamId],
+  queryKey: scopedKey('teams-page-data', [periodId], requester),
   queryFn: () => getTeamsPageDataAction(periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: requester !== undefined ? requester != null : true,
+  enabled: requester != null,
 });
 
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async (team: Partial<Team>) => {
       const res = await upsertTeamAction(team);
@@ -142,15 +196,16 @@ export const useUpsertTeam = () => {
       return res.team;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
+      invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'teams-page-data', requesterRef.current);
     },
   });
 };
 
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await deleteTeamAction(id);
@@ -158,44 +213,44 @@ export const useDeleteTeam = () => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
+      invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'teams-page-data', requesterRef.current);
     },
   });
 };
 
 
 // Periods & Evaluations
-export const usePeriods = (requester?: User | null) => useQuery({ queryKey: ['periods', requester?.id], queryFn: getPeriodsAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
-export const useActivePeriod = (requester?: User | null) => useQuery({ queryKey: ['active-period', requester?.id], queryFn: getActivePeriodAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
+export const usePeriods = (requester?: User | null) => useQuery({ queryKey: scopedKey('periods', [], requester), queryFn: getPeriodsAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
+export const useActivePeriod = (requester?: User | null) => useQuery({ queryKey: scopedKey('active-period', [], requester), queryFn: getActivePeriodAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
 
 export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
-  queryKey: ['evaluations', periodId, user?.id],
+  queryKey: scopedKey('evaluations', [periodId], user),
   queryFn: () => getEvaluationsAction(periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!user
+  enabled: user != null
 });
 
 export const useEvaluationSummaries = (periodId?: string, user?: User | null) => useQuery({
-  queryKey: ['evaluations', 'summary', periodId, user?.id],
+  queryKey: scopedKey('evaluations', ['summary', periodId], user),
   queryFn: () => getEvaluationSummariesAction(periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!user
+  enabled: user != null
 });
 
 export const useEvaluationSummariesBatch = (employeeIds: string[], periodId?: string, user?: User | null) => useQuery({
-  queryKey: ['evaluations', 'summary-batch', periodId, user?.id, employeeIds.join(',')],
+  queryKey: scopedKey('evaluations', ['summary-batch', periodId, employeeIds.join(',')], user),
   queryFn: () => getEvaluationSummariesBatchAction(employeeIds, periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!user && !!periodId && employeeIds.length > 0
+  enabled: user != null && !!periodId && employeeIds.length > 0
 });
 
 
-export const useEvaluation = (id: string, user?: User | null) => useQuery({ 
-  queryKey: ['evaluation', id, user?.id], 
-  queryFn: () => getEvaluationByIdAction(id), 
-  enabled: !!id && !!user 
+export const useEvaluation = (id: string, user?: User | null) => useQuery({
+  queryKey: scopedKey('evaluation', [id], user),
+  queryFn: () => getEvaluationByIdAction(id),
+  enabled: !!id && user != null
 });
 
 export const useEvaluationPageData = (
@@ -203,10 +258,10 @@ export const useEvaluationPageData = (
   periodId?: string,
   user?: User | null
 ) => useQuery<EvaluationPageData>({
-  queryKey: ['evaluation-page-data', employeeId, periodId, user?.id],
+  queryKey: scopedKey('evaluation-page-data', [employeeId, periodId], user),
   queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && !!user && !!periodId,
+  enabled: !!employeeId && user != null && !!periodId,
 });
 
 export const useEvaluationComparePageData = (
@@ -214,17 +269,21 @@ export const useEvaluationComparePageData = (
   periodId?: string,
   user?: User | null
 ) => useQuery<EvaluationComparePageData>({
-  queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id],
+  queryKey: scopedKey('evaluation-compare-page-data', [employeeId, periodId], user),
   queryFn: () => getEvaluationComparePageDataAction(employeeId, periodId),
   staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && !!user && !!periodId,
+  enabled: !!employeeId && user != null && !!periodId,
 });
 
 // Criteria
-export const useCriteria = () => useQuery({ queryKey: ['criteria'], queryFn: getAllCriteriaGroups, staleTime: 5 * 60 * 1000 });
+export const useCriteria = () => {
+  const { user } = useAuth();
+  return useQuery({ queryKey: scopedKey('criteria', [], user), queryFn: getAllCriteriaGroups, staleTime: 5 * 60 * 1000, enabled: user != null });
+};
 
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ group, expectedVersion }: { group: Partial<CriteriaGroup>; expectedVersion?: number }) => {
       const res = await upsertCriteriaGroupAction(group, expectedVersion);
@@ -232,13 +291,14 @@ export const useUpsertCriteriaGroup = () => {
       return res.group;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };
 
 export const useDeleteCriteriaGroup = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
       const res = await deleteCriteriaGroupAction(id, expectedVersion);
@@ -246,7 +306,7 @@ export const useDeleteCriteriaGroup = () => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };
@@ -254,6 +314,7 @@ export const useDeleteCriteriaGroup = () => {
 
 export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ criterion, groupId, expectedVersion }: { criterion: Partial<Criterion>; groupId: string; expectedVersion?: number }) => {
       const res = await upsertCriterionAction(criterion, groupId, expectedVersion);
@@ -261,13 +322,14 @@ export const useUpsertCriterion = () => {
       return res.criterion;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };
 
 export const useDeleteCriterion = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
       const res = await deleteCriterionAction(id, expectedVersion);
@@ -275,7 +337,7 @@ export const useDeleteCriterion = () => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };
@@ -283,6 +345,7 @@ export const useDeleteCriterion = () => {
 
 export const useUpdateDefaultLevel = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ criterionId, levelIndex, expectedVersion }: { criterionId: string; levelIndex: number | null; expectedVersion?: number }) => {
       const res = await updateDefaultLevelAction(criterionId, levelIndex, expectedVersion);
@@ -290,13 +353,14 @@ export const useUpdateDefaultLevel = () => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };
 
 export const useUpdateCriterionAudiences = () => {
   const queryClient = useQueryClient();
+  const requesterRef = useRequesterRef();
   return useMutation({
     mutationFn: async ({ criterionId, audiences, expectedVersion }: { criterionId: string; audiences: CriterionAudience[]; expectedVersion?: number }) => {
       const res = await updateCriterionAudiencesAction(criterionId, audiences, expectedVersion);
@@ -304,7 +368,7 @@ export const useUpdateCriterionAudiences = () => {
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['criteria'] });
+      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
     },
   });
 };

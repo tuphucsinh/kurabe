@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Send,
@@ -14,7 +14,7 @@ import {
   MessageSquareQuote,
 } from 'lucide-react';
 import { generateResultMessagesChunkAction, saveResultMessageAction, draftResultMessageAction } from '@/actions/ai';
-import { useEvaluations, useUsers, usePeriods, useTeams } from '@/hooks/use-db';
+import { invalidateRequesterQueries, useEvaluations, useUsers, usePeriods, useTeams } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -41,6 +41,10 @@ interface MessageItem {
 export default function BatchResultMessageModal({ periodId }: BatchResultMessageModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -267,7 +271,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
           prev.map((m) => (m.evaluationId === item.evaluationId ? { ...m, status: 'saved' } : m))
         );
         toast(`Đã lưu thông báo cho ${item.employeeName}`, 'success');
-        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        invalidateRequesterQueries(queryClient, 'evaluations', userRef.current);
       } else {
         setMessagesList((prev) =>
           prev.map((m) =>
@@ -325,7 +329,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
     }
 
     setIsSavingAll(false);
-    queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+    invalidateRequesterQueries(queryClient, 'evaluations', userRef.current);
     toast(`Đã lưu thành công ${savedCount}/${toSave.length} thông báo kết quả!`, 'success');
   };
 

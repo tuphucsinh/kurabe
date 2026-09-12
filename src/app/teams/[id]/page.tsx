@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTeamsPageData, useEvaluations } from '@/hooks/use-db';
+import { invalidateRequesterQueries, useTeamsPageData, useEvaluations } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { upsertUserAction } from '@/actions/users';
@@ -37,6 +37,10 @@ export default function TeamDetailPage() {
   const teamId = params.id;
 
   const { user, currentPeriod, isLoading: isAuthLoading } = useAuth();
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -149,10 +153,10 @@ export default function TeamDetailPage() {
       const result = await upsertUserAction(payload);
       if (result.success) {
         toast(editingEmployee ? 'Cập nhật nhân viên thành công!' : 'Thêm nhân viên thành công!', 'success');
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-        queryClient.invalidateQueries({ queryKey: ['teams'] });
-        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        queryClient.invalidateQueries({ queryKey: ['teams-page-data'] });
+        invalidateRequesterQueries(queryClient, 'users', userRef.current);
+        invalidateRequesterQueries(queryClient, 'teams', userRef.current);
+        invalidateRequesterQueries(queryClient, 'evaluations', userRef.current);
+        invalidateRequesterQueries(queryClient, 'teams-page-data', userRef.current);
       } else {
         toast(result.error || (editingEmployee ? 'Lỗi khi cập nhật nhân viên.' : 'Lỗi khi thêm nhân viên.'), 'error');
       }

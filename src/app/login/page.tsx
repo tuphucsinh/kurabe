@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock, User as UserIcon } from 'lucide-react';
 import { isIndividualRole } from '@/lib/role-policy';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [employeeCode, setEmployeeCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +20,7 @@ export default function LoginPage() {
     try {
       const user = await login(employeeCode, password);
       // Redirect thẳng theo role (loginAction đã trả user) — khỏi vòng '/' → middleware → /dashboard (bớt 1-2 hop 307 trên Vercel)
-      window.location.href = isIndividualRole(user.role) ? `/evaluations/${user.id}` : '/dashboard';
+      router.replace(isIndividualRole(user.role) ? `/evaluations/${user.id}` : '/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
     }

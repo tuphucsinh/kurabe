@@ -75,6 +75,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
+    if (pathname !== '/login' && pathname !== '/setup-password') {
+      return (
+        <div className="min-h-screen bg-brand-strong flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      );
+    }
+
     return (
       <main className="flex-1 w-full">
         <PageTransition>{children}</PageTransition>

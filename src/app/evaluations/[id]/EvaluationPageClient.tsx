@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvaluationPageData } from '@/hooks/use-db';
+import { invalidateRequesterQueries, useEvaluationPageData } from '@/hooks/use-db';
 import { User, EvaluationRound, RoundNumber, EvaluationPeriod } from '@/types';
 import type { EvaluationPeriodScope } from '@/lib/evaluation-period-scope';
 import { useAuth } from '@/contexts/AuthContext';
@@ -64,6 +64,10 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   const { data: pageData, isLoading } = useEvaluationPageData(employeeId, periodId, user);
   const employee = pageData?.employee ?? null;
   const evaluation = pageData?.evaluation ?? null;
@@ -325,9 +329,9 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
       if (res.success) {
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
+          invalidateRequesterQueries(queryClient, 'evaluation-page-data', userRef.current),
+          invalidateRequesterQueries(queryClient, 'evaluation-compare-page-data', userRef.current),
+          invalidateRequesterQueries(queryClient, 'evaluations', userRef.current),
         ]);
         if (isSubmit) {
           showSubmitSuccess();
@@ -369,9 +373,9 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
       if (res.success) {
         toast('Đã trả lại đánh giá.', 'success');
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['evaluation-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluation-compare-page-data', employeeId, periodId, user?.id] }),
-          queryClient.invalidateQueries({ queryKey: ['evaluations'] }),
+          invalidateRequesterQueries(queryClient, 'evaluation-page-data', userRef.current),
+          invalidateRequesterQueries(queryClient, 'evaluation-compare-page-data', userRef.current),
+          invalidateRequesterQueries(queryClient, 'evaluations', userRef.current),
         ]);
         setReturnDialogOpen(false);
         setReturnReason('');
