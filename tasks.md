@@ -93,7 +93,7 @@ Changes: fail closed on read errors; pass server-authenticated actor ID to trans
 Constraints: no authority from client role/team/actor; historical/submitted snapshots immutable; preserve multiple SubLeaders and partial-update omitted/null distinction. No auto-delete live personnel.
 DoD: `node tests/personnel-action-boundary.test.mjs`; `node scripts/verify-release.mjs --suite personnel-actor-guard`; first lookup error then success cannot bypass scope; target transfer/promotion and actor demotion races; delete leader/subleader/inactive/self cases; zero partial graph writes; repeat and historical hash preservation; G.
 
-### [ ] [#P102M3T06] Persistent truthful AI summary input/coverage contract
+### [x] [#P102M3T06] Persistent truthful AI summary input/coverage contract
 ```yaml
 task:
   id: P102M3T06
