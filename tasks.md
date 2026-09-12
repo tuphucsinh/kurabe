@@ -54,7 +54,7 @@ task:
   id: P102M3T03
   tier: CONTROLLED
   depends: [P102M3T02]
-  owns: [src/actions/auth.ts, src/lib/login-rate-limit.ts, src/types/database.ts, supabase/migrations/20260911000200_login_admission.sql, db/rollback-login-admission.sql, tests/integration/login-admission.mjs, tests/login-admission-action.test.mjs]
+  owns: [src/actions/auth.ts, src/lib/auth-password-setup.ts, src/lib/login-rate-limit.ts, src/types/database.ts, supabase/migrations/20260911000200_login_admission.sql, db/rollback-login-admission.sql, tests/integration/login-admission.mjs, tests/login-admission-action.test.mjs, tests/p98-password-setup.test.mjs]
   locks: [AUTH_LOGIN_CONTRACT]
 ```
 Goal: close F05; bound admitted attempts, not just stored failure records.
@@ -69,7 +69,7 @@ task:
   id: P102M3T04
   tier: CONTROLLED
   depends: [P102M3T13]
-  owns: [src/actions/evaluation.ts, src/lib/evaluation-transaction-rpc.ts, src/lib/evaluation-round-validation.ts, src/lib/db/criteria-admin.ts, src/lib/db/evaluations-write.ts, src/hooks/use-evaluation-page-state.ts, 'src/app/evaluations/[id]/EvaluationPageClient.tsx', src/types/database.ts, src/types/index.ts, supabase/migrations/20260911000300_evaluation_transition_guard.sql, db/rollback-evaluation-transition-guard.sql, tests/integration/evaluation-transition-guard.mjs, tests/browser/evaluation-transition-guard.mjs, tests/evaluation-transaction-rpc.test.ts]
+  owns: [src/actions/evaluation.ts, src/lib/evaluation-transaction-rpc.ts, src/lib/evaluation-round-validation.ts, src/lib/db/criteria-admin.ts, src/lib/db/evaluations-write.ts, src/hooks/use-evaluation-page-state.ts, 'src/app/evaluations/[id]/EvaluationPageClient.tsx', src/types/database.ts, src/types/index.ts, supabase/migrations/20260911000300_evaluation_transition_guard.sql, db/rollback-evaluation-transition-guard.sql, tests/integration/evaluation-transition-guard.mjs, tests/browser/evaluation-transition-guard.mjs, tests/evaluation-transaction-rpc.test.ts, tests/p96t05-closed-period-write-firewall.test.mjs, docs/PRODUCTION_RUNBOOK.md]
   locks: [PERSONNEL_EVALUATION_GRAPH, SCORING_CONFIG]
 ```
 Goal: close F01/F02 and prevent stale client criteria from being relabeled as current config.
