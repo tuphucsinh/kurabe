@@ -42,12 +42,12 @@ export async function explainAnomalyAction(input: {
     return { error: 'AI chưa được cấu hình — chờ cung cấp API key.' };
   }
 
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'explainAnomaly');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
-
   const prompt = `Dữ liệu đánh giá QAQC:
 - Nhân viên (mã số ${input.evaluationId.slice(0, 8)}): vòng ${input.round - 1} đạt ${input.prevScore} điểm, vòng ${input.round} đạt ${input.score} điểm (chênh lệch ${Math.abs(input.score - input.prevScore)} điểm).
 - Hãy đưa ra 3 khả năng có thể giải thích sự chênh lệch này (thiên kiến, thay đổi năng lực, lỗi nhập liệu...) và 1 gợi ý hành động cho quản lý. Ngắn gọn, tối đa 120 từ, tiếng Việt.`;
+
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'explainAnomaly');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   const explanation = await callAI(prompt, { maxTokens: 250 });
   if (!explanation) {
@@ -132,9 +132,6 @@ export async function draftResultMessageAction(input: {
     return { error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
   }
 
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'draftResultMessage');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
-
   const prompt = buildResultPrompt({
     employeeCode: employee.employeeCode || '',
     name: employee.name || '',
@@ -148,6 +145,9 @@ export async function draftResultMessageAction(input: {
     periodName: `${period.name} (${period.year})`,
   });
   const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
+  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'draftResultMessage');
+  if (!aiQuota.allowed) return { error: aiQuota.error };
+
   const message = await callAI(bounded.text, { maxTokens: 800, temperature: 0.7 });
   if (!message) return aiError();
   return { message, payloadCoverage: bounded.coverageMeta };
@@ -223,9 +223,6 @@ export async function generateResultMessagesChunkAction(input: {
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generateResultMessagesChunk');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
-
   const limit = input.limit ?? 5;
   const offset = Math.max(0, input.offset || 0);
 
@@ -248,6 +245,12 @@ export async function generateResultMessagesChunkAction(input: {
     const approvedEvals = evaluations.filter((e) => e.status === 'Approved');
     const totalApproved = approvedEvals.length;
     const chunk = approvedEvals.slice(offset, offset + limit);
+    if (chunk.length === 0) {
+      return { items: [], nextOffset: offset, done: true, total: totalApproved };
+    }
+
+    const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generateResultMessagesChunk');
+    if (!aiQuota.allowed) return { error: aiQuota.error };
 
     const userMap = new Map(users.map((u) => [u.id, u]));
     const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
@@ -370,9 +373,6 @@ export async function generatePeriodMinutesAction(input: {
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
   if (!input.periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
 
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodMinutes');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
-
   try {
     const [d, periodSummaryRes, users, periodRes] = await Promise.all([
       getDashboardData(input.periodId),
@@ -451,6 +451,9 @@ CẤU TRÚC BIÊN BẢN (đầy đủ các phần rõ ràng):
 YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ ràng, chuẩn phong cách biên bản hành chính doanh nghiệp.`;
 
     const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
+    const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodMinutes');
+    if (!aiQuota.allowed) return { error: aiQuota.error };
+
     const minutes = await callAI(bounded.text, { maxTokens: 1200, temperature: 0.4 });
     if (!minutes) {
       return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sparkles, Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
@@ -27,40 +27,61 @@ export default function AiSummaryCard({
   const [coverageLabel, setCoverageLabel] = useState(
     initialCoverage && initialCoverage.status !== 'complete' ? initialCoverage.coverageLabel : ''
   );
+  const [freshnessLabel, setFreshnessLabel] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(() => !initialSummary && !!periodId);
+  const requestSeqRef = useRef(0);
+  const userId = user?.id;
+  const userRole = user?.role;
 
   useEffect(() => {
-    if (initialSummary || !periodId || (user && user.role !== 'Manager')) {
-      return;
-    }
-
+    const requestSeq = ++requestSeqRef.current;
     let active = true;
 
     void Promise.resolve().then(async () => {
-      if (!active) return;
+      if (!active || requestSeqRef.current !== requestSeq) return;
+      setSummary('');
+      setCreatedAt('');
+      setCoverage(undefined);
+      setCoverageLabel('');
+      setFreshnessLabel(initialSummary ? 'Tóm tắt có sẵn nhưng chưa được xác nhận với dữ liệu hiện tại.' : '');
+
+      if (initialSummary || !periodId || (userId && userRole !== 'Manager')) {
+        setIsLoadingSummary(false);
+        return;
+      }
+
       setIsLoadingSummary(true);
       try {
         const res = await getPeriodSummary(periodId);
-        if (active && res) {
-          if (res.summary) setSummary(res.summary);
+        if (active && requestSeqRef.current === requestSeq && res) {
+          setSummary(res.freshness === 'current' ? res.summary || '' : '');
           if (res.created_at) setCreatedAt(res.created_at);
           if (res.coverage) {
             setCoverage(res.coverage);
             setCoverageLabel(res.coverage.status !== 'complete' ? res.coverage.coverageLabel : '');
           }
+          setFreshnessLabel(res.freshnessLabel || '');
         }
       } catch (err) {
         console.error('getPeriodSummary error:', err);
+        if (active && requestSeqRef.current === requestSeq) {
+          setSummary('');
+          setCreatedAt('');
+          setCoverage(undefined);
+          setCoverageLabel('');
+          setFreshnessLabel('Không thể xác nhận tóm tắt với dữ liệu hiện tại — hãy tạo lại.');
+        }
       } finally {
-        if (active) setIsLoadingSummary(false);
+        if (active && requestSeqRef.current === requestSeq) setIsLoadingSummary(false);
       }
     });
 
     return () => {
       active = false;
+      if (requestSeqRef.current === requestSeq) requestSeqRef.current += 1;
     };
-  }, [periodId, initialSummary, user]);
+  }, [periodId, initialSummary, initialCreatedAt, initialCoverage, userId, userRole]);
 
   if (user?.role !== 'Manager') return null;
 
@@ -69,14 +90,22 @@ export default function AiSummaryCard({
       toast('Không có kỳ đánh giá.', 'error');
       return;
     }
+    const requestSeq = ++requestSeqRef.current;
     setIsGenerating(true);
+    setSummary('');
+    setCreatedAt('');
+    setCoverage(undefined);
+    setCoverageLabel('');
+    setFreshnessLabel('');
     try {
       const result = await generatePeriodSummary(periodId);
+      if (requestSeqRef.current !== requestSeq) return;
       if (result.summary) {
         setSummary(result.summary);
         setCoverage(result.coverage);
         setCoverageLabel(result.coverage?.status !== 'complete' ? result.coverage?.coverageLabel || result.coverageLabel || 'Dữ liệu đầu vào đã được rút gọn.' : '');
         setCreatedAt(result.coverage?.sourceGeneratedAt || new Date().toISOString());
+        setFreshnessLabel('');
         toast('Đã tạo tóm tắt bằng AI.', 'success');
       } else {
         toast(result.error || 'Lỗi khi tạo tóm tắt.', 'error');
@@ -85,7 +114,7 @@ export default function AiSummaryCard({
       console.error('generatePeriodSummary error:', err);
       toast('Lỗi khi tạo tóm tắt.', 'error');
     } finally {
-      setIsGenerating(false);
+      if (requestSeqRef.current === requestSeq) setIsGenerating(false);
     }
   };
 
@@ -114,6 +143,12 @@ export default function AiSummaryCard({
             {isGenerating ? 'Đang tạo...' : summary ? 'Tạo lại' : 'Tạo tóm tắt'}
           </button>
         </div>
+
+        {freshnessLabel && (
+          <div className="mb-3 rounded-xl border border-outline-soft bg-brand-soft px-3 py-2 text-xs text-ink-muted">
+            {freshnessLabel}
+          </div>
+        )}
 
         {isLoadingSummary ? (
           <div className="space-y-3 py-4">

@@ -12,11 +12,58 @@ import { boundAITextWithMeta, MAX_AI_PROMPT_CHARS, buildAIPayload, type AIPayloa
 import { assertEvaluationPeriodActive } from '@/lib/db/evaluation-period-write-guard';
 import { createHash } from 'node:crypto';
 
+type SummaryFreshness = 'current' | 'stale' | 'unknown';
+
+type SummarySourceRound = {
+  id: string;
+  round: number;
+  status?: string | null;
+  submittedAt?: string | null;
+  totalScore?: number | null;
+  grade?: string | null;
+};
+
+type SummarySourceEvaluation = {
+  id: string;
+  updatedAt?: string | null;
+  status?: string | null;
+  rounds: SummarySourceRound[];
+};
+
+function isSubmittedRound(round: { status?: string | null; submittedAt?: string | null }): boolean {
+  return round.status === 'Submitted' || !!round.submittedAt;
+}
+
+function getSourceRevision(evaluations: SummarySourceEvaluation[]): string {
+  const evaluated = evaluations.filter((evaluation) => (evaluation.rounds || []).some(isSubmittedRound));
+  return createHash('sha256')
+    .update(
+      JSON.stringify(
+        evaluated.map((evaluation) => ({
+          id: evaluation.id,
+          updatedAt: evaluation.updatedAt,
+          status: evaluation.status,
+          rounds: evaluation.rounds.filter(isSubmittedRound).map((round) => ({
+            id: round.id,
+            round: round.round,
+            status: round.status,
+            submittedAt: round.submittedAt,
+            totalScore: round.totalScore,
+            grade: round.grade,
+          })),
+        }))
+      )
+    )
+    .digest('hex');
+}
+
 /** Đọc tóm tắt AI đã lưu của kỳ (cache) — Manager. */
 export async function getPeriodSummary(periodId: string): Promise<{
   summary?: string;
   created_at?: string;
   coverage?: AIPayloadCoverage;
+  freshness?: SummaryFreshness;
+  freshnessLabel?: string;
 }> {
   const auth = await requireManager();
   if (auth.error !== null) return {};
@@ -45,25 +92,51 @@ export async function getPeriodSummary(periodId: string): Promise<{
   };
   const status = row.coverage_status === 'complete' || row.coverage_status === 'partial' ? row.coverage_status : 'unknown';
   const coverageFields = row.coverage_fields && typeof row.coverage_fields === 'object' ? row.coverage_fields : undefined;
+  const coverage: AIPayloadCoverage = {
+    status,
+    truncated: row.coverage_truncated === true || status === 'partial',
+    droppedItems: row.coverage_dropped_items ?? 0,
+    totalItems: row.coverage_total_items ?? 0,
+    fittedItems: row.coverage_fitted_items ?? 0,
+    coverageLabel:
+      status === 'unknown'
+        ? 'unknown — dữ liệu cũ không lưu phạm vi đầu vào'
+        : row.coverage_truncated
+          ? `partial — ${row.coverage_fitted_items ?? 0}/${row.coverage_total_items ?? 0} bản ghi được đưa vào`
+          : `complete — ${row.coverage_fitted_items ?? 0}/${row.coverage_total_items ?? 0} bản ghi`,
+    fieldTruncation: coverageFields as AIPayloadCoverage['fieldTruncation'],
+    sourceRevision: row.source_revision || undefined,
+    sourceGeneratedAt: row.source_generated_at || undefined,
+  };
+
+  if (!row.source_revision) {
+    return {
+      created_at: row.created_at || undefined,
+      coverage,
+      freshness: 'unknown',
+      freshnessLabel: 'Tóm tắt cũ chưa có phiên bản nguồn để xác nhận.',
+    };
+  }
+
+  let freshness: SummaryFreshness = 'unknown';
+  try {
+    const currentEvaluations = await getEvaluationsByPeriodAdmin(periodId, auth.user);
+    freshness = getSourceRevision(currentEvaluations as SummarySourceEvaluation[]) === row.source_revision ? 'current' : 'stale';
+  } catch (error) {
+    console.error('Không thể xác nhận phiên bản nguồn của AI summary:', error);
+  }
+
   return {
-    summary: row.summary,
+    summary: freshness === 'current' ? row.summary : undefined,
     created_at: row.created_at || undefined,
-    coverage: {
-      status,
-      truncated: row.coverage_truncated === true || status === 'partial',
-      droppedItems: row.coverage_dropped_items ?? 0,
-      totalItems: row.coverage_total_items ?? 0,
-      fittedItems: row.coverage_fitted_items ?? 0,
-      coverageLabel:
-        status === 'unknown'
-          ? 'unknown — dữ liệu cũ không lưu phạm vi đầu vào'
-          : row.coverage_truncated
-            ? `partial — ${row.coverage_fitted_items ?? 0}/${row.coverage_total_items ?? 0} bản ghi được đưa vào`
-            : `complete — ${row.coverage_fitted_items ?? 0}/${row.coverage_total_items ?? 0} bản ghi`,
-      fieldTruncation: coverageFields as AIPayloadCoverage['fieldTruncation'],
-      sourceRevision: row.source_revision || undefined,
-      sourceGeneratedAt: row.source_generated_at || undefined,
-    },
+    coverage,
+    freshness,
+    freshnessLabel:
+      freshness === 'stale'
+        ? 'Tóm tắt đã cũ vì dữ liệu đánh giá nguồn đã thay đổi — hãy tạo lại.'
+        : freshness === 'unknown'
+          ? 'Không thể xác nhận tóm tắt đang phản ánh dữ liệu hiện tại — hãy tạo lại.'
+          : undefined,
   };
 }
 
@@ -95,9 +168,7 @@ export async function generatePeriodSummary(
     ]);
 
     const userMap = new Map(users.map((u) => [u.id, u]));
-    const isSubmitted = (round: (typeof evaluations)[number]['rounds'][number]) =>
-      round.status === 'Submitted' || !!round.submittedAt;
-    const evaluated = evaluations.filter((e) => (e.rounds || []).some(isSubmitted));
+    const evaluated = evaluations.filter((e) => (e.rounds || []).some(isSubmittedRound));
 
     if (evaluated.length === 0) {
       return { error: 'Kỳ này chưa có đánh giá nào có điểm — hãy chờ các vòng đánh giá hoàn thành rồi tạo tóm tắt.' };
@@ -118,9 +189,9 @@ export async function generatePeriodSummary(
       const u = userMap.get(e.employeeId);
       const lastRound = [...e.rounds]
         .sort((a, b) => b.round - a.round)
-        .find(isSubmitted);
+        .find(isSubmittedRound);
       const notes = (e.rounds || [])
-        .filter((r) => isSubmitted(r) && (r.comment || '').trim())
+        .filter((r) => isSubmittedRound(r) && (r.comment || '').trim())
         .map((r) => {
           const boundedComment = boundAITextWithMeta(r.comment, 500, 'characters');
           commentTotalChars += boundedComment.coverageMeta.totalItems;
@@ -149,25 +220,7 @@ export async function generatePeriodSummary(
     const { payload, coverageMeta } = buildAIPayload(promptPrefix, rows, MAX_AI_PROMPT_CHARS);
     const boundedPrompt = boundAITextWithMeta(payload, MAX_AI_PROMPT_CHARS, 'characters');
     const sourceGeneratedAt = new Date().toISOString();
-    const sourceRevision = createHash('sha256')
-      .update(
-        JSON.stringify(
-          evaluated.map((evaluation) => ({
-            id: evaluation.id,
-            updatedAt: evaluation.updatedAt,
-            status: evaluation.status,
-            rounds: evaluation.rounds.filter(isSubmitted).map((round) => ({
-              id: round.id,
-              round: round.round,
-              status: round.status,
-              submittedAt: round.submittedAt,
-              totalScore: round.totalScore,
-              grade: round.grade,
-            })),
-          }))
-        )
-      )
-      .digest('hex');
+    const sourceRevision = getSourceRevision(evaluations as SummarySourceEvaluation[]);
     const coverage: AIPayloadCoverage = {
       status: coverageMeta.droppedItems > 0 || boundedPrompt.coverageMeta.truncated || commentTruncated ? 'partial' : 'complete',
       truncated: coverageMeta.droppedItems > 0 || boundedPrompt.coverageMeta.truncated || commentTruncated,
@@ -243,6 +296,7 @@ export async function generatePeriodSummary(
   } catch (err) {
     if (quotaRequestId && !providerReturnedOutput) {
       const refund = await refundAiQuota(auth.user.id, quotaRequestId);
+      quotaRequestId = null;
       if (!refund.ok) console.error('AI quota refund failed after summary error:', refund.error);
     }
     console.error('generatePeriodSummary error');

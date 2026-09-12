@@ -122,8 +122,20 @@ export async function checkAndRecordAiUsage(
   limit: number = AI_LIMIT_PER_HOUR,
   windowMs: number = AI_WINDOW_MS
 ): Promise<{ allowed: boolean; error?: string }> {
+  // Legacy callers are attempt-accounted: reserve and immediately terminalize
+  // the accepted attempt before calling the provider. They must not retain a
+  // reservation while the provider runs.
   const result = await reserveAiQuota(userId, action, limit, windowMs);
-  return { allowed: result.allowed, error: result.error };
+  if (!result.allowed || !result.requestId) return { allowed: false, error: result.error };
+
+  const consumed = await consumeAiQuota(userId, result.requestId);
+  if (consumed.ok) return { allowed: true };
+
+  const refunded = await refundAiQuota(userId, result.requestId);
+  if (!refunded.ok) {
+    console.error('AI quota terminalization failed:', refunded.error || consumed.error);
+  }
+  return { allowed: false, error: consumed.error || AI_BUSY_MESSAGE };
 }
 
 /** Consume an AI reservation after the provider returned usable output. */

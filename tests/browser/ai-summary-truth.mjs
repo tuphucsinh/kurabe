@@ -13,11 +13,13 @@ export async function run() {
   const card = read('src/components/reports/AiSummaryCard.tsx');
   const modal = read('src/components/reports/PeriodMinutesModal.tsx');
   const governance = read('src/lib/ai-governance.ts');
+  const aiLimit = read('src/lib/ai-limit.ts');
   const states = [];
 
   assert.match(summary, /status === 'Submitted'/, 'summary input must use submitted rounds');
   assert.doesNotMatch(summary, /totalScore\s*>\s*0/, 'zero-score submitted rounds must not be dropped');
   assert.match(summary, /sourceRevision/);
+  assert.match(summary, /getSourceRevision/);
   assert.match(summary, /coverage_fields/);
   assert.match(summary, /upsert_ai_summary_if_active/);
   states.push('submitted-round-source-and-persistent-metadata');
@@ -27,6 +29,8 @@ export async function run() {
   states.push('minutes-carries-summary-and-payload-coverage');
 
   assert.match(card, /coverage\.status/);
+  assert.match(card, /requestSeqRef/);
+  assert.match(card, /freshnessLabel/);
   assert.match(card, /Không coi đây là bản tổng hợp đầy đủ/);
   states.push('summary-card-discloses-legacy-or-partial-coverage');
 
@@ -40,7 +44,11 @@ export async function run() {
   assert.match(governance, /droppedItems/);
   states.push('coverage-contract-is-explicit');
 
-  assert.equal(states.length, 5);
+  assert.match(aiLimit, /Legacy callers are attempt-accounted/);
+  assert.match(aiLimit, /const consumed = await consumeAiQuota/);
+  states.push('attempt-accounted-callers-terminalize-quota');
+
+  assert.equal(states.length, 6);
   return {
     real: true,
     passed: true,
