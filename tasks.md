@@ -48,7 +48,7 @@ Changes: explicit never-configured vs reset-pending state; optional legacy remai
 Constraints: any production semantics change needs owner approval; no strict global flag, forced legacy setup or shared password. Never log raw setup/session tokens, hashes or password values. Document migration compatibility/rollback without reviving revoked credentials.
 DoD: `node tests/password-byte-boundary.test.mjs`; `node scripts/verify-release.mjs --suite session-credential-guard`; absent/false/true modes; NULL legacy, configured good/bad, reset-pending, one-time expiry/reuse; real concurrent login vs reset/change/setup must reject stale issuance; logout DB failure truthful; 71/72/73-byte Vietnamese/emoji boundaries; browser reset→setup→login and account errors; G.
 
-### [ ] [#P102M3T03] Atomic login admission and explicit proxy trust
+### [x] [#P102M3T03] Atomic login admission and explicit proxy trust
 ```yaml
 task:
   id: P102M3T03
