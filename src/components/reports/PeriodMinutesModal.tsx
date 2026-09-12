@@ -16,6 +16,7 @@ import { usePeriods } from '@/hooks/use-db';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+
 interface PeriodMinutesModalProps {
   periodId: string;
 }
@@ -24,6 +25,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
   const [isOpen, setIsOpen] = useState(false);
   const [minutes, setMinutes] = useState('');
   const [coverageLabel, setCoverageLabel] = useState('');
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
@@ -66,7 +68,14 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
         toast(res.error, 'error');
       } else if (res.minutes) {
         setMinutes(res.minutes);
-        setCoverageLabel(res.payloadCoverage?.truncated ? res.payloadCoverage.coverageLabel : '');
+
+        const coverageLabels = [
+          res.sourceSummaryCoverage && res.sourceSummaryCoverage.status !== 'complete'
+            ? `tóm tắt kỳ: ${res.sourceSummaryCoverage.coverageLabel}`
+            : '',
+          res.payloadCoverage?.truncated ? `biên bản: ${res.payloadCoverage.coverageLabel}` : '',
+        ].filter(Boolean);
+        setCoverageLabel(coverageLabels.join(' · '));
         toast('Đã soạn biên bản kết thúc kỳ thành công.', 'success');
       }
     } catch (err) {

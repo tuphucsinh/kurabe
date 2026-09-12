@@ -66,6 +66,8 @@ export interface AIProviderValidationResult {
  * Callers MUST NOT claim complete coverage when truncated=true or droppedItems > 0.
  */
 export interface AIPayloadCoverage {
+  /** Persistent summary coverage state; legacy rows are explicitly unknown. */
+  status?: 'complete' | 'partial' | 'unknown';
   /** True when the text was truncated to fit within maxChars. */
   truncated: boolean;
   /** Number of logical items (rows, history entries) dropped due to bounds. */
@@ -76,6 +78,11 @@ export interface AIPayloadCoverage {
   fittedItems: number;
   /** Human-readable label for UI disclosure. */
   coverageLabel: string;
+  /** Per-field truncation facts for persisted summaries. */
+  fieldTruncation?: Record<string, { truncated: boolean; totalChars?: number; includedChars?: number }>;
+  /** Stable source fingerprint and capture time for persisted summary inputs. */
+  sourceRevision?: string;
+  sourceGeneratedAt?: string;
 }
 
 /**

@@ -358,7 +358,13 @@ export async function generateResultMessagesChunkAction(input: {
  */
 export async function generatePeriodMinutesAction(input: {
   periodId: string;
-}): Promise<{ minutes?: string; periodName?: string; payloadCoverage?: AIPayloadCoverage; error?: string }> {
+}): Promise<{
+  minutes?: string;
+  periodName?: string;
+  payloadCoverage?: AIPayloadCoverage;
+  sourceSummaryCoverage?: AIPayloadCoverage;
+  error?: string;
+}> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
@@ -450,7 +456,12 @@ YÊU CẦU: Trình bày mạch lạc, có cấu trúc gạch đầu dòng rõ r�
       return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
     }
 
-    return { minutes, periodName, payloadCoverage: bounded.coverageMeta };
+    return {
+      minutes,
+      periodName,
+      payloadCoverage: bounded.coverageMeta,
+      sourceSummaryCoverage: periodSummaryRes.coverage,
+    };
   } catch (err: unknown) {
     return { error: toClientError(err, 'Lỗi tạo biên bản kết thúc kỳ. Vui lòng thử lại.') };
   }

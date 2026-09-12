@@ -5,22 +5,28 @@ import { Sparkles, Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { generatePeriodSummary, getPeriodSummary } from '@/actions/ai-summary';
+import type { AIPayloadCoverage } from '@/lib/ai-governance';
 
 /** Card "Tóm tắt kỳ bằng AI" trên Báo cáo — Manager-only. Heavy data layer. */
 export default function AiSummaryCard({
   periodId,
   initialSummary,
   initialCreatedAt,
+  initialCoverage,
 }: {
   periodId: string;
   initialSummary?: string;
   initialCreatedAt?: string;
+  initialCoverage?: AIPayloadCoverage;
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [summary, setSummary] = useState(() => initialSummary || '');
   const [createdAt, setCreatedAt] = useState(() => initialCreatedAt || '');
-  const [coverageLabel, setCoverageLabel] = useState('');
+  const [coverage, setCoverage] = useState<AIPayloadCoverage | undefined>(initialCoverage);
+  const [coverageLabel, setCoverageLabel] = useState(
+    initialCoverage && initialCoverage.status !== 'complete' ? initialCoverage.coverageLabel : ''
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(() => !initialSummary && !!periodId);
 
@@ -39,6 +45,10 @@ export default function AiSummaryCard({
         if (active && res) {
           if (res.summary) setSummary(res.summary);
           if (res.created_at) setCreatedAt(res.created_at);
+          if (res.coverage) {
+            setCoverage(res.coverage);
+            setCoverageLabel(res.coverage.status !== 'complete' ? res.coverage.coverageLabel : '');
+          }
         }
       } catch (err) {
         console.error('getPeriodSummary error:', err);
@@ -64,8 +74,9 @@ export default function AiSummaryCard({
       const result = await generatePeriodSummary(periodId);
       if (result.summary) {
         setSummary(result.summary);
-        setCoverageLabel(result.partial ? result.coverageLabel || 'Dữ liệu đầu vào đã được rút gọn.' : '');
-        setCreatedAt(new Date().toISOString());
+        setCoverage(result.coverage);
+        setCoverageLabel(result.coverage?.status !== 'complete' ? result.coverage?.coverageLabel || result.coverageLabel || 'Dữ liệu đầu vào đã được rút gọn.' : '');
+        setCreatedAt(result.coverage?.sourceGeneratedAt || new Date().toISOString());
         toast('Đã tạo tóm tắt bằng AI.', 'success');
       } else {
         toast(result.error || 'Lỗi khi tạo tóm tắt.', 'error');
@@ -118,7 +129,7 @@ export default function AiSummaryCard({
         ) : summary ? (
           <div className="prose prose-sm max-w-none bg-surface-raised/70 rounded-2xl border border-outline-soft p-5">
             <div className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{summary}</div>
-            {coverageLabel && (
+            {coverageLabel && coverage && (
               <div className="mt-3 rounded-xl border border-outline-soft bg-brand-soft px-3 py-2 text-xs text-ink-muted">
                 Phạm vi AI: {coverageLabel}. Không coi đây là bản tổng hợp đầy đủ nếu còn dữ liệu chưa đưa vào payload.
               </div>

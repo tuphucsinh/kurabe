@@ -426,24 +426,48 @@ export type Database = {
       }
       ai_summaries: {
         Row: {
+          coverage_dropped_items: number
+          coverage_fields: Json
+          coverage_fitted_items: number
+          coverage_status: string
+          coverage_total_items: number
+          coverage_truncated: boolean
           created_at: string | null
           created_by: string | null
           id: string
           period_id: string
+          source_generated_at: string | null
+          source_revision: string | null
           summary: string
         }
         Insert: {
+          coverage_dropped_items?: number
+          coverage_fields?: Json
+          coverage_fitted_items?: number
+          coverage_status?: string
+          coverage_total_items?: number
+          coverage_truncated?: boolean
           created_at?: string | null
           created_by?: string | null
           id?: string
           period_id: string
+          source_generated_at?: string | null
+          source_revision?: string | null
           summary: string
         }
         Update: {
+          coverage_dropped_items?: number
+          coverage_fields?: Json
+          coverage_fitted_items?: number
+          coverage_status?: string
+          coverage_total_items?: number
+          coverage_truncated?: boolean
           created_at?: string | null
           created_by?: string | null
           id?: string
           period_id?: string
+          source_generated_at?: string | null
+          source_revision?: string | null
           summary?: string
         }
         Relationships: []
@@ -1143,6 +1167,22 @@ export type Database = {
           p_users: Json
           p_team?: Json | null
           p_actor_id: string
+        }
+        Returns: Json
+      }
+      upsert_ai_summary_if_active: {
+        Args: {
+          p_period_id: string
+          p_summary: string
+          p_created_by: string
+          p_coverage_status: string
+          p_coverage_total_items: number
+          p_coverage_fitted_items: number
+          p_coverage_dropped_items: number
+          p_coverage_truncated: boolean
+          p_coverage_fields: Json
+          p_source_revision: string
+          p_source_generated_at: string
         }
         Returns: Json
       }
