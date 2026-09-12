@@ -34,7 +34,7 @@ assert.ok(
 assert.ok(sidebar.includes('const { logout, currentPeriod, isLoggingOut } = useAuth();'), 'Sidebar must consume isLoggingOut');
 assert.ok(sidebar.includes('if (isLogoutStarted || isLoggingOut) return;'), 'Sidebar must prevent duplicate logout clicks');
 assert.ok(sidebar.includes('disabled={isLogoutStarted || isLoggingOut}'), 'Logout button must be disabled while pending');
-assert.ok(sidebar.includes("window.location.replace('/login');"), 'Logout must use one replace navigation to login');
+assert.ok(sidebar.includes("router.replace('/login');"), 'Logout must use one replace navigation to login');
 assert.ok(!sidebar.includes("window.location.href = '/login'"), 'Old href logout navigation must be removed');
 
 console.log('logout-transition-regression tests: ALL PASS');

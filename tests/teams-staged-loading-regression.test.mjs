@@ -257,14 +257,15 @@ function normalizeWhitespace(code) {
 {
   const hookCode = readProjectFile('src/hooks/use-db.ts');
   const normHook = normalizeWhitespace(stripComments(hookCode));
-  const keyStart = normHook.indexOf("queryKey: ['teams-page-data'");
-  const keyEnd = normHook.indexOf('],', keyStart);
+  const keyStart = normHook.indexOf("queryKey: scopedKey('teams-page-data'");
+  const keyEnd = normHook.indexOf('),', keyStart);
   assert.ok(keyStart >= 0 && keyEnd > keyStart, 'useTeamsPageData query key must be present');
   const teamsPageKey = normHook.slice(keyStart, keyEnd);
   assert.ok(teamsPageKey.includes('periodId'), 'Teams page query key must include periodId');
-  assert.ok(teamsPageKey.includes('requester?.id'), 'Teams page query key must include requester identity');
-  assert.ok(teamsPageKey.includes('requester?.role'), 'Teams page query key must include requester role');
-  assert.ok(teamsPageKey.includes('requester?.teamId'), 'Teams page query key must include requester team scope');
+  assert.ok(teamsPageKey.includes('requester'), 'Teams page query key must include requester scope');
+  assert.ok(normHook.includes('requester?.id'), 'Scoped query keys must include requester identity');
+  assert.ok(normHook.includes('requester?.role'), 'Scoped query keys must include requester role');
+  assert.ok(normHook.includes('requester?.teamId'), 'Scoped query keys must include requester team scope');
 }
 
 // -------------------------------------------------------------

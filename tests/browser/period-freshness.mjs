@@ -50,8 +50,7 @@ export async function run() {
   assert.doesNotMatch(filters, /Dữ liệu thời gian thực/);
   states.push('truthful-freshness-label');
 
-  const compareInvalidations = [...evaluation.matchAll(/invalidateQueries\(\{ queryKey: \[(.*?)\] \}\)/g)].map((match) => match[1]);
-  assert.ok(compareInvalidations.some((key) => key.includes("'evaluation-compare-page-data'")), 'compare key must be invalidated');
+  assert.match(evaluation, /invalidateRequesterQueries\(queryClient, 'evaluation-compare-page-data', userRef\.current\)/, 'compare key must be invalidated');
   assert.doesNotMatch(evaluation, /evaluation-by-employee/);
   states.push('save-and-return-invalidate-compare');
 

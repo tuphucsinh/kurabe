@@ -20,6 +20,7 @@ const BOOTSTRAP_PREDICATE_KEYS = [
 ];
 const ROLLBACK_TARGETS = Object.freeze({
   'rollback-ai-quota.sql': 'supabase/migrations/20260907000800_ai_quota.sql',
+  'rollback-ai-summary-coverage.sql': 'supabase/migrations/20260911000500_ai_summary_coverage.sql',
   'rollback-credential-change.sql': 'supabase/migrations/20260907000100_credential_change.sql',
   'rollback-criteria-config-version.sql': 'supabase/migrations/20260907000600_criteria_config_version.sql',
   'rollback-grade-config-version.sql': 'supabase/migrations/20260907000500_grade_config_version.sql',
@@ -34,8 +35,12 @@ const ROLLBACK_TARGETS = Object.freeze({
   'rollback-p98-password-setup-transaction.sql': 'supabase/migrations/20260905072000_p98_password_setup_transaction.sql',
   'rollback-p98-password-setup.sql': 'supabase/migrations/20260905070000_p98_password_setup.sql',
   'rollback-p98-reconcile-login-attempts.sql': 'supabase/migrations/20260909000100_p98_reconcile_login_attempts.sql',
+  'rollback-evaluation-transition-guard.sql': 'supabase/migrations/20260911000300_evaluation_transition_guard.sql',
+  'rollback-login-admission.sql': 'supabase/migrations/20260911000200_login_admission.sql',
+  'rollback-personnel-actor-guard.sql': 'supabase/migrations/20260911000400_personnel_actor_guard.sql',
   'rollback-personnel-history-guard.sql': 'supabase/migrations/20260907000300_personnel_history_guard.sql',
   'rollback-personnel-transaction.sql': 'supabase/migrations/20260907000400_personnel_transaction.sql',
+  'rollback-session-credential-guard.sql': 'supabase/migrations/20260911000100_session_credential_guard.sql',
   'rollback-sensitive-read-grants.sql': 'supabase/migrations/20260907000700_sensitive_read_grants.sql',
 });
 const PERSONNEL_FORWARD = 'supabase/migrations/20260907000400_personnel_transaction.sql';
