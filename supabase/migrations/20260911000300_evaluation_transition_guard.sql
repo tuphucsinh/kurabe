@@ -317,10 +317,12 @@ BEGIN
       OR NEW.scores IS DISTINCT FROM OLD.scores
       OR NEW.notes IS DISTINCT FROM OLD.notes
       OR NEW.comment IS DISTINCT FROM OLD.comment
+      OR NEW.additional_comment IS DISTINCT FROM OLD.additional_comment
       OR NEW.total_score IS DISTINCT FROM OLD.total_score
       OR NEW.grade IS DISTINCT FROM OLD.grade
       OR NEW.status IS DISTINCT FROM OLD.status
       OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at
+      OR NEW.created_at IS DISTINCT FROM OLD.created_at
       OR NEW.criteria_config_version_id IS DISTINCT FROM OLD.criteria_config_version_id
       OR NEW.grade_config_version_id IS DISTINCT FROM OLD.grade_config_version_id
     ) THEN
@@ -366,10 +368,12 @@ BEGIN
       IF NEW.scores IS DISTINCT FROM OLD.scores
          OR NEW.notes IS DISTINCT FROM OLD.notes
          OR NEW.comment IS DISTINCT FROM OLD.comment
+         OR NEW.additional_comment IS DISTINCT FROM OLD.additional_comment
          OR NEW.total_score IS DISTINCT FROM OLD.total_score
          OR NEW.grade IS DISTINCT FROM OLD.grade
          OR NEW.status IS DISTINCT FROM OLD.status
          OR NEW.submitted_at IS DISTINCT FROM OLD.submitted_at
+         OR NEW.created_at IS DISTINCT FROM OLD.created_at
          OR NEW.criteria_config_version_id IS DISTINCT FROM OLD.criteria_config_version_id
          OR NEW.grade_config_version_id IS DISTINCT FROM OLD.grade_config_version_id THEN
         RAISE EXCEPTION 'P102M3T04_INVALID_ROUND: submitted history can only change through the transactional return RPC';
@@ -670,7 +674,12 @@ DECLARE
   v_existing_next_grade_id uuid;
   v_next_user_role text;
   v_next_user_active boolean;
+  v_next_user_team_id uuid;
+  v_next_user_subleader_id uuid;
+  v_next_team_active boolean;
+  v_next_team_leader_id uuid;
   v_expected_next_role text;
+  v_expected_next_status text;
   v_active_criteria_id uuid;
   v_active_grade_id uuid;
   v_effective_criteria_version_id uuid;
@@ -786,7 +795,7 @@ BEGIN
   v_effective_grade_version_id := p_grade_config_version_id;
 
   -- 4. Lock evaluation FOR UPDATE
-  SELECT id, status, current_round, team_id, employee_role
+  SELECT id, employee_id, status, current_round, team_id, employee_role
   INTO v_eval
   FROM public.evaluations
   WHERE id = p_evaluation_id
@@ -807,6 +816,16 @@ BEGIN
   IF p_is_submit IS TRUE AND p_is_final IS FALSE
      AND p_next_evaluator_role IS DISTINCT FROM v_expected_next_role THEN
     RAISE EXCEPTION 'INVALID_WORKFLOW_ROLE: expected next evaluator role %, got %', v_expected_next_role, p_next_evaluator_role;
+  END IF;
+  v_expected_next_status := CASE p_next_round
+    WHEN 1 THEN 'Draft'
+    WHEN 2 THEN 'Submitted'
+    WHEN 3 THEN 'Reviewed'
+    ELSE NULL
+  END;
+  IF p_is_submit IS TRUE AND p_is_final IS FALSE
+     AND p_next_status IS DISTINCT FROM v_expected_next_status THEN
+    RAISE EXCEPTION 'INVALID_WORKFLOW_STATUS: expected next status %, got %', v_expected_next_status, p_next_status;
   END IF;
   IF p_is_final IS TRUE AND (
        (v_eval.employee_role = 'Manager' AND p_round <> 1)
@@ -1019,12 +1038,40 @@ BEGIN
     v_next_round_id := NULL;
   ELSE
     IF p_is_final IS FALSE THEN
-      SELECT role, is_active INTO v_next_user_role, v_next_user_active
+      SELECT role, is_active, team_id, subleader_id
+      INTO v_next_user_role, v_next_user_active, v_next_user_team_id, v_next_user_subleader_id
       FROM public.users
       WHERE id = p_next_evaluator_id
       FOR KEY SHARE;
       IF NOT FOUND OR v_next_user_active IS NOT TRUE OR v_next_user_role IS DISTINCT FROM p_next_evaluator_role OR p_next_evaluator_role NOT IN ('Leader', 'SubLeader', 'Manager') THEN
         RAISE EXCEPTION 'UNAUTHORIZED_NEXT_EVALUATOR: evaluator % is missing, inactive, or has role % instead of %', p_next_evaluator_id, v_next_user_role, p_next_evaluator_role;
+      END IF;
+      IF p_next_evaluator_role IN ('Leader', 'SubLeader') THEN
+        SELECT is_active, leader_id
+        INTO v_next_team_active, v_next_team_leader_id
+        FROM public.teams
+        WHERE id = v_eval.team_id
+        FOR KEY SHARE;
+        IF v_eval.team_id IS NULL OR NOT FOUND OR v_next_team_active IS DISTINCT FROM TRUE THEN
+          RAISE EXCEPTION 'UNAUTHORIZED_NEXT_EVALUATOR: team scope is missing or inactive';
+        END IF;
+        IF v_next_user_team_id IS DISTINCT FROM v_eval.team_id THEN
+          RAISE EXCEPTION 'UNAUTHORIZED_NEXT_EVALUATOR: evaluator must belong to the evaluation team';
+        END IF;
+        IF p_next_evaluator_role = 'Leader'
+           AND v_next_team_leader_id IS NOT NULL
+           AND p_next_evaluator_id IS DISTINCT FROM v_next_team_leader_id THEN
+          RAISE EXCEPTION 'UNAUTHORIZED_NEXT_EVALUATOR: evaluator is not the appointed team Leader';
+        END IF;
+        IF p_next_evaluator_role = 'SubLeader'
+           AND NOT EXISTS (
+             SELECT 1 FROM public.users subject
+             WHERE subject.id = v_eval.employee_id
+               AND subject.subleader_id = p_next_evaluator_id
+               AND subject.team_id = v_eval.team_id
+           ) THEN
+          RAISE EXCEPTION 'UNAUTHORIZED_NEXT_EVALUATOR: evaluator is not the employee''s assigned SubLeader';
+        END IF;
       END IF;
 
       SELECT id, evaluator_id, evaluator_role, status,

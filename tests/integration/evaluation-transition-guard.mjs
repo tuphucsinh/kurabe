@@ -184,6 +184,7 @@ export async function run() {
   const evaluationActionSrc = fs.readFileSync(path.join(projectRoot, 'src/actions/evaluation.ts'), 'utf8');
   const rpcSrc = fs.readFileSync(path.join(projectRoot, 'src/lib/evaluation-transaction-rpc.ts'), 'utf8');
   const validationSrc = fs.readFileSync(path.join(projectRoot, 'src/lib/evaluation-round-validation.ts'), 'utf8');
+  const guardSrc = fs.readFileSync(guardMigration, 'utf8');
   const pageStateSrc = fs.readFileSync(path.join(projectRoot, 'src/hooks/use-evaluation-page-state.ts'), 'utf8');
   const clientSrc = fs.readFileSync(path.join(projectRoot, 'src/app/evaluations/[id]/EvaluationPageClient.tsx'), 'utf8');
 
@@ -198,6 +199,11 @@ export async function run() {
   assert.match(clientSrc, /renderedRules/);
   assert.match(evaluationActionSrc, /save_evaluation_round_transaction_active_only/);
   assert.match(evaluationActionSrc, /return_evaluation_round_transaction/);
+  assert.match(guardSrc, /NEW\.additional_comment IS DISTINCT FROM OLD\.additional_comment/);
+  assert.match(guardSrc, /NEW\.created_at IS DISTINCT FROM OLD\.created_at/);
+  assert.match(guardSrc, /v_expected_next_status/);
+  assert.match(guardSrc, /evaluator must belong to the evaluation team/);
+  assert.match(guardSrc, /employee''s assigned SubLeader/);
   cases.push('source-contracts');
 
   const name = `kurabe-p102m3t04-${process.pid}`;
@@ -287,6 +293,30 @@ export async function run() {
     assert.equal(psql(port, password, database, `SELECT criteria_config_version_id FROM public.evaluation_rounds WHERE id='${submitResult.next_round_id}';`).out, activeCriteriaId);
     assert.equal(psql(port, password, database, `SELECT grade_config_version_id FROM public.evaluation_rounds WHERE id='${submitResult.next_round_id}';`).out, activeGradeId);
     cases.push('version-pinning-submit');
+
+    // An invalid next-round status must fail before changing either parent or
+    // child state. This exercises the exact workflow contract, not only its
+    // source marker.
+    const invalidStatusTarget = seedEvaluation(port, password, database, '108', 'Leader', 1, 'Draft', 'Draft');
+    const invalidStatusBefore = psql(port, password, database, `
+      SELECT current_round::text || '|' || (SELECT count(*) FROM public.evaluation_rounds WHERE evaluation_id='${invalidStatusTarget.evaluationId}')
+      FROM public.evaluations WHERE id='${invalidStatusTarget.evaluationId}';
+    `).out;
+    const invalidStatus = psql(port, password, database, `
+      SELECT * FROM public.save_evaluation_round_transaction_active_only(
+        '${invalidStatusTarget.evaluationId}', 1, '${invalidStatusTarget.actorId}',
+        '{}'::jsonb, '{}'::jsonb, 'Invalid next status', 1, 'B', true,
+        now(), 2, '${nextActorId}'::uuid, 'Manager', 'Draft', false,
+        '${activeCriteriaId}'::uuid, '${activeGradeId}'::uuid
+      );
+    `, false);
+    assert.notEqual(invalidStatus.status, 0);
+    assert.match(invalidStatus.err, /INVALID_WORKFLOW_STATUS/);
+    assert.equal(psql(port, password, database, `
+      SELECT current_round::text || '|' || (SELECT count(*) FROM public.evaluation_rounds WHERE evaluation_id='${invalidStatusTarget.evaluationId}')
+      FROM public.evaluations WHERE id='${invalidStatusTarget.evaluationId}';
+    `).out, invalidStatusBefore);
+    cases.push('exact-next-status-validation');
 
     // 5. replay-after-r2-r3-approved
 
@@ -489,6 +519,35 @@ export async function run() {
     cases.push('stale-render-unchanged-ids-changed-values');
 
     // 10. next-round-parent-fault-zero-delta
+    const faultTarget = seedEvaluation(port, password, database, '109', 'Leader', 1, 'Draft', 'Draft');
+    psql(port, password, database, `
+      CREATE OR REPLACE FUNCTION public.p102m3t04_test_next_round_fault()
+      RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'P102M3T04_TEST_NEXT_ROUND_WRITE_FAULT'; END $$;
+      CREATE TRIGGER p102m3t04_test_next_round_fault AFTER INSERT ON public.evaluation_rounds
+      FOR EACH ROW EXECUTE FUNCTION public.p102m3t04_test_next_round_fault();
+    `);
+    const faultBefore = psql(port, password, database, `
+      SELECT current_round::text || '|' || (SELECT count(*) FROM public.evaluation_rounds WHERE evaluation_id='${faultTarget.evaluationId}')
+      FROM public.evaluations WHERE id='${faultTarget.evaluationId}';
+    `).out;
+    const parentFault = psql(port, password, database, `
+      SELECT * FROM public.save_evaluation_round_transaction_active_only(
+        '${faultTarget.evaluationId}', 1, '${faultTarget.actorId}',
+        '{}'::jsonb, '{}'::jsonb, 'Faulted parent', 10, 'B', true,
+        now(), 2, '${nextActorId}'::uuid, 'Manager', 'Submitted', false,
+        '${activeCriteriaId}'::uuid, '${activeGradeId}'::uuid
+      );
+    `, false);
+    assert.notEqual(parentFault.status, 0);
+    assert.match(parentFault.err, /P102M3T04_TEST_NEXT_ROUND_WRITE_FAULT/);
+    psql(port, password, database, `
+      DROP TRIGGER p102m3t04_test_next_round_fault ON public.evaluation_rounds;
+      DROP FUNCTION public.p102m3t04_test_next_round_fault();
+    `);
+    assert.equal(psql(port, password, database, `
+      SELECT current_round::text || '|' || (SELECT count(*) FROM public.evaluation_rounds WHERE evaluation_id='${faultTarget.evaluationId}')
+      FROM public.evaluations WHERE id='${faultTarget.evaluationId}';
+    `).out, faultBefore);
     psql(port, password, database, `
       UPDATE public.evaluation_periods SET status='closed' WHERE id='00000000-0000-0000-0000-000000000301';
     `);

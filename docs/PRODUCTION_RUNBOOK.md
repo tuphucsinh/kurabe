@@ -8,7 +8,7 @@
 
 ## 1. Current State & Artifact Scope
 
-- **Status**: [VERIFIED] All SQL migrations (`db/migration-p3-evaluation-transaction.sql`, `db/migration-p3-retention.sql`) and rollback scripts (`db/rollback-p3-evaluation-transaction.sql`, `db/rollback-p3-retention.sql`) exist solely as local candidate artifacts.
+- **Status**: [VERIFIED] The evaluation transition migration (`supabase/migrations/20260911000300_evaluation_transition_guard.sql`) and rollback (`db/rollback-evaluation-transition-guard.sql`) exist solely as local candidate artifacts; the separate retention candidate remains local-only.
 - **Application Path**: [VERIFIED] `src/actions/evaluation.ts` requires `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` for evaluation writes; unset/false fails closed and does not execute the legacy multi-step path.
 - **Database State**: [VERIFIED] No candidate DDL has been executed against any remote database.
 - **Retention State**: [VERIFIED] No retention cron job or pg_cron schedule is registered or enabled.
@@ -46,7 +46,7 @@ Every stage in this runbook represents an isolated gate. Transitioning to the ne
 | **Gate 0** | Local test suite, build, lint, typecheck | Automated CI / Local Developer | Halt immediately, fix locally |
 | **Gate 1** | Remote read-only queries (duplicates, schema collisions) | DBA / Lead Engineer | Halt if duplicate data or schema conflict exists |
 | **Gate 2** | Full point-in-time database snapshot | Infrastructure / DBA | Halt until backup is verified restorable |
-| **Gate 3** | Execute `db/migration-p3-evaluation-transaction.sql` | DBA / Release Manager | Execute `db/rollback-p3-evaluation-transaction.sql` |
+| **Gate 3** | Execute `supabase/migrations/20260911000300_evaluation_transition_guard.sql` | DBA / Release Manager | Execute `db/rollback-evaluation-transition-guard.sql` |
 | **Gate 4** | Set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` on canary after migration verification | Product / Tech Lead | Disable evaluation writes and execute the approved rollback/recovery procedure; no legacy fallback is assumed |
 | **Gate 5** | Privacy approval for `db/migration-p3-retention.sql` & dry-run | DPO / Security / Legal | Do NOT schedule cron; drop function if needed |
 | **Gate 6** | Git branch merge / deploy to production | Release Manager | Halt deployment; maintain stable baseline |
@@ -280,10 +280,10 @@ Step 2: Verify Evaluation Writes Are Fail-Closed
                  │
                  ▼
 Step 3: Provide Session Approval GUC
-  SET kurabe.p3_rollback_approved = 'true';
+  SET kurabe.p102m3t04_rollback_approved = 'true';
                  │
                  ▼
-Step 4: Execute db/rollback-p3-evaluation-transaction.sql
+Step 4: Execute db/rollback-evaluation-transition-guard.sql
                  │
                  ▼
 Step 5: Verify Candidate Objects Dropped & Data Intact
@@ -295,13 +295,13 @@ Step 5: Verify Candidate Objects Dropped & Data Intact
 3. **Run Rollback Script**:
    ```sql
    -- In administrative psql session:
-   SET kurabe.p3_rollback_approved = 'true';
-   \i db/rollback-p3-evaluation-transaction.sql
+   SET kurabe.p102m3t04_rollback_approved = 'true';
+   \i db/rollback-evaluation-transition-guard.sql
    ```
 4. **Verify Object Absence**:
    ```sql
    SELECT COUNT(*) FROM pg_constraint WHERE conname LIKE 'uq_evaluations%' OR conname LIKE 'chk_evaluation%';
-   SELECT to_regprocedure('public.save_evaluation_round_transaction(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean)');
+   SELECT to_regprocedure('public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid)');
    -- Expected: 0 constraints matching P3 names; NULL for function.
    ```
 5. **Verify Data Intact**:
