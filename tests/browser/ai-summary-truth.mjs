@@ -34,6 +34,10 @@ export async function run() {
   assert.match(card, /Không coi đây là bản tổng hợp đầy đủ/);
   states.push('summary-card-discloses-legacy-or-partial-coverage');
 
+  assert.match(modal, /const escapeHtml/);
+  assert.match(modal, /escapedPeriodName/);
+  states.push('print-period-name-is-escaped');
+
   assert.match(modal, /sourceSummaryCoverage/);
   assert.match(modal, /không đại diện cho phần dữ liệu đã bị rút gọn/i);
   states.push('minutes-draft-discloses-incomplete-source');
@@ -48,7 +52,7 @@ export async function run() {
   assert.match(aiLimit, /const consumed = await consumeAiQuota/);
   states.push('attempt-accounted-callers-terminalize-quota');
 
-  assert.equal(states.length, 6);
+  assert.equal(states.length, 7);
   return {
     real: true,
     passed: true,

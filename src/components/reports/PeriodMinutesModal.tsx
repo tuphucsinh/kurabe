@@ -21,6 +21,9 @@ interface PeriodMinutesModalProps {
   periodId: string;
 }
 
+const escapeHtml = (value: string): string =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [minutes, setMinutes] = useState('');
@@ -110,21 +113,16 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
 
     const printWindow = window.open('', '_blank', 'width=850,height=900');
     if (printWindow) {
-      const escaped = minutes
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const escapedCoverage = coverageLabel
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+      const escaped = escapeHtml(minutes);
+      const escapedCoverage = escapeHtml(coverageLabel);
+      const escapedPeriodName = escapeHtml(periodName);
 
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Biên bản kết thúc kỳ - ${periodName}</title>
+            <title>Biên bản kết thúc kỳ - ${escapedPeriodName}</title>
             <style>
               body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -168,7 +166,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
           <body>
             <div class="header">
               <div class="title">Biên bản kết thúc kỳ đánh giá</div>
-              <div class="meta">Kỳ: ${periodName} • Ngày in: ${new Date().toLocaleDateString('vi-VN')}</div>
+              <div class="meta">Kỳ: ${escapedPeriodName} • Ngày in: ${new Date().toLocaleDateString('vi-VN')}</div>
             </div>
             ${escapedCoverage ? `<div class="coverage">Phạm vi AI: ${escapedCoverage}. Biên bản là dự thảo và không đại diện cho phần dữ liệu đã bị rút gọn.</div>` : ''}
             <div class="content">${escaped}</div>
