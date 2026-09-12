@@ -63,7 +63,7 @@ Changes: idempotent atomic admission reservation per account and declared truste
 Constraints: do not alter live proxy/security env; preserve generic responses and optional legacy login; trusted deployment assumptions stay explicit until separately read back. No broad retention deletion.
 DoD: `node tests/login-admission-action.test.mjs`; `node scripts/verify-release.mjs --suite login-admission`; real concurrent threshold bursts, DB insert/count/RPC failures, duplicate retry, success cleanup, expiry, account/network isolation and forged headers; assert actual admitted attempts never exceed contract; G.
 
-### [ ] [#P102M3T04] Transactional monotonic evaluation graph and exact config-version handshake
+### [x] [#P102M3T04] Transactional monotonic evaluation graph and exact config-version handshake
 ```yaml
 task:
   id: P102M3T04

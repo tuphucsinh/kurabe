@@ -9,7 +9,7 @@
 ## 1. Current State & Artifact Scope
 
 - **Status**: [VERIFIED] All SQL migrations (`db/migration-p3-evaluation-transaction.sql`, `db/migration-p3-retention.sql`) and rollback scripts (`db/rollback-p3-evaluation-transaction.sql`, `db/rollback-p3-retention.sql`) exist solely as local candidate artifacts.
-- **Application Path**: [VERIFIED] `src/actions/evaluation.ts` (lines 138–187) executes the legacy multi-step sequential fallback path whenever `process.env.KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC !== 'true'`.
+- **Application Path**: [VERIFIED] `src/actions/evaluation.ts` requires `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` for evaluation writes; unset/false fails closed and does not execute the legacy multi-step path.
 - **Database State**: [VERIFIED] No candidate DDL has been executed against any remote database.
 - **Retention State**: [VERIFIED] No retention cron job or pg_cron schedule is registered or enabled.
 
@@ -47,7 +47,7 @@ Every stage in this runbook represents an isolated gate. Transitioning to the ne
 | **Gate 1** | Remote read-only queries (duplicates, schema collisions) | DBA / Lead Engineer | Halt if duplicate data or schema conflict exists |
 | **Gate 2** | Full point-in-time database snapshot | Infrastructure / DBA | Halt until backup is verified restorable |
 | **Gate 3** | Execute `db/migration-p3-evaluation-transaction.sql` | DBA / Release Manager | Execute `db/rollback-p3-evaluation-transaction.sql` |
-| **Gate 4** | Set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` on canary | Product / Tech Lead | Revert flag to `false` (instant client-side fallback) |
+| **Gate 4** | Set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` on canary after migration verification | Product / Tech Lead | Disable evaluation writes and execute the approved rollback/recovery procedure; no legacy fallback is assumed |
 | **Gate 5** | Privacy approval for `db/migration-p3-retention.sql` & dry-run | DPO / Security / Legal | Do NOT schedule cron; drop function if needed |
 | **Gate 6** | Git branch merge / deploy to production | Release Manager | Halt deployment; maintain stable baseline |
 
@@ -218,12 +218,12 @@ END $$;
 
 ## 7. Gate 4: Feature-Flag Canary Rollout & Observability
 
-The application code contains dual execution paths in `src/actions/evaluation.ts`:
-- **Default Path (`flag !== 'true'`)**: Multi-step non-atomic sequential client updates.
-- **Canary Path (`flag === 'true'`)**: Atomic `supabase.rpc('save_evaluation_round_transaction', ...)`.
+The application code has an explicit fail-closed gate in `src/actions/evaluation.ts`:
+- **Flag unset/false**: Evaluation save, initialization, and return writes are rejected; no non-atomic fallback runs.
+- **Flag `true`**: The atomic transactional RPC path is used.
 
 ### Rollout Lifecycle:
-1. **Stage A (Baseline)**: Migration applied, `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC` remains unset / `false`. System continues using standard path.
+1. **Stage A (Baseline)**: Migration applied and verified; keep evaluation writes disabled until the canary flag is explicitly enabled.
 2. **Stage B (Canary Enablement)**:
    - Enable `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` in staging or on a single canary app instance.
    - Perform test evaluations for: Draft save, Intermediate round submit (Round 1 → Round 2), and Final approval (Round 3 → Approved).
@@ -232,9 +232,9 @@ The application code contains dual execution paths in `src/actions/evaluation.ts
    - Query `public.evaluations` and `public.evaluation_rounds` to verify `current_round` transitions, score validity, and absence of race conditions.
 4. **Stage D (Full Rollout)**:
    - Set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=true` across production app instances.
-5. **Instant Emergency Deactivation**:
+5. **Emergency Deactivation**:
    - If any anomaly occurs, set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=false` in app environment variables and restart app instances.
-   - Applications immediately fall back to the multi-step client path without requiring database changes or downtime.
+   - Evaluation writes fail closed while the operator follows the approved rollback/recovery gate; the application does not silently fall back to non-atomic writes.
 
 ---
 
@@ -276,7 +276,7 @@ Step 1: Disable Feature Flag
   KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=false
                  │
                  ▼
-Step 2: Verify Application Normal Path Active
+Step 2: Verify Evaluation Writes Are Fail-Closed
                  │
                  ▼
 Step 3: Provide Session Approval GUC
@@ -291,7 +291,7 @@ Step 5: Verify Candidate Objects Dropped & Data Intact
 
 #### Detailed Steps:
 1. **Disable Flag**: Set `KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC=false` in app environment and reload.
-2. **Verify Normal Path**: Verify users can submit evaluations normally via client fallback.
+2. **Verify Fail-Closed State**: Verify evaluation writes are rejected while the candidate RPC/migration is being rolled back; do not assume a legacy client fallback.
 3. **Run Rollback Script**:
    ```sql
    -- In administrative psql session:

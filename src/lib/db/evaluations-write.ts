@@ -7,6 +7,7 @@ import { getEvaluationFlow } from '@/lib/evaluation-workflow';
 import { resolveEvaluatorFromList, loadTeamLeaderIds, EvaluationSubject } from '@/lib/evaluator-resolver';
 import { parseRole } from '@/lib/parsers';
 import { loadAuthoritativeCriteriaForRole } from './criteria-admin';
+import { ensureServerGradeBands } from '@/lib/grade-bands-server';
 import {
   assertEvaluationPeriodActive,
   CLOSED_PERIOD_WRITE_ERROR,
@@ -135,6 +136,8 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
     }
     const evId = (ev as { id: string }).id;
 
+    const gradeSnapshot = await ensureServerGradeBands();
+
     // Tạo round 1 (evaluator_id = null nếu nhân viên chưa được gán subleader)
     const roundRow: TablesInsert<'evaluation_rounds'> = {
       evaluation_id: evId,
@@ -147,6 +150,7 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
       grade: 'Pending',
       status: 'NotStarted',
       criteria_config_version_id: criteriaConfig.versionId,
+      grade_config_version_id: gradeSnapshot.versionId,
       created_at: now,
     };
     const { error: rError } = await supabaseAdmin

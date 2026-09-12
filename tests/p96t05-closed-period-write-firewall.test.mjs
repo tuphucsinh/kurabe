@@ -153,7 +153,7 @@ assert.ok(
 const guardPosInInit = initDraftChunk.indexOf('assertEvaluationPeriodActiveForEvaluation');
 const updatePosInInit = initDraftChunk.indexOf('.update(');
 assert.ok(
-  guardPosInInit !== -1 && guardPosInInit < updatePosInInit,
+  guardPosInInit !== -1 && (updatePosInInit === -1 || guardPosInInit < updatePosInInit),
   'initializeEvaluationRoundDraft guard must precede any .update() calls'
 );
 assert.ok(

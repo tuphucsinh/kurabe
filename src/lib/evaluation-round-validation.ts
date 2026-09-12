@@ -29,6 +29,7 @@ export interface EvaluationValidationOptions {
   maxCommentLength?: number;
   maxPayloadBytes?: number;
   isSubmitOverride?: boolean;
+  renderedRules?: EvaluationCriterionRule[];
 }
 
 export interface CanonicalEvaluationRoundPayload {
@@ -138,6 +139,61 @@ export function validateEvaluationRoundPayload(
     }
 
     criteriaRuleMap.set(critId, points);
+  }
+
+  // 3.5. Rendered rules consistency validation (reject unchanged IDs with changed level values)
+  if (options?.renderedRules) {
+    if (!Array.isArray(options.renderedRules)) {
+      return { ok: false, error: 'Cấu hình tiêu chí đã kết xuất không hợp lệ.' };
+    }
+    const renderedRuleMap = new Map<string, number[]>();
+    for (const rule of options.renderedRules) {
+      if (!rule || typeof rule !== 'object' || typeof rule.id !== 'string' || !rule.id.trim()) {
+        return { ok: false, error: 'Cấu hình tiêu chí đã kết xuất không hợp lệ.' };
+      }
+      const rCritId = rule.id.trim();
+      let rPoints: number[] | null = null;
+      if (Array.isArray(rule.allowedPoints)) {
+        rPoints = rule.allowedPoints;
+      } else if (Array.isArray(rule.levels)) {
+        rPoints = rule.levels.map((l) => l?.points);
+      }
+      if (!rPoints) {
+        return { ok: false, error: 'Cấu hình tiêu chí đã kết xuất không hợp lệ.' };
+      }
+      if (renderedRuleMap.has(rCritId)) {
+        return { ok: false, error: 'Cấu hình tiêu chí đã kết xuất bị trùng lặp.' };
+      }
+      renderedRuleMap.set(rCritId, rPoints);
+    }
+
+    if (renderedRuleMap.size !== criteriaRuleMap.size) {
+      return { ok: false, error: 'Cấu hình tiêu chí đã kết xuất không khớp với cấu hình hiện hành.' };
+    }
+
+    for (const [critId, activePoints] of criteriaRuleMap.entries()) {
+      const renderedPoints = renderedRuleMap.get(critId);
+      if (!renderedPoints) {
+        return {
+          ok: false,
+          error: 'Cấu hình tiêu chí đánh giá đã thay đổi (thiếu tiêu chí). Vui lòng tải lại trang.',
+        };
+      }
+      if (renderedPoints.length !== activePoints.length) {
+        return {
+          ok: false,
+          error: 'Cấu hình mức đánh giá của tiêu chí đã thay đổi. Vui lòng tải lại trang.',
+        };
+      }
+      for (let i = 0; i < activePoints.length; i++) {
+        if (renderedPoints[i] !== activePoints[i]) {
+          return {
+            ok: false,
+            error: 'Cấu hình điểm số của tiêu chí đã thay đổi. Vui lòng tải lại trang.',
+          };
+        }
+      }
+    }
   }
 
   const raw = input as Record<string, unknown>;
@@ -277,4 +333,53 @@ export function validateEvaluationRoundPayload(
       isSubmit,
     },
   };
+}
+
+/**
+ * Validates that rendered criteria rules match active criteria rules exactly.
+ * Fails closed if any criterion ID is missing, has a different level count,
+ * or has changed level points (rejects unchanged IDs with changed level values).
+ */
+export function assertCriteriaRulesMatch(
+  renderedRules: EvaluationCriterionRule[],
+  activeRules: EvaluationCriterionRule[]
+): { ok: boolean; error?: string } {
+  if (!Array.isArray(renderedRules) || !Array.isArray(activeRules)) {
+    return { ok: false, error: 'Danh sách tiêu chí không hợp lệ.' };
+  }
+  const activeMap = new Map<string, number[]>();
+  for (const r of activeRules) {
+    if (!r || typeof r.id !== 'string') continue;
+    const points = Array.isArray(r.allowedPoints)
+      ? r.allowedPoints
+      : (r.levels?.map((l) => l.points) ?? []);
+    activeMap.set(r.id.trim(), points);
+  }
+
+  for (const r of renderedRules) {
+    if (!r || typeof r.id !== 'string') {
+      return { ok: false, error: 'Tiêu chí kết xuất không hợp lệ.' };
+    }
+    const rCritId = r.id.trim();
+    const rPoints = Array.isArray(r.allowedPoints)
+      ? r.allowedPoints
+      : (r.levels?.map((l) => l.points) ?? []);
+    const aPoints = activeMap.get(rCritId);
+    if (!aPoints) {
+      return { ok: false, error: `Tiêu chí ${rCritId} không tồn tại trong cấu hình hiện hành.` };
+    }
+    if (aPoints.length !== rPoints.length) {
+      return { ok: false, error: `Thang điểm của tiêu chí ${rCritId} đã thay đổi số mức điểm.` };
+    }
+    for (let i = 0; i < aPoints.length; i++) {
+      if (aPoints[i] !== rPoints[i]) {
+        return {
+          ok: false,
+          error: `Thang điểm của tiêu chí ${rCritId} đã thay đổi giá trị điểm tại mức ${i + 1}.`,
+        };
+      }
+    }
+  }
+
+  return { ok: true };
 }

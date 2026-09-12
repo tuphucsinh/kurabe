@@ -117,6 +117,9 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     isMounted,
     initMetadata,
     userEditedRef,
+    criteriaConfigVersionId,
+    gradeConfigVersionId,
+    renderedCriteriaRules,
   } = useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user });
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
 
@@ -136,7 +139,15 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
       !autosaveAttemptedKeys.current.has(initMetadata.key) &&
       !autosavePendingKeys.current.has(initMetadata.key);
 
-    if (!shouldAutosave || !currentEvaluationId || initMetadata.round === null || !initMetadata.key) return;
+    if (
+      !shouldAutosave ||
+      !currentEvaluationId ||
+      initMetadata.round === null ||
+      !initMetadata.key ||
+      !criteriaConfigVersionId ||
+      !gradeConfigVersionId ||
+      !Array.isArray(renderedCriteriaRules)
+    ) return;
 
     const autosaveKey = initMetadata.key;
     const autosaveRound = initMetadata.round as RoundNumber;
@@ -152,7 +163,12 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
           scores,
           notes,
           selectedLevelIndexes,
-          comment
+          comment,
+          {
+            criteriaConfigVersionId: criteriaConfigVersionId ?? null,
+            gradeConfigVersionId: gradeConfigVersionId ?? null,
+            renderedRules: renderedCriteriaRules,
+          }
         );
         if (!res.success && res.error) {
           console.error('[FirstOpenAutosave] Failed to initialize draft:', res.error);
@@ -170,9 +186,12 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   }, [
     accessState?.mode,
     comment,
+    criteriaConfigVersionId,
     evaluationId,
+    gradeConfigVersionId,
     initMetadata,
     notes,
+    renderedCriteriaRules,
     scores,
     selectedLevelIndexes,
     toast,
@@ -296,7 +315,12 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
         notes,
         selectedLevelIndexes,
         comment,
-        isSubmit
+        isSubmit,
+        {
+          criteriaConfigVersionId: criteriaConfigVersionId ?? null,
+          gradeConfigVersionId: gradeConfigVersionId ?? null,
+          renderedRules: renderedCriteriaRules,
+        }
       );
 
       if (res.success) {

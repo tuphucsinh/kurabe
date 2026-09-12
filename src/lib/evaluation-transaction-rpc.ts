@@ -11,7 +11,7 @@ export interface EvaluationRoundTransactionRpcArgs {
   p_comment: string;
   p_total_score: number;
   p_grade: string;
-  p_is_submit: boolean;
+  p_is_submit: boolean | null;
   p_submitted_at: string;
   p_next_round: number | null;
   p_next_evaluator_id: string | null;
@@ -19,6 +19,14 @@ export interface EvaluationRoundTransactionRpcArgs {
   p_next_status: string | null;
   p_is_final: boolean;
   p_criteria_config_version_id: string;
+  p_grade_config_version_id: string | null;
+}
+
+export interface EvaluationRoundTransactionRpcResult {
+  round_id: string;
+  evaluation_id: string;
+  next_round_id: string | null;
+  final_status: string;
 }
 
 export interface BuildEvaluationRoundTransactionRpcInput {
@@ -30,7 +38,7 @@ export interface BuildEvaluationRoundTransactionRpcInput {
     notes: Record<string, string>;
     selectedLevelIndexes: SelectedLevelIndexes;
     comment: string;
-    isSubmit: boolean;
+    isSubmit: boolean | null;
   };
   totalScore: number;
   grade: Grade;
@@ -38,6 +46,21 @@ export interface BuildEvaluationRoundTransactionRpcInput {
   nextStep?: EvaluationNextStep | null;
   nextEvaluator?: { id: string; role: Role } | null;
   criteriaConfigVersionId: string;
+  gradeConfigVersionId?: string | null;
+}
+
+export interface EvaluationRoundReturnRpcArgs {
+  p_evaluation_id: string;
+  p_round: number;
+  p_actor_id: string;
+  p_reason: string;
+}
+
+export interface BuildEvaluationRoundReturnRpcInput {
+  evaluationId: string;
+  round: RoundNumber;
+  actorId: string;
+  reason: string;
 }
 
 /**
@@ -58,12 +81,13 @@ export function buildEvaluationRoundTransactionRpcArgs(
     nextStep,
     nextEvaluator,
     criteriaConfigVersionId,
+    gradeConfigVersionId,
   } = input;
 
   const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
   const now = submittedAt || new Date().toISOString();
 
-  const isSubmit = Boolean(canonical.isSubmit);
+  const isSubmit = canonical.isSubmit === true;
   const isFinal = Boolean(isSubmit && nextStep?.isFinal);
 
   // Clone scores to avoid external mutation
@@ -83,7 +107,7 @@ export function buildEvaluationRoundTransactionRpcArgs(
     p_comment: canonical.comment ?? '',
     p_total_score: totalScore,
     p_grade: grade,
-    p_is_submit: isSubmit,
+    p_is_submit: canonical.isSubmit,
     p_submitted_at: now,
     p_next_round: isSubmit && !isFinal && nextStep ? nextStep.round : null,
     p_next_evaluator_id: isSubmit && !isFinal && nextEvaluator ? nextEvaluator.id : null,
@@ -91,5 +115,35 @@ export function buildEvaluationRoundTransactionRpcArgs(
     p_next_status: isSubmit && nextStep ? nextStep.status : null,
     p_is_final: isFinal,
     p_criteria_config_version_id: criteriaConfigVersionId,
+    p_grade_config_version_id: gradeConfigVersionId ?? null,
+  };
+}
+
+/**
+ * Pure typed builder mapping return evaluation round parameters to SQL RPC parameter names.
+ */
+export function buildEvaluationRoundReturnRpcArgs(
+  input: BuildEvaluationRoundReturnRpcInput
+): EvaluationRoundReturnRpcArgs {
+  const { evaluationId, round, actorId, reason } = input;
+  if (!evaluationId || typeof evaluationId !== 'string') {
+    throw new Error('INVALID_ARGUMENT: evaluationId is required');
+  }
+  if (!round || round < 1 || round > 3) {
+    throw new Error('INVALID_ARGUMENT: round must be between 1 and 3');
+  }
+  if (!actorId || typeof actorId !== 'string') {
+    throw new Error('INVALID_ARGUMENT: actorId is required');
+  }
+  const trimmedReason = (reason ?? '').trim();
+  if (!trimmedReason) {
+    throw new Error('Lý do trả lại không được để trống');
+  }
+
+  return {
+    p_evaluation_id: evaluationId,
+    p_round: round,
+    p_actor_id: actorId,
+    p_reason: trimmedReason,
   };
 }

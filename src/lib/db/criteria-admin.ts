@@ -67,3 +67,17 @@ export async function loadAuthoritativeCriteriaForRole(role: Role): Promise<Load
     return { success: false, error: toClientError(error, 'Lỗi không xác định khi tải tiêu chí đánh giá.') };
   }
 }
+
+/**
+ * Verifies that the client's rendered criteria config version matches the active version.
+ */
+export async function verifyActiveCriteriaConfigVersion(expectedVersionId: string): Promise<boolean> {
+  if (!expectedVersionId || typeof expectedVersionId !== 'string') return false;
+  try {
+    const { data, error } = await supabaseAdmin.rpc('get_active_criteria_config');
+    if (error || !isActiveConfig(data)) return false;
+    return data.version_id === expectedVersionId;
+  } catch {
+    return false;
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { User, Evaluation, EvaluationRound, CriteriaGroup, EvaluationAccessState, RoundNumber } from '@/types';
 import { 
   getCriteriaForRoleAction, 
@@ -339,6 +339,20 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     setIsMounted(true);
   }, []);
 
+  const criteriaConfigVersionId = criteriaGroups[0]?.configVersionId ?? null;
+  const gradeConfigVersionId = gradeBands?.versionId ?? null;
+  const renderedCriteriaRules = useMemo(() => {
+    return criteriaGroups.flatMap((g) => g.criteria).map((c) => ({
+      id: c.id,
+      allowedPoints: c.levels.map((l) => l.points),
+      levels: c.levels.map((l) => ({
+        points: l.points,
+        label: l.label,
+        description: l.description,
+      })),
+    }));
+  }, [criteriaGroups]);
+
   return {
     state,
     dispatch: wrappedDispatch,
@@ -358,5 +372,8 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     firstOpenEligible: initMetadata.firstOpenEligible,
     userEditedRef,
     isUserEdited: () => userEditedRef.current,
+    criteriaConfigVersionId,
+    gradeConfigVersionId,
+    renderedCriteriaRules,
   };
 }

@@ -123,3 +123,15 @@ export interface CriteriaGroup {
   configVersion?: number;
   configVersionId?: string;
 }
+
+export interface EvaluationConfigVersions {
+  criteriaConfigVersionId?: string | null;
+  gradeConfigVersionId?: string | null;
+}
+
+export interface EvaluationTransitionResult {
+  roundId: string;
+  evaluationId: string;
+  nextRoundId: string | null;
+  finalStatus: string;
+}

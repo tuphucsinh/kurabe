@@ -1167,6 +1167,46 @@ export type Database = {
         }
         Returns: Json
       }
+      save_evaluation_round_transaction_active_only: {
+        Args: {
+          p_evaluation_id: string
+          p_round: number
+          p_actor_id: string
+          p_scores: Json
+          p_notes: Json
+          p_comment: string
+          p_total_score: number
+          p_grade: string
+          p_is_submit: boolean | null
+          p_submitted_at?: string
+          p_next_round?: number | null
+          p_next_evaluator_id?: string | null
+          p_next_evaluator_role?: string | null
+          p_next_status?: string | null
+          p_is_final?: boolean
+          p_criteria_config_version_id?: string | null
+          p_grade_config_version_id?: string | null
+        }
+        Returns: {
+          round_id: string
+          evaluation_id: string
+          next_round_id: string | null
+          final_status: string
+        }[]
+      }
+      return_evaluation_round_transaction: {
+        Args: {
+          p_evaluation_id: string
+          p_round: number
+          p_actor_id: string
+          p_reason: string
+        }
+        Returns: {
+          evaluation_id: string
+          restored_round: number
+          restored_status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

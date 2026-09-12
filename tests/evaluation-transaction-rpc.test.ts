@@ -10,8 +10,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
   buildEvaluationRoundTransactionRpcArgs,
+  buildEvaluationRoundReturnRpcArgs,
   BuildEvaluationRoundTransactionRpcInput,
+  BuildEvaluationRoundReturnRpcInput,
   EvaluationRoundTransactionRpcArgs,
+  EvaluationRoundReturnRpcArgs,
 } from '../src/lib/evaluation-transaction-rpc';
 
 const PROJECT_ROOT = process.cwd();
@@ -36,6 +39,7 @@ const PROJECT_ROOT = process.cwd();
     totalScore: 25,
     grade: 'B',
     criteriaConfigVersionId: 'criteria-version-1111',
+    gradeConfigVersionId: 'grade-version-1111',
     submittedAt: '2026-08-24T12:00:00.000Z',
     nextStep: null,
     nextEvaluator: null,
@@ -52,6 +56,7 @@ const PROJECT_ROOT = process.cwd();
   assert.equal(args.p_total_score, 25);
   assert.equal(args.p_grade, 'B');
   assert.equal(args.p_criteria_config_version_id, 'criteria-version-1111');
+  assert.equal(args.p_grade_config_version_id, 'grade-version-1111');
   assert.equal(args.p_is_submit, false);
   assert.equal(args.p_submitted_at, '2026-08-24T12:00:00.000Z');
 
@@ -87,6 +92,7 @@ const PROJECT_ROOT = process.cwd();
     totalScore: 40,
     grade: 'A',
     criteriaConfigVersionId: 'criteria-version-2222',
+    gradeConfigVersionId: 'grade-version-2222',
     submittedAt: '2026-08-24T13:00:00.000Z',
     nextStep: {
       round: 2,
@@ -108,6 +114,8 @@ const PROJECT_ROOT = process.cwd();
   assert.equal(args.p_next_evaluator_id, 'user-uuid-leader');
   assert.equal(args.p_next_evaluator_role, 'Leader');
   assert.equal(args.p_next_status, 'Submitted');
+  assert.equal(args.p_criteria_config_version_id, 'criteria-version-2222');
+  assert.equal(args.p_grade_config_version_id, 'grade-version-2222');
 }
 
 // --- 1.3 Final Submit (e.g. Round 3 -> Approved) ---
@@ -126,6 +134,7 @@ const PROJECT_ROOT = process.cwd();
     totalScore: 50,
     grade: 'S',
     criteriaConfigVersionId: 'criteria-version-3333',
+    gradeConfigVersionId: 'grade-version-3333',
     submittedAt: '2026-08-24T14:00:00.000Z',
     nextStep: {
       round: 3,
@@ -145,6 +154,8 @@ const PROJECT_ROOT = process.cwd();
   assert.equal(args.p_next_status, 'Approved', 'Final submit next status must be Approved');
   assert.equal(args.p_grade, 'S');
   assert.equal(args.p_total_score, 50);
+  assert.equal(args.p_criteria_config_version_id, 'criteria-version-3333');
+  assert.equal(args.p_grade_config_version_id, 'grade-version-3333');
 }
 
 // --- 1.4 Input Immutability and Non-Numeric Sanitization ---
@@ -171,6 +182,34 @@ const PROJECT_ROOT = process.cwd();
   rawScores.crit_1 = 999;
   assert.equal(args.p_scores.crit_1, 10, 'Scores must be cloned to prevent external mutation');
   assert.equal('crit_invalid' in args.p_scores, false, 'Non-finite numeric scores must be omitted');
+  assert.equal(args.p_grade_config_version_id, null, 'Default grade config version must be null');
+}
+
+// --- 1.5 Return RPC Args Builder Contract ---
+{
+  const returnInput: BuildEvaluationRoundReturnRpcInput = {
+    evaluationId: 'eval-uuid-return-1',
+    round: 2,
+    actorId: 'actor-leader-1',
+    reason: '   Vui lòng chỉnh sửa lại điểm chất lượng   ',
+  };
+
+  const returnArgs: EvaluationRoundReturnRpcArgs = buildEvaluationRoundReturnRpcArgs(returnInput);
+
+  assert.equal(returnArgs.p_evaluation_id, 'eval-uuid-return-1');
+  assert.equal(returnArgs.p_round, 2);
+  assert.equal(returnArgs.p_actor_id, 'actor-leader-1');
+  assert.equal(returnArgs.p_reason, 'Vui lòng chỉnh sửa lại điểm chất lượng');
+
+  // Must reject empty or whitespace-only reason fail-closed
+  assert.throws(
+    () => buildEvaluationRoundReturnRpcArgs({ ...returnInput, reason: '   ' }),
+    /Lý do trả lại không được để trống/
+  );
+  assert.throws(
+    () => buildEvaluationRoundReturnRpcArgs({ ...returnInput, reason: '' }),
+    /Lý do trả lại không được để trống/
+  );
 }
 
 // ============================================================
@@ -391,6 +430,57 @@ const retentionSql = fs.readFileSync(RETENTION_MIGRATION_PATH, 'utf-8');
     false,
     'Retention migration candidate must NOT register cron/pg_cron jobs'
   );
+}
+
+// --- 2.3 Evaluation Transition Guard Migration Safety Markers & Signatures (P102M3T04) ---
+{
+  const GUARD_MIGRATION_PATH = path.join(
+    PROJECT_ROOT,
+    'supabase',
+    'migrations',
+    '20260911000300_evaluation_transition_guard.sql'
+  );
+  const GUARD_ROLLBACK_PATH = path.join(
+    PROJECT_ROOT,
+    'db',
+    'rollback-evaluation-transition-guard.sql'
+  );
+
+  assert.equal(fs.existsSync(GUARD_MIGRATION_PATH), true, '20260911000300_evaluation_transition_guard.sql must exist');
+  assert.equal(fs.existsSync(GUARD_ROLLBACK_PATH), true, 'rollback-evaluation-transition-guard.sql must exist');
+
+  const guardSql = fs.readFileSync(GUARD_MIGRATION_PATH, 'utf-8');
+  const rollbackSql = fs.readFileSync(GUARD_ROLLBACK_PATH, 'utf-8');
+
+  // Candidate only markers
+  assert.equal(guardSql.includes('CANDIDATE ONLY — NOT APPLIED'), true);
+  assert.equal(rollbackSql.includes('CANDIDATE ONLY — NOT APPLIED'), true);
+
+  // Functions and trigger definitions
+  assert.equal(guardSql.includes('FUNCTION public.guard_evaluation_transitions()'), true);
+  assert.equal(guardSql.includes('TRIGGER guard_evaluation_transitions'), true);
+  assert.equal(guardSql.includes('FUNCTION public.return_evaluation_round_transaction('), true);
+  assert.equal(guardSql.includes('FUNCTION public.save_evaluation_round_transaction_active_only('), true);
+
+  // Security & provenance
+  assert.equal(guardSql.includes('SECURITY DEFINER'), true);
+  assert.equal(guardSql.includes('SET search_path = public'), true);
+  assert.equal(guardSql.includes('kurabe:p102m3t04:candidate:v1:function:guard_evaluation_transitions'), true);
+  assert.equal(guardSql.includes('kurabe:p102m3t04:candidate:v1:trigger:guard_evaluation_transitions'), true);
+  assert.equal(guardSql.includes('kurabe:p102m3t04:candidate:v1:function:return_evaluation_round_transaction'), true);
+  assert.equal(guardSql.includes('kurabe:p102m3t04:candidate:v1:function:save_evaluation_round_transaction_active_only'), true);
+
+  // 17th parameter and version pinning
+  assert.equal(guardSql.includes('p_criteria_config_version_id uuid'), true);
+  assert.equal(guardSql.includes('p_grade_config_version_id uuid'), true);
+
+  // Rollback safety and approval checks
+  assert.equal(rollbackSql.includes('kurabe.p102m3t04_rollback_approved'), true);
+  assert.equal(rollbackSql.includes('P102M3T04_ROLLBACK_UNAPPROVED'), true);
+  assert.equal(rollbackSql.includes('DROP TRIGGER IF EXISTS guard_evaluation_transitions'), true);
+  assert.equal(rollbackSql.includes('DROP FUNCTION IF EXISTS public.guard_evaluation_transitions()'), true);
+  assert.equal(rollbackSql.includes('DROP FUNCTION IF EXISTS public.return_evaluation_round_transaction'), true);
+  assert.equal(rollbackSql.includes('DROP FUNCTION IF EXISTS public.save_evaluation_round_transaction_active_only'), true);
 }
 
 console.log('evaluation-transaction-rpc tests: ALL PASS');
