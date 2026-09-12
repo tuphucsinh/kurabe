@@ -186,11 +186,14 @@ export type PersonnelTransactionResult = {
  */
 export async function applyPersonnelTransaction(
   users: PersonnelTransactionUserInput[],
-  team: PersonnelTransactionTeamInput | null = null
+  team: PersonnelTransactionTeamInput | null,
+  actorId: string
 ): Promise<{ data: PersonnelTransactionResult | null; error: Error | null }> {
+  if (!actorId) return { data: null, error: new Error('Authenticated personnel actor is required.') };
   const { data, error } = await supabaseAdmin.rpc('apply_personnel_transaction', {
     p_users: users as unknown as Json,
     p_team: team as unknown as Json | null,
+    p_actor_id: actorId,
   });
 
   if (error) return { data: null, error: new Error(error.message) };

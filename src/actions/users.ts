@@ -62,11 +62,14 @@ export async function upsertUserAction(
     }
     user.teamId = leaderTeamId;
     if (user.id) {
-      const { data: existingUser } = await supabaseAdmin
+      const { data: existingUser, error: existingUserError } = await supabaseAdmin
         .from('users')
         .select('id, team_id, role')
         .eq('id', user.id)
         .maybeSingle();
+      if (existingUserError) {
+        return { success: false, error: toClientError(existingUserError, 'Lỗi kiểm tra phạm vi nhân viên hiện tại.') };
+      }
       if (existingUser) {
         if (existingUser.team_id !== leaderTeamId) {
           return { success: false, error: 'Bạn chỉ được sửa nhân viên trong nhóm mình.' };
@@ -92,7 +95,7 @@ export async function upsertUserAction(
     }
 
     const payload = buildPersonnelUserPayload(user, userId, isNewUser);
-    const result = await applyPersonnelTransaction([payload]);
+    const result = await applyPersonnelTransaction([payload], null, auth.user.id);
     if (result.error || !result.data || result.data.users.length !== 1) {
       return { success: false, error: toClientError(result.error, 'Lỗi lưu nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
     }
@@ -136,7 +139,7 @@ export async function upsertUsersAction(
       };
     });
 
-    const result = await applyPersonnelTransaction(prepared.map((item) => item.payload));
+    const result = await applyPersonnelTransaction(prepared.map((item) => item.payload), null, auth.user.id);
     if (result.error || !result.data || result.data.users.length !== prepared.length) {
       return { success: false, error: toClientError(result.error, 'Lỗi lưu hàng loạt nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
     }
@@ -163,18 +166,9 @@ export async function softDeleteUserAction(id: string): Promise<{ success: boole
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select('id');
-
-    if (error) {
-      return { success: false, error: toClientError(error, 'Lỗi xóa nhân viên. Vui lòng thử lại.') };
-    }
-
-    if (!data || data.length === 0) {
-      return { success: false, error: 'Không tìm thấy nhân viên' };
+    const result = await applyPersonnelTransaction([{ id, is_active: false }], null, auth.user.id);
+    if (result.error || !result.data || result.data.users.length !== 1) {
+      return { success: false, error: toClientError(result.error, 'Lỗi xóa nhân viên. Quan hệ nhân sự chưa hợp lệ nên không có thay đổi nào được giữ lại.') };
     }
 
     revalidateUserPaths();

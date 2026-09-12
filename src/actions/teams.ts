@@ -77,7 +77,7 @@ export async function upsertTeamAction(
     // inside apply_personnel_transaction, so user/team changes cannot split.
     // The old error branch `if (userUpdateError)` is likewise represented by the RPC error result.
 
-    const result = await applyPersonnelTransaction([], dbTeam);
+    const result = await applyPersonnelTransaction([], dbTeam, auth.user.id);
     if (result.error || !result.data?.team) {
       return { success: false, error: toClientError(result.error, 'Lỗi khi lưu nhóm và cập nhật quan hệ nhân sự. Không có thay đổi nào được giữ lại.') };
     }
@@ -112,7 +112,7 @@ export async function softDeleteTeamAction(
   if (auth.error !== null) return { success: false, error: auth.error };
 
   try {
-    const result = await applyPersonnelTransaction([], { id, is_active: false });
+    const result = await applyPersonnelTransaction([], { id, is_active: false }, auth.user.id);
     if (result.error || !result.data?.team) {
       return { success: false, error: toClientError(result.error, 'Lỗi khi xóa nhóm. Quan hệ nhân sự chưa hợp lệ nên không có thay đổi nào được giữ lại.') };
     }

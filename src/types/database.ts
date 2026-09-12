@@ -1142,6 +1142,7 @@ export type Database = {
         Args: {
           p_users: Json
           p_team?: Json | null
+          p_actor_id: string
         }
         Returns: Json
       }
