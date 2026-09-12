@@ -1,5 +1,6 @@
 import 'server-only';
 
+import crypto from 'node:crypto';
 import net from 'node:net';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
@@ -8,6 +9,7 @@ export const MAX_NETWORK_ATTEMPTS = 25; // Tối đa 25 lần thử thất bại
 export const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 phút
 export const LOGIN_ATTEMPT_WINDOW_SECONDS = 15 * 60; // 900 giây
 export const LOGIN_ATTEMPT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 ngày retention
+export const DEFAULT_RESERVATION_TIMEOUT_SECONDS = 30; // 30 giây timeout cho admission reservation
 
 export const THROTTLED_ERROR_MESSAGE =
   'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.';
@@ -26,6 +28,11 @@ export interface TrustedProxyConfig {
    * Được cấu hình qua biến môi trường KURABE_TRUSTED_PROXY_HOPS.
    */
   trustedHops?: number;
+  /**
+   * Địa chỉ IP trực tiếp của kết nối peer kết nối đến máy chủ (nếu runtime cung cấp).
+   * Khi được cung cấp, các header forwarded chỉ được xem xét nếu peer này là proxy tin cậy.
+   */
+  immediatePeer?: string;
 }
 
 export interface RateLimitResult {
@@ -35,6 +42,7 @@ export interface RateLimitResult {
   retryAfterSeconds?: number;
   accountAttempts?: number;
   ipAttempts?: number;
+  requestId?: string;
 }
 
 export interface RecordAttemptResult {
@@ -46,10 +54,22 @@ export interface RecordAttemptResult {
   ipAttempts?: number;
 }
 
+export interface FinalizeAdmissionResult {
+  finalized: boolean;
+  allowed: boolean;
+  error?: string;
+  lockedBy?: string | null;
+  accountAttempts?: number;
+  ipAttempts?: number;
+  retryAfterSeconds?: number;
+}
+
 export interface RateLimitOptions {
   windowSeconds?: number;
   maxAccountAttempts?: number;
   maxNetworkAttempts?: number;
+  requestId?: string;
+  reservationTimeoutSeconds?: number;
 }
 
 // ============================================================
@@ -125,10 +145,30 @@ export function normalizeIp(ip: string): string {
 export function parseTrustedProxies(envValue?: string): string[] {
   const raw = envValue !== undefined ? envValue : process.env.KURABE_TRUSTED_PROXIES;
   if (!raw || typeof raw !== 'string') return [];
-  return raw
+  const entries = raw
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+  // A partially valid allow-list is ambiguous: silently retaining the valid
+  // entries would make a deployment typo look like an approved trust policy.
+  // Fail closed for the whole configuration instead.
+  if (entries.some((entry) => !['loopback', 'private'].includes(entry) && !isValidIp(entry))) {
+    return [];
+  }
+  return [...new Set(entries)];
+}
+
+/**
+ * Kiểm tra xem một peer IP có nằm trong danh sách proxy tin cậy không.
+ */
+export function isPeerTrusted(peer: string, trustedProxies: string[]): boolean {
+  if (!peer || !isValidIp(peer)) return false;
+  const clean = peer.trim().toLowerCase();
+  return (
+    trustedProxies.includes(clean) ||
+    (trustedProxies.includes('loopback') && isLoopbackIp(clean)) ||
+    (trustedProxies.includes('private') && isPrivateIp(clean))
+  );
 }
 
 type HeaderInput =
@@ -164,16 +204,19 @@ function extractHeaderValue(headers: HeaderInput, name: string): string | null {
 
 /**
  * Phân giải IP mạng máy khách theo hợp đồng proxy tin cậy tường minh.
- * Không giả định Next.js cung cấp raw TCP socket address (vì server actions không có socket).
  *
- * Nguyên tắc:
- * 1. Nếu có cấu hình KURABE_TRUSTED_PROXY_HOPS: lấy IP ở vị trí `hops` tính từ phải sang trái.
- * 2. Nếu có cấu hình KURABE_TRUSTED_PROXIES: duyệt từ phải sang trái, bỏ qua các proxy tin cậy;
- *    IP đầu tiên không thuộc danh sách tin cậy chính là IP thực của client.
- * 3. Nếu không có cấu hình proxy tin cậy (mặc định tương thích an toàn):
- *    - Nếu có X-Forwarded-For: lấy IP ngoài cùng bên phải (hop gần server nhất do proxy kế tiếp thêm vào),
- *      tránh tin tưởng phần tử đầu tiên do client gửi tự do.
- *    - Fallback về X-Real-IP hoặc loopback.
+ * Hợp đồng triển khai proxy:
+ * 1. Các header chuyển tiếp (X-Forwarded-For, CF-Connecting-IP, X-Real-IP) CHỈ được tin cậy
+ *    khi hợp đồng proxy được chứng minh rõ ràng thông qua:
+ *    - KURABE_TRUSTED_PROXIES (danh sách IP hoặc 'loopback'/'private')
+ *    - KURABE_TRUSTED_PROXY_HOPS (số hop nguyên dương)
+ *    - immediatePeer được cấu hình và nằm trong danh sách proxy tin cậy.
+ * 2. Cấu hình mơ hồ hoặc sai định dạng (ví dụ: hops <= 0, hops không phải số nguyên,
+ *    hoặc số hop trong header ít hơn số hop được cấu hình) PHẢI fail closed:
+ *    không tin cậy header chuyển tiếp và trả về fallback an toàn (isTrustedProxy = false).
+ * 3. Mạng không tin cậy (khi không có cấu hình proxy tin cậy):
+ *    KHÔNG CHO PHÉP client tự gửi cf-/forwarded headers để mạo danh danh tính tin cậy.
+ *    Trả về fallback cục bộ an toàn với isTrustedProxy = false.
  */
 export function resolveClientNetwork(
   headers: HeaderInput,
@@ -183,107 +226,166 @@ export function resolveClientNetwork(
   const xRealIp = extractHeaderValue(headers, 'x-real-ip');
   const cfConnectingIp = extractHeaderValue(headers, 'cf-connecting-ip');
 
+  const rawImmediatePeer = config?.immediatePeer?.trim();
+  const immediatePeer = rawImmediatePeer && isValidIp(rawImmediatePeer) ? normalizeIp(rawImmediatePeer) : null;
   const trustedProxies = config?.trustedProxies ?? parseTrustedProxies();
-  const trustedHopsEnv = process.env.KURABE_TRUSTED_PROXY_HOPS;
-  const configuredHops =
-    config?.trustedHops ?? (trustedHopsEnv ? parseInt(trustedHopsEnv, 10) : undefined);
+  const rawHops =
+    config?.trustedHops !== undefined ? config.trustedHops : process.env.KURABE_TRUSTED_PROXY_HOPS;
+
+  let configuredHops: number | null = null;
+  const hasInvalidTrustedProxyConfig = trustedProxies.some(
+    (entry) => !['loopback', 'private'].includes(entry) && !isValidIp(entry)
+  );
+  if (hasInvalidTrustedProxyConfig) {
+    const fallback = immediatePeer ?? '127.0.0.1';
+    return { clientIp: fallback, isTrustedProxy: false, proxyChain: [fallback] };
+  }
+  if (rawHops !== undefined && rawHops !== null && rawHops !== '') {
+    const parsed = typeof rawHops === 'number' ? rawHops : Number(rawHops);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      // Cấu hình sai định dạng -> fail closed!
+      const fallback = immediatePeer ?? '127.0.0.1';
+      return { clientIp: fallback, isTrustedProxy: false, proxyChain: [fallback] };
+    }
+    configuredHops = parsed;
+  }
+
+  const hasTrustedProxiesConfig = trustedProxies.length > 0;
+  const hasTrustedHopsConfig = configuredHops !== null;
+  const hasProxyTrustConfig = hasTrustedProxiesConfig || hasTrustedHopsConfig;
+
+  // Safe untrusted-network behavior:
+  // Headers alone never establish the immediate peer. Even a configured hop
+  // count or proxy list must be paired with a runtime-supplied peer address.
+  if (!hasProxyTrustConfig || !immediatePeer || (hasTrustedHopsConfig && !hasTrustedProxiesConfig)) {
+    const fallback = immediatePeer ?? '127.0.0.1';
+    return { clientIp: fallback, isTrustedProxy: false, proxyChain: [fallback] };
+  }
+
+  // Nếu immediate peer được cung cấp và danh sách proxy tin cậy được cấu hình,
+  // kiểm tra xem immediate peer có được tin cậy không.
+  if (immediatePeer && hasTrustedProxiesConfig && !isPeerTrusted(immediatePeer, trustedProxies)) {
+    return { clientIp: immediatePeer, isTrustedProxy: false, proxyChain: [immediatePeer] };
+  }
+
+  if ((cfConnectingIp && !isValidIp(cfConnectingIp)) || (xRealIp && !isValidIp(xRealIp))) {
+    const fallback = immediatePeer ?? '127.0.0.1';
+    return { clientIp: fallback, isTrustedProxy: false, proxyChain: [fallback] };
+  }
 
   if (xForwardedFor) {
-    const hops = xForwardedFor
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    const hops = xForwardedFor.split(',').map((s) => s.trim());
 
     if (hops.length > 0) {
-      // 1. Nếu cấu hình số hop tin cậy cụ thể
-      if (configuredHops && Number.isInteger(configuredHops) && configuredHops > 0) {
-        const targetIndex = Math.max(0, hops.length - configuredHops);
+      if (hops.some((hop) => !isValidIp(hop))) {
+        const fallback = immediatePeer ?? '127.0.0.1';
+        return { clientIp: fallback, isTrustedProxy: false, proxyChain: hops };
+      }
+
+      // 1. Cấu hình số hop tin cậy cụ thể
+      if (hasTrustedHopsConfig && configuredHops !== null) {
+        if (hops.length < configuredHops) {
+          // Chuỗi ngắn hơn số hop cấu hình: chuỗi không hợp lệ -> fail closed!
+          const fallback = immediatePeer ?? '127.0.0.1';
+          return { clientIp: fallback, isTrustedProxy: false, proxyChain: hops };
+        }
+        const targetIndex = hops.length - configuredHops;
         const selectedIp = normalizeIp(hops[targetIndex]);
         return { clientIp: selectedIp, isTrustedProxy: true, proxyChain: hops };
       }
 
-      // 2. Nếu cấu hình danh sách proxy tin cậy (IP hoặc 'loopback' / 'private')
-      if (trustedProxies.length > 0) {
-        let selectedIp = hops[0];
-        let foundUntrusted = false;
+      // 2. Cấu hình danh sách proxy tin cậy
+      if (hasTrustedProxiesConfig) {
+        const rightmostHop = hops[hops.length - 1];
+        const immediateToCheck = immediatePeer ?? rightmostHop;
+
+        if (!isPeerTrusted(immediateToCheck, trustedProxies)) {
+          // Peer kết nối trực tiếp không nằm trong danh sách tin cậy -> fail closed!
+          return {
+            clientIp: normalizeIp(immediateToCheck),
+            isTrustedProxy: false,
+            proxyChain: hops,
+          };
+        }
+
+        let selectedIp: string | null = null;
 
         for (let i = hops.length - 1; i >= 0; i--) {
           const hop = hops[i];
-          const hopLower = hop.toLowerCase();
-
-          const isTrusted =
-            trustedProxies.includes(hopLower) ||
-            (trustedProxies.includes('loopback') && isLoopbackIp(hop)) ||
-            (trustedProxies.includes('private') && isPrivateIp(hop));
-
-          if (!isTrusted) {
+          if (!isPeerTrusted(hop, trustedProxies)) {
             selectedIp = hop;
-            foundUntrusted = true;
             break;
           }
         }
 
+        if (!selectedIp) {
+          return { clientIp: immediatePeer ?? '127.0.0.1', isTrustedProxy: false, proxyChain: hops };
+        }
+
         return {
-          clientIp: normalizeIp(selectedIp),
-          isTrustedProxy: foundUntrusted,
+          clientIp: selectedIp,
+          isTrustedProxy: true,
           proxyChain: hops,
         };
       }
-
-      // 3. Mặc định tương thích (không có cấu hình proxy tường minh):
-      // Lấy hop ngoài cùng bên phải (hop gần server nhất), tránh nhận prefix giả mạo từ client.
-      const fallbackIp = hops[hops.length - 1];
-      return {
-        clientIp: normalizeIp(fallbackIp),
-        isTrustedProxy: false,
-        proxyChain: hops,
-      };
     }
   }
 
+  // Cloudflare Connecting-IP: chỉ tin cậy khi có cấu hình proxy tin cậy hợp lệ
   if (cfConnectingIp && isValidIp(cfConnectingIp)) {
+    if (!hasTrustedProxiesConfig || !immediatePeer || !isPeerTrusted(immediatePeer, trustedProxies)) {
+      return { clientIp: immediatePeer, isTrustedProxy: false, proxyChain: [immediatePeer] };
+    }
     return { clientIp: normalizeIp(cfConnectingIp), isTrustedProxy: true, proxyChain: [cfConnectingIp] };
   }
 
+  // X-Real-IP: chỉ tin cậy khi có cấu hình proxy tin cậy hợp lệ
   if (xRealIp && isValidIp(xRealIp)) {
-    return { clientIp: normalizeIp(xRealIp), isTrustedProxy: false, proxyChain: [xRealIp] };
+    if (!hasTrustedProxiesConfig || !immediatePeer || !isPeerTrusted(immediatePeer, trustedProxies)) {
+      return { clientIp: immediatePeer, isTrustedProxy: false, proxyChain: [immediatePeer] };
+    }
+    return { clientIp: normalizeIp(xRealIp), isTrustedProxy: true, proxyChain: [xRealIp] };
   }
 
-  return { clientIp: '127.0.0.1', isTrustedProxy: false, proxyChain: ['127.0.0.1'] };
+  const defaultFallback = immediatePeer ?? '127.0.0.1';
+  return { clientIp: defaultFallback, isTrustedProxy: false, proxyChain: [defaultFallback] };
 }
 
 /**
  * Trả về địa chỉ IP thực đã được làm sạch và xác thực.
  */
-export function resolveClientIp(headers: HeaderInput): string {
-  return resolveClientNetwork(headers).clientIp;
+export function resolveClientIp(headers: HeaderInput, config?: TrustedProxyConfig): string {
+  return resolveClientNetwork(headers, config).clientIp;
 }
 
 // ============================================================
-// 2. ATOMIC RATE LIMITING & FAIL-SAFE DB ACCESS
+// 2. ATOMIC ADMISSION RESERVATION & FAIL-SAFE DB ACCESS
 // ============================================================
 
 /**
- * Kiểm tra giới hạn tần suất đăng nhập trước khi xác thực mật khẩu.
- * Fail-safe: nếu database gặp lỗi, trả về lỗi chung an toàn thay vì fail-open.
+ * Đặt chỗ cho một lượt đăng nhập nguyên tử theo tài khoản và mạng tin cậy (F05).
+ * Giới hạn số lần thử đồng thời ngay trước khi thực thi xác thực mật khẩu.
+ * Fail-safe: lỗi RPC hoặc lỗi database luôn fail-closed an toàn, không fallback truy vấn bảng.
  */
-export async function checkLoginRateLimit(
+export async function acquireLoginAdmission(
   employeeCode: string,
   ip: string,
   options?: RateLimitOptions
 ): Promise<RateLimitResult> {
   const cleanCode = (employeeCode || '').trim();
   const cleanIp = normalizeIp(ip);
+  const requestId = (options?.requestId || '').trim() || crypto.randomUUID();
 
   if (!cleanCode) {
-    return { allowed: false, error: GENERIC_AUTH_ERROR, lockedBy: 'invalid_input' };
+    return { allowed: false, error: GENERIC_AUTH_ERROR, lockedBy: 'invalid_input', requestId };
   }
 
   const windowSeconds = options?.windowSeconds ?? LOGIN_ATTEMPT_WINDOW_SECONDS;
   const maxAccountAttempts = options?.maxAccountAttempts ?? MAX_LOGIN_ATTEMPTS;
   const maxNetworkAttempts = options?.maxNetworkAttempts ?? MAX_NETWORK_ATTEMPTS;
+  const reservationTimeoutSeconds =
+    options?.reservationTimeoutSeconds ?? DEFAULT_RESERVATION_TIMEOUT_SECONDS;
 
-  // Thử gọi RPC check_login_rate_limit nếu đã được cài đặt
   try {
     const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
       fn: string,
@@ -297,33 +399,27 @@ export async function checkLoginRateLimit(
         retry_after_seconds: number;
       }> | null;
       error: { message?: string } | null;
-    }>)('check_login_rate_limit', {
+    }>)('acquire_login_admission', {
+      p_request_id: requestId,
       p_employee_code: cleanCode,
       p_ip: cleanIp,
       p_window_seconds: windowSeconds,
       p_max_account_attempts: maxAccountAttempts,
       p_max_ip_attempts: maxNetworkAttempts,
+      p_reservation_timeout_seconds: reservationTimeoutSeconds,
     });
 
     if (rpcError) {
-      const msg = (rpcError.message || '').toLowerCase();
-      const code = (rpcError as { code?: string }).code;
-      if (
-        msg.includes('function') ||
-        msg.includes('not found') ||
-        msg.includes('does not exist') ||
-        code === 'PGRST202' ||
-        code === '42883'
-      ) {
-        // Fallback sang truy vấn bảng login_attempts trực tiếp bên dưới
-      } else {
-        return {
-          allowed: false,
-          error: SYSTEM_BUSY_ERROR_MESSAGE,
-          lockedBy: 'db_error',
-        };
-      }
-    } else if (rpcData && rpcData.length > 0) {
+      // Fail closed: không dùng direct table fallback làm suy yếu bất biến
+      return {
+        allowed: false,
+        error: SYSTEM_BUSY_ERROR_MESSAGE,
+        lockedBy: 'db_error',
+        requestId,
+      };
+    }
+
+    if (rpcData && rpcData.length > 0) {
       const row = rpcData[0];
       if (!row.allowed) {
         return {
@@ -333,113 +429,68 @@ export async function checkLoginRateLimit(
           retryAfterSeconds: row.retry_after_seconds,
           accountAttempts: row.account_attempts,
           ipAttempts: row.ip_attempts,
+          requestId,
         };
       }
       return {
         allowed: true,
         accountAttempts: row.account_attempts,
         ipAttempts: row.ip_attempts,
-      };
-    }
-  } catch {
-    // Fallback sang truy vấn bảng login_attempts trực tiếp bên dưới
-  }
-
-  // Fallback: truy vấn bảng login_attempts trực tiếp với kiểm tra lỗi fail-closed nghiêm ngặt
-  try {
-    const windowCutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
-
-    // 1. Kiểm tra số lần thử sai theo mã tài khoản
-    const { count: accountCount, error: accountError } = await supabaseAdmin
-      .from('login_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('employee_code', cleanCode)
-      .gte('attempted_at', windowCutoff);
-
-    if (accountError) {
-      return {
-        allowed: false,
-        error: SYSTEM_BUSY_ERROR_MESSAGE,
-        lockedBy: 'db_error',
-      };
-    }
-
-    if ((accountCount ?? 0) >= maxAccountAttempts) {
-      return {
-        allowed: false,
-        error: THROTTLED_ERROR_MESSAGE,
-        lockedBy: 'account',
-        accountAttempts: accountCount ?? 0,
-        retryAfterSeconds: windowSeconds,
-      };
-    }
-
-    // 2. Kiểm tra số lần thử sai theo mạng/IP tin cậy
-    const { count: ipCount, error: ipError } = await supabaseAdmin
-      .from('login_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('ip', cleanIp)
-      .gte('attempted_at', windowCutoff);
-
-    if (ipError) {
-      return {
-        allowed: false,
-        error: SYSTEM_BUSY_ERROR_MESSAGE,
-        lockedBy: 'db_error',
-      };
-    }
-
-    if ((ipCount ?? 0) >= maxNetworkAttempts) {
-      return {
-        allowed: false,
-        error: THROTTLED_ERROR_MESSAGE,
-        lockedBy: 'ip',
-        ipAttempts: ipCount ?? 0,
-        retryAfterSeconds: windowSeconds,
+        requestId,
       };
     }
 
     return {
-      allowed: true,
-      accountAttempts: accountCount ?? 0,
-      ipAttempts: ipCount ?? 0,
+      allowed: false,
+      error: SYSTEM_BUSY_ERROR_MESSAGE,
+      lockedBy: 'db_error',
+      requestId,
     };
   } catch {
     return {
       allowed: false,
       error: SYSTEM_BUSY_ERROR_MESSAGE,
       lockedBy: 'db_error',
+      requestId,
     };
   }
 }
 
 /**
- * Ghi nhận một lần đăng nhập thất bại một cách nguyên tử và an toàn.
- * Có kiểm soát tương tranh (concurrency control) và dọn dẹp lưu trữ giới hạn (bounded retention).
+ * Hoàn tất việc đặt chỗ đăng nhập: chuyển sang 'failed' (thất bại) hoặc dọn dẹp (thành công).
+ * Đảm bảo tính lũy nghiệm (idempotent) khi gọi lại với cùng request_id.
  */
-export async function recordFailedLoginAttempt(
+export async function finalizeLoginAdmission(
+  requestId: string,
   employeeCode: string,
   ip: string,
+  success: boolean,
   options?: RateLimitOptions
-): Promise<RecordAttemptResult> {
+): Promise<FinalizeAdmissionResult> {
   const cleanCode = (employeeCode || '').trim();
   const cleanIp = normalizeIp(ip);
+  const cleanRequestId = (requestId || '').trim();
 
-  if (!cleanCode) {
-    return { success: false, isThrottled: false, error: 'Mã nhân viên không hợp lệ' };
+  if (!cleanCode || !cleanRequestId) {
+    return {
+      finalized: false,
+      allowed: false,
+      error: 'Mã nhân viên hoặc mã yêu cầu không hợp lệ',
+      lockedBy: 'invalid_input',
+    };
   }
 
   const windowSeconds = options?.windowSeconds ?? LOGIN_ATTEMPT_WINDOW_SECONDS;
   const maxAccountAttempts = options?.maxAccountAttempts ?? MAX_LOGIN_ATTEMPTS;
   const maxNetworkAttempts = options?.maxNetworkAttempts ?? MAX_NETWORK_ATTEMPTS;
 
-  // Thử gọi RPC record_failed_login_transaction (sử dụng advisory locks & atomic prune)
   try {
     const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
       fn: string,
       args: Record<string, unknown>
     ) => Promise<{
       data: Array<{
+        finalized: boolean;
         allowed: boolean;
         account_attempts: number;
         ip_attempts: number;
@@ -447,77 +498,89 @@ export async function recordFailedLoginAttempt(
         retry_after_seconds: number;
       }> | null;
       error: { message?: string } | null;
-    }>)('record_failed_login_transaction', {
+    }>)('finalize_login_admission', {
+      p_request_id: cleanRequestId,
       p_employee_code: cleanCode,
       p_ip: cleanIp,
+      p_success: success,
       p_window_seconds: windowSeconds,
       p_max_account_attempts: maxAccountAttempts,
       p_max_ip_attempts: maxNetworkAttempts,
     });
 
     if (rpcError) {
-      const msg = (rpcError.message || '').toLowerCase();
-      const code = (rpcError as { code?: string }).code;
-      if (
-        msg.includes('function') ||
-        msg.includes('not found') ||
-        msg.includes('does not exist') ||
-        code === 'PGRST202' ||
-        code === '42883'
-      ) {
-        // Fallback sang insert trực tiếp bên dưới
-      } else {
-        return {
-          success: false,
-          isThrottled: false,
-          error: 'Lỗi ghi nhận đăng nhập thất bại: ' + (rpcError.message || 'db error'),
-        };
-      }
-    } else if (rpcData && rpcData.length > 0) {
+      return {
+        finalized: false,
+        allowed: false,
+        error: rpcError.message || 'Lỗi cơ sở dữ liệu khi hoàn tất đăng nhập',
+        lockedBy: 'db_error',
+      };
+    }
+
+    if (rpcData && rpcData.length > 0) {
       const row = rpcData[0];
       return {
-        success: true,
-        isThrottled: !row.allowed,
+        finalized: row.finalized,
+        allowed: row.allowed,
         lockedBy: row.locked_by,
         accountAttempts: row.account_attempts,
         ipAttempts: row.ip_attempts,
-      };
-    }
-  } catch {
-    // Fallback sang insert trực tiếp bên dưới
-  }
-
-  // Fallback: ghi trực tiếp vào bảng login_attempts
-  try {
-    const { error: insertError } = await supabaseAdmin.from('login_attempts').insert({
-      employee_code: cleanCode,
-      ip: cleanIp,
-    });
-
-    if (insertError) {
-      return {
-        success: false,
-        isThrottled: false,
-        error: 'Lỗi ghi nhận đăng nhập thất bại',
+        retryAfterSeconds: row.retry_after_seconds,
       };
     }
 
-    // Bounded retention: dọn dẹp các bản ghi cũ hơn 30 ngày một cách bất đồng bộ
-    try {
-      const retentionCutoff = new Date(Date.now() - LOGIN_ATTEMPT_RETENTION_MS).toISOString();
-      await supabaseAdmin.from('login_attempts').delete().lt('attempted_at', retentionCutoff);
-    } catch {
-      // Bỏ qua lỗi dọn dẹp phụ trợ
-    }
-
-    return { success: true, isThrottled: false };
-  } catch {
-    return { success: false, isThrottled: false, error: 'Lỗi hệ thống khi ghi nhận đăng nhập' };
+    return {
+      finalized: false,
+      allowed: false,
+      error: 'Không nhận được kết quả hoàn tất đăng nhập',
+      lockedBy: 'db_error',
+    };
+  } catch (err: unknown) {
+    return {
+      finalized: false,
+      allowed: false,
+      error: err instanceof Error ? err.message : 'Lỗi hệ thống khi hoàn tất đăng nhập',
+      lockedBy: 'db_error',
+    };
   }
 }
 
 /**
+ * Kiểm tra giới hạn tần suất đăng nhập và thực hiện đặt chỗ admission.
+ * Duy trì khả năng tương thích ngược cho các lời gọi checkLoginRateLimit hiện có.
+ */
+export async function checkLoginRateLimit(
+  employeeCode: string,
+  ip: string,
+  options?: RateLimitOptions
+): Promise<RateLimitResult> {
+  return acquireLoginAdmission(employeeCode, ip, options);
+}
+
+/**
+ * Ghi nhận một lần đăng nhập thất bại và hoàn tất reservation tương ứng.
+ * Duy trì tính tương thích với recordFailedLoginAttempt.
+ */
+export async function recordFailedLoginAttempt(
+  employeeCode: string,
+  ip: string,
+  options?: RateLimitOptions
+): Promise<RecordAttemptResult> {
+  const requestId = options?.requestId || crypto.randomUUID();
+  const res = await finalizeLoginAdmission(requestId, employeeCode, ip, false, options);
+  return {
+    success: res.finalized,
+    isThrottled: !res.allowed,
+    error: res.error,
+    lockedBy: res.lockedBy,
+    accountAttempts: res.accountAttempts,
+    ipAttempts: res.ipAttempts,
+  };
+}
+
+/**
  * Xóa các lần đăng nhập thất bại khi người dùng đăng nhập thành công.
+ * Không fallback sang direct table delete khi RPC gặp lỗi.
  */
 export async function clearLoginAttempts(
   employeeCode: string,
@@ -527,7 +590,6 @@ export async function clearLoginAttempts(
   if (!cleanCode) return { success: false, deletedCount: 0 };
   const cleanIp = ip ? normalizeIp(ip) : null;
 
-  // Thử gọi RPC clear_login_attempts
   try {
     const { data, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
       fn: string,
@@ -543,20 +605,7 @@ export async function clearLoginAttempts(
     if (!rpcError && typeof data === 'number') {
       return { success: true, deletedCount: data };
     }
-  } catch {
-    // Fallback sang query delete bên dưới
-  }
-
-  try {
-    let query = supabaseAdmin.from('login_attempts').delete().eq('employee_code', cleanCode);
-    if (cleanIp) {
-      query = query.eq('ip', cleanIp);
-    }
-    const { error } = await query;
-    if (error) {
-      return { success: false, deletedCount: 0 };
-    }
-    return { success: true, deletedCount: 0 };
+    return { success: false, deletedCount: 0 };
   } catch {
     return { success: false, deletedCount: 0 };
   }

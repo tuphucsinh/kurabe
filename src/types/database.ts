@@ -896,18 +896,24 @@ export type Database = {
           employee_code: string
           id: string
           ip: string
+          request_id: string | null
+          status: string
         }
         Insert: {
           attempted_at?: string
           employee_code: string
           id?: string
           ip: string
+          request_id?: string | null
+          status?: string
         }
         Update: {
           attempted_at?: string
           employee_code?: string
           id?: string
           ip?: string
+          request_id?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -1019,6 +1025,62 @@ export type Database = {
           p_token_hash: string
           p_password_hash: string
           p_expected_credential_revision: number | null
+        }
+        Returns: {
+          user_id: string
+        }[]
+      }
+      acquire_login_admission: {
+        Args: {
+          p_request_id: string
+          p_employee_code: string
+          p_ip: string
+          p_window_seconds?: number
+          p_max_account_attempts?: number
+          p_max_ip_attempts?: number
+          p_reservation_timeout_seconds?: number
+        }
+        Returns: {
+          allowed: boolean
+          account_attempts: number
+          ip_attempts: number
+          locked_by: string | null
+          retry_after_seconds: number
+        }[]
+      }
+      finalize_login_admission: {
+        Args: {
+          p_request_id: string
+          p_employee_code: string
+          p_ip: string
+          p_success: boolean
+          p_window_seconds?: number
+          p_max_account_attempts?: number
+          p_max_ip_attempts?: number
+        }
+        Returns: {
+          finalized: boolean
+          allowed: boolean
+          account_attempts: number
+          ip_attempts: number
+          locked_by: string | null
+          retry_after_seconds: number
+        }[]
+      }
+      issue_session_finalize_login_admission: {
+        Args: {
+          p_user_id: string
+          p_expected_password_hash: string | null
+          p_expected_password_setup_required: boolean
+          p_expected_credential_revision: number
+          p_token_hash: string
+          p_expires_at: string
+          p_request_id: string
+          p_employee_code: string
+          p_ip: string
+          p_max_account_attempts: number
+          p_max_ip_attempts: number
+          p_window_seconds: number
         }
         Returns: {
           user_id: string
@@ -1255,4 +1317,6 @@ export interface LoginAttemptRecord {
   employee_code: string
   ip: string
   attempted_at: string
+  request_id: string | null
+  status: string
 }

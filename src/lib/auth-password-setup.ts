@@ -3,6 +3,7 @@ import 'server-only';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { LOGIN_ATTEMPT_WINDOW_SECONDS, MAX_LOGIN_ATTEMPTS } from '@/lib/login-rate-limit';
 
 export const MIN_PASSWORD_LENGTH = 6;
 /** bcrypt consumes at most 72 UTF-8 bytes, not 72 JavaScript string units. */
@@ -31,6 +32,13 @@ export type ChangePasswordResult =
 export type IssueSessionResult =
   | { success: true }
   | { success: false; error: string };
+
+export interface IssueSessionAdmission {
+  requestId: string;
+  employeeCode: string;
+  ip: string;
+  maxNetworkAttempts: number;
+}
 
 /**
  * Validates bounded password constraints. bcrypt's maximum is measured in UTF-8 bytes.
@@ -71,7 +79,8 @@ export async function executeIssueSessionRpc(
   expectedSetupRequired: boolean,
   expectedCredentialRevision: number,
   tokenHash: string,
-  expiresAt: string
+  expiresAt: string,
+  admission?: IssueSessionAdmission
 ): Promise<IssueSessionResult> {
   try {
     const cleanUserId = (userId || '').trim();
@@ -79,20 +88,34 @@ export async function executeIssueSessionRpc(
       return { success: false, error: 'Lỗi tạo phiên đăng nhập. Vui lòng thử lại.' };
     }
 
-    const { error: rpcError } = await (supabaseAdmin.rpc as unknown as (
-      fn: string,
-      args: Record<string, unknown>
-    ) => Promise<{ data: unknown; error: { message?: string } | null }>)(
-      'issue_session_transaction',
-      {
+    let rpcError: { message?: string } | null = null;
+    if (admission) {
+      const { error } = await supabaseAdmin.rpc('issue_session_finalize_login_admission', {
         p_user_id: cleanUserId,
         p_expected_password_hash: expectedPasswordHash,
         p_expected_password_setup_required: expectedSetupRequired,
         p_expected_credential_revision: expectedCredentialRevision,
         p_token_hash: tokenHash,
         p_expires_at: expiresAt,
-      }
-    );
+        p_request_id: admission.requestId,
+        p_employee_code: admission.employeeCode,
+        p_ip: admission.ip,
+        p_max_account_attempts: MAX_LOGIN_ATTEMPTS,
+        p_max_ip_attempts: admission.maxNetworkAttempts,
+        p_window_seconds: LOGIN_ATTEMPT_WINDOW_SECONDS,
+      });
+      rpcError = error;
+    } else {
+      const { error } = await supabaseAdmin.rpc('issue_session_transaction', {
+        p_user_id: cleanUserId,
+        p_expected_password_hash: expectedPasswordHash,
+        p_expected_password_setup_required: expectedSetupRequired,
+        p_expected_credential_revision: expectedCredentialRevision,
+        p_token_hash: tokenHash,
+        p_expires_at: expiresAt,
+      });
+      rpcError = error;
+    }
 
     if (rpcError) {
       return { success: false, error: 'Thông tin xác thực đã thay đổi. Vui lòng đăng nhập lại.' };

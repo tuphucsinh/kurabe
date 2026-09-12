@@ -1381,12 +1381,16 @@ assert.ok(
   'auth.ts must wire recordFailedLoginAttempt'
 );
 assert.ok(
-  authCode.includes('clearLoginAttempts'),
-  'auth.ts must wire clearLoginAttempts'
+  helperCode.includes('issue_session_finalize_login_admission'),
+  'auth helper must finalize login admission atomically with session issuance'
 );
 assert.ok(
-  authCode.includes('resolveClientIp'),
-  'auth.ts must wire resolveClientIp'
+  !authCode.includes('clearLoginAttempts('),
+  'auth.ts must not bypass admission accounting with legacy clear'
+);
+assert.ok(
+  authCode.includes('resolveClientNetwork'),
+  'auth.ts must wire resolveClientNetwork'
 );
 
 // 7.3 Pure Deterministic Logic Simulations
