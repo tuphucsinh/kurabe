@@ -7,7 +7,7 @@ import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsersAdmin } from '@/lib/db/users-admin';
 import { revalidatePath } from 'next/cache';
 import { toClientError } from '@/lib/errors';
-import { checkAndRecordAiUsage } from '@/lib/ai-limit';
+import { consumeAiQuota, refundAiQuota, reserveAiQuota } from '@/lib/ai-limit';
 import { boundAITextWithMeta, MAX_AI_PROMPT_CHARS, buildAIPayload, type AIPayloadCoverage } from '@/lib/ai-governance';
 import { assertEvaluationPeriodActive } from '@/lib/db/evaluation-period-write-guard';
 import { createHash } from 'node:crypto';
@@ -75,6 +75,8 @@ export async function getPeriodSummary(periodId: string): Promise<{
 export async function generatePeriodSummary(
   periodId: string
 ): Promise<{ summary?: string; partial?: boolean; coverageLabel?: string; coverage?: AIPayloadCoverage; error?: string }> {
+  let quotaRequestId: string | null = null;
+  let providerReturnedOutput = false;
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!periodId) return { error: 'Thiếu thông tin kỳ đánh giá.' };
@@ -85,9 +87,6 @@ export async function generatePeriodSummary(
   if (!periodGuard.success) {
     return { error: periodGuard.error };
   }
-
-  const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generatePeriodSummary');
-  if (!aiQuota.allowed) return { error: aiQuota.error };
 
   try {
     const [evaluations, users] = await Promise.all([
@@ -103,6 +102,13 @@ export async function generatePeriodSummary(
     if (evaluated.length === 0) {
       return { error: 'Kỳ này chưa có đánh giá nào có điểm — hãy chờ các vòng đánh giá hoàn thành rồi tạo tóm tắt.' };
     }
+
+    // Reserve only after the no-data guard. The reservation is consumed on
+    // usable provider output and refunded on provider failure, so quota state
+    // reflects actual attempts rather than abandoned reservations.
+    const aiQuota = await reserveAiQuota(auth.user.id, 'generatePeriodSummary');
+    if (!aiQuota.allowed || !aiQuota.requestId) return { error: aiQuota.error };
+    quotaRequestId = aiQuota.requestId;
 
     // Ẩn danh hóa: mã NV thay tên; gom dữ liệu gọn
     let commentTotalChars = 0;
@@ -188,7 +194,16 @@ export async function generatePeriodSummary(
     };
     const coverageStatus = coverage.status ?? (coverage.truncated ? 'partial' : 'complete');
     const summary = await callAI(boundedPrompt.text, { maxTokens: 800 });
-    if (!summary) return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
+    if (!summary) {
+      const refund = await refundAiQuota(auth.user.id, quotaRequestId);
+      quotaRequestId = null;
+      if (!refund.ok) console.error('AI quota refund failed:', refund.error);
+      return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
+    }
+    providerReturnedOutput = true;
+    const consumed = await consumeAiQuota(auth.user.id, quotaRequestId);
+    if (!consumed.ok) return { error: consumed.error || 'Không thể ghi nhận lượt sử dụng AI. Vui lòng thử lại.' };
+    quotaRequestId = null;
 
     // P96T05: Closed-period write firewall — guard period exact active again before upsert
     const preUpsertGuard = await assertEvaluationPeriodActive(periodId);
@@ -226,6 +241,10 @@ export async function generatePeriodSummary(
         : coverage,
     };
   } catch (err) {
+    if (quotaRequestId && !providerReturnedOutput) {
+      const refund = await refundAiQuota(auth.user.id, quotaRequestId);
+      if (!refund.ok) console.error('AI quota refund failed after summary error:', refund.error);
+    }
     console.error('generatePeriodSummary error');
     return { error: toClientError(err, 'Lỗi khi tạo tóm tắt. Vui lòng thử lại.') };
   }

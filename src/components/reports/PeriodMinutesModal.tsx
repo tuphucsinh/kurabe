@@ -114,6 +114,10 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+      const escapedCoverage = coverageLabel
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -145,6 +149,13 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
                 font-size: 12px;
                 color: #64748b;
               }
+              .coverage {
+                margin: 0 0 18px 0;
+                padding: 8px 10px;
+                border: 1px solid #cbd5e1;
+                color: #475569;
+                font-size: 11px;
+              }
               .content {
                 white-space: pre-wrap;
                 word-break: break-word;
@@ -159,6 +170,7 @@ export default function PeriodMinutesModal({ periodId }: PeriodMinutesModalProps
               <div class="title">Biên bản kết thúc kỳ đánh giá</div>
               <div class="meta">Kỳ: ${periodName} • Ngày in: ${new Date().toLocaleDateString('vi-VN')}</div>
             </div>
+            ${escapedCoverage ? `<div class="coverage">Phạm vi AI: ${escapedCoverage}. Biên bản là dự thảo và không đại diện cho phần dữ liệu đã bị rút gọn.</div>` : ''}
             <div class="content">${escaped}</div>
           </body>
         </html>

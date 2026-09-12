@@ -86,12 +86,12 @@ async function callQuotaRpc<T extends QuotaRpcRow>(
  * một giao dịch có advisory lock theo user, nên request đồng thời không thể
  * vượt ngưỡng. Request identity (request_id) làm retry idempotent.
  */
-export async function checkAndRecordAiUsage(
+export async function reserveAiQuota(
   userId: string,
   action: string = 'ai',
   limit: number = AI_LIMIT_PER_HOUR,
   windowMs: number = AI_WINDOW_MS
-): Promise<{ allowed: boolean; error?: string }> {
+): Promise<{ allowed: boolean; requestId?: string; error?: string }> {
   const safeAction = normalizeAIAction(action);
   const requestId = makeRequestId('ai', safeAction);
   const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_reserve', {
@@ -113,7 +113,45 @@ export async function checkAndRecordAiUsage(
       row.error === 'LIMIT_REACHED' ? AI_LIMIT_MESSAGE(limit) : AI_BUSY_MESSAGE;
     return { allowed: false, error };
   }
-  return { allowed: true };
+  return { allowed: true, requestId };
+}
+
+export async function checkAndRecordAiUsage(
+  userId: string,
+  action: string = 'ai',
+  limit: number = AI_LIMIT_PER_HOUR,
+  windowMs: number = AI_WINDOW_MS
+): Promise<{ allowed: boolean; error?: string }> {
+  const result = await reserveAiQuota(userId, action, limit, windowMs);
+  return { allowed: result.allowed, error: result.error };
+}
+
+/** Consume an AI reservation after the provider returned usable output. */
+export async function consumeAiQuota(
+  userId: string,
+  requestId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_consume', {
+    p_kind: 'ai',
+    p_user_id: userId,
+    p_request_id: requestId,
+  });
+  if (!row) return { ok: false, error: AI_BUSY_MESSAGE };
+  return { ok: row.consumed === true, error: row.error ?? undefined };
+}
+
+/** Refund an AI reservation when the provider failed before returning output. */
+export async function refundAiQuota(
+  userId: string,
+  requestId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_refund', {
+    p_kind: 'ai',
+    p_user_id: userId,
+    p_request_id: requestId,
+  });
+  if (!row) return { ok: false, error: AI_BUSY_MESSAGE };
+  return { ok: row.refunded === true, error: row.error ?? undefined };
 }
 
 /**
