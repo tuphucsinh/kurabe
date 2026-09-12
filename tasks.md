@@ -78,7 +78,7 @@ Changes: pass expected rendered criteria/grade identities through UI→action→
 Constraints: preserve existing valid scoring policy, captured history and supported role flows; no historical recalculation/backfill without approved mapping. No partial rollback claimed as atomic. Any extra caller discovered expands owns through plan amendment first.
 DoD: `node scripts/verify-release.mjs --suite evaluation-transition-guard`; replay R1 after R2/R3/Approved leaves full graph unchanged; concurrent duplicate submit/return/close/config replacement; stale render with unchanged IDs but changed level values rejects; next-round/parent write faults leave zero delta; grade and criteria pinned to actual scoring inputs; flag absent/false/true behavior explicit; browser save/retry/return/history; G.
 
-### [ ] [#P102M3T05] Personnel transaction enforces authoritative actor scope and deletion graph
+### [x] [#P102M3T05] Personnel transaction enforces authoritative actor scope and deletion graph
 ```yaml
 task:
   id: P102M3T05
