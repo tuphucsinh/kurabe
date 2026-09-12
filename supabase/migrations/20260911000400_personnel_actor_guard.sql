@@ -18,6 +18,10 @@ BEGIN
   IF to_regprocedure('public.apply_personnel_transaction(jsonb,jsonb,uuid)') IS NOT NULL THEN
     RAISE EXCEPTION 'P102M3T05_PREFLIGHT_COLLISION: actor-aware personnel RPC already exists';
   END IF;
+  IF to_regprocedure('public.guard_personnel_evaluator_reference()') IS NOT NULL
+     OR EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'guard_personnel_evaluator_reference') THEN
+    RAISE EXCEPTION 'P102M3T05_PREFLIGHT_COLLISION: evaluator reference guard already exists';
+  END IF;
 END $$;
 
 CREATE FUNCTION public.apply_personnel_transaction(
@@ -56,7 +60,7 @@ BEGIN
 
   -- Serialize the complete personnel graph before reading actor or target scope.
   -- This also serializes actor demotion/target transfer races with this call.
-  LOCK TABLE public.teams, public.users IN SHARE ROW EXCLUSIVE MODE;
+  LOCK TABLE public.teams, public.users, public.evaluation_rounds IN SHARE ROW EXCLUSIVE MODE;
 
   SELECT * INTO v_actor
   FROM public.users
@@ -67,6 +71,15 @@ BEGIN
   END IF;
   IF v_actor.role NOT IN ('Manager', 'Leader') THEN
     RAISE EXCEPTION 'P102M3T05_ACTOR_FORBIDDEN: actor role is not authorized';
+  END IF;
+  IF v_actor.role = 'Leader' AND (
+    v_actor.team_id IS NULL
+    OR NOT EXISTS (
+      SELECT 1 FROM public.teams t
+      WHERE t.id = v_actor.team_id AND t.is_active IS TRUE
+    )
+  ) THEN
+    RAISE EXCEPTION 'P102M3T05_ACTOR_TEAM_INACTIVE: Leader must belong to an active team';
   END IF;
 
   IF p_team IS NOT NULL AND v_actor.role IS DISTINCT FROM 'Manager' THEN
@@ -174,6 +187,36 @@ $$;
 
 COMMENT ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb,uuid) IS
   'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph';
+
+-- Prevent a later direct/service-role round insert from recreating a live
+-- evaluator edge to a personnel record that has already been deactivated.
+-- Historical rows remain untouched; this is only a future-write guard.
+CREATE FUNCTION public.guard_personnel_evaluator_reference()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.evaluator_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.users u
+    WHERE u.id = NEW.evaluator_id AND u.is_active IS TRUE
+  ) THEN
+    RAISE EXCEPTION 'P102M3T05_INACTIVE_EVALUATOR: new evaluation round requires an active evaluator';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.guard_personnel_evaluator_reference() IS
+  'kurabe:p102m3t05:candidate:v1:function:guard_personnel_evaluator_reference';
+
+CREATE TRIGGER guard_personnel_evaluator_reference
+BEFORE INSERT OR UPDATE ON public.evaluation_rounds
+FOR EACH ROW EXECUTE FUNCTION public.guard_personnel_evaluator_reference();
+
+COMMENT ON TRIGGER guard_personnel_evaluator_reference ON public.evaluation_rounds
+IS 'kurabe:p102m3t05:candidate:v1:trigger:guard_personnel_evaluator_reference';
 
 REVOKE ALL ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb,uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb,uuid) TO service_role, postgres;

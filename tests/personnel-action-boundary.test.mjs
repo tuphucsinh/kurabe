@@ -22,7 +22,7 @@ assert.match(teams, /applyPersonnelTransaction\(\[\], \{ id, is_active: false \}
 assert.match(writer, /actorId: string/);
 assert.match(writer, /p_actor_id: actorId/);
 assert.match(migration, /p_actor_id uuid/);
-assert.match(migration, /LOCK TABLE public\.teams, public\.users IN SHARE ROW EXCLUSIVE MODE/);
+assert.match(migration, /LOCK TABLE public\.teams, public\.users, public\.evaluation_rounds IN SHARE ROW EXCLUSIVE MODE/);
 assert.match(migration, /v_actor\.role NOT IN \('Manager', 'Leader'\)/);
 assert.match(migration, /v_target_team_id IS DISTINCT FROM v_actor\.team_id/);
 assert.match(migration, /P102M3T05_DELETE_REFERENCED_(LEADER|SUBLEADER|EVALUATOR)/);

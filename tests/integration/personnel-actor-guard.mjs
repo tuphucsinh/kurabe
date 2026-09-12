@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { run as runRealActorProof } from './personnel-actor-guard-real.mjs';
 import { spawnSync } from 'node:child_process';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -145,6 +146,11 @@ SELECT (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb,uuid)
        (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb)') IS NOT NULL);`);
     assert.equal(postRollback, 'true|true', 'rollback must remove only actor-aware overload');
 
+    // Keep the small contract fixture for ACL/source checks, but also execute
+    // the actor RPC against the real baseline graph and legacy executor.
+    const realProof = await runRealActorProof({ options });
+    assert.equal(realProof.passed, true, 'real graph executor proof must pass');
+
     return {
       real: true, passed: true, tier: 'real-DB', status: 'EXECUTED',
       cases: [
@@ -153,6 +159,7 @@ SELECT (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb,uuid)
         'referenced leader deletion deny', 'referenced subleader deletion deny', 'historical evaluator deletion deny',
         'self deletion deny', 'non-empty team deletion deny', 'Manager team mutation allow',
         'SECURITY DEFINER/search_path/ACL/provenance catalog proof', 'fail-closed overload rollback and legacy retention',
+        'real baseline graph executor and transaction proof',
       ],
       target: `loopback:${target.port}/${target.database}`,
     };

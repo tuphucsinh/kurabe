@@ -34,14 +34,26 @@ BEGIN
      'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph' THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_PROVENANCE: RPC provenance changed';
   END IF;
-  IF v_body_hash IS DISTINCT FROM '911a1424cc8c5e8ef486aeec6dd96849' THEN
+  IF v_body_hash IS DISTINCT FROM '66eef3a80c2489ad13dc6ee7a8264692' THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_BODY: RPC body fingerprint changed';
+  END IF;
+  IF to_regprocedure('public.guard_personnel_evaluator_reference()') IS NULL
+     OR NOT EXISTS (
+       SELECT 1 FROM pg_trigger t
+       JOIN pg_class c ON c.oid = t.tgrelid
+       WHERE t.tgname = 'guard_personnel_evaluator_reference'
+         AND c.relname = 'evaluation_rounds'
+         AND NOT t.tgisinternal
+     ) THEN
+    RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_REFERENCE_GUARD: evaluator reference guard is absent';
   END IF;
   IF to_regprocedure('public.apply_personnel_transaction(jsonb,jsonb)') IS NULL THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_LEGACY_MISSING: legacy graph executor is required';
   END IF;
 END $$;
 
+DROP TRIGGER guard_personnel_evaluator_reference ON public.evaluation_rounds;
+DROP FUNCTION public.guard_personnel_evaluator_reference();
 DROP FUNCTION public.apply_personnel_transaction(jsonb,jsonb,uuid);
 
 DO $$
@@ -51,6 +63,10 @@ BEGIN
   END IF;
   IF to_regprocedure('public.apply_personnel_transaction(jsonb,jsonb)') IS NULL THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_POSTCONDITION_LEGACY_MISSING: legacy graph executor was removed';
+  END IF;
+  IF to_regprocedure('public.guard_personnel_evaluator_reference()') IS NOT NULL
+     OR EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'guard_personnel_evaluator_reference') THEN
+    RAISE EXCEPTION 'P102M3T05_ROLLBACK_POSTCONDITION_REFERENCE_GUARD_PRESENT: evaluator reference guard remains';
   END IF;
 END $$;
 
