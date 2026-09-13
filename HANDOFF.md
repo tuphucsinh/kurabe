@@ -1,6 +1,6 @@
 # HANDOFF — Kurabe non-production execution
 
-- Canonical HEAD: `a33750986ad8afd9022bb1325463f993e9ad8156`; main is ahead origin by 103.
+- Canonical HEAD: `40d4a68bef8d450d9bd1c9399c3f46b7d50d4e8e`; main is ahead origin by 104.
 - P102M3T10 is canonical DONE at `4efe42d979e231299663c669d0573199a58b0351`; fresh `agy-readonly` review PASS, fingerprint `e841c9194d3c59c0fe37028bb8f2a1a6cb1d9b0da72da4fcb236558eed56d699`.
 - P102M3T11 is BLOCKED from base `a33750986ad8afd9022bb1325463f993e9ad8156`; candidate remains quarantined in `/home/pi5/projects/kurabe-task-wt/P102M3T11` with one untracked owned suite file.
 - T11 release-matrix against approved T13 loopback runtime PASS; full and production npm audit PASS with zero vulnerabilities.
