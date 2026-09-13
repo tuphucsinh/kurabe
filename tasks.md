@@ -84,7 +84,7 @@ task:
   id: P102M3T05
   tier: CONTROLLED
   depends: [P102M3T04]
-  owns: [src/actions/users.ts, src/actions/teams.ts, src/lib/db/evaluations-write.ts, src/types/database.ts, supabase/migrations/20260911000400_personnel_actor_guard.sql, db/rollback-personnel-actor-guard.sql, tests/integration/personnel-actor-guard.mjs, tests/personnel-action-boundary.test.mjs]
+  owns: [src/actions/users.ts, src/actions/teams.ts, src/lib/db/evaluations-write.ts, src/types/database.ts, supabase/migrations/20260911000400_personnel_actor_guard.sql, db/rollback-personnel-actor-guard.sql, tests/integration/personnel-actor-guard.mjs, tests/integration/personnel-actor-guard-real.mjs, tests/personnel-action-boundary.test.mjs]
   locks: [PERSONNEL_EVALUATION_GRAPH]
 ```
 Goal: close F06 lookup-error and TOCTOU scope seams; one validated personnel graph for create/update/batch/delete.
