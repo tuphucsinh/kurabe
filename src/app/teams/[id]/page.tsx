@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { invalidateRequesterQueries, useTeamsPageData, useEvaluations } from '@/hooks/use-db';
+import { invalidateRequesterQueries, useTeam, useTeamsPageData, useEvaluations } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { upsertUserAction } from '@/actions/users';
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Evaluation, User } from '@/types';
+import { Evaluation, Team, User } from '@/types';
 import TeamDetailShell from '@/components/teams/TeamDetailShell';
 import TeamDetailMemberCell from '@/components/teams/TeamDetailMemberCell';
 
@@ -50,6 +50,7 @@ export default function TeamDetailPage() {
 
   const isManager = user?.role === 'Manager';
 
+  const { data: directTeam, isLoading: isDirectTeamLoading, isError: isDirectTeamError } = useTeam(teamId);
   const { data: pg, isLoading: isLightLoadingData, isError: isLightErrorData } = useTeamsPageData(undefined, user);
   const { data: evaluationsData, isLoading: evalsLoading, isError: evalsError } = useEvaluations(currentPeriod?.id, user);
 
@@ -61,10 +62,13 @@ export default function TeamDetailPage() {
   const teamsLoading = isLightLoadingData;
   const evaluations = useMemo(() => evaluationsData ?? [], [evaluationsData]);
 
-  const isLightLoading = isAuthLoading || usersLoading || teamsLoading;
-  const isLightError = teamsError || usersError;
+  const isLightLoading = isAuthLoading || usersLoading || teamsLoading || isDirectTeamLoading;
+  const isLightError = teamsError || usersError || isDirectTeamError;
 
-  const team = useMemo(() => teams.find((t) => t.id === teamId) || null, [teams, teamId]);
+  const team = useMemo(
+    () => directTeam ?? teams.find((candidate: Team) => candidate.id === teamId) ?? null,
+    [directTeam, teams, teamId]
+  );
   const isLeaderOwnTeam = user?.role === 'Leader'
     && (user.teamId === teamId || team?.leaderId === user.id);
   const canAddEmployee = isManager || isLeaderOwnTeam;
