@@ -1,7 +1,7 @@
 # HANDOFF — Kurabe final closure
 
 - State: `COMPLETE`; no active Runner, candidate, reservation, or quarantine.
-- Canonical production/source SHA: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; `origin/main` matches.
+- Production/source SHA: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; repository `HEAD` and `origin/main` match the documentation closure commit.
 - Production alias `https://lykiv.vercel.app` is READY; release closure is COMPLETE.
 - Production migrations/schema compatibility, deployment, and authenticated smoke are PASS.
 - Smoke covered login, dashboard, normal read, QI Xe hơi, QI-KIV2, unrelated-team denial, and zero HTTP 5xx/page/visible errors.

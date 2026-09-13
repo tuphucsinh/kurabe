@@ -3,7 +3,7 @@
 ## Authority / final status
 
 - `PROJECT_STATE=COMPLETE`; this file is the canonical status ledger after the final production release and control/documentation sweep.
-- Canonical branch: `main`; current canonical source and `origin/main` are `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
+- Production/source SHA: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; current repository `HEAD` and `origin/main` are the documentation closure commit.
 - Production is LIVE and the release is COMPLETE. Production closure evidence: `/home/pi5/hermes-artifacts/kurabe-execution/production-release-closure-76221ca.log`.
 - `.ai/MASTER_PLAN.md` owns current outcomes/invariants; this file owns the compact classification of every task retained by the former active WBS. Detailed historical task contracts remain recoverable in Git, `.state/agent-state.json`, and timestamped evidence.
 - No active Runner, candidate, reservation, task/integration worktree, quarantine, or actionable `RUNNING`/`READY`/`BLOCKED`/`UNKNOWN` task remains.

@@ -6,7 +6,7 @@
 - Production: `LIVE`.
 - Release status: `COMPLETE`.
 - Current production/source SHA: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
-- Canonical branch: `main`; `origin/main` matches the source SHA.
+- Canonical branch: `main`; repository `HEAD` and `origin/main` match the documentation closure commit, while the deployed production/source SHA remains `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
 - Production alias: `https://lykiv.vercel.app`; deployment state: `READY`.
 - Final closure evidence: `/home/pi5/hermes-artifacts/kurabe-execution/production-release-closure-76221ca.log`.
 - Worktree cleanup: `PASS`; only `/home/pi5/projects/kurabe` remains.
