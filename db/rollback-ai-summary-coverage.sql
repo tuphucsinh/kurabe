@@ -1,5 +1,13 @@
 BEGIN;
 
+DO $$
+BEGIN
+  IF current_setting('kurabe.p102m3t06_rollback_approved', true) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'P102M3T06_ROLLBACK_UNAPPROVED: set kurabe.p102m3t06_rollback_approved=true in the approved rollback session';
+  END IF;
+END;
+$$;
+
 -- Fail-closed rollback for P102M3T06. Existing ai_summaries.summary rows are retained.
 DO $$
 DECLARE
