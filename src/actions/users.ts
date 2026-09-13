@@ -7,6 +7,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { User } from '@/types';
 import { Database } from '@/types/database';
 import { mapUserFromDb } from '@/lib/db/users';
+import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 import { applyPersonnelTransaction, PersonnelTransactionUserInput } from '@/lib/db/evaluations-write';
 import { toClientError } from '@/lib/errors';
 
@@ -53,16 +54,17 @@ export async function upsertUserAction(
 
   const isLeader = auth.user.role === 'Leader';
   if (isLeader) {
-    if (!auth.user.teamId) {
+    const leaderTeamIds = await getLeaderTeamIds(auth.user);
+    if (leaderTeamIds.length === 0) {
       return { success: false, error: 'Bạn chưa được gán nhóm nào — liên hệ Manager.' };
     }
-    const leaderTeamId = auth.user.teamId;
     if (user.role && !['Employee', 'SubLeader', 'Worker'].includes(user.role)) {
-      return { success: false, error: 'Leader chỉ được tạo hoặc sửa Nhân viên/Công nhân/SubLeader trong nhóm của mình.' };
+      return { success: false, error: 'Leader chỉ được tạo hoặc sửa Nhân viên/Công nhân/SubLeader trong nhóm mình lead.' };
     }
-    user.teamId = leaderTeamId;
+
+    let existingUser: { id: string; team_id: string | null; role: string } | null = null;
     if (user.id) {
-      const { data: existingUser, error: existingUserError } = await supabaseAdmin
+      const { data, error: existingUserError } = await supabaseAdmin
         .from('users')
         .select('id, team_id, role')
         .eq('id', user.id)
@@ -70,15 +72,22 @@ export async function upsertUserAction(
       if (existingUserError) {
         return { success: false, error: toClientError(existingUserError, 'Lỗi kiểm tra phạm vi nhân viên hiện tại.') };
       }
-      if (existingUser) {
-        if (existingUser.team_id !== leaderTeamId) {
-          return { success: false, error: 'Bạn chỉ được sửa nhân viên trong nhóm mình.' };
+      if (data) {
+        existingUser = data;
+        if (!data.team_id || !leaderTeamIds.includes(data.team_id)) {
+          return { success: false, error: 'Bạn chỉ được sửa nhân viên trong nhóm mình lead.' };
         }
-        if (!['Employee', 'SubLeader', 'Worker'].includes(existingUser.role)) {
+        if (!['Employee', 'SubLeader', 'Worker'].includes(data.role)) {
           return { success: false, error: 'Bạn không được sửa đổi Manager/Leader.' };
         }
       }
     }
+
+    const targetTeamId = user.teamId ?? existingUser?.team_id ?? auth.user.teamId;
+    if (!targetTeamId || !leaderTeamIds.includes(targetTeamId)) {
+      return { success: false, error: 'Leader chỉ được thao tác trong nhóm mình lead.' };
+    }
+    user.teamId = targetTeamId;
   }
 
   try {

@@ -1,6 +1,8 @@
 BEGIN;
 
 -- P99M2T02: the personnel graph and evaluation initialisation are one transaction.
+-- users.team_id is primary membership; teams.leader_id is an independent
+-- appointed-lead relation and may reference a Leader who leads multiple teams.
 -- The preflight is intentionally fail-closed: this migration never repairs existing
 -- graph drift or silently chooses a leader/subleader for an invalid baseline.
 DO $$
@@ -50,7 +52,6 @@ BEGIN
       u.id IS NULL
       OR u.is_active IS DISTINCT FROM TRUE
       OR u.role IS DISTINCT FROM 'Leader'
-      OR u.team_id IS DISTINCT FROM t.id
     );
   IF v_count > 0 THEN
     RAISE EXCEPTION 'P99M2T02_PREFLIGHT_FAILED: % invalid team Leader relation(s) already exist', v_count;
@@ -69,7 +70,7 @@ CREATE UNIQUE INDEX idx_users_active_leader_team
   WHERE is_active IS TRUE AND role = 'Leader' AND team_id IS NOT NULL;
 
 COMMENT ON INDEX public.idx_users_active_leader_team IS
-  'kurabe:p99m2t02:candidate:v1:one-active-leader-per-team';
+  'kurabe:p99m2t02:candidate:v2:one-active-primary-leader-per-team';
 
 CREATE OR REPLACE FUNCTION public.validate_personnel_graph_trigger()
 RETURNS trigger
@@ -107,7 +108,6 @@ BEGIN
         AND (
           NEW.is_active IS DISTINCT FROM TRUE
           OR NEW.role IS DISTINCT FROM 'Leader'
-          OR NEW.team_id IS DISTINCT FROM t.id
         )
     ) THEN
       RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: user % is still referenced as an invalid team Leader', NEW.id;
@@ -122,9 +122,8 @@ BEGIN
       SELECT * INTO v_related FROM public.users WHERE id = NEW.leader_id;
       IF NOT FOUND
          OR v_related.is_active IS DISTINCT FROM TRUE
-         OR v_related.role IS DISTINCT FROM 'Leader'
-         OR v_related.team_id IS DISTINCT FROM NEW.id THEN
-        RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: team % must reference an active same-team Leader', NEW.id;
+         OR v_related.role IS DISTINCT FROM 'Leader' THEN
+        RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: team % must reference an active Leader', NEW.id;
       END IF;
     END IF;
   END IF;
@@ -134,7 +133,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.validate_personnel_graph_trigger() IS
-  'kurabe:p99m2t02:candidate:v1:deferred-personnel-graph-validation';
+  'kurabe:p99m2t02:candidate:v2:deferred-personnel-graph-validation-multi-team-leader';
 
 CREATE CONSTRAINT TRIGGER users_personnel_graph_validate
 AFTER INSERT OR UPDATE ON public.users
@@ -209,21 +208,14 @@ BEGIN
         FROM public.users u
         WHERE u.id = v_leader_id
           AND u.role = 'Leader'
-          AND u.is_active IS TRUE
-          AND u.team_id = p_team_id;
+          AND u.is_active IS TRUE;
         IF FOUND THEN
           RETURN;
         END IF;
       END IF;
 
-      RETURN QUERY
-      SELECT u.id, u.role
-      FROM public.users u
-      WHERE u.role = 'Leader'
-        AND u.is_active IS TRUE
-        AND u.team_id = p_team_id
-      ORDER BY u.id
-      LIMIT 1;
+      -- teams.leader_id is authoritative. Do not infer a different leader
+      -- from the appointee's primary users.team_id.
       RETURN;
     END IF;
 
@@ -246,7 +238,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.resolve_personnel_evaluator(uuid,text,uuid,integer) IS
-  'kurabe:p99m2t02:candidate:v1:authoritative-evaluator-resolution';
+  'kurabe:p99m2t02:candidate:v2:authoritative-evaluator-resolution-multi-team-leader';
 
 CREATE OR REPLACE FUNCTION public.apply_personnel_transaction(
   p_users jsonb,
@@ -447,22 +439,21 @@ BEGIN
   WHERE u.team_id IS NOT NULL
   ON CONFLICT DO NOTHING;
 
-  -- A team update may appoint an existing unassigned active Leader. This is
-  -- still one graph mutation and is included in affected-user accounting.
+  -- A Leader can be appointed to teams outside their primary membership.
+  -- Revalidate those pointers if that Leader is part of this transaction.
+  INSERT INTO p99m2t02_affected_teams (id)
+  SELECT DISTINCT t.id
+  FROM public.teams t
+  JOIN p99m2t02_affected_users a ON a.id = t.leader_id
+  ON CONFLICT DO NOTHING;
+
+  -- A team update may appoint any existing active Leader, including one whose
+  -- primary membership is another team. This does not move users.team_id.
   IF p_team IS NOT NULL AND v_team_leader_id IS NOT NULL THEN
     INSERT INTO p99m2t02_affected_users (id) VALUES (v_team_leader_id) ON CONFLICT DO NOTHING;
     IF NOT EXISTS (SELECT 1 FROM p99m2t02_user_state WHERE id = v_team_leader_id) THEN
       RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: user % does not exist', v_team_leader_id;
     END IF;
-    IF EXISTS (
-      SELECT 1 FROM p99m2t02_user_state
-      WHERE id = v_team_leader_id AND team_id IS NOT NULL AND team_id IS DISTINCT FROM v_team_id
-    ) THEN
-      RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: Leader % belongs to another team', v_team_leader_id;
-    END IF;
-    UPDATE p99m2t02_user_state
-    SET team_id = v_team_id
-    WHERE id = v_team_leader_id AND team_id IS NULL;
   END IF;
 
   INSERT INTO p99m2t02_affected_teams (id)
@@ -532,21 +523,19 @@ BEGIN
         u.id IS NULL
         OR u.is_active IS DISTINCT FROM TRUE
         OR u.role IS DISTINCT FROM 'Leader'
-        OR u.team_id IS DISTINCT FROM t.id
       )
   ) THEN
-    RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: team leader must be active, Leader, and same-team';
+    RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: team leader must reference an active Leader';
   END IF;
 
-  -- If the caller explicitly appoints a leader, it must be the graph's unique
-  -- active Leader. Otherwise the transaction derives teams.leader_id from the
-  -- validated final user graph.
+  -- If the caller explicitly appoints a leader, it must be an active Leader.
+  -- The appointment is independent from the user's primary team.
   IF p_team IS NOT NULL AND v_team_payload_has_leader AND v_team_leader_id IS NOT NULL THEN
     IF NOT EXISTS (
       SELECT 1 FROM p99m2t02_user_state
-      WHERE id = v_team_leader_id AND is_active IS TRUE AND role = 'Leader' AND team_id = v_team_id
+      WHERE id = v_team_leader_id AND is_active IS TRUE AND role = 'Leader'
     ) THEN
-      RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: appointed user is not an active same-team Leader';
+      RAISE EXCEPTION 'P99M2T02_INVALID_TEAM_LEADER: appointed user is not an active Leader';
     END IF;
   END IF;
 
@@ -597,20 +586,23 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Reconcile old and new team leader pointers from the final graph. This fixes
-  -- both the old team and the new team when a Leader moves or is demoted.
+  -- Reconcile only invalidated pointers. A valid appointed Leader may lead
+  -- multiple teams, so never derive teams.leader_id from users.team_id.
   FOR v_team_state IN
     SELECT t.* FROM p99m2t02_team_state t
     JOIN p99m2t02_affected_teams a ON a.id = t.id
     ORDER BY t.id
   LOOP
-    SELECT u.id INTO v_team_leader_id
-    FROM p99m2t02_user_state u
-    WHERE u.team_id = v_team_state.id
-      AND u.is_active IS TRUE
-      AND u.role = 'Leader'
-    ORDER BY u.id
-    LIMIT 1;
+    v_team_leader_id := v_team_state.leader_id;
+    IF v_team_leader_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1
+      FROM p99m2t02_user_state u
+      WHERE u.id = v_team_leader_id
+        AND u.is_active IS TRUE
+        AND u.role = 'Leader'
+    ) THEN
+      v_team_leader_id := NULL;
+    END IF;
 
     UPDATE public.teams
     SET leader_id = v_team_leader_id
@@ -769,7 +761,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb) IS
-  'kurabe:p99m2t02:candidate:v1:atomic-personnel-team-evaluation-graph';
+  'kurabe:p99m2t02:candidate:v2:atomic-personnel-team-evaluation-graph-multi-team-leader';
 
 REVOKE ALL ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb) TO service_role, postgres;

@@ -14,7 +14,7 @@ BEGIN
   SELECT obj_description(p.oid, 'pg_proc') INTO v_comment
   FROM pg_proc p
   WHERE p.oid = to_regprocedure('public.apply_personnel_transaction(jsonb,jsonb)');
-  IF v_comment IS DISTINCT FROM 'kurabe:p99m2t02:candidate:v1:atomic-personnel-team-evaluation-graph' THEN
+  IF v_comment IS DISTINCT FROM 'kurabe:p99m2t02:candidate:v2:atomic-personnel-team-evaluation-graph-multi-team-leader' THEN
     RAISE EXCEPTION 'P99M2T02_ROLLBACK_PROVENANCE_FAILED: apply RPC marker mismatch';
   END IF;
 

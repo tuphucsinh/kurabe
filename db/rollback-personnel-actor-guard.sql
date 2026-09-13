@@ -39,10 +39,10 @@ BEGIN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_SECURITY: RPC security contract changed';
   END IF;
   IF v_comment IS DISTINCT FROM
-     'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph' THEN
+     'kurabe:p102m3t05:candidate:v2:authoritative-actor-scope-and-safe-personnel-graph-multi-team-leader' THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_PROVENANCE: RPC provenance changed';
   END IF;
-  IF v_body_hash IS DISTINCT FROM '66eef3a80c2489ad13dc6ee7a8264692' THEN
+  IF v_body_hash IS DISTINCT FROM 'd5bb8bc82af51fe0dc7e73ce93efc2a5' THEN
     RAISE EXCEPTION 'P102M3T05_ROLLBACK_PREFLIGHT_BODY: RPC body fingerprint changed';
   END IF;
   IF to_regprocedure('public.guard_personnel_evaluator_reference()') IS NULL

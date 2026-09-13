@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { User } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
+import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 import { isIndividualRole } from '@/lib/role-policy';
 import { normalizeBatchParams, computeBatchResult } from '@/lib/employee-batch-helpers';
 
@@ -26,7 +27,8 @@ export interface UsersBatchResult {
  * Đọc danh sách users theo lô (batch) 20 dòng bằng service_role (supabaseAdmin).
  * - Hard cap limit = 20, offset >= 0
  * - Fixed sort: name ASC, id ASC
- * - RBAC: Manager xem tất cả; Leader/SubLeader xem team mình; Employee/Worker xem chính mình; thiếu team fail-closed.
+ * - RBAC: Manager xem tất cả; Leader xem primary và team mình lead;
+ *   SubLeader xem primary team; Employee/Worker xem chính mình; thiếu scope fail-closed.
  * - Search sanitized (max 50, stripped PostgREST metacharacters).
  * - Trả về { items, hasMore, totalCount, subleaderMap } dùng limit + 1.
  */
@@ -39,6 +41,7 @@ export async function getUsersBatchAdmin(
   }
 
   const { offset, limit, search, teamId, role } = normalizeBatchParams(options);
+  const leaderTeamIds = requester.role === 'Leader' ? await getLeaderTeamIds(requester) : [];
 
   // RBAC enforcement
   if (requester.role !== 'Manager') {
@@ -50,12 +53,17 @@ export async function getUsersBatchAdmin(
       if (role && role !== requester.role) {
         return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
-    } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
-      // Leader/SubLeader must have teamId
+    } else if (requester.role === 'Leader') {
+      if (leaderTeamIds.length === 0) {
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
+      }
+      if (teamId && !leaderTeamIds.includes(teamId)) {
+        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
+      }
+    } else if (requester.role === 'SubLeader') {
       if (!requester.teamId) {
         return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
-      // Cannot request a different team than their own
       if (teamId && teamId !== requester.teamId) {
         return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
@@ -70,7 +78,9 @@ export async function getUsersBatchAdmin(
   if (requester.role !== 'Manager') {
     if (isIndividualRole(requester.role)) {
       query = query.eq('id', requester.id);
-    } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
+    } else if (requester.role === 'Leader') {
+      query = query.in('team_id', leaderTeamIds);
+    } else if (requester.role === 'SubLeader') {
       query = query.eq('team_id', requester.teamId);
     }
   } else {
@@ -164,9 +174,14 @@ export async function getUsersAdmin(
   if (requester && requester.role !== 'Manager') {
     if (isIndividualRole(requester.role)) {
       query = query.eq('id', requester.id);
-    } else if (requester.role === 'Leader' || requester.role === 'SubLeader') {
+    } else if (requester.role === 'Leader') {
+      const leaderTeamIds = await getLeaderTeamIds(requester);
+      if (leaderTeamIds.length === 0) {
+        return [];
+      }
+      query = query.in('team_id', leaderTeamIds);
+    } else if (requester.role === 'SubLeader') {
       if (!requester.teamId) {
-        // Leader/SubLeader thiếu teamId → KHÔNG được xem toàn bộ (chống bypass)
         return [];
       }
       query = query.eq('team_id', requester.teamId);
@@ -211,7 +226,12 @@ export async function getUserByIdAdmin(
 
   if (requester.role !== 'Manager') {
     const sameUser = id === requester.id;
-    const sameTeam = !isIndividualRole(requester.role) && !!requester.teamId && (await isUserInTeam(id, requester.teamId!));
+    const scopedTeamIds = requester.role === 'Leader'
+      ? await getLeaderTeamIds(requester)
+      : requester.teamId ? [requester.teamId] : [];
+    const sameTeam = !isIndividualRole(requester.role)
+      && scopedTeamIds.length > 0
+      && (await isUserInAnyTeam(id, scopedTeamIds));
     if (!sameUser && !sameTeam) {
       return null;
     }
@@ -232,12 +252,13 @@ export async function getUserByIdAdmin(
 }
 
 /** Kiểm tra user có thuộc team không (server-only, dùng trong phân quyền ById). */
-async function isUserInTeam(userId: string, teamId: string): Promise<boolean> {
+async function isUserInAnyTeam(userId: string, teamIds: string[]): Promise<boolean> {
+  if (teamIds.length === 0) return false;
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('id')
     .eq('id', userId)
-    .eq('team_id', teamId)
+    .in('team_id', teamIds)
     .eq('is_active', true)
     .maybeSingle();
   if (error) return false;
@@ -246,7 +267,8 @@ async function isUserInTeam(userId: string, teamId: string): Promise<boolean> {
 
 /**
  * Đọc danh sách users thuộc một Team bằng service_role (supabaseAdmin).
- * Phân quyền: Manager xem mọi team; Leader/SubLeader xem team của mình; Employee/Worker chỉ xem chính mình.
+ * Phân quyền: Manager xem mọi team; Leader xem team mình lead; SubLeader xem primary
+ * team; Employee/Worker chỉ xem chính mình.
  */
 export async function getUsersByTeamAdmin(
   teamId: string,
@@ -255,8 +277,12 @@ export async function getUsersByTeamAdmin(
   if (!teamId) return [];
   if (!requester) return [];
 
-  if (requester.role !== 'Manager' && (isIndividualRole(requester.role) || requester.teamId !== teamId)) {
-    return [];
+  if (requester.role !== 'Manager') {
+    if (isIndividualRole(requester.role)) return [];
+    const scopedTeamIds = requester.role === 'Leader'
+      ? await getLeaderTeamIds(requester)
+      : requester.teamId ? [requester.teamId] : [];
+    if (!scopedTeamIds.includes(teamId)) return [];
   }
 
   const { data, error } = await supabaseAdmin

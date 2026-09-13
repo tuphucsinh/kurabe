@@ -11,7 +11,7 @@ const writer = read('src/lib/db/evaluations-write.ts');
 const migration = read('supabase/migrations/20260911000400_personnel_actor_guard.sql');
 const rollback = read('db/rollback-personnel-actor-guard.sql');
 
-assert.match(users, /data: existingUser, error: existingUserError/);
+assert.match(users, /const \{ data, error: existingUserError \}/);
 assert.match(users, /if \(existingUserError\)/);
 assert.match(users, /applyPersonnelTransaction\(\[payload\], null, auth\.user\.id\)/);
 assert.match(users, /applyPersonnelTransaction\(prepared\.map\(\(item\) => item\.payload\), null, auth\.user\.id\)/);
@@ -24,7 +24,8 @@ assert.match(writer, /p_actor_id: actorId/);
 assert.match(migration, /p_actor_id uuid/);
 assert.match(migration, /LOCK TABLE public\.teams, public\.users, public\.evaluation_rounds IN SHARE ROW EXCLUSIVE MODE/);
 assert.match(migration, /v_actor\.role NOT IN \('Manager', 'Leader'\)/);
-assert.match(migration, /v_target_team_id IS DISTINCT FROM v_actor\.team_id/);
+assert.match(migration, /t\.leader_id = v_actor\.id/);
+assert.doesNotMatch(migration, /v_target_team_id IS DISTINCT FROM v_actor\.team_id/);
 assert.match(migration, /P102M3T05_DELETE_REFERENCED_(LEADER|SUBLEADER|EVALUATOR)/);
 assert.match(migration, /SECURITY DEFINER/);
 assert.match(migration, /REVOKE ALL ON FUNCTION public\.apply_personnel_transaction\(jsonb,jsonb,uuid\)/);

@@ -49,8 +49,6 @@ export default function TeamDetailPage() {
   const [, setIsSaving] = useState(false);
 
   const isManager = user?.role === 'Manager';
-  const isLeaderOwnTeam = user?.role === 'Leader' && user.teamId === teamId;
-  const canAddEmployee = isManager || isLeaderOwnTeam;
 
   const { data: pg, isLoading: isLightLoadingData, isError: isLightErrorData } = useTeamsPageData(undefined, user);
   const { data: evaluationsData, isLoading: evalsLoading, isError: evalsError } = useEvaluations(currentPeriod?.id, user);
@@ -67,6 +65,9 @@ export default function TeamDetailPage() {
   const isLightError = teamsError || usersError;
 
   const team = useMemo(() => teams.find((t) => t.id === teamId) || null, [teams, teamId]);
+  const isLeaderOwnTeam = user?.role === 'Leader'
+    && (user.teamId === teamId || team?.leaderId === user.id);
+  const canAddEmployee = isManager || isLeaderOwnTeam;
   const leader = useMemo(
     () => (team ? users.find((u) => u.id === team.leaderId) || null : null),
     [team, users]

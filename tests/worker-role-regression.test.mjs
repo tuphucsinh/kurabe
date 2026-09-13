@@ -288,35 +288,26 @@ function stripComments(code) {
     'upsertTeamAction must not unconditionally overwrite existing name with empty string'
   );
 
-  // Post-upsert unassigned leader sync and row count verification
+  // Team/user relationship is now committed atomically by the personnel RPC.
   const postUpsertRegion = upsertRegion.slice(upsertIdx);
+  const cleanPostUpsertRegion = stripComments(postUpsertRegion);
   assert.ok(
-    postUpsertRegion.includes(".from('users')"),
-    'upsertTeamAction must update users table for unassigned leader sync post-upsert'
+    cleanPostUpsertRegion.includes('applyPersonnelTransaction([], dbTeam, auth.user.id)'),
+    'upsertTeamAction must commit team/leader changes through the atomic personnel transaction'
   );
   assert.ok(
-    postUpsertRegion.includes(".update({ team_id: teamId })") || postUpsertRegion.includes(".update({team_id: teamId})"),
-    'upsertTeamAction must update team_id to target teamId'
+    !cleanPostUpsertRegion.includes(".from('users')") ||
+      !cleanPostUpsertRegion.includes('.update('),
+    'upsertTeamAction must not perform a compensating direct users update'
   );
+}
+
+// 10b. appointed Leader UI scope
+{
+  const code = readProjectFile('src/app/teams/[id]/page.tsx');
   assert.ok(
-    postUpsertRegion.includes(".eq('id', leaderId)"),
-    'upsertTeamAction must filter by leaderId when updating user'
-  );
-  assert.ok(
-    postUpsertRegion.includes(".is('team_id', null)"),
-    'upsertTeamAction must ensure user team_id is null before syncing to avoid transferring from another team'
-  );
-  assert.ok(
-    postUpsertRegion.includes(".select('id')"),
-    'upsertTeamAction must select id on user update to verify modified row count'
-  );
-  assert.ok(
-    postUpsertRegion.includes('updatedUsers.length !== 1'),
-    'upsertTeamAction must fail-closed if updated user row count is not exactly 1'
-  );
-  assert.ok(
-    postUpsertRegion.includes('if (userUpdateError)'),
-    'upsertTeamAction must check userUpdateError on user team sync'
+    code.includes('team?.leaderId === user.id'),
+    'team detail actions must allow a Leader appointed through teams.leader_id'
   );
 }
 
@@ -328,62 +319,26 @@ function stripComments(code) {
   const dbResolverRegion = extractFunction(code, 'resolveEvaluatorFromDb');
   const dbLeaderBranch = extractBetween(dbResolverRegion, "if (selector === 'Leader'", "if (selector === 'Manager')");
 
-  const dbFallbackSplit = dbLeaderBranch.split(/\/\/\s*2\.\s*Fallback/);
-  assert.strictEqual(
-    dbFallbackSplit.length,
-    2,
-    'resolveEvaluatorFromDb Leader branch must split cleanly into appointed block and fallback block at fallback comment'
-  );
-  const [appointedDbBlock, fallbackDbBlock] = dbFallbackSplit;
-
-  // Appointed leader query block in resolveEvaluatorFromDb
-  const cleanAppointedDb = stripComments(appointedDbBlock);
   assert.ok(
-    cleanAppointedDb.includes(".from('teams')") &&
-      cleanAppointedDb.includes(".select('leader_id')") &&
-      cleanAppointedDb.includes(".eq('id', subject.teamId)"),
-    'resolveEvaluatorFromDb appointed block must query teams for subject.teamId in executable code'
+    dbLeaderBranch.includes(".from('teams')") &&
+      dbLeaderBranch.includes(".select('leader_id')") &&
+      dbLeaderBranch.includes(".eq('id', subject.teamId)"),
+    'resolveEvaluatorFromDb Leader branch must query teams.leader_id for subject.teamId'
+  );
+  const cleanLeaderDb = stripComments(dbLeaderBranch);
+  assert.ok(
+    cleanLeaderDb.includes(".from('users')") &&
+      cleanLeaderDb.includes(".eq('id', team.leader_id)") &&
+      (cleanLeaderDb.includes(".eq('role', 'Leader')") || cleanLeaderDb.includes('.eq("role", "Leader")')) &&
+      cleanLeaderDb.includes(".eq('is_active', true)"),
+    'appointed Leader lookup must require an active Leader without a primary-team equality filter'
   );
   assert.ok(
-    cleanAppointedDb.includes(".from('users')") &&
-      cleanAppointedDb.includes(".eq('id', team.leader_id)") &&
-      cleanAppointedDb.includes(".eq('team_id', subject.teamId)") &&
-      (cleanAppointedDb.includes(".eq('role', 'Leader')") || cleanAppointedDb.includes('.eq("role", "Leader")')) &&
-      cleanAppointedDb.includes(".eq('is_active', true)"),
-    'resolveEvaluatorFromDb appointed block must query users with team.leader_id, team_id equal subject.teamId, role Leader, and is_active true in executable code'
+    !cleanLeaderDb.includes(".eq('team_id', subject.teamId)") &&
+      !dbLeaderBranch.includes('return { id: fallbackLeader.id'),
+    'resolveEvaluatorFromDb must not infer a fallback Leader from users.team_id'
   );
-
-  const teamIdAppointedIdx = appointedDbBlock.indexOf(".eq('team_id', subject.teamId)");
-  const returnAppointedIdx = appointedDbBlock.indexOf('return { id: teamLeader.id');
-  assert.ok(
-    teamIdAppointedIdx !== -1 && returnAppointedIdx !== -1 && teamIdAppointedIdx < returnAppointedIdx,
-    'resolveEvaluatorFromDb appointed block must filter .eq("team_id", subject.teamId) inside the appointed block before returning teamLeader'
-  );
-  assert.ok(
-    !appointedDbBlock.includes('false &&'),
-    'resolveEvaluatorFromDb appointed block must not contain false &&'
-  );
-
-  // Fallback query block in resolveEvaluatorFromDb
-  const cleanFallbackDb = stripComments(fallbackDbBlock);
-  assert.ok(
-    cleanFallbackDb.includes(".from('users')") &&
-      cleanFallbackDb.includes(".eq('team_id', subject.teamId)") &&
-      (cleanFallbackDb.includes(".eq('role', 'Leader')") || cleanFallbackDb.includes('.eq("role", "Leader")')) &&
-      cleanFallbackDb.includes(".eq('is_active', true)"),
-    'resolveEvaluatorFromDb fallback block must independently query users with team_id equal subject.teamId, role Leader, and is_active true in executable code'
-  );
-
-  const teamIdFallbackIdx = fallbackDbBlock.indexOf(".eq('team_id', subject.teamId)");
-  const returnFallbackIdx = fallbackDbBlock.indexOf('return { id: fallbackLeader.id');
-  assert.ok(
-    teamIdFallbackIdx !== -1 && returnFallbackIdx !== -1 && teamIdFallbackIdx < returnFallbackIdx,
-    'resolveEvaluatorFromDb fallback block must filter .eq("team_id", subject.teamId) inside fallback block before returning fallbackLeader'
-  );
-  assert.ok(
-    !fallbackDbBlock.includes('false &&'),
-    'resolveEvaluatorFromDb fallback block must not contain false &&'
-  );
+  assert.ok(!dbLeaderBranch.includes('false &&'), 'resolveEvaluatorFromDb Leader branch must not contain false &&');
 
   // resolveEvaluatorFromList
   const listResolverRegion = extractFunction(code, 'resolveEvaluatorFromList');
@@ -395,24 +350,16 @@ function stripComments(code) {
   );
 
   const cleanListLeader = stripComments(listLeaderBranch);
-  assert.ok(
-    cleanListLeader.includes('selectValidLeader('),
-    'resolveEvaluatorFromList must delegate leader selection to selectValidLeader helper'
-  );
+  assert.ok(cleanListLeader.includes('selectValidLeader('), 'resolveEvaluatorFromList must delegate leader selection to helper');
   assert.ok(
     cleanListLeader.includes('teamLeaderIds?.[subject.teamId]') || cleanListLeader.includes('teamLeaderIds[subject.teamId]'),
-    'resolveEvaluatorFromList must pass appointed leader ID from teamLeaderIds'
+    'resolveEvaluatorFromList must use appointed leader ID from teamLeaderIds'
   );
-  assert.ok(
-    !listLeaderBranch.includes('false &&'),
-    'resolveEvaluatorFromList must not contain false &&'
-  );
+  assert.ok(cleanListLeader.includes('if (!appointedId) return null;'), 'list resolution must not infer a fallback leader');
+  assert.ok(!listLeaderBranch.includes('false &&'), 'resolveEvaluatorFromList must not contain false &&');
 
   // Null fallback behavior
-  assert.ok(
-    listResolverRegion.includes('return null;'),
-    'resolveEvaluatorFromList must have null fallback return when selector has no match'
-  );
+  assert.ok(listResolverRegion.includes('return null;'), 'resolveEvaluatorFromList must return null without an appointment');
 }
 
 // 12. src/lib/team-validation.ts

@@ -8,6 +8,7 @@ import { getUsersAdmin } from '@/lib/db/users-admin';
 import { mapEvaluationFromDb, mapPeriodFromDb } from '@/lib/db/evaluations';
 import { canViewEvaluation } from '@/data/workflow';
 import { isIndividualRole } from '@/lib/role-policy';
+import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 
 export interface EvaluationHistoryEntry {
   evaluation: Evaluation;
@@ -105,6 +106,7 @@ export async function getEvaluationHistoryAdmin(
 
   // 5. Lọc từng evaluation và period, kiểm tra tính hợp lệ và quyền xem
   const entries: EvaluationHistoryEntry[] = [];
+  const leaderTeamIds = viewer.role === 'Leader' ? await getLeaderTeamIds(viewer) : [];
 
   for (const row of evalRows) {
     const periodData = Array.isArray(row.evaluation_periods)
@@ -128,7 +130,7 @@ export async function getEvaluationHistoryAdmin(
     ];
 
     // Kiểm tra quyền theo graph đã capture trong evaluation/round snapshots.
-    if (!canViewEvaluation(viewer, evaluation, allUsersContext)) {
+    if (!canViewEvaluation(viewer, evaluation, allUsersContext, leaderTeamIds)) {
       continue;
     }
 

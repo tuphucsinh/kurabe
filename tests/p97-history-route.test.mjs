@@ -125,8 +125,9 @@ assert.ok(
 
 // 2.5 canViewEvaluation Access Control
 assert.ok(
-  cleanQueryCode.includes('canViewEvaluation(viewer, evaluation, allUsersContext)'),
-  'Query module must call canViewEvaluation with viewer, evaluation, and allUsersContext'
+  cleanQueryCode.includes('canViewEvaluation(viewer, evaluation, allUsersContext') &&
+    cleanQueryCode.includes('leaderTeamIds'),
+  'Query module must call canViewEvaluation with viewer, evaluation, allUsersContext, and bounded Leader scope'
 );
 
 // 2.6 Fail-closed on missing viewer or target

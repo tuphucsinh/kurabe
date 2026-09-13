@@ -9,9 +9,14 @@ type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
 type DbEvaluation = Tables<'evaluations'> & { evaluation_rounds?: DbRound[] };
 
-export function filterEvaluationsForViewer(evaluations: Evaluation[], viewer?: User | null, allUsers?: User[]): Evaluation[] {
+export function filterEvaluationsForViewer(
+  evaluations: Evaluation[],
+  viewer?: User | null,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): Evaluation[] {
   if (!viewer) return [];
-  return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers));
+  return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers, ledTeamIds));
 }
 
 const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {

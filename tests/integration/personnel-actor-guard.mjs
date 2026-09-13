@@ -114,7 +114,7 @@ FROM pg_proc p WHERE p.oid = to_regprocedure('${schema}.apply_personnel_transact
     const [securityDefiner, config, provenance, anonExecute, serviceExecute] = metadata.split('|');
     assert.equal(securityDefiner, 'true', `security/provenance/ACL contract mismatch metadata=${metadata}`);
     assert.ok(config.includes('search_path=public'), `search_path contract mismatch metadata=${metadata}`);
-    assert.equal(provenance, 'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph', `provenance mismatch metadata=${metadata}`);
+    assert.equal(provenance, 'kurabe:p102m3t05:candidate:v2:authoritative-actor-scope-and-safe-personnel-graph-multi-team-leader', `provenance mismatch metadata=${metadata}`);
     assert.equal(anonExecute, 'false', `anon ACL mismatch metadata=${metadata}`);
     assert.equal(serviceExecute, 'true', `service_role ACL mismatch metadata=${metadata}`);
 

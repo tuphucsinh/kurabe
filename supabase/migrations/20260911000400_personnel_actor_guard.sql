@@ -1,6 +1,8 @@
 BEGIN;
 
 -- P102M3T05: authoritative personnel actor scope and safe graph deletion.
+-- Leader authorization includes active teams where teams.leader_id points to
+-- the actor, not only the actor's primary users.team_id.
 -- This migration adds a mandatory actor-aware overload. The older two-argument
 -- service-role function remains the graph executor and is called only after the
 -- actor/scope/deletion guard below has acquired the same transaction locks.
@@ -123,10 +125,22 @@ BEGIN
 
     IF v_actor.role = 'Leader' THEN
       IF v_target_role NOT IN ('Employee', 'SubLeader', 'Worker')
-         OR v_target_team_id IS DISTINCT FROM v_actor.team_id
+         OR NOT EXISTS (
+           SELECT 1
+           FROM public.teams t
+           WHERE t.id = v_target_team_id
+             AND t.is_active IS TRUE
+             AND (t.id = v_actor.team_id OR t.leader_id = v_actor.id)
+         )
          OR (v_existing_target AND v_existing.role NOT IN ('Employee', 'SubLeader', 'Worker'))
-         OR (v_existing_target AND v_existing.team_id IS DISTINCT FROM v_actor.team_id) THEN
-        RAISE EXCEPTION 'P102M3T05_SCOPE_FORBIDDEN: Leader may mutate only subordinate personnel in the same team';
+         OR (v_existing_target AND NOT EXISTS (
+           SELECT 1
+           FROM public.teams t
+           WHERE t.id = v_existing.team_id
+             AND t.is_active IS TRUE
+             AND (t.id = v_actor.team_id OR t.leader_id = v_actor.id)
+         )) THEN
+        RAISE EXCEPTION 'P102M3T05_SCOPE_FORBIDDEN: Leader may mutate only subordinate personnel in a team they lead';
       END IF;
     END IF;
 
@@ -186,7 +200,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.apply_personnel_transaction(jsonb,jsonb,uuid) IS
-  'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph';
+  'kurabe:p102m3t05:candidate:v2:authoritative-actor-scope-and-safe-personnel-graph-multi-team-leader';
 
 -- Prevent a later direct/service-role round insert from recreating a live
 -- evaluator edge to a personnel record that has already been deactivated.
@@ -235,7 +249,7 @@ BEGIN
     RAISE EXCEPTION 'P102M3T05_POSTCONDITION_SECURITY: actor-aware RPC must be SECURITY DEFINER with fixed search_path';
   END IF;
   IF obj_description(v_oid, 'pg_proc') IS DISTINCT FROM
-     'kurabe:p102m3t05:candidate:v1:authoritative-actor-scope-and-safe-personnel-graph' THEN
+     'kurabe:p102m3t05:candidate:v2:authoritative-actor-scope-and-safe-personnel-graph-multi-team-leader' THEN
     RAISE EXCEPTION 'P102M3T05_POSTCONDITION_PROVENANCE: actor-aware RPC provenance mismatch';
   END IF;
 END $$;

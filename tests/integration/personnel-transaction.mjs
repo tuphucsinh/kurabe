@@ -209,7 +209,7 @@ export async function run() {
     cases.push('multiple-subleaders-allowed');
 
     runPsql(c.target, callTeam({ id: IDS.teamC, name: 'C', leader_id: IDS.unassignedLeader }));
-    assert.equal(scalar(c.target, `SELECT team_id FROM public.users WHERE id='${IDS.unassignedLeader}';`), IDS.teamC);
+    assert.equal(scalar(c.target, `SELECT team_id FROM public.users WHERE id='${IDS.unassignedLeader}';`), '');
     assert.equal(scalar(c.target, `SELECT leader_id FROM public.teams WHERE id='${IDS.teamC}';`), IDS.unassignedLeader);
     cases.push('atomic-team-leader-appointment');
 

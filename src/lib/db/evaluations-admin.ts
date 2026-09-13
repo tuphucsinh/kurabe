@@ -8,6 +8,8 @@ import { mapEvaluationFromDb, filterEvaluationsForViewer, mapPeriodFromDb } from
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
 import { isIndividualRole } from '@/lib/role-policy';
 import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
+import { getLeaderTeamIds } from '@/lib/db/teams-admin';
+
 
 const PERIOD_SELECT = 'id, year, name, status, created_by, created_at, closed_at, target_rate, target_grade';
 
@@ -81,7 +83,7 @@ async function getSubLeaderViewContextAdmin(user: User): Promise<User[] | undefi
  * Query evaluations phía SERVER bằng service role (supabaseAdmin).
  * Áp dụng đúng phân quyền theo viewer:
  * - Manager: xem tất cả
- * - Người khác: của mình + được giao chấm (+ Leader: team; SubLeader: NV quản)
+ * - Người khác: của mình + được giao chấm (+ Leader: primary/appointed teams; SubLeader: NV quản)
  */
 export async function fetchEvaluationsForViewerAdmin(
   user: User,
@@ -98,6 +100,7 @@ export async function fetchEvaluationsForViewerAdmin(
   }
 
   let allUsers: User[] | undefined = undefined;
+  const leaderTeamIds = user.role === 'Leader' ? await getLeaderTeamIds(user) : [];
 
   if (user.role !== 'Manager') {
     // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
@@ -115,9 +118,9 @@ export async function fetchEvaluationsForViewerAdmin(
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
 
-    // Leader xem evaluations trong team
-    if (user.role === 'Leader' && user.teamId) {
-      orFilters.push(`team_id.eq.${user.teamId}`);
+    // Leader xem evaluations trong primary và appointed teams.
+    if (user.role === 'Leader' && leaderTeamIds.length > 0) {
+      orFilters.push(`team_id.in.(${leaderTeamIds.join(',')})`);
     }
 
     // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
@@ -299,7 +302,7 @@ function mapEvaluationBatchSummaryFromDb(db: DbEvaluationBatchSummary): Evaluati
  * Dùng projection rút gọn (không tải scores/notes/comment nặng) để tối ưu danh sách.
  * Áp dụng đúng phân quyền theo viewer:
  * - Manager: xem tất cả
- * - Người khác: của mình + được giao chấm (+ Leader: team; SubLeader: NV quản)
+ * - Người khác: của mình + được giao chấm (+ Leader: primary/appointed teams; SubLeader: NV quản)
  */
 export async function fetchEvaluationSummariesForViewerAdmin(
   user: User,
@@ -316,6 +319,7 @@ export async function fetchEvaluationSummariesForViewerAdmin(
   }
 
   let allUsers: User[] | undefined = undefined;
+  const leaderTeamIds = user.role === 'Leader' ? await getLeaderTeamIds(user) : [];
 
   if (user.role !== 'Manager') {
     // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
@@ -333,9 +337,9 @@ export async function fetchEvaluationSummariesForViewerAdmin(
     const orFilters = [`employee_id.eq.${user.id}`];
     if (assignedIds.length > 0) orFilters.push(`id.in.(${assignedIds.join(',')})`);
 
-    // Leader xem evaluations trong team
-    if (user.role === 'Leader' && user.teamId) {
-      orFilters.push(`team_id.eq.${user.teamId}`);
+    // Leader xem evaluations trong primary và appointed teams.
+    if (user.role === 'Leader' && leaderTeamIds.length > 0) {
+      orFilters.push(`team_id.in.(${leaderTeamIds.join(',')})`);
     }
 
     // SubLeader chỉ xem evaluation của NV có subleader_id = chính mình
@@ -362,7 +366,7 @@ export async function fetchEvaluationSummariesForViewerAdmin(
   }
 
   const evaluations = (data || []).map(mapEvaluationSummaryFromDb);
-  return filterEvaluationsForViewer(evaluations, user, allUsers);
+  return filterEvaluationsForViewer(evaluations, user, allUsers, leaderTeamIds);
 }
 
 export async function getEvaluationSummariesAdmin(
@@ -411,15 +415,16 @@ export async function getEvaluationSummariesByEmployeeIdsAdmin(
   if (requester.role === 'Manager') {
     authorizedIds = validIds;
   } else if (requester.role === 'Leader') {
-    if (!requester.teamId) {
+    const leaderTeamIds = await getLeaderTeamIds(requester);
+    if (leaderTeamIds.length === 0) {
       return [];
     }
-    // Leader chỉ được xem các nhân viên thuộc team của mình
+    // Leader chỉ được xem các nhân viên thuộc primary/appointed team
     const { data: teamMembers, error: teamErr } = await supabaseAdmin
       .from('users')
       .select('id')
       .in('id', validIds)
-      .eq('team_id', requester.teamId)
+      .in('team_id', leaderTeamIds)
       .eq('is_active', true);
 
     if (teamErr || !teamMembers || teamMembers.length === 0) {
@@ -458,7 +463,8 @@ export async function getEvaluationSummariesByEmployeeIdsAdmin(
   }
 
   const evaluations = (data || []).map(mapEvaluationBatchSummaryFromDb);
-  return filterEvaluationsForViewer(evaluations, requester, allUsers);
+  const leaderTeamIds = requester.role === 'Leader' ? await getLeaderTeamIds(requester) : [];
+  return filterEvaluationsForViewer(evaluations, requester, allUsers, leaderTeamIds);
 }
 
 
@@ -480,9 +486,14 @@ export async function getEvaluationByIdAdmin(
   }
 
   const evaluation = mapEvaluationFromDb(data);
-  const allUsers = user ? await getSubLeaderViewContextAdmin(user) : undefined;
+  const [allUsers, leaderTeamIds] = user
+    ? await Promise.all([
+      getSubLeaderViewContextAdmin(user),
+      user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
+    ])
+    : [undefined, [] as string[]];
 
-  if (!canViewEvaluation(user, evaluation, allUsers)) {
+  if (!canViewEvaluation(user, evaluation, allUsers, leaderTeamIds)) {
     return null;
   }
 
@@ -511,9 +522,14 @@ export async function getEvaluationByEmployeeAdmin(
   if (!data) return null;
 
   const evaluation = mapEvaluationFromDb(data);
-  const allUsers = user ? await getSubLeaderViewContextAdmin(user) : undefined;
+  const [allUsers, leaderTeamIds] = user
+    ? await Promise.all([
+      getSubLeaderViewContextAdmin(user),
+      user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
+    ])
+    : [undefined, [] as string[]];
 
-  if (!canViewEvaluation(user, evaluation, allUsers)) {
+  if (!canViewEvaluation(user, evaluation, allUsers, leaderTeamIds)) {
     return null;
   }
 
@@ -522,10 +538,20 @@ export async function getEvaluationByEmployeeAdmin(
 
 export async function getEvaluationHistoryByEmployeeAdmin(
   employeeId: string,
-  user?: { id: string; role: string } | null
+  user?: User | null
 ): Promise<Evaluation[]> {
-  if (!user || !employeeId || (user.role !== 'Manager' && employeeId !== user.id)) {
-    return [];
+  if (!user || !employeeId) return [];
+  if (user.role !== 'Manager' && employeeId !== user.id) {
+    if (user.role !== 'Leader') return [];
+    const leaderTeamIds = await getLeaderTeamIds(user);
+    if (leaderTeamIds.length === 0) return [];
+    const { data: target } = await supabaseAdmin
+      .from('users')
+      .select('team_id')
+      .eq('id', employeeId)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!target?.team_id || !leaderTeamIds.includes(target.team_id)) return [];
   }
 
   const { data, error } = await supabaseAdmin

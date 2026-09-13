@@ -87,7 +87,6 @@ export async function resolveEvaluatorFromDb(
         .from('users')
         .select('id, role')
         .eq('id', team.leader_id)
-        .eq('team_id', subject.teamId)
         .eq('role', 'Leader')
         .eq('is_active', true)
         .maybeSingle();
@@ -97,19 +96,6 @@ export async function resolveEvaluatorFromDb(
       }
     }
 
-    // 2. Fallback tìm user bất kỳ có role Leader trong team
-    const { data: fallbackLeader } = await supabaseAdmin
-      .from('users')
-      .select('id, role')
-      .eq('team_id', subject.teamId)
-      .eq('role', 'Leader')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (fallbackLeader) {
-      return { id: fallbackLeader.id, role: parseRole(fallbackLeader.role) };
-    }
   }
 
   if (selector === 'Manager') {
@@ -131,8 +117,9 @@ export async function resolveEvaluatorFromDb(
 
 /**
  * Tìm evaluator tương ứng với selector từ danh sách bộ nhớ (Batch).
- * `teamLeaderIds` (optional): map teamId → teams.leader_id — truyền để Leader-resolve
- * ƯU TIÊN leader được chỉ định (giống resolveEvaluatorFromDb); thiếu thì scan role Leader trong team.
+ * `teamLeaderIds` (optional): map teamId → teams.leader_id — truyền để Leader-resolve.
+ * teams.leader_id là quan hệ dẫn dắt độc lập với users.team_id; không suy đoán
+ * fallback từ primary membership khi team chưa có appointed Leader.
  */
 export function resolveEvaluatorFromList(
   selector: EvaluatorSelector,
@@ -158,6 +145,7 @@ export function resolveEvaluatorFromList(
   if (selector === 'Leader') {
     if (!subject.teamId) return null;
     const appointedId = teamLeaderIds?.[subject.teamId];
+    if (!appointedId) return null;
     const candidates: Candidate[] = allUsers.map((u) => ({
       id: u.id,
       role: u.role,
