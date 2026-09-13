@@ -168,7 +168,7 @@ Changes: baseline same production build/runtime/data/auth/route matrix, cold/war
 Constraints: no universal invented latency SLA, same dataset/build mode for comparisons; no network/provider production calls; no blanket cache/virtualization/rewrite/new infra. Generated report must be clearly identified as this task's tracked owned output.
 DoD: `node scripts/verify-release.mjs --suite performance-baseline`; `node scripts/verify-release.mjs --suite dashboard-reports-performance`; `node scripts/verify-release.mjs --suite detail-list-performance`; raw samples/exact SHAs, all requested routes/roles/viewports or explicit denied cases, real data equality and absence of console errors; evidence-based benefit or reviewed no-change; G.
 
-### [ ] [#P102M3T11] Refresh exact final release/rollback/evidence package
+### [x] [#P102M3T11] Refresh exact final release/rollback/evidence package
 ```yaml
 task:
   id: P102M3T11
