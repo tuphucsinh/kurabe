@@ -109,8 +109,7 @@ BEGIN
 END $$;
 
 ALTER TABLE public.users
-  ADD COLUMN IF NOT EXISTS credential_revision bigint;
-UPDATE public.users SET credential_revision = 0 WHERE credential_revision IS NULL;
+  ADD COLUMN IF NOT EXISTS credential_revision bigint DEFAULT 0 NOT NULL;
 ALTER TABLE public.users
   ALTER COLUMN credential_revision SET DEFAULT 0,
   ALTER COLUMN credential_revision SET NOT NULL;
@@ -118,8 +117,7 @@ COMMENT ON COLUMN public.users.credential_revision IS
   'kurabe:p102m3t02:candidate:v1:column:users.credential_revision';
 
 ALTER TABLE public.sessions
-  ADD COLUMN IF NOT EXISTS credential_revision bigint;
-UPDATE public.sessions SET credential_revision = 0 WHERE credential_revision IS NULL;
+  ADD COLUMN IF NOT EXISTS credential_revision bigint DEFAULT 0 NOT NULL;
 ALTER TABLE public.sessions
   ALTER COLUMN credential_revision SET DEFAULT 0,
   ALTER COLUMN credential_revision SET NOT NULL;
@@ -129,6 +127,23 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_credential_revision
   ON public.sessions (user_id, credential_revision);
 COMMENT ON INDEX public.idx_sessions_user_credential_revision IS
   'kurabe:p102m3t02:candidate:v1:index:idx_sessions_user_credential_revision';
+
+UPDATE public.users SET credential_revision = 0 WHERE credential_revision IS NULL;
+UPDATE public.sessions SET credential_revision = 0 WHERE credential_revision IS NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.users WHERE credential_revision IS NULL
+  ) THEN
+    RAISE EXCEPTION 'P102M3T02_POSTCONDITION_FAILED: public.users contains NULL credential_revision';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.sessions WHERE credential_revision IS NULL
+  ) THEN
+    RAISE EXCEPTION 'P102M3T02_POSTCONDITION_FAILED: public.sessions contains NULL credential_revision';
+  END IF;
+END $$;
 
 -- Login admission: lock the user before comparing the complete credential snapshot
 -- and inserting the session. Reset/change/setup all increment this revision.
