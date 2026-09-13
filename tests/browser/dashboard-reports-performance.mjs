@@ -101,9 +101,9 @@ export async function run({ rootDir = defaultRoot } = {}) {
     return {
       real: true,
       passed: true,
-      tier: 'actual-Next-browser',
+      tier: 'mocked-action',
       status: 'EXECUTED',
-      target: 'loopback-only dashboard request fixture',
+      target: 'loopback-only unauthenticated dashboard request fixture',
       live_browser: 'NOT_RUN_AUTH_REQUIRED',
       cases: ['same request count', 'same payload bytes', 'full completion milestone', 'parallel light/heavy completion', 'zero scope leaks and first-party errors'],
       measurement: { baseline, candidate, unauthorizedRouteSamples, firstPartyErrors },

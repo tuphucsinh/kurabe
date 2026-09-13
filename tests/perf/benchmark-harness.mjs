@@ -24,11 +24,12 @@ import path from 'node:path';
 // --- 1. Environment & Target Validation ---
 const EXPECTED_BASE_URL = 'https://lykiv.vercel.app';
 const LOCAL_FIXTURE_MODE = process.env.KURABE_BENCHMARK_MODE === 'local-fixture';
+const ACTUAL_LOCAL_MODE = process.env.KURABE_BENCHMARK_MODE === 'actual-local';
 const baseUrl = process.env.KURABE_BENCHMARK_BASE_URL;
 const employeeCode = process.env.KURABE_BENCHMARK_EMPLOYEE_CODE;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!LOCAL_FIXTURE_MODE) {
+if (!LOCAL_FIXTURE_MODE && !ACTUAL_LOCAL_MODE) {
   if (!baseUrl || baseUrl.trim() !== EXPECTED_BASE_URL) {
     throw new Error(`CRITICAL: KURABE_BENCHMARK_BASE_URL must be explicitly set to '${EXPECTED_BASE_URL}'. Current: '${baseUrl}'`);
   }
@@ -839,7 +840,149 @@ async function runLocalFixtureBenchmark() {
   }
 }
 
-(LOCAL_FIXTURE_MODE ? runLocalFixtureBenchmark() : runBenchmark()).catch((err) => {
+async function runActualLocalBenchmark() {
+  const { createAppAuthFixture, createBrowserSession, startNextApplication } = await import('../browser/app-auth-harness.mjs');
+  const fixture = await createAppAuthFixture();
+  let next = null;
+  const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurabe-actual-perf-chrome-'));
+  const chrome = spawn('/usr/bin/google-chrome-stable', [
+    '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`,
+    '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
+    '--disable-dev-shm-usage', '--disable-extensions', '--disable-gpu', '--disable-popup-blocking',
+    '--disable-sync', '--metrics-recording-only', '--no-sandbox', '--password-store=basic',
+    '--use-mock-keychain', '--window-size=1440,900', 'about:blank',
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  chrome.stderr.on('data', () => {});
+  const portFile = path.join(profileDir, 'DevToolsActivePort');
+  let cdp = null;
+  const browserErrors = [];
+  const runs = [];
+  const viewports = [
+    { name: 'mobile', width: 390, height: 844 },
+    { name: 'desktop', width: 1440, height: 900 },
+  ];
+  const matrix = [
+    { role: 'manager', routes: TARGET_ROUTES, denied: false },
+    { role: 'employee', routes: ['/reports'], denied: true },
+  ];
+  const browserVersion = spawnSync('/usr/bin/google-chrome-stable', ['--version'], { encoding: 'utf8' }).stdout.trim();
+  try {
+    next = await startNextApplication(fixture);
+    const sessions = {
+      manager: createBrowserSession(fixture, 'manager'),
+      employee: createBrowserSession(fixture, 'employee'),
+    };
+    const devToolsPort = await waitForDevToolsPort(portFile);
+    const targets = await (await fetch(`http://127.0.0.1:${devToolsPort}/json/list`)).json();
+    const pageTarget = targets.find((target) => target.type === 'page');
+    if (!pageTarget) throw new Error('Actual local Chrome page target missing.');
+    cdp = new CDPClient(pageTarget.webSocketDebuggerUrl);
+    await cdp.connect();
+    await cdp.send('Page.enable');
+    await cdp.send('Network.enable');
+    await cdp.send('Runtime.enable');
+    await cdp.send('Log.enable');
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      window.__perf_entries = { fcp: null, lcp: null };
+      try { new PerformanceObserver((list) => { for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') window.__perf_entries.fcp = entry.startTime; }).observe({ type: 'paint', buffered: true }); } catch {}
+      try { new PerformanceObserver((list) => { const entries = list.getEntries(); if (entries.length) window.__perf_entries.lcp = entries[entries.length - 1].startTime; }).observe({ type: 'largest-contentful-paint', buffered: true }); } catch {}
+    ` });
+    cdp.on('Log.entryAdded', (payload) => { if (payload.entry?.level === 'error') browserErrors.push({ type: 'log', text: String(payload.entry.text || '').slice(0, 240) }); });
+    cdp.on('Runtime.consoleAPICalled', (payload) => { if (payload.type === 'error') browserErrors.push({ type: 'console', text: payload.args?.map((arg) => arg.value || arg.description || '').join(' ').slice(0, 240) }); });
+    cdp.on('Network.loadingFailed', (payload) => { if (payload.canceled !== true && payload.errorText !== 'net::ERR_ABORTED') browserErrors.push({ type: 'network', text: String(payload.errorText || 'loading failed').slice(0, 240) }); });
+
+    for (const viewport of viewports) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.name === 'mobile' });
+      for (const entry of matrix) {
+        const session = sessions[entry.role];
+        const cookie = await cdp.send('Network.setCookie', { name: 'auth_session', value: session.token, url: next.url, path: '/', httpOnly: true, sameSite: 'Lax' });
+        if (cookie.success !== true) throw new Error(`could not install ${entry.role} local auth cookie`);
+        for (const route of entry.routes) {
+          for (const state of ['cold', 'warm']) {
+            for (let sample = 1; sample <= 2; sample += 1) {
+              const errorStart = browserErrors.length;
+              if (state === 'cold') await cdp.send('Network.clearBrowserCache');
+              let documentStatus = null;
+              const documentHandler = (payload) => {
+                if (payload.type === 'Document' && payload.response?.url?.startsWith(next.url)) documentStatus = payload.response.status;
+              };
+              cdp.on('Network.responseReceived', documentHandler);
+              await cdp.send('Page.navigate', { url: `${next.url}${route}` });
+              let complete = false;
+              let finalState = null;
+              for (let attempt = 0; attempt < 150; attempt += 1) {
+                try {
+                  const stateResult = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+                    const text = document.body?.innerText || '';
+                    const path = location.pathname;
+                    const loading = document.querySelectorAll('.animate-spin, .animate-pulse').length > 0;
+                    const targetRoute = ${JSON.stringify(route)};
+                    const denied = ${JSON.stringify(entry.denied)};
+                    let ready = false;
+                    if (denied) ready = targetRoute === '/reports' && path.startsWith('/evaluations/') && document.readyState === 'complete';
+                    else if (targetRoute === '/dashboard') ready = text.includes('Kỳ 2099') && text.includes('Tổng quan hệ thống');
+                    else if (targetRoute === '/employees') ready = text.includes('P102M3T13 Seed Employee');
+                    else if (targetRoute === '/reports') ready = text.includes('Báo cáo QAQC');
+                    return { ready, path, text: text.slice(0, 300) };
+                  })()` });
+                  finalState = stateResult.result?.value || null;
+                  if (finalState?.ready) { complete = true; break; }
+                } catch { /* navigation context transition; retry */ }
+                await sleep(100);
+              }
+              const measurement = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+                const nav = performance.getEntriesByType('navigation')[0];
+                const paints = performance.getEntriesByType('paint');
+                const fcp = window.__perf_entries?.fcp ?? paints.find((entry) => entry.name === 'first-contentful-paint')?.startTime ?? null;
+                const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+                const lcp = window.__perf_entries?.lcp ?? (lcpEntries.length ? lcpEntries[lcpEntries.length - 1].startTime : null);
+                const resources = performance.getEntriesByType('resource');
+                return { ttfb: nav ? nav.responseStart - nav.startTime : null, fcp, lcp, domContentLoaded: nav ? nav.domContentLoadedEventEnd - nav.startTime : null, load: nav ? nav.loadEventEnd - nav.startTime : null, dataComplete: performance.now(), resourceBytes: resources.reduce((sum, entry) => sum + (entry.transferSize || entry.encodedBodySize || 0), 0), resourceCount: resources.length };
+              })()` });
+              cdp.off('Network.responseReceived', documentHandler);
+              if (!complete || !finalState?.path || documentStatus == null) throw new Error(`actual route incomplete role=${entry.role} route=${route} viewport=${viewport.name} state=${state} status=${documentStatus} path=${finalState?.path || 'unknown'}`);
+              runs.push({ route, role: entry.role, access: entry.denied ? 'denied' : 'allowed', viewport: viewport.name, state, sample, status: documentStatus, effectivePath: finalState.path, ...measurement.result.value, browserErrors: browserErrors.slice(errorStart) });
+            }
+          }
+        }
+      }
+    }
+    if (runs.length !== 32) throw new Error(`Expected 32 actual local samples, got ${runs.length}`);
+    if (runs.some((run) => run.browserErrors.length > 0)) throw new Error(`Actual local performance recorded browser/runtime errors: ${JSON.stringify(browserErrors.slice(0, 5))}`);
+    const summary = {};
+    for (const run of runs) {
+      const key = `${run.route}|${run.viewport}|${run.role}|${run.access}|${run.state}`;
+      if (!summary[key]) summary[key] = { route: run.route, viewport: run.viewport, role: run.role, access: run.access, state: run.state, sampleCount: 0, metrics: {} };
+      const item = summary[key]; item.sampleCount += 1;
+      for (const metric of ['ttfb', 'fcp', 'lcp', 'domContentLoaded', 'load', 'dataComplete', 'resourceBytes', 'resourceCount']) item.metrics[metric] = [...(item.metrics[metric] || []), run[metric]];
+    }
+    for (const item of Object.values(summary)) for (const [metric, values] of Object.entries(item.metrics)) item.metrics[metric] = summarizeValues(values);
+    const candidateSha = process.env.KURABE_PERF_CANDIDATE_SHA || 'WORKTREE_BASE';
+    const metricAvailability = Object.fromEntries(['fcp', 'lcp'].map((metric) => [metric, { availableRuns: runs.filter((run) => typeof run[metric] === 'number').length, totalRuns: runs.length }]));
+    const report = {
+      schema: 'kurabe-performance-baseline/v1',
+      provenance: {
+        mode: 'actual-local', target: 'loopback-owned-supabase-plus-private-next-production', candidateSha, browser: browserVersion,
+        liveBrowser: true, authenticated: true, stack: fixture.stackHandle.stackName, network: fixture.stackHandle.networkId,
+        api: fixture.restUrl, db: fixture.stackHandle.dbTarget, next: { appRoot: next.sourceIdentity.appRoot, nextConfig: next.sourceIdentity.nextConfig, buildMode: next.sourceIdentity.buildMode, candidateSha }, routes: TARGET_ROUTES,
+        viewports, roles: ['manager', 'employee'], samplesPerPoint: 2, deniedRouteSamples: 8, metricAvailability,
+      },
+      limitations: ['Employee role is measured on the explicit denied /reports route; manager is measured on all required data routes.', 'FCP/LCP are reported as UNKNOWN where Chrome exposes no paint entry; no fallback value is invented.'],
+      runs, summary: Object.values(summary), runtimeReadback: { seed: fixture.seedHandle.seedIdentity, postCleanup: 'verified-by-fixture-stop' },
+    };
+    fs.writeFileSync(REPORT_FILE, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    console.log(`ACTUAL_LOCAL_PERF_PASS runs=${runs.length} routes=3 viewports=2 manager=3-routes employee=denied-reports samples=2`);
+    console.log(`ACTUAL_LOCAL_PERF_REPORT ${REPORT_FILE}`);
+  } finally {
+    if (cdp) cdp.close();
+    try { chrome.kill('SIGTERM'); } catch {}
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch {}
+    if (next) await next.stop();
+    await fixture.stop();
+  }
+}
+
+((ACTUAL_LOCAL_MODE ? runActualLocalBenchmark : LOCAL_FIXTURE_MODE ? runLocalFixtureBenchmark : runBenchmark)()).catch((err) => {
   console.error('\nBenchmark Fatal Error:', err);
   process.exit(1);
 });
