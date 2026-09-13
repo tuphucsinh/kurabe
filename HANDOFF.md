@@ -1,10 +1,12 @@
 # HANDOFF — Kurabe non-production execution
 
-- Canonical observed HEAD is `87da82feb84cae5bc64205f7819257e10b6de05e`; canonical DONE: P102M3T01, P102M3T02, P102M3T07, P102M3T12, P102M3T13.
-- Existing DAG is unchanged. Remaining non-production IDs: P102M3T03, P102M3T04, P102M3T05, P102M3T06, P102M3T08, P102M3T09, P102M3T10, P102M3T11.
-- T02 candidate `8f28c05c7259716132babe3c889f2c8d5cd93692` passed exact real-DB (13), actual Next/Chrome (18), root, lint, typecheck, build, secret scan, diff and migration/rollback gates.
-- T02 fresh CONTROLLED review: `REVIEW_IDENTITY=PASS`, `REVIEWED_SHA=8f28c05c7259716132babe3c889f2c8d5cd93692`, F1–F5 `PASS`, `BLOCKING_FINDINGS=NONE`, `REVIEW_VERDICT=PASS`.
-- T02 disposable resources are cleaned and read back absent: containers=0, network=0, volumes=0, ports=0; production mutation is `NONE`.
-- T13 exact candidate and fresh `agy-readonly` CONTROLLED review remain PASS; its disposable resources are absent. Evidence manifests are under `/home/pi5/hermes-artifacts/kurabe-execution/`.
-- Protected pre-existing `AGENTS.md` remains untouched and unstaged. Historical audit/control metadata remains preserved; no broad audit or new phase was opened.
-- Next action: reconcile the unchanged graph, dispatch oldest READY P102M3T03, then continue through all remaining non-production tasks without owner handoff.
+- Canonical HEAD: `a33750986ad8afd9022bb1325463f993e9ad8156`; main is ahead origin by 103.
+- P102M3T10 is canonical DONE at `4efe42d979e231299663c669d0573199a58b0351`; fresh `agy-readonly` review PASS, fingerprint `e841c9194d3c59c0fe37028bb8f2a1a6cb1d9b0da72da4fcb236558eed56d699`.
+- P102M3T11 is BLOCKED from base `a33750986ad8afd9022bb1325463f993e9ad8156`; candidate remains quarantined in `/home/pi5/projects/kurabe-task-wt/P102M3T11` with one untracked owned suite file.
+- T11 release-matrix against approved T13 loopback runtime PASS; full and production npm audit PASS with zero vulnerabilities.
+- T11 release-preflight and release-manifest-integrity both fail on the same P1: `db/rollback-ai-summary-coverage.sql` lacks an explicit rollback approval guard.
+- Repair belongs to originating P102M3T06 ownership; T11 forbids mutating historical SQL to make its package green. No SQL, production, deployment, or external mutation occurred.
+- Exact blocker evidence: `/home/pi5/hermes-artifacts/kurabe-execution/P102M3T11-blocker-report.txt`; state is lock-written with `OPEN_P0=0`, `OPEN_P1=1`, reservations empty.
+- T13 disposable Supabase containers/network and loopback ports remain retained for the blocked repair/review path; cleanup is deferred until T11 closure.
+- Protected pre-existing `AGENTS.md` remains untouched and unstaged; no T11 commit or review was fabricated.
+- Next authorized action: amend/reopen P102M3T06 repair scope, then rebuild T11 from canonical HEAD, rerun affected gates, obtain fresh CONTROLLED review, and only then cleanup/reconcile final state.
