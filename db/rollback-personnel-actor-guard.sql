@@ -1,5 +1,13 @@
 BEGIN;
 
+DO $$
+BEGIN
+  IF current_setting('kurabe.p102m3t05_rollback_approved', true) IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'P102M3T05_ROLLBACK_UNAPPROVED: set kurabe.p102m3t05_rollback_approved=true in the approved rollback session';
+  END IF;
+END;
+$$;
+
 -- Fail-closed rollback for the P102M3T05 actor-aware overload. The legacy
 -- two-argument graph executor is intentionally retained and must remain present.
 DO $$

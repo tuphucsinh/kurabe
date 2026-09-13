@@ -10,7 +10,7 @@ const MIGRATION_PATH = path.join(projectRoot, 'supabase/migrations/2026091100040
 const ROLLBACK_PATH = path.join(projectRoot, 'db/rollback-personnel-actor-guard.sql');
 const SAFE_ENV = {
   PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-  HOME: '/tmp', LANG: 'C', LC_ALL: 'C', PGCONNECT_TIMEOUT: '5',
+  HOME: '/tmp', LANG: 'C', LC_ALL: 'C', PGCONNECT_TIMEOUT: '5', PGPASSWORD: process.env.PGPASSWORD || '',
 };
 const IDS = {
   manager: '00000000-0000-0000-0000-000000000001',
@@ -140,7 +140,13 @@ FROM pg_proc p WHERE p.oid = to_regprocedure('${schema}.apply_personnel_transact
     runPsql(target, call(schema, [], { id: IDS.teamTwo, name: 'Two renamed' }, IDS.manager));
     assert.equal(countCalls(target, schema), 3, 'Manager team mutation must reach executor');
 
-    runPsql(target, rewrite(rollback, schema));
+    const unapprovedRollback = rewrite(rollback, schema);
+    runPsql(target, unapprovedRollback, { expectPass: false });
+    const approvedRollback = unapprovedRollback.replace(
+      /^BEGIN;/,
+      "BEGIN;\nSET LOCAL kurabe.p102m3t05_rollback_approved = 'true';",
+    );
+    runPsql(target, approvedRollback);
     const postRollback = runPsql(target, `
 SELECT (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb,uuid)') IS NULL) || '|' ||
        (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb)') IS NOT NULL);`);

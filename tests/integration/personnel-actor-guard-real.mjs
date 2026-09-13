@@ -14,7 +14,7 @@ const ROLLBACK_PATH = path.join(projectRoot, 'db/rollback-personnel-actor-guard.
 const SAFE_ENV = {
   PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   HOME: '/tmp', LANG: 'C', LC_ALL: 'C',
-  PGCONNECT_TIMEOUT: '5',
+  PGCONNECT_TIMEOUT: '5', PGPASSWORD: process.env.PGPASSWORD || '',
 };
 const IDS = Object.freeze({
   activePeriod: '20000000-0000-0000-0000-000000000001',
@@ -149,7 +149,11 @@ export async function run({ options = {} } = {}) {
     assert.equal(scalar(target, `SELECT name FROM ${s}.teams WHERE id=${q(IDS.teamB)};`), 'B renamed');
     cases.push('actual-team-mutation');
 
-    runPsql(target, rewrite(rollback, schema));
+    const approvedRollback = rewrite(rollback, schema).replace(
+      /\bBEGIN;\s*/,
+      "BEGIN;\nSET LOCAL kurabe.p102m3t05_rollback_approved = 'true';\n",
+    );
+    runPsql(target, approvedRollback);
     assert.equal(scalar(target, `SELECT (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb,uuid)') IS NULL) || '|' || (to_regprocedure('${schema}.apply_personnel_transaction(jsonb,jsonb)') IS NOT NULL) || '|' || (to_regprocedure('${schema}.guard_personnel_evaluator_reference()') IS NULL);`), 'true|true|true');
     cases.push('fail-closed-rollback-and-legacy-retention');
     return { real: true, passed: true, tier: 'real-DB', status: 'EXECUTED', cases, target: `loopback:${target.port}/${target.database}` };
