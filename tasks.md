@@ -129,7 +129,7 @@ task:
   id: P102M3T08
   tier: CONTROLLED
   depends: [P102M3T02, P102M3T05, P102M3T06]
-  owns: [src/hooks/use-db.ts, src/contexts/AuthContext.tsx, src/components/employees/EmployeesClient.tsx, src/components/layout/PeriodSelector.tsx, src/components/reports/ReportsDataLayer.tsx, src/components/dashboard/DashboardDataLayer.tsx, 'src/app/evaluations/[id]/EvaluationPageClient.tsx', tests/browser/client-scope-freshness.mjs, tests/client-cache-contract.test.mjs]
+  owns: [src/hooks/use-db.ts, src/contexts/AuthContext.tsx, src/app/login/page.tsx, src/components/employees/EmployeesClient.tsx, src/components/layout/PeriodSelector.tsx, src/components/reports/ReportsDataLayer.tsx, src/components/dashboard/DashboardDataLayer.tsx, 'src/app/evaluations/[id]/EvaluationPageClient.tsx', 'src/app/teams/[id]/page.tsx', src/components/layout/Sidebar.tsx, src/components/reports/BatchResultMessageModal.tsx, tests/browser/client-scope-freshness.mjs, tests/client-cache-contract.test.mjs]
   locks: [PERIOD_CACHE_CONTRACT]
 ```
 Goal: close F09 and verify effective scope across mutation, role change, navigation and error states.
@@ -138,13 +138,13 @@ Changes: inventory every hook caller; mandatory authenticated viewer identity an
 Constraints: no cache-only authorization, composition redesign or suppressing errors. Preserve login full-reload compatibility until actual browser proof supports change; avoid indiscriminate memoization.
 DoD: `node tests/client-cache-contract.test.mjs`; `node scripts/verify-release.mjs --suite client-scope-freshness`; actual React/Next resident Manager→restricted viewer/role changes, mutation failure, personnel save→teams/detail/compare, rapid period/filter/back-forward, delayed rejection, no old-scope payload flash; G.
 
-### [ ] [#P102M3T09] Actual authenticated Next + DB release matrix and CI enforcement
+### [x] [#P102M3T09] Actual authenticated Next + DB release matrix and CI enforcement
 ```yaml
 task:
   id: P102M3T09
   tier: CONTROLLED
   depends: [P102M3T03, P102M3T07, P102M3T08]
-  owns: [.github/workflows/ci.yml, tests/integration/release-matrix.mjs, tests/browser/release-matrix.mjs, tests/browser/period-freshness.mjs, tests/browser/password-setup.mjs, tests/browser/credential-change.mjs, tests/browser/security-headers.mjs, tests/browser/responsive-accessibility.mjs, tests/operations/ci-suite-manifest.mjs]
+  owns: [.github/workflows/ci.yml, tests/integration/release-matrix.mjs, tests/browser/release-matrix.mjs, tests/browser/period-freshness.mjs, tests/browser/password-setup.mjs, tests/browser/credential-change.mjs, tests/browser/security-headers.mjs, tests/browser/responsive-accessibility.mjs, tests/operations/ci-suite-manifest.mjs, tests/logout-transition-regression.test.mjs, tests/teams-staged-loading-regression.test.mjs]
   locks: [KURABE_TEST_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 Goal: close F10 missing runtime coverage using existing harness infrastructure, not a second fake app.
@@ -153,7 +153,7 @@ Changes: qualify disposable Supabase-compatible local API/DB or existing equival
 Constraints: no production DB clone, actual employee identifiers or hosted project; inability to supply local authenticated seam => BLOCKED_CAPABILITY, not synthetic replacement. No system installs, hosted billing or GitHub settings changes without approval.
 DoD: `node scripts/verify-release.mjs --suite release-matrix`; `node scripts/verify-release.mjs --suite ci-suite-manifest`; all five roles on authorized/denied routes; actual save/return/close/personnel/config/history/report/export/AI-stub, fault/race cases and DB readbacks; CSP/hydration/console errors and 390x844/768x1024/1440x900 screenshots; deliberately break one real action and CI-equivalent must fail; missing/zero role coverage fails; G. Hosted enforcement NOT_RUN until approved remote readback.
 
-### [ ] [#P102M3T10] Authenticated application baseline and bounded measured optimization
+### [x] [#P102M3T10] Authenticated application baseline and bounded measured optimization
 ```yaml
 task:
   id: P102M3T10
