@@ -7,6 +7,6 @@
 - npm test, lint, typecheck, local-runtime build, full audit and production audit PASS; npm audit vulnerabilities total = 0.
 - Evidence root: `/home/pi5/hermes-artifacts/kurabe-execution/P102M3T05-T11-final/`; review package SHA-256 `3f1072847063ceaa2211158bb0aaecd3a031705364c5cd7e2bc36621145e1e41`.
 - No production connection, deploy, publish, external mutation, credential capture, or secret values in evidence.
-- T13 loopback runtime was used only for disposable local verification and is ready for cleanup after state close.
+- T13 loopback runtime was used only for disposable local verification and was fully cleaned: containers, network, ports and runtime directory are absent.
 - Pre-existing `AGENTS.md` remains untouched and unstaged; no unrelated task paths were changed.
-- Next action: commit this control bookkeeping, atomically close state, then remove only current-run temporary worktrees/runtime and verify clean residue.
+- Final state: state was atomically closed after cleanup; only pre-existing `AGENTS.md` remains dirty and protected.
