@@ -11,7 +11,6 @@ import {
   getEvaluationSummariesByEmployeeIdsAdmin,
   getEvaluationByIdAdmin, 
   getEvaluationByEmployeeAdmin, 
-  getEvaluationHistoryByEmployeeAdmin,
   getPeriodsAdmin,
   getActivePeriodAdmin,
   getPeriodByIdAdmin,
@@ -30,6 +29,7 @@ import {
 } from '@/lib/db/teams-admin';
 import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
+import { getEvaluationHistoryAdmin } from '@/lib/db/evaluation-history-admin';
 
 
 export type AuditRow = {
@@ -607,7 +607,7 @@ export async function getEvaluationByEmployeeAction(
 
 /**
  * Đọc lịch sử đánh giá các kỳ trước (status = Approved) của nhân viên.
- * Bắt buộc requireAuth() + chỉ Manager hoặc chính nhân viên đó mới được xem.
+ * Route và Server Action dùng chung một server-side authorization policy.
  */
 export async function getEvaluationHistoryAction(employeeId: string): Promise<Evaluation[]> {
   const auth = await requireAuth();
@@ -615,7 +615,8 @@ export async function getEvaluationHistoryAction(employeeId: string): Promise<Ev
     return [];
   }
 
-  return getEvaluationHistoryByEmployeeAdmin(employeeId, auth.user);
+  const { entries } = await getEvaluationHistoryAdmin(employeeId, auth.user);
+  return entries.map(({ evaluation }) => evaluation);
 }
 
 /**

@@ -157,7 +157,8 @@ export function canViewEvaluation(
   if (user.id === evaluation.employeeId) return true;
 
   // Người đã/đang được assign làm evaluator xem được.
-  if (evaluation.rounds.some(r => r.evaluatorId === user.id)) return true;
+  // Đối với evaluation đã Approved (hoặc đã kết thúc), chỉ evaluator đã thực sự submit round mới có quyền xem theo historical snapshot (tránh cấp quyền từ unfinished/withdrawn assignment).
+  if (evaluation.rounds.some(r => r.evaluatorId === user.id && (evaluation.status !== 'Approved' || isRoundSubmitted(r)))) return true;
 
   // Thành viên trong flow của người được đánh giá (nếu cùng team)
   const flow = getEvaluationFlow(evaluation.employeeRole);
@@ -168,6 +169,57 @@ export function canViewEvaluation(
   if (user.role === 'Leader' && isInFlow) return true;
 
   return false;
+}
+
+/**
+ * Kiểm tra xem viewer có quyền hạn hiện tại (current scope) đối với target employee hay không.
+ * - Manager: có quyền xem tất cả nhân viên.
+ * - Self: có quyền xem chính mình.
+ * - Leader: có quyền đối với nhân viên thuộc primary team hoặc appointed teams (teams.leader_id).
+ * - SubLeader / Employee / Worker: không có current scope xem lịch sử người khác.
+ */
+export function hasEvaluationHistoryTargetScope(
+  viewer: User | null | undefined,
+  target: User,
+  leaderTeamIds?: readonly string[]
+): boolean {
+  if (!viewer) return false;
+  if (viewer.role === 'Manager') return true;
+  if (viewer.id === target.id) return true;
+  if (viewer.role === 'Leader') {
+    return Boolean(target.teamId && leaderTeamIds && leaderTeamIds.includes(target.teamId));
+  }
+  return false;
+}
+
+/**
+ * Kiểm tra xem viewer có phải là historical evaluator đã thực sự submit round cho evaluation này hay không.
+ * Stale unfinished / withdrawn assignment (chưa submit) KHÔNG cấp quyền xem lịch sử.
+ */
+export function isAuthorizedHistoricalEvaluator(
+  viewer: User | null | undefined,
+  evaluation: Evaluation
+): boolean {
+  if (!viewer) return false;
+  return evaluation.rounds.some(
+    (r) => r.evaluatorId === viewer.id && isRoundSubmitted(r)
+  );
+}
+
+/**
+ * Single authorization truth table for historical evaluation reads.
+ * Current scope permits the current target history; a submitted historical
+ * round permits only that immutable historical entry after current scope is
+ * withdrawn. This never grants current evaluation write access.
+ */
+export function canReadEvaluationHistory(
+  viewer: User | null | undefined,
+  target: User,
+  evaluation: Evaluation,
+  leaderTeamIds?: readonly string[]
+): boolean {
+  return hasEvaluationHistoryTargetScope(viewer, target, leaderTeamIds)
+    || isAuthorizedHistoricalEvaluator(viewer, evaluation);
 }
 
 /**

@@ -6,7 +6,12 @@ import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
 import { getUsersAdmin } from '@/lib/db/users-admin';
 import { mapEvaluationFromDb, mapPeriodFromDb } from '@/lib/db/evaluations';
-import { canViewEvaluation } from '@/data/workflow';
+import {
+  canViewEvaluation,
+  canReadEvaluationHistory,
+  hasEvaluationHistoryTargetScope,
+  isAuthorizedHistoricalEvaluator,
+} from '@/data/workflow';
 import { isIndividualRole } from '@/lib/role-policy';
 import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 
@@ -40,9 +45,12 @@ function buildHistoricalTarget(target: User, evaluation: Evaluation): User {
  * Ràng buộc bảo mật & dữ liệu:
  * 1. Chỉ lấy evaluation có status = 'Approved'.
  * 2. Chỉ lấy kỳ đánh giá có trạng thái thô trong database là 'closed' (không fallback sang active/latest).
- * 3. Kiểm tra quyền truy cập nghiêm ngặt qua canViewEvaluation(viewer, evaluation, allUsersContext).
+ * 3. Kiểm tra quyền truy cập nghiêm ngặt qua canReadEvaluationHistory (shared H4 truth table).
  * 4. Sắp xếp: period.year DESC -> period.createdAt DESC -> evaluation.id ASC.
  * 5. Fail-closed: viewer thiếu auth hoặc không có quyền xem -> trả về entries rỗng hoặc target null.
+ * 6. Non-disclosure: Viewer không có current scope (Manager, Self, Leader của team hiện tại)
+ *    và không có historical evaluator entry hợp lệ -> trả { target: null, entries: [] }
+ *    để ngăn chặn target enumeration qua route /history/[id].
  */
 export async function getEvaluationHistoryAdmin(
   employeeId: string,
@@ -75,6 +83,8 @@ export async function getEvaluationHistoryAdmin(
   }
 
   const target = mapUserFromDb(targetData);
+  const leaderTeamIds = viewer.role === 'Leader' ? await getLeaderTeamIds(viewer) : [];
+  const hasCurrentScope = hasEvaluationHistoryTargetScope(viewer, target, leaderTeamIds);
 
   // 3. Query evaluations đã Approved thuộc các kỳ đã closed
   const { data: evalRows, error: evalError } = await supabaseAdmin
@@ -89,14 +99,16 @@ export async function getEvaluationHistoryAdmin(
   }
 
   if (!evalRows || evalRows.length === 0) {
+    if (!hasCurrentScope) {
+      return { target: null, entries: [] };
+    }
     return { target, entries: [] };
   }
 
-  // 4. Chuẩn bị context phân quyền cho canViewEvaluation
+  // 4. Chuẩn bị context nội bộ cho legacy evaluation-detail policy. This is
+  // never returned to the client and cannot widen the H4 history truth table.
   let allUsersContextBase: User[] = [target];
   if (viewer.role === 'Leader' || viewer.role === 'SubLeader') {
-    // Giữ đủ context user trong cùng team để matchesEvaluatorSelector không deny
-    // sai do thiếu quan hệ subleader/team; context này không được trả về client.
     const teamUsers = await getUsersAdmin(viewer);
     allUsersContextBase = [
       ...teamUsers.filter((user) => user.id !== target.id),
@@ -104,9 +116,8 @@ export async function getEvaluationHistoryAdmin(
     ];
   }
 
-  // 5. Lọc từng evaluation và period, kiểm tra tính hợp lệ và quyền xem
+  // 5. Lọc từng evaluation và period qua shared H4 history policy.
   const entries: EvaluationHistoryEntry[] = [];
-  const leaderTeamIds = viewer.role === 'Leader' ? await getLeaderTeamIds(viewer) : [];
 
   for (const row of evalRows) {
     const periodData = Array.isArray(row.evaluation_periods)
@@ -128,9 +139,17 @@ export async function getEvaluationHistoryAdmin(
       ...allUsersContextBase.filter((user) => user.id !== historicalTarget.id),
       historicalTarget,
     ];
+    const canViewEvaluationDetail = canViewEvaluation(viewer, evaluation, allUsersContext, leaderTeamIds);
 
-    // Kiểm tra quyền theo graph đã capture trong evaluation/round snapshots.
-    if (!canViewEvaluation(viewer, evaluation, allUsersContext, leaderTeamIds)) {
+    // One shared H4 truth table serves both the route and direct Server Action:
+    // current target scope OR a submitted historical evaluator snapshot.
+    // Historical read access is deliberately separate from current write auth.
+    if (!canReadEvaluationHistory(viewer, historicalTarget, evaluation, leaderTeamIds)) {
+      continue;
+    }
+    // Outside current scope, retain the existing evaluation-detail guard and
+    // require a submitted historical evaluator snapshot (never draft access).
+    if (!hasCurrentScope && (!canViewEvaluationDetail || !isAuthorizedHistoricalEvaluator(viewer, evaluation))) {
       continue;
     }
 
@@ -154,6 +173,12 @@ export async function getEvaluationHistoryAdmin(
     }
     return a.evaluation.id.localeCompare(b.evaluation.id);
   });
+
+  // Nếu viewer không có current scope VÀ không có entries hợp lệ nào viewer được phép xem:
+  // Fail closed: Không disclose target metadata (tránh user enumeration qua /history/[id])
+  if (!hasCurrentScope && entries.length === 0) {
+    return { target: null, entries: [] };
+  }
 
   return { target, entries };
 }

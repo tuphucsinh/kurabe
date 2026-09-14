@@ -90,8 +90,23 @@ export async function getLeaderTeamIds(requester: User): Promise<string[]> {
     throw new DatabaseError('Error fetching Leader team scope (admin)', error);
   }
 
+  let activePrimaryTeamId: string | null = null;
+  if (requester.teamId) {
+    const { data: primaryTeam, error: primaryError } = await supabaseAdmin
+      .from('teams')
+      .select('id')
+      .eq('id', requester.teamId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (primaryError) {
+      throw new DatabaseError('Error fetching Leader primary team scope (admin)', primaryError);
+    }
+    activePrimaryTeamId = primaryTeam?.id ?? null;
+  }
+
   return Array.from(new Set([
-    ...(requester.teamId ? [requester.teamId] : []),
+    ...(activePrimaryTeamId ? [activePrimaryTeamId] : []),
     ...(data || []).map((team: { id: string }) => team.id),
   ]));
 }

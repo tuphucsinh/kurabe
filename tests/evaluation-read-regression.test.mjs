@@ -168,8 +168,8 @@ function extractFunction(code, functionName) {
 
   const historyFn = normalizeWhitespace(extractFunction(code, 'getEvaluationHistoryAction'));
   assert.ok(
-    /return\s+getEvaluationHistoryByEmployeeAdmin\s*\(\s*employeeId\s*,\s*auth\.user\s*\)/.test(historyFn),
-    'getEvaluationHistoryAction must call getEvaluationHistoryByEmployeeAdmin(employeeId, auth.user)'
+    /getEvaluationHistoryAdmin\s*\(\s*employeeId\s*,\s*auth\.user\s*\)/.test(historyFn),
+    'getEvaluationHistoryAction must call the shared getEvaluationHistoryAdmin(employeeId, auth.user) policy'
   );
 
   const listFn = normalizeWhitespace(extractFunction(code, 'getEvaluationsAction'));
