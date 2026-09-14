@@ -28,7 +28,7 @@
 
 Only parallel groups: **PG1 = M2T02 + M2T03**, **PG2 = M3T02 + M3T03**. Same RPC/`evaluation.ts`/`read.ts`/`use-db.ts` ownership is sequential through ancestors, never concurrent siblings. Isolated DB lock names below are per task; runtime resource cap still serializes heavy verification. Each integration must include all canonical ancestors.
 
-### [ ] [#P103M1T01] Qualify reusable disposable confirmation fixture
+### [x] [#P103M1T01] Qualify reusable disposable confirmation fixture
 
 ```yaml
 task:
@@ -47,6 +47,7 @@ task:
 - **Evidence:** six actor-ID checks, bootstrap manifest and catalog/ACL digests, bound ports/container IDs, sanitized traffic, source SHA, cleanup readback; preserve first setup failure separately.
 - **DB/security impact:** synthetic disposable writes only; credentials never emitted. No production bootstrap/client fallback.
 - **Rollback/risk:** tear down exact owned local resources after preserving evidence; refuse ambiguous/shared targets. Missing Docker/Chrome/runtime capability => BLOCKED_CAPABILITY, not synthetic PASS.
+- **Execution result:** PASS after fresh independent review; canonical task commit `4af6cd911b7c411b3a21243ad1dda49ea3d6ee38`; evidence `runtime-qualification-repair.json` and `candidate-verification-repair.json`; production writes `0`; disposable residue `0`.
 
 ### [ ] [#P103M1T02] H4 server history authorization and target non-disclosure
 
