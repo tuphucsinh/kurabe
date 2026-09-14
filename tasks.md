@@ -70,7 +70,7 @@ task:
 - **Rollback/risk:** scoped local revert; historical over-denial prevented by positive snapshot cases. Do not deploy/revert to known leak as workaround.
 - **Execution result:** PASS after fresh exact-SHA populated authenticated route/action qualification and independent `agy-readonly` review. Frozen candidate `7a7a759eef968ec7ec4204b8ae28e44155520815` integrated from canonical base `072d247413485c459f51d983105f95e393e76717` as `eddafaca9c197931499bd35edb7f1b5f28b84f50`; closure evidence `H4-final-closure.json`; production writes/migrations/deployment `0`; known H6 fixture interference remained unchanged and documented.
 
-### [ ] [#P103M1T03] H5 transactional current authorization after revoke
+### [x] [#P103M1T03] H5 transactional current authorization after revoke
 
 ```yaml
 task:
@@ -89,6 +89,7 @@ task:
 - **Evidence:** current role/team/appointment before/after, action+RPC results, round/evaluation immutable-on-deny hashes, two-session lock sequence/wait timings, pre/post function definitions/signatures/ACL/search_path and only intended semantic changes.
 - **DB/security impact:** migration 001 (NEW) replaces save/return function bodies, no data repair/schema expansion/GRANT broadening; source applied SQL remains byte-identical.
 - **Rollback/risk:** existing personnel table-fence order reused; contention/period-close/config-writer race bounded and recorded. Disposable restore exact captured functions; production rollback may not resurrect revoked-authority bypass, use containment/forward correction with approval.
+- **Execution result:** PASS after fresh exact-SHA authenticated qualification on candidate `6205ef475cd3a837697ff0d1fab932f914378482`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M1T03/H5-final-qualification.json` SHA-256 `b3bb127715118c204327a82cc4817083a4837795f216aaef99b2d414ca7ffe0b`; fresh independent review `PASS`; integrated canonical commit `2e2623af5dd01bef849f3ee713bea51e301b332f`; production writes/migrations `0`; known H6 response-contract interference unchanged and documented.
 
 ### [ ] [#P103M2T01] H1/H2 workflow parity and multi-team SQL transition
 
