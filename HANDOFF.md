@@ -1,12 +1,11 @@
 # HANDOFF — Kurabe P103 execution
 
-- State: `RUNNING`; P103M1T01 is canonically integrated and independently reviewed `PASS`; production remains read-only.
-- Canonical task commit: `4af6cd911b7c411b3a21243ad1dda49ea3d6ee38`; code source anchor is unchanged.
+- State: `RUNNING`; P103M1T01 and P103M1T02 are canonically integrated and independently reviewed `PASS`; production remains read-only.
+- P103M1T02 frozen candidate: `7a7a759eef968ec7ec4204b8ae28e44155520815`; integrated task commit: `eddafaca9c197931499bd35edb7f1b5f28b84f50`.
+- H4 closure evidence: `/home/pi5/hermes-artifacts/kurabe-p103/P103M1T02/H4-final-closure.json`; populated authenticated qualification and route/action parity passed.
 - Existing owner changes in `AGENTS.md` and `docs/PRODUCTION_RUNBOOK.md` are preserved and excluded from task ownership.
-- P103 has 12 pending tasks; current gate is `P103M1T02` H4 server history authorization and target non-disclosure.
-- All task Runner work must use isolated Git worktrees, forward migrations, disposable DB/runtime only, and independent verification/review.
+- P103M1T02 known H6 fixture interference remains documented; H6 implementation was not changed.
+- All task Runner work uses isolated Git worktrees, disposable DB/runtime only, and fresh independent review for CONTROLLED tasks.
 - No production write, deployment, credential publication, migration apply, or unrelated refactor is authorized.
-- Prior production closure/evidence remains historical context only; this execution must not treat it as new verification.
-- Next action: register `P103M1T02` under `control.lock`, create its clean task worktree from canonical HEAD, and dispatch its bounded Runner.
+- Next action: dispatch `P103M1T03` from canonical `eddafaca9c197931499bd35edb7f1b5f28b84f50` after durable state readback.
 - Durable evidence/state paths: `.state/agent-state.json`, `.state/control.lock`, `.state/SYSTEM_ALERT.md` when blocked.
-- Final gate requires exact-candidate disposable E2E, CI/release verification, fresh independent review, and canonical readback.

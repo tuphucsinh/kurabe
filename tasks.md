@@ -3,10 +3,10 @@
 ## Planning authority and entry gate
 
 - `PLAN_REVISION=P103-r1`; source `ab4d6a798946ff26c565d17095685a1571688db9`; canonical `main` at `/home/pi5/projects/kurabe`.
-- **13 tasks, all pending. No implementation has started or completed.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
+- **P103M1T01 and P103M1T02 are completed; 11 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
 - `.ai/MASTER_PLAN.md` sections 1–7 are mandatory context for each task. Rules A–D settle authorization, multi-team selection, workflow/status and snapshots; a worker must not pick a different policy.
 - `Independent: yes` means no new P103 prerequisite; `no` means dependencies required. `Parallel-safe: yes` is a descriptive opportunity only after dependencies integrate and ownership/locks/live state allow it; it is not a scheduler bypass or runtime schema field.
-- `READY_TO_EXECUTE=NO`: owner has requested **planning only**. Need implementation/security/disposable-DB authorization and mika-v3 dirty-canonical/state reconciliation before execution. No production write, deploy, credential change, commit/push or task registration is authorized now.
+- `READY_TO_EXECUTE=YES`: owner authorized bounded P103 execution; production write, deploy, credential change, and migration remain unauthorized unless separately approved.
 - All tasks use isolated per-task WTs; Runner never edits `tasks.md`, `AGENTS.md`, `.ai/*`, `.state/*`, HANDOFF or protected owner changes. `owns` below includes matching tests, not control files. Existing source is context, not blanket write permission.
 - No new board/daemon/control DB. Runner preference AGY then coder capability fallback; Mika verifies independently. CONTROLLED tasks need fresh selected reviewer/readonly AGY before canonical integration; P103M4T04 adds final cross-feature review, not a replacement for task gates.
 
@@ -49,7 +49,7 @@ task:
 - **Rollback/risk:** tear down exact owned local resources after preserving evidence; refuse ambiguous/shared targets. Missing Docker/Chrome/runtime capability => BLOCKED_CAPABILITY, not synthetic PASS.
 - **Execution result:** PASS after fresh independent review; canonical task commit `4af6cd911b7c411b3a21243ad1dda49ea3d6ee38`; evidence `runtime-qualification-repair.json` and `candidate-verification-repair.json`; production writes `0`; disposable residue `0`.
 
-### [ ] [#P103M1T02] H4 server history authorization and target non-disclosure
+### [x] [#P103M1T02] H4 server history authorization and target non-disclosure
 
 ```yaml
 task:
@@ -68,6 +68,7 @@ task:
 - **Evidence:** baseline leak vs fixed redacted HTML/RSC/action payload, positive authorized history entries, denied payload field assertions, screenshots of generic unavailable and permitted B history.
 - **DB/security impact:** no migration; scoped service-role read only in app, no new target enumeration.
 - **Rollback/risk:** scoped local revert; historical over-denial prevented by positive snapshot cases. Do not deploy/revert to known leak as workaround.
+- **Execution result:** PASS after fresh exact-SHA populated authenticated route/action qualification and independent `agy-readonly` review. Frozen candidate `7a7a759eef968ec7ec4204b8ae28e44155520815` integrated from canonical base `072d247413485c459f51d983105f95e393e76717` as `eddafaca9c197931499bd35edb7f1b5f28b84f50`; closure evidence `H4-final-closure.json`; production writes/migrations/deployment `0`; known H6 fixture interference remained unchanged and documented.
 
 ### [ ] [#P103M1T03] H5 transactional current authorization after revoke
 
