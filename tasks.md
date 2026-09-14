@@ -56,13 +56,13 @@ task:
   id: P103M1T02
   tier: CONTROLLED
   depends: [P103M1T01]
-  owns: [src/lib/db/evaluation-history-admin.ts, 'src/app/history/[employeeId]/page.tsx', src/components/evaluation/EvaluationHistoryPage.tsx, src/data/workflow.ts, src/lib/db/teams-admin.ts, tests/h4-history-authorization.test.ts, tests/integration/h4-history.mjs, tests/browser/h4-history.mjs]
+  owns: [src/lib/db/evaluation-history-admin.ts, 'src/app/history/[employeeId]/page.tsx', src/components/evaluation/EvaluationHistoryPage.tsx, src/data/workflow.ts, src/lib/db/teams-admin.ts, src/actions/read.ts, tests/h4-history-authorization.test.ts, tests/integration/h4-history.mjs, tests/browser/h4-history.mjs]
   locks: [P103M1T02_LOCAL_RUNTIME]
 ```
 - **Independent:** no. **Parallel-safe:** no.
 - **Goal/current context:** stop `getEvaluationHistoryAdmin` leaking target on empty/filtered history; trace `HistoryPage`, `canViewEvaluation`, `getLeaderTeamIds`. Preserve authorized historical snapshot reads.
 - **Interface:** keep history result shape; denied => `{target:null,entries:[]}`, unauthorized/not-found same UI state. Current active Leader scope = active primary ∪ active appointed teams; other role checks preserved.
-- **Implementation steps:** (1) add red HTML/RSC target-leak and permission truth table; (2) resolve server current scope once; (3) return target only for current target scope or at least one authorized closed-history entry; (4) prevent stale unfinished assignment outside scope granting access; render unavailable without target details; (5) positive-control historical evaluator, self/Manager/B.
+- **Implementation steps:** (1) add red HTML/RSC target-leak and permission truth table; (2) resolve server current scope once; (3) return target only for current target scope or at least one authorized closed-history entry; (4) prevent stale unfinished assignment outside scope granting access; (5) centralize route and `getEvaluationHistoryAction` policy; (6) enforce active primary + active appointed Leader scope; (7) render unavailable without target details; (8) positive-control historical evaluator, self/Manager/B.
 - **Acceptance criteria:** A+B cannot see name/code/role/team of C with no/permitted-zero history; direct action and route consistent, errors fail closed; authorized history preserved, no global allow or client-only mask.
 - **Mandatory tests / verification:** V0; `node scripts/verify-release.mjs --suite h4-history --tier authenticated --evidence "$EVIDENCE/h4-history.json"`. Include missing target, empty/populated forbidden target, anonymous/individual/SubLeader, withdrawn unfinished assignment, old submitted evaluator and unrelated period denial.
 - **Evidence:** baseline leak vs fixed redacted HTML/RSC/action payload, positive authorized history entries, denied payload field assertions, screenshots of generic unavailable and permitted B history.
