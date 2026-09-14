@@ -56,7 +56,7 @@ task:
   id: P103M1T02
   tier: CONTROLLED
   depends: [P103M1T01]
-  owns: [src/lib/db/evaluation-history-admin.ts, 'src/app/history/[employeeId]/page.tsx', src/components/evaluation/EvaluationHistoryPage.tsx, src/data/workflow.ts, src/lib/db/teams-admin.ts, src/actions/read.ts, tests/h4-history-authorization.test.ts, tests/integration/h4-history.mjs, tests/browser/h4-history.mjs]
+  owns: [src/lib/db/evaluation-history-admin.ts, 'src/app/history/[employeeId]/page.tsx', src/components/evaluation/EvaluationHistoryPage.tsx, src/data/workflow.ts, src/lib/db/teams-admin.ts, src/actions/read.ts, tests/evaluation-read-regression.test.mjs, tests/h4-history-authorization.test.ts, tests/integration/h4-history.mjs, tests/browser/h4-history.mjs]
   locks: [P103M1T02_LOCAL_RUNTIME]
 ```
 - **Independent:** no. **Parallel-safe:** no.
