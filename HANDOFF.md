@@ -1,15 +1,12 @@
-# HANDOFF — Kurabe final closure
+# HANDOFF — Kurabe P103 execution
 
-- State: `COMPLETE`; no active Runner, candidate, reservation, or quarantine.
-- Production/source SHA: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; repository `HEAD` and `origin/main` match the documentation closure commit.
-- Production alias `https://lykiv.vercel.app` is READY; release closure is COMPLETE.
-- Production migrations/schema compatibility, deployment, and authenticated smoke are PASS.
-- Smoke covered login, dashboard, normal read, QI Xe hơi, QI-KIV2, unrelated-team denial, and zero HTTP 5xx/page/visible errors.
-- Temporary credential cleanup is PASS: sessions/setup tokens are zero; no secret file retained.
-- Multi-team Leader contract is live: primary membership and appointed leadership are separate; QI-KIV2 access PASS.
-- Worktree cleanup is PASS: only `/home/pi5/projects/kurabe` remains; `ACTIVE_RESERVATIONS=0`, `OPEN_P0=0`, `OPEN_P1=0`.
-- `MANDATORY_OPEN_WORK=NONE`.
-- Optional boundaries: P102M2T01 is owner-gated; P96T11–P96T13 and strict-password go-live are deferred/owner-gated.
-- Protected `AGENTS.md` and pre-existing `docs/PRODUCTION_RUNBOOK.md` changes were preserved.
-- Evidence: `/home/pi5/hermes-artifacts/kurabe-execution/production-release-closure-76221ca.log` and `/home/pi5/hermes-artifacts/kurabe-worktree-cleanup/`.
-- Next action: no automatic dispatch; wait for a new explicit owner-approved scope.
+- State: `RUNNING`; owner approved execution of the current P103 plan; production remains read-only.
+- Canonical pre-execution HEAD: `ab4d6a798946ff26c565d17095685a1571688db9`; code source anchor is unchanged.
+- Existing owner changes in `AGENTS.md` and `docs/PRODUCTION_RUNBOOK.md` are preserved and excluded from task ownership.
+- P103 has 13 pending tasks; current gate is `P103M1T01` disposable confirmation fixture qualification.
+- All task Runner work must use isolated Git worktrees, forward migrations, disposable DB/runtime only, and independent verification/review.
+- No production write, deployment, credential publication, migration apply, or unrelated refactor is authorized.
+- Prior production closure/evidence remains historical context only; this execution must not treat it as new verification.
+- Next action: register P103 state under `control.lock`, create the clean task worktree, and dispatch `P103M1T01`.
+- Durable evidence/state paths: `.state/agent-state.json`, `.state/control.lock`, `.state/SYSTEM_ALERT.md` when blocked.
+- Final gate requires exact-candidate disposable E2E, CI/release verification, fresh independent review, and canonical readback.
