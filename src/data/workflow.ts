@@ -46,9 +46,14 @@ function matchesEvaluatorSelector(
   allUsers?: User[],
   ledTeamIds?: readonly string[]
 ): boolean {
+  if ((evaluator as { isActive?: boolean; is_active?: boolean }).isActive === false || (evaluator as { isActive?: boolean; is_active?: boolean }).is_active === false) {
+    return false;
+  }
+
   if (selector === 'SELF') {
     const targetId = 'employeeId' in target ? target.employeeId : target.id;
-    return evaluator.id === targetId;
+    const targetRole = 'employeeRole' in target ? target.employeeRole : target.role;
+    return evaluator.id === targetId && evaluator.role === targetRole;
   }
 
   if (selector === 'SubLeader') {
@@ -64,12 +69,13 @@ function matchesEvaluatorSelector(
   }
 
   if (selector === 'Leader') {
-    const leadsTargetTeam = ledTeamIds?.includes(target.teamId) ?? false;
+    const leadsTargetTeam = Boolean(target.teamId && ledTeamIds?.includes(target.teamId));
     return evaluator.role === 'Leader' && (evaluator.teamId === target.teamId || leadsTargetTeam);
   }
 
   return evaluator.role === 'Manager';
 }
+
 
 /**
  * Kiểm tra quyền đánh giá (thường ở Round 1)
@@ -231,7 +237,7 @@ export function getEvaluationAccessState(
   allUsers?: User[],
   ledTeamIds?: readonly string[]
 ): EvaluationAccessState {
-  if (!viewer) {
+  if (!viewer || (viewer as { isActive?: boolean; is_active?: boolean }).isActive === false || (viewer as { isActive?: boolean; is_active?: boolean }).is_active === false) {
     return {
       mode: 'blocked',
       reason: 'NOT_AUTHORIZED',
@@ -273,11 +279,13 @@ export function getEvaluationAccessState(
       viewer.id === evaluation.employeeId &&
       currentStep?.evaluator === 'SELF' &&
       !!currentRoundData &&
+      currentRoundData.evaluatorId === viewer.id &&
       !isRoundSubmitted(currentRoundData);
 
     const isManagerReviewerRound =
       currentStep?.evaluator === 'Manager' &&
       !!currentRoundData &&
+      currentRoundData.evaluatorId === viewer.id &&
       previousSubmitted &&
       !isRoundSubmitted(currentRoundData);
 
@@ -298,7 +306,13 @@ export function getEvaluationAccessState(
   if (viewer.id === evaluation.employeeId) {
     const currentStep = flow.find(s => s.round === evaluation.currentRound);
     const currentRoundData = evaluation.rounds.find(r => r.round === evaluation.currentRound);
-    if (currentStep && currentStep.evaluator === 'SELF' && currentRoundData) {
+    if (
+      currentStep &&
+      currentStep.evaluator === 'SELF' &&
+      currentRoundData &&
+      currentRoundData.evaluatorId === viewer.id &&
+      !isRoundSubmitted(currentRoundData)
+    ) {
       state.mode = 'edit';
       state.editableRound = evaluation.currentRound;
       state.displayRound = evaluation.currentRound;
@@ -327,10 +341,18 @@ export function getEvaluationAccessState(
     // Nếu đang đến lượt mình
     if (viewerStep.round === evaluation.currentRound) {
       const currentRoundData = evaluation.rounds.find(r => r.round === evaluation.currentRound);
-      if (!currentRoundData) {
+      if (!currentRoundData || currentRoundData.evaluatorId !== viewer.id || isRoundSubmitted(currentRoundData)) {
+        if (!hasAnyDraft) {
+          return {
+            mode: 'blocked',
+            reason: 'NO_DRAFT',
+            displayRound: latestVisibleRound,
+            editableRound: null,
+            visibleRounds,
+          };
+        }
         return {
-          mode: 'blocked',
-          reason: 'ROUND_LOCKED',
+          mode: 'readonly',
           displayRound: latestVisibleRound,
           editableRound: null,
           visibleRounds,
@@ -340,7 +362,7 @@ export function getEvaluationAccessState(
       // Check xem round trước (nếu có) đã submit chưa - thực tế currentRound đã đảm bảo điều này qua saveEvaluationRound
       // Nhưng ta check thêm tính draft-gate: Nếu round 1 chưa có draft mà Leader (R2) vào xem
       if (evaluation.currentRound > 1) {
-        const prevRound = evaluation.rounds.find(r => r.round === evaluation.currentRound - 1);
+        const prevRound = evaluation.rounds.find(r => r.round === parseRoundNumber(evaluation.currentRound - 1));
         if (!prevRound || !isRoundSubmitted(prevRound)) {
            // Trường hợp hy hữu: currentRound tăng nhưng round trước chưa submit
            state.mode = 'readonly';
@@ -370,4 +392,96 @@ export function getEvaluationAccessState(
     editableRound: null,
     visibleRounds: [],
   };
+}
+
+/**
+ * Kiểm tra xem actor có quyền ghi (Save Draft, Initialize Draft, Submit) đối với một round cụ thể hay không.
+ * Yêu cầu đồng thời:
+ * 1. Actor còn đang active (không bị khóa/inactivated).
+ * 2. Actor thỏa mãn current authorization theo role, team, và quan hệ tổ chức hiện tại.
+ * 3. Round đang mở (chưa submit) và actor là evaluator được gán trên round đó (stored assignment).
+ * 4. Đảm bảo thứ tự monotonic (round hiện tại).
+ */
+export function canWriteEvaluationRound(
+  actor: User | null | undefined,
+  evaluation: Evaluation,
+  round: RoundNumber,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): boolean {
+  if (!actor || (actor as { isActive?: boolean; is_active?: boolean }).isActive === false || (actor as { isActive?: boolean; is_active?: boolean }).is_active === false) {
+    return false;
+  }
+  if (evaluation.currentRound !== round) {
+    return false;
+  }
+  const roundRecord = evaluation.rounds.find((r) => r.round === round);
+  if (!roundRecord || isRoundSubmitted(roundRecord)) {
+    return false;
+  }
+  if (roundRecord.evaluatorId !== actor.id) {
+    return false;
+  }
+  if (round > 1) {
+    const prevRound = evaluation.rounds.find((r) => r.round === parseRoundNumber(round - 1));
+    if (!prevRound || !isRoundSubmitted(prevRound)) {
+      return false;
+    }
+  }
+  const flow = getEvaluationFlow(evaluation.employeeRole);
+  const step = flow.find((s) => s.round === round);
+  if (!step) {
+    return false;
+  }
+  return matchesEvaluatorSelector(step.evaluator, actor, evaluation, allUsers, ledTeamIds);
+}
+
+/**
+ * Kiểm tra xem actor có quyền trả lại (Return Evaluation Round) hay không.
+ * Case B: Manager trả lại round 1 của chính mình khi đã Approved.
+ * Case A: Reviewer (Leader/Manager) trả lại round > 1 đang ở Draft về round trước.
+ * Yêu cầu actor còn đang active và giữ đúng vai trò/phạm vi hiện tại.
+ */
+export function canReturnEvaluationRound(
+  actor: User | null | undefined,
+  evaluation: Evaluation,
+  round: RoundNumber,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): boolean {
+  if (!actor || (actor as { isActive?: boolean; is_active?: boolean }).isActive === false || (actor as { isActive?: boolean; is_active?: boolean }).is_active === false) {
+    return false;
+  }
+  if (round === 1) {
+    if (
+      evaluation.employeeRole !== 'Manager' ||
+      evaluation.status !== 'Approved' ||
+      evaluation.currentRound !== 1 ||
+      actor.role !== 'Manager' ||
+      actor.id !== evaluation.employeeId
+    ) {
+      return false;
+    }
+    const round1 = evaluation.rounds.find((r) => r.round === 1);
+    return Boolean(round1 && round1.evaluatorId === actor.id && isRoundSubmitted(round1));
+  }
+
+  // round > 1
+  if (evaluation.currentRound !== round || evaluation.status === 'Approved') {
+    return false;
+  }
+  const currentRound = evaluation.rounds.find((r) => r.round === round);
+  if (!currentRound || currentRound.evaluatorId !== actor.id || isRoundSubmitted(currentRound)) {
+    return false;
+  }
+  const prevRound = evaluation.rounds.find((r) => r.round === parseRoundNumber(round - 1));
+  if (!prevRound || !isRoundSubmitted(prevRound)) {
+    return false;
+  }
+  const flow = getEvaluationFlow(evaluation.employeeRole);
+  const step = flow.find((s) => s.round === round);
+  if (!step || step.evaluator === 'SELF') {
+    return false;
+  }
+  return matchesEvaluatorSelector(step.evaluator, actor, evaluation, allUsers, ledTeamIds);
 }

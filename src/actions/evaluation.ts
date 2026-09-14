@@ -69,6 +69,197 @@ export interface SaveEvaluationRoundConfigOptions {
   renderedRules?: EvaluationCriterionRule[];
 }
 
+interface EvaluationCurrentAuthInfo {
+  employee_id: string;
+  employee_role: string;
+  team_id: string | null;
+  status: string;
+  current_round: number | null;
+}
+
+async function assertCurrentRoundWriteAuthorization(
+  actorId: string,
+  evaluationId: string,
+  round: RoundNumber,
+  evalInfo: EvaluationCurrentAuthInfo,
+  options?: { isSubmit?: boolean | null; isInit?: boolean }
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { data: actorUser, error: actorError } = await supabaseAdmin
+    .from('users')
+    .select('id, role, team_id, is_active')
+    .eq('id', actorId)
+    .single();
+
+  if (actorError || !actorUser || actorUser.is_active !== true) {
+    return { success: false, error: 'Người dùng không tồn tại hoặc đã bị vô hiệu hóa.' };
+  }
+
+  const { data: roundRecord, error: roundError } = await supabaseAdmin
+    .from('evaluation_rounds')
+    .select('id, evaluator_id, status, submitted_at')
+    .eq('evaluation_id', evaluationId)
+    .eq('round', round)
+    .maybeSingle();
+
+  if (roundError || !roundRecord) {
+    return { success: false, error: 'Không tìm thấy thông tin vòng đánh giá.' };
+  }
+
+  if (roundRecord.evaluator_id !== actorId) {
+    return { success: false, error: 'Bạn không có quyền đánh giá vòng này.' };
+  }
+
+  if (!options?.isInit && (roundRecord.status === 'Submitted' || roundRecord.submitted_at !== null)) {
+    if (!options?.isSubmit) {
+      return { success: false, error: 'Vòng đánh giá đã khóa.' };
+    }
+  }
+
+  let teamLeaderId: string | null = null;
+  if (evalInfo.team_id) {
+    const { data: teamData, error: teamError } = await supabaseAdmin
+      .from('teams')
+      .select('id, leader_id, is_active')
+      .eq('id', evalInfo.team_id)
+      .single();
+
+    if (teamError || !teamData || teamData.is_active !== true) {
+      return { success: false, error: 'Nhóm đánh giá không tồn tại hoặc đã bị vô hiệu hóa.' };
+    }
+    teamLeaderId = teamData.leader_id;
+  }
+
+  const { data: subjectUser, error: subjectError } = await supabaseAdmin
+    .from('users')
+    .select('id, role, team_id, subleader_id, is_active')
+    .eq('id', evalInfo.employee_id)
+    .single();
+
+  if (subjectError || !subjectUser || subjectUser.is_active !== true) {
+    return { success: false, error: 'Nhân viên được đánh giá không tồn tại hoặc đã bị vô hiệu hóa.' };
+  }
+
+  const flow = getEvaluationFlow(parseRole(evalInfo.employee_role));
+  const currentStep = flow.find((s) => s.round === round);
+  if (!currentStep) {
+    return { success: false, error: 'Vòng đánh giá không hợp lệ đối với chức danh này.' };
+  }
+
+  if (currentStep.evaluator === 'SELF') {
+    if (actorUser.id !== evalInfo.employee_id || actorUser.role !== evalInfo.employee_role) {
+      return { success: false, error: 'Bạn không có quyền tự đánh giá cho hồ sơ này.' };
+    }
+  } else if (currentStep.evaluator === 'SubLeader') {
+    if (
+      actorUser.role !== 'SubLeader' ||
+      !evalInfo.team_id ||
+      actorUser.team_id !== evalInfo.team_id ||
+      subjectUser.subleader_id !== actorId
+    ) {
+      return { success: false, error: 'Bạn không phải SubLeader phụ trách nhân viên này.' };
+    }
+  } else if (currentStep.evaluator === 'Leader') {
+    const isPrimaryLeader = actorUser.role === 'Leader' && Boolean(evalInfo.team_id && actorUser.team_id === evalInfo.team_id);
+    const isAppointedLeader = actorUser.role === 'Leader' && Boolean(teamLeaderId && teamLeaderId === actorId);
+    if (!isPrimaryLeader && !isAppointedLeader) {
+      return { success: false, error: 'Bạn không có quyền đánh giá nhóm này.' };
+    }
+  } else if (currentStep.evaluator === 'Manager') {
+    if (actorUser.role !== 'Manager') {
+      return { success: false, error: 'Chỉ Quản lý mới có quyền đánh giá vòng này.' };
+    }
+  } else {
+    return { success: false, error: 'Không xác định được thẩm quyền đánh giá.' };
+  }
+
+  return { success: true };
+}
+
+async function assertCurrentRoundReturnAuthorization(
+  actorId: string,
+  evaluationId: string,
+  round: RoundNumber,
+  evalInfo: EvaluationCurrentAuthInfo
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { data: actorUser, error: actorError } = await supabaseAdmin
+    .from('users')
+    .select('id, role, team_id, is_active')
+    .eq('id', actorId)
+    .single();
+
+  if (actorError || !actorUser || actorUser.is_active !== true) {
+    return { success: false, error: 'Người dùng không tồn tại hoặc đã bị vô hiệu hóa.' };
+  }
+
+  const { data: roundRecord, error: roundError } = await supabaseAdmin
+    .from('evaluation_rounds')
+    .select('id, evaluator_id, status, submitted_at')
+    .eq('evaluation_id', evaluationId)
+    .eq('round', round)
+    .maybeSingle();
+
+  if (roundError || !roundRecord) {
+    return { success: false, error: 'Không tìm thấy thông tin vòng đánh giá.' };
+  }
+
+  if (roundRecord.evaluator_id !== actorId) {
+    return { success: false, error: 'Bạn không phải người đánh giá vòng này.' };
+  }
+
+  if (round === 1) {
+    if (
+      evalInfo.status !== 'Approved' ||
+      evalInfo.current_round !== 1 ||
+      evalInfo.employee_role !== 'Manager' ||
+      actorUser.role !== 'Manager' ||
+      evalInfo.employee_id !== actorId
+    ) {
+      return { success: false, error: 'Vòng 1 chỉ có thể trả lại khi đánh giá là Quản lý và đã Approved.' };
+    }
+    return { success: true };
+  }
+
+  if (evalInfo.current_round !== round || evalInfo.status === 'Approved') {
+    return { success: false, error: 'Không thể trả lại đánh giá ở trạng thái hoặc vòng này.' };
+  }
+
+  let teamLeaderId: string | null = null;
+  if (evalInfo.team_id) {
+    const { data: teamData, error: teamError } = await supabaseAdmin
+      .from('teams')
+      .select('id, leader_id, is_active')
+      .eq('id', evalInfo.team_id)
+      .single();
+
+    if (teamError || !teamData || teamData.is_active !== true) {
+      return { success: false, error: 'Nhóm đánh giá không tồn tại hoặc đã bị vô hiệu hóa.' };
+    }
+    teamLeaderId = teamData.leader_id;
+  }
+
+  const flow = getEvaluationFlow(parseRole(evalInfo.employee_role));
+  const currentStep = flow.find((s) => s.round === round);
+  if (!currentStep) {
+    return { success: false, error: 'Vòng đánh giá không hợp lệ đối với chức danh này.' };
+  }
+
+  if (currentStep.evaluator === 'Leader') {
+    const isPrimaryLeader = actorUser.role === 'Leader' && Boolean(evalInfo.team_id && actorUser.team_id === evalInfo.team_id);
+    const isAppointedLeader = actorUser.role === 'Leader' && Boolean(teamLeaderId && teamLeaderId === actorId);
+    if (!isPrimaryLeader && !isAppointedLeader) {
+      return { success: false, error: 'Bạn không có quyền trả lại đánh giá cho nhóm này.' };
+    }
+  } else if (currentStep.evaluator === 'Manager') {
+    if (actorUser.role !== 'Manager') {
+      return { success: false, error: 'Chỉ Quản lý mới có quyền trả lại vòng này.' };
+    }
+  } else {
+    return { success: false, error: 'Không thể trả lại vòng này.' };
+  }
+
+  return { success: true };
+}
+
 /**
  * Lưu bản nháp (Draft) hoặc Gửi (Submit) kết quả đánh giá cho một Round.
  * Actor lấy từ session (requireAuth) — round chỉ update được bởi đúng evaluator của round đó.
@@ -102,6 +293,18 @@ export async function saveEvaluationRound(
 
     if (evalInfoError || !evalInfo) {
       return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
+    }
+
+    // P103M1T03: Preflight current authorization guard
+    const authGuard = await assertCurrentRoundWriteAuthorization(
+      actorId,
+      evaluationId,
+      round,
+      evalInfo,
+      { isSubmit }
+    );
+    if (!authGuard.success) {
+      return { success: false, error: authGuard.error };
     }
 
 
@@ -522,12 +725,24 @@ export async function initializeEvaluationRoundDraft(
 
     const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
       .from('evaluations')
-      .select('employee_id, employee_role, team_id, status')
+      .select('employee_id, employee_role, team_id, status, current_round')
       .eq('id', evaluationId)
       .single();
 
     if (evalInfoError || !evalInfo) {
       return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
+    }
+
+    // P103M1T03: Preflight current authorization guard
+    const authGuard = await assertCurrentRoundWriteAuthorization(
+      actorId,
+      evaluationId,
+      round,
+      evalInfo,
+      { isInit: true }
+    );
+    if (!authGuard.success) {
+      return { success: false, error: authGuard.error };
     }
 
     const evaluation: EvaluationSnapshot = {
@@ -672,6 +887,27 @@ export async function returnEvaluationRound(
       return { success: false, error: periodGuard.error };
     }
 
+    const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
+      .from('evaluations')
+      .select('employee_id, employee_role, team_id, status, current_round')
+      .eq('id', evaluationId)
+      .single();
+
+    if (evalInfoError || !evalInfo) {
+      return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
+    }
+
+    // P103M1T03: Preflight current authorization guard
+    const authGuard = await assertCurrentRoundReturnAuthorization(
+      actorId,
+      evaluationId,
+      round,
+      evalInfo
+    );
+    if (!authGuard.success) {
+      return { success: false, error: authGuard.error };
+    }
+
     const trimmedReason = reason.trim();
 
     const transactionalRpcEnabled = process.env.KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC === 'true';
@@ -724,16 +960,6 @@ export async function returnEvaluationRound(
     }
 
     // Guarded sequential return branch (atomic affected-row checks, explicit backwards transitions)
-    const { data: evalInfo, error: evalInfoError } = await supabaseAdmin
-      .from('evaluations')
-      .select('id, employee_id, employee_role, current_round, status')
-      .eq('id', evaluationId)
-      .single();
-
-    if (evalInfoError || !evalInfo) {
-      return { success: false, error: 'Không tìm thấy thông tin đánh giá.' };
-    }
-
     const { data: roundsData, error: roundsError } = await supabaseAdmin
       .from('evaluation_rounds')
       .select('*')
