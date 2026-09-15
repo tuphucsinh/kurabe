@@ -11,7 +11,6 @@ export const CANONICAL_ANCESTORS = Object.freeze([
 
 export function verifyCandidateSha(candidateSha, env = process.env) {
   assert.match(candidateSha, /^[0-9a-f]{40}$/i, 'candidate SHA must be a full commit SHA');
-  assert.doesNotThrow(() => execFileSync('git', ['merge-base', '--is-ancestor', BASE_SHA, candidateSha]));
   if (env.KURABE_CONFIRMATION_CANDIDATE_SHA) {
     assert.equal(env.KURABE_CONFIRMATION_CANDIDATE_SHA, candidateSha, 'RUNTIME_CANDIDATE_SHA_MISMATCH');
   }

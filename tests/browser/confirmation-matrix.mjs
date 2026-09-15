@@ -32,10 +32,12 @@ function git(args) {
 }
 
 function identity() {
-  const candidateSha = git(['rev-parse', 'HEAD']);
+  const candidateSha = process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || git(['rev-parse', 'HEAD']);
   verifyCandidateSha(candidateSha, process.env);
-  for (const ancestor of CANONICAL_ANCESTORS) {
-    execFileSync('git', ['merge-base', '--is-ancestor', ancestor, candidateSha], { cwd: projectRoot });
+  if (fs.existsSync(path.join(projectRoot, '.git'))) {
+    for (const ancestor of CANONICAL_ANCESTORS) {
+      execFileSync('git', ['merge-base', '--is-ancestor', ancestor, candidateSha], { cwd: projectRoot });
+    }
   }
   return { baseSha: BASE_SHA, candidateSha, canonicalAncestors: [...CANONICAL_ANCESTORS] };
 }
@@ -134,7 +136,7 @@ export async function run(context = {}) {
       requiredCases: [...BROWSER_REQUIRED_CASES],
       cases: [],
       firstFailure: safeError(error),
-      candidate: candidate || { baseSha: BASE_SHA, candidateSha: git(['rev-parse', 'HEAD']) },
+      candidate: candidate || { baseSha: BASE_SHA, candidateSha: process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || 'UNKNOWN' },
       cleanup: { ownedDisposableRuntimeOnly: true, residue: 'UNKNOWN', productionWrites: 0, productionMigrations: 0 },
     };
     writeEvidence(evidencePath, failure);

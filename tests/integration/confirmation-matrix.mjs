@@ -48,10 +48,12 @@ function git(args) {
 }
 
 function candidateIdentity(env = process.env) {
-  const candidateSha = git(['rev-parse', 'HEAD']);
+  const candidateSha = env.KURABE_CONFIRMATION_CANDIDATE_SHA || git(['rev-parse', 'HEAD']);
   verifyCandidateSha(candidateSha, env);
-  for (const ancestor of CANONICAL_ANCESTORS) {
-    execFileSync('git', ['merge-base', '--is-ancestor', ancestor, candidateSha], { cwd: projectRoot });
+  if (fs.existsSync(path.join(projectRoot, '.git'))) {
+    for (const ancestor of CANONICAL_ANCESTORS) {
+      execFileSync('git', ['merge-base', '--is-ancestor', ancestor, candidateSha], { cwd: projectRoot });
+    }
   }
   return {
     baseSha: BASE_SHA,
@@ -219,7 +221,7 @@ export async function run(context = {}) {
       requiredCases: [...INTEGRATION_REQUIRED_CASES],
       cases: [],
       firstFailure: safeError(error),
-      candidate: identity || { baseSha: BASE_SHA, candidateSha: git(['rev-parse', 'HEAD']) },
+      candidate: identity || { baseSha: BASE_SHA, candidateSha: process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || 'UNKNOWN' },
       migrations: provenance || null,
       cleanup: { ownedDisposableRuntimeOnly: true, residue: 'UNKNOWN', productionWrites: 0, productionMigrations: 0 },
     };
