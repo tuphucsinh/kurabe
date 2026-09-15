@@ -112,12 +112,15 @@ function activeFixtureState(target) {
 }
 
 function setCurrentRules(target, active) {
-  psql(target, `
-    UPDATE public.criteria_config_versions SET is_active = FALSE WHERE id IN (${sqlLiteral(FIXTURE_CRITERIA_V1_ID)}, ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)});
-    UPDATE public.grade_band_versions SET is_active = FALSE WHERE id IN (${sqlLiteral(FIXTURE_GRADE_V1_ID)}, ${sqlLiteral(FIXTURE_GRADE_V2_ID)});
-    UPDATE public.criteria_config_versions SET is_active = ${active ? 'TRUE' : 'FALSE'} WHERE id = ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)};
-    UPDATE public.grade_band_versions SET is_active = ${active ? 'TRUE' : 'FALSE'} WHERE id = ${sqlLiteral(FIXTURE_GRADE_V2_ID)};
+  if (!active) return;
+  const counts = psqlJson(target, `
+    SELECT json_build_object(
+      'criteria', (SELECT count(*) FROM public.criteria_config_versions WHERE is_active = TRUE),
+      'grades', (SELECT count(*) FROM public.grade_band_versions WHERE is_active = TRUE)
+    )::text;
   `);
+  assert.equal(counts.criteria, 1, 'browser fixture requires one existing active criteria configuration');
+  assert.equal(counts.grades, 1, 'browser fixture requires one existing active grade configuration');
 }
 
 function setLegacySubmittedFixture(target) {
