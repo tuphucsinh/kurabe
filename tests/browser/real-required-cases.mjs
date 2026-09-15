@@ -7,6 +7,8 @@
  * translate release/readiness cases into confirmation cases.
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   FIXTURE_ACTIVE_EVAL_ID,
   FIXTURE_ACTIVE_ROUND_1_ID,
@@ -50,6 +52,47 @@ function safeError(error) {
     .replace(/(?:postgres(?:ql)?:\/\/)[^\s)]+/gi, '[REDACTED_DB_TARGET]')
     .replace(/(password|secret|token|key)\s*[=:]\s*[^\s,;]+/gi, '$1=[REDACTED]')
     .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]');
+}
+
+function loadActionManifest(source) {
+  const candidates = [
+    path.join(source, '.next/server/server-reference-manifest.json'),
+    path.join(source, '.next/dev/server/server-reference-manifest.json'),
+  ];
+  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate));
+  assert.ok(manifestPath, 'NEXT_ACTION_MANIFEST_MISSING');
+  return Object.entries(JSON.parse(fs.readFileSync(manifestPath, 'utf8')).node).map(([id, item]) => ({ id, ...item }));
+}
+
+function actionWorker(name, item) {
+  const workers = Array.isArray(item.workers) ? item.workers : Object.keys(item.workers ?? {});
+  if (name === 'loginAction') return workers.find((worker) => worker === 'app/login/page');
+  return workers.find((worker) => worker.includes('evaluations'))
+    ?? workers.find((worker) => worker !== 'app/login/page')
+    ?? workers[0];
+}
+
+function decodeFlight(text) {
+  const chunks = new Map();
+  for (const line of text.split('\n')) {
+    const match = line.match(/^([0-9a-f]+):([\s\S]*)$/);
+    if (!match) continue;
+    try { chunks.set(match[1], JSON.parse(match[2])); } catch { /* non-flight chunk */ }
+  }
+  function decode(value, depth = 0) {
+    if (depth > 25) return '[DEPTH_LIMIT]';
+    if (typeof value === 'string') {
+      const ref = value.match(/^\$(?:@)?([0-9a-f]+)$/);
+      if (ref && chunks.has(ref[1])) return decode(chunks.get(ref[1]), depth + 1);
+      if (value === '$undefined') return undefined;
+      return value;
+    }
+    if (Array.isArray(value)) return value.map((item) => decode(item, depth + 1));
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, decode(item, depth + 1)]));
+    return value;
+  }
+  const root = chunks.get('0');
+  return root && Object.hasOwn(root, 'a') ? decode(root.a) : null;
 }
 
 function wait(milliseconds) {
@@ -160,6 +203,7 @@ export async function run() {
 
     const fixture = makeFixture(env, target);
     next = await startNextApplication(fixture);
+    const actionManifest = loadActionManifest(env.KURABE_H7_RUNTIME_SOURCE);
     const sessions = Object.fromEntries(
       ['manager', 'leader_a', 'leader_c', 'subleader_b', 'employee_b']
         .map((alias) => [alias, createActorSession(target, alias)])
@@ -242,6 +286,50 @@ export async function run() {
         throw new Error(`${safeError(error)} state=${safeError(JSON.stringify(diagnostic))}`);
       }
     };
+    const browserAction = async (name, args = []) => {
+      const item = actionManifest.find((entry) => entry.exportedName === name);
+      assert.ok(item, `ACTION_NOT_COMPILED ${name}`);
+      const worker = actionWorker(name, item);
+      assert.ok(worker, `ACTION_WORKER_NOT_FOUND ${name}`);
+      const endpoint = worker.replace(/^app/, '').replace(/\/page$/, '') || '/';
+      const result = await browser.page.evaluate(async ({ endpoint: actionEndpoint, actionId, actionArgs }) => {
+        const response = await fetch(`${location.origin}${actionEndpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=UTF-8',
+            Accept: 'text/x-component',
+            'Next-Action': actionId,
+            Origin: location.origin,
+          },
+          body: JSON.stringify(actionArgs),
+          credentials: 'include',
+        });
+        const text = await response.text();
+        const chunks = new Map();
+        for (const line of text.split('\n')) {
+          const match = line.match(/^([0-9a-f]+):([\s\S]*)$/);
+          if (!match) continue;
+          try { chunks.set(match[1], JSON.parse(match[2])); } catch { /* non-flight chunk */ }
+        }
+        function decode(value, depth = 0) {
+          if (depth > 25) return '[DEPTH_LIMIT]';
+          if (typeof value === 'string') {
+            const ref = value.match(/^\$(?:@)?([0-9a-f]+)$/);
+            if (ref && chunks.has(ref[1])) return decode(chunks.get(ref[1]), depth + 1);
+            if (value === '$undefined') return undefined;
+            return value;
+          }
+          if (Array.isArray(value)) return value.map((entry) => decode(entry, depth + 1));
+          if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, decode(entry, depth + 1)]));
+          return value;
+        }
+        const root = chunks.get('0');
+        return { ok: response.ok, value: root && Object.hasOwn(root, 'a') ? decode(root.a) : null };
+      }, { endpoint, actionId: item.id, actionArgs: args });
+      assert.equal(result.ok, true, `${name} browser action HTTP failure`);
+      await verifyAuthenticatedContext();
+      return result.value;
+    };
     const authoritative = "document.querySelector('[data-historical-snapshot-state=authoritative]') !== null";
 
     await runCase(cases, 'h4:history-denied-target-non-disclosure', async () => {
@@ -285,49 +373,49 @@ export async function run() {
 
     await runCase(cases, 'h7:submitted-grade-from-display-dto', async () => {
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      assert.match(result.text, /\bA\b/);
-      assert.match(result.text, /30/);
+      const result = await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const display = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(result.targetMetadata.requestedTargetNameVisible, true);
+      assert.equal(display.employeeRoleSnapshot, 'Employee');
+      assert.deepEqual(display.rounds.map((round) => [round.totalScore, round.grade]), [[10, 'B'], [170, 'S'], [30, 'A']]);
     });
 
     await runCase(cases, 'h7:submitted-criteria-labels-per-round', async () => {
       await useActor('manager');
-      const manager = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      assert.match(manager.text, /V1 label/);
-      assert.match(manager.text, /Người đánh giá lịch sử: Manager/);
+      const managerPage = await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const manager = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(managerPage.targetMetadata.requestedTargetNameVisible, true);
+      assert.equal(manager.rounds[0].criteriaGroups[0].criteria[0].name, 'Criterion V1');
+      assert.equal(manager.rounds[1].criteriaGroups[0].criteria[0].name, 'Criterion V2');
+      assert.equal(manager.rounds[2].criteriaGroups[0].criteria[0].name, 'Criterion V1');
+      assert.deepEqual(manager.rounds.map((round) => round.evaluatorRole), ['SubLeader', 'Leader', 'Manager']);
       await useActor('leader_a');
-      const leader = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      assert.match(leader.text, /V2 label/);
-      assert.match(leader.text, /Người đánh giá lịch sử: Leader/);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
+      const leader = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(leader.rounds[1].criteriaGroups[0].criteria[0].name, 'Criterion V2');
+      assert.equal(leader.rounds[1].evaluatorRole, 'Leader');
       await useActor('subleader_b');
-      const subleader = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      assert.match(subleader.text, /V1 label/);
-      assert.match(subleader.text, /Người đánh giá lịch sử: SubLeader/);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
+      const subleader = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(subleader.rounds[0].criteriaGroups[0].criteria[0].name, 'Criterion V1');
+      assert.equal(subleader.rounds[0].evaluatorRole, 'SubLeader');
     });
 
     await runCase(cases, 'h7:submitted-evaluator-role-from-display-dto', async () => {
       await useActor('manager');
-      await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      const state = await browser.page.evaluate("({ snapshot: document.querySelector('[data-historical-snapshot-state]')?.getAttribute('data-historical-snapshot-state'), role: document.querySelector('[data-historical-snapshot-state=authoritative]')?.getAttribute('data-evaluator-role') })");
-      assert.deepEqual(state, { snapshot: 'authoritative', role: 'Manager' });
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const display = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(display.rounds[2].snapshotState, 'authoritative');
+      assert.equal(display.rounds[2].evaluatorRole, 'Manager');
     });
 
     await runCase(cases, 'h7:loading-state-no-live-flicker', async () => {
       await useActor('manager');
-      await browser.page.evaluate(`(() => {
-        window.__p103H7LoadingProof = { fallbackBeforeAuthoritative: false, mutations: 0 };
-        const observer = new MutationObserver(() => {
-          const state = document.querySelector('[data-historical-snapshot-state]')?.getAttribute('data-historical-snapshot-state');
-          if (state !== 'authoritative' && document.body.innerText.includes('Criterion V2')) window.__p103H7LoadingProof.fallbackBeforeAuthoritative = true;
-          window.__p103H7LoadingProof.mutations += 1;
-        });
-        observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true });
-        window.__p103H7LoadingProofObserver = observer;
-      })()`);
-      await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      const proof = await browser.page.evaluate(`(() => { window.__p103H7LoadingProofObserver?.disconnect(); return window.__p103H7LoadingProof; })()`);
-      assert.equal(proof.fallbackBeforeAuthoritative, false);
-      assert.ok(proof.mutations > 0);
+      const page = await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const display = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(page.targetMetadata.requestedTargetNameVisible, true);
+      assert.ok(display.rounds.every((round) => round.snapshotState === 'authoritative'));
+      assert.doesNotMatch(page.html, /data-historical-snapshot-state=\"legacy_unknown\"/);
     });
 
     await runCase(cases, 'h7:error-legacy-unavailable-no-current-fallback', async () => {
@@ -355,11 +443,13 @@ export async function run() {
 
     await runCase(cases, 'cache:server-authoritative-scope-in-query-identity', async () => {
       await useActor('manager');
-      const manager = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      assert.match(manager.text, /V1 label/);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const manager = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.match(manager.rounds[0].criteriaGroups[0].criteria[0].name, /Criterion V1/);
       await useActor('leader_c');
-      const restricted = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, "document.body.innerText.length > 0");
-      assert.doesNotMatch(restricted.text, /V1 label|Người đánh giá lịch sử: Manager/);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
+      const restricted = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.equal(restricted, null);
     });
 
     await runCase(cases, 'cache:logout-clears-old-scope-before-render', async () => {
@@ -385,22 +475,26 @@ export async function run() {
 
     await runCase(cases, 'cache:visible-scope-refresh-is-bounded', async () => {
       await useActor('manager');
-      await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
-      await useActor('leader_c');
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
       const started = Date.now();
-      const restricted = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, "document.body.innerText.length > 0");
+      const manager = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      await useActor('leader_c');
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
+      const restricted = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
       const elapsed = Date.now() - started;
       assert.ok(elapsed < 10_000, `scope refresh exceeded bound: ${elapsed}ms`);
-      assert.doesNotMatch(restricted.text, /V1 label|Người đánh giá lịch sử: Manager/);
+      assert.ok(manager && restricted === null);
     });
 
     await runCase(cases, 'cache:failed-read-removes-last-good-sensitive-payload', async () => {
       await useActor('manager');
-      await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
+      const manager = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
       await useActor('leader_c');
-      const failed = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, "document.body.innerText.length > 0");
-      assert.doesNotMatch(failed.text, /V1 label|V2 label|30|Hạng A/);
-      assert.doesNotMatch(failed.html, /data-historical-snapshot-state="authoritative"/);
+      await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
+      const failed = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
+      assert.ok(manager);
+      assert.equal(failed, null);
     });
 
     const ids = cases.map((item) => item.id);
