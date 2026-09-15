@@ -2,7 +2,7 @@
 
 import { requireAuth, requireRole } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { Evaluation, Role, CriteriaGroup, User, Team, EvaluationPeriod } from '@/types';
+import { Evaluation, Role, CriteriaGroup, User, Team, EvaluationDisplayDto, EvaluationPeriod } from '@/types';
 import { 
   getEvaluationsAdmin, 
   getEvaluationsByPeriodAdmin, 
@@ -30,6 +30,7 @@ import {
 import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 import { getEvaluationHistoryAdmin } from '@/lib/db/evaluation-history-admin';
+import { getEvaluationDisplayAdmin } from '@/lib/db/evaluation-display-admin';
 
 
 export type AuditRow = {
@@ -51,6 +52,18 @@ export async function getCurrentUserAction(): Promise<User | null> {
     return null;
   }
   return auth.user;
+}
+
+/**
+ * Read-only historical evaluation display. Authorization is performed by the
+ * admin loader before any immutable snapshot version is queried.
+ */
+export async function getEvaluationDisplayAction(
+  evaluationId: string
+): Promise<EvaluationDisplayDto | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) return null;
+  return getEvaluationDisplayAdmin(evaluationId, auth.user);
 }
 
 export async function getPeriodsAction(): Promise<EvaluationPeriod[]> {

@@ -5,6 +5,7 @@ import {
   getEvaluationsAction, 
   getEvaluationSummariesAction,
   getEvaluationByIdAction,
+  getEvaluationDisplayAction,
   getUsersAction,
   getUsersBatchAction,
   getUserByIdAction,
@@ -38,7 +39,7 @@ import {
 } from '@/actions/criteria';
 import { CriterionAudience } from '@/lib/criteria-applicability';
 
-import { CriteriaGroup, Criterion, Team, User } from '@/types';
+import { CriteriaGroup, Criterion, EvaluationDisplayDto, Team, User } from '@/types';
 
 const requesterScope = (requester?: User | null): readonly unknown[] => [
   requester?.id,
@@ -251,6 +252,17 @@ export const useEvaluation = (id: string, user?: User | null) => useQuery({
   queryKey: scopedKey('evaluation', [id], user),
   queryFn: () => getEvaluationByIdAction(id),
   enabled: !!id && user != null
+});
+
+export const useEvaluationDisplay = (
+  evaluationId: string,
+  periodId?: string,
+  user?: User | null
+) => useQuery<EvaluationDisplayDto | null>({
+  queryKey: scopedKey('evaluation-display', [evaluationId, periodId], user),
+  queryFn: () => getEvaluationDisplayAction(evaluationId),
+  staleTime: 2 * 60 * 1000,
+  enabled: !!evaluationId && !!periodId && user != null,
 });
 
 export const useEvaluationPageData = (

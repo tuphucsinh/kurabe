@@ -129,6 +129,26 @@ export interface EvaluationConfigVersions {
   gradeConfigVersionId?: string | null;
 }
 
+export type EvaluationSnapshotState = 'authoritative' | 'legacy_unknown' | 'unavailable';
+
+export interface EvaluationDisplayRound {
+  round: RoundNumber;
+  status: EvaluationRoundStatus;
+  totalScore: number;
+  grade: Grade;
+  evaluatorRole: Role;
+  criteriaConfigVersionId: string | null;
+  gradeConfigVersionId: string | null;
+  snapshotState: EvaluationSnapshotState;
+  criteriaGroups: CriteriaGroup[];
+}
+
+export interface EvaluationDisplayDto {
+  evaluationId: string;
+  employeeRoleSnapshot: Role;
+  rounds: EvaluationDisplayRound[];
+}
+
 export interface EvaluationTransitionResult {
   roundId: string;
   evaluationId: string;
