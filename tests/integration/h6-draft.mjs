@@ -346,10 +346,27 @@ export async function runBehavioralConfirmationSuite(runtime) {
   const gradeVersionId = configRows[0]?.grade_version_id;
   assert.ok(criteriaVersionId && gradeVersionId, 'ACTIVE_CONFIG_MISSING');
 
+  const ruleRows = runtime.queryJson(`
+    SELECT c.id AS criterion_id, cl.points, cl.label, cl.description
+    FROM public.criteria c
+    JOIN public.criterion_levels cl ON cl.criterion_id = c.id
+    ORDER BY c.sort_order, cl.sort_order;
+  `);
+  const renderedRules = [];
+  for (const row of ruleRows) {
+    let rule = renderedRules.find((candidate) => candidate.id === row.criterion_id);
+    if (!rule) {
+      rule = { id: row.criterion_id, allowedPoints: [], levels: [] };
+      renderedRules.push(rule);
+    }
+    rule.allowedPoints.push(row.points);
+    rule.levels.push({ points: row.points, label: row.label, description: row.description });
+  }
+
   const configOptions = {
     criteriaConfigVersionId: criteriaVersionId,
     gradeConfigVersionId: gradeVersionId,
-    renderedRules: [],
+    renderedRules,
   };
 
   // Seed fresh evaluation for Employee B
