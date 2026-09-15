@@ -550,7 +550,12 @@ async function runFlow(runtime, evaluationId, employee, role, teamId, firstEvalu
       cases.push({ label: `response-interference:${role}:R${round}`, detail: 'authenticated action persisted DB state but returned non-success contract' });
     }
   }
-  assert.equal(evaluationRow(runtime, evaluationId).status, 'Approved', `${role} final status mismatch`);
+  const finalEvaluation = evaluationRow(runtime, evaluationId);
+  assert.equal(finalEvaluation.status, 'Approved', `${role} final status mismatch`);
+  assert.equal(finalEvaluation.current_round, flow.length, `${role} final current_round mismatch`);
+  const finalRound = roundRow(runtime, evaluationId, flow.length);
+  assert.equal(finalRound.status, 'Submitted', `${role} final round status mismatch`);
+  assert.equal(finalRound.evaluator_id, ACTORS[flow[flow.length - 1]].id, `${role} final evaluator mismatch`);
 }
 
 function cleanup(runtime, evaluationIds) {
