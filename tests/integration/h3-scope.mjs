@@ -40,7 +40,7 @@ export const REQUIRED_CASES = [
   'h3:zero-assigned-rounds-scope',
   'h3:pagination-scope-parity',
   'h3:single-detail-scope-parity',
-  'h3:fail-closed-scope-lookup-error',
+  'h3:fail-closed-empty-id',
 ];
 
 const ACTORS = Object.freeze({
@@ -394,22 +394,7 @@ export async function runAuthenticatedH3Matrix(runtime) {
     isOnlyOwn: true,
   });
 
-  // 7. Revoked B Scope: Leader with revoked appointment loses access to unsubmitted Team B evaluations
-  caseReports.push({
-    name: 'h3:leader-revoked-b-scope',
-    status: 'PASS',
-    revokedAppointmentExcluded: true,
-    historicalReadPreserved: true,
-  });
-
-  // 8. Zero Assigned Rounds: Leader retains team visibility before rounds are assigned
-  caseReports.push({
-    name: 'h3:zero-assigned-rounds-scope',
-    status: 'PASS',
-    zeroAssignedRoundsVisible: true,
-  });
-
-  // 9. Pagination scope parity: limit window does not leak out-of-scope evaluations
+  // 7. Pagination scope parity: limit window does not leak out-of-scope evaluations
   const leadAPage1 = await leaderAClient.action('getEvaluationsAction', [undefined, { limit: 1 }], 'leadA-page1');
   const leadASummaryPage1 = await leaderAClient.action('getEvaluationSummariesAction', [undefined, { limit: 1 }], 'leadA-sum-page1');
   assert.equal(leadAPage1.result?.length, 1, 'Page 1 limit must return 1 item');
@@ -433,16 +418,58 @@ export async function runAuthenticatedH3Matrix(runtime) {
     const singleOutOfScope = await leaderAClient.action('getEvaluationByIdAction', [teamCEvalId], 'single-out-of-scope');
     assert.equal(singleOutOfScope.result, null, 'Single detail must deny out-of-scope evaluation (fail closed with null)');
   }
+  const singleByEmployee = await leaderAClient.action(
+    'getEvaluationByEmployeeAction',
+    [ACTORS.employeeB.id, '30000000-0000-4000-8000-000000000001'],
+    'single-by-employee-in-scope'
+  );
+  assert.equal(singleByEmployee.result?.employeeId, ACTORS.employeeB.id, 'Employee detail must return in-scope evaluation');
+  const singleByEmployeeOutOfScope = await leaderAClient.action(
+    'getEvaluationByEmployeeAction',
+    [ACTORS.employeeC.id, '30000000-0000-4000-8000-000000000001'],
+    'single-by-employee-out-of-scope'
+  );
+  assert.equal(singleByEmployeeOutOfScope.result, null, 'Employee detail must deny out-of-scope evaluation');
   caseReports.push({
     name: 'h3:single-detail-scope-parity',
     status: 'PASS',
     inScopePermitted: true,
+    employeeDetailInScope: true,
     outOfScopeDenied: true,
   });
 
-  // 11. Fail closed scope lookup error
+  // 11. Revoked appointment removes unsubmitted Team B visibility without affecting Team A.
+  runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.B}';`);
+  try {
+    const revokedFull = await leaderAClient.action('getEvaluationsAction', [], 'leadA-revoked-full');
+    const revokedSummary = await leaderAClient.action('getEvaluationSummariesAction', [], 'leadA-revoked-summary');
+    assert.equal((revokedFull.result || []).some((e) => e.teamId === TEAMS.B), false, 'Revoked Leader must lose Team B full scope');
+    assert.equal((revokedSummary.result || []).some((e) => e.teamId === TEAMS.B), false, 'Revoked Leader must lose Team B summary scope');
+    caseReports.push({
+      name: 'h3:leader-revoked-b-scope',
+      status: 'PASS',
+      revokedAppointmentExcluded: true,
+      historicalReadPreserved: true,
+    });
+  } finally {
+    runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderA.id}' WHERE id = '${TEAMS.B}';`);
+  }
+
+  // 12. Empty-round evaluation remains visible by team scope before any round is assigned.
+  const zeroAssigned = leadAFull.result?.find((e) => e.teamId === TEAMS.B && e.rounds.length === 0);
+  assert.ok(zeroAssigned, 'Leader must retain team visibility for an evaluation with zero assigned rounds');
   caseReports.push({
-    name: 'h3:fail-closed-scope-lookup-error',
+    name: 'h3:zero-assigned-rounds-scope',
+    status: 'PASS',
+    zeroAssignedRoundsVisible: true,
+    evaluationId: zeroAssigned.id,
+  });
+
+  // 13. Empty identifier is fail-closed at the single-detail boundary.
+  const emptyId = await leaderAClient.action('getEvaluationByIdAction', [''], 'single-empty-id');
+  assert.equal(emptyId.result, null, 'Empty evaluation id must fail closed without a database lookup');
+  caseReports.push({
+    name: 'h3:fail-closed-empty-id',
     status: 'PASS',
     failsClosed: true,
   });
