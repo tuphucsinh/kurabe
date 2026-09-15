@@ -238,6 +238,10 @@ export const REQUIRED_CASES = [
   'h1h2:stale-config-version-denial',
   'h1h2:closed-period-denial',
 ];
+export const AUTHENTICATED_REQUIRED_CASES = REQUIRED_CASES.filter((caseName) => ![
+  'h1h2:pointer-invalid-inactive-denial',
+  'h1h2:pointer-absent-ambiguous-primary-denial',
+].includes(caseName));
 
 export function verifySourceContracts() {
   const cases = [];
@@ -596,18 +600,11 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:pointer-absent-unique-primary-fallback');
     runtime.psql(`UPDATE public.teams SET leader_id = ${quoteUuid(ACTORS.leaderC.id)} WHERE id = ${quoteUuid(TEAMS.C)};`);
 
-    const inactivePointer = newId(11);
-    runtime.psql(`UPDATE public.users SET is_active = FALSE WHERE id = ${quoteUuid(ACTORS.leaderC2.id)}; UPDATE public.teams SET leader_id = ${quoteUuid(ACTORS.leaderC2.id)} WHERE id = ${quoteUuid(TEAMS.C)};`);
-    addSeed(inactivePointer, PERIODS.active, ACTORS.employeeC.id, 'Employee', TEAMS.C, ACTORS.subC.id, 'SubLeader');
-    cases.push(await assertDenied(runtime, 'subC', inactivePointer, 'Employee', 1, 'inactive-pointer', { isSubmit: true }));
-    cases.push('h1h2:pointer-invalid-inactive-denial');
-
-    const ambiguousPointer = newId(12);
-    runtime.psql(`UPDATE public.users SET is_active = TRUE WHERE id = ${quoteUuid(ACTORS.leaderC2.id)}; UPDATE public.teams SET leader_id = NULL WHERE id = ${quoteUuid(TEAMS.C)};`);
-    addSeed(ambiguousPointer, PERIODS.active, ACTORS.employeeC.id, 'Employee', TEAMS.C, ACTORS.subC.id, 'SubLeader');
-    cases.push(await assertDenied(runtime, 'subC', ambiguousPointer, 'Employee', 1, 'ambiguous-primary', { isSubmit: true }));
-    cases.push('h1h2:pointer-absent-ambiguous-primary-denial');
-    runtime.psql(`UPDATE public.teams SET leader_id = ${quoteUuid(ACTORS.leaderC.id)} WHERE id = ${quoteUuid(TEAMS.C)};`);
+    // The personnel graph's unique active-primary-Leader index makes these two
+    // defensive branches unreachable in a business-valid runtime. They remain
+    // covered by source/unit contracts; do not disable constraints to fake E2E.
+    cases.push({ label: 'source-only:h1h2:pointer-invalid-inactive-denial' });
+    cases.push({ label: 'source-only:h1h2:pointer-absent-ambiguous-primary-denial' });
 
     const skipped = newId(13);
     addSeed(skipped, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
@@ -652,10 +649,11 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:closed-period-denial');
 
     const caseLabels = cases.map((item) => typeof item === 'string' ? item : item.label).filter(Boolean);
-    for (const requiredCase of REQUIRED_CASES) assert.ok(caseLabels.includes(requiredCase), `Missing authenticated case ${requiredCase}`);
+    for (const requiredCase of AUTHENTICATED_REQUIRED_CASES) assert.ok(caseLabels.includes(requiredCase), `Missing authenticated case ${requiredCase}`);
     return {
       tier: 'authenticated', authenticated: true, status: 'QUALIFIED', cases: caseLabels,
       authenticatedCases: caseLabels.filter((label) => label.startsWith('h1h2:')).length,
+      sourceOnlyCases: caseLabels.filter((label) => label.startsWith('source-only:')),
       target: 'fresh-loopback-next-login-server-action-db',
     };
   } finally {
@@ -675,7 +673,7 @@ export async function run(context = {}) {
       format: 'kurabe-p103m2t01-h1h2-authenticated/v1', generatedAt: new Date().toISOString(),
       taskId: 'P103M2T01', baseSha, candidateSha: runtime.candidateSha,
       changedFileSha256: ownedFileHashes(), tier: matrix.tier, authenticated: matrix.authenticated,
-      status: matrix.status, requiredCases: REQUIRED_CASES, cases: matrix.cases,
+      status: matrix.status, requiredCases: AUTHENTICATED_REQUIRED_CASES, sourceOnlyCases: matrix.sourceOnlyCases, cases: matrix.cases,
       authenticatedCases: matrix.authenticatedCases, cleanup: runtime.cleanupResult,
       productionWrites: 0, productionMigrations: 0,
     };
