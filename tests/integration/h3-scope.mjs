@@ -194,7 +194,7 @@ function createDisposableRuntimeFromEnv() {
       assert.ok(password, 'KURABE_FIXTURE_PASSWORD is required for authenticated qualification');
       const login = await this.action('loginAction', [actor.code, password], `login-${this.alias}`);
       assert.equal(login.result?.success, true, `AUTH_FAILED ${this.alias}`);
-      const page = await fetch(`${origin}/evaluations/40000000-0000-4000-8000-000000000011`, {
+      const page = await fetch(`${origin}/evaluations/10000000-0000-4000-8000-000000000005`, {
         headers: this.cookieHeader() ? { Cookie: this.cookieHeader() } : {},
         redirect: 'manual',
         signal: AbortSignal.timeout(30000),
@@ -291,8 +291,9 @@ export function verifySourceContracts() {
     readActionCode.includes('getEvaluationsAction') &&
     readActionCode.includes('getEvaluationSummariesAction') &&
     readActionCode.includes('getEvaluationByIdAction') &&
-    readActionCode.includes('getEvaluationByEmployeeAction'),
-    'read.ts must export all read server actions'
+    readActionCode.includes('getEvaluationByEmployeeAction') &&
+    readActionCode.includes('getEvaluationPageDataAction'),
+    'read.ts must export all read server actions and the application detail path'
   );
   cases.push('source:read-actions-delegate-server-resolved-scope');
 
@@ -426,17 +427,19 @@ export async function runAuthenticatedH3Matrix(runtime) {
     assert.equal(singleOutOfScope.result, null, 'Single detail must deny out-of-scope evaluation (fail closed with null)');
   }
   const singleByEmployee = await leaderAClient.action(
-    'getEvaluationByEmployeeAction',
+    'getEvaluationPageDataAction',
     [ACTORS.employeeB.id, '30000000-0000-4000-8000-000000000001'],
     'single-by-employee-in-scope'
   );
-  assert.equal(singleByEmployee.result?.employeeId, ACTORS.employeeB.id, 'Employee detail must return in-scope evaluation');
+  assert.equal(singleByEmployee.result?.employee?.id, ACTORS.employeeB.id, 'Employee detail must return in-scope employee');
+  assert.equal(singleByEmployee.result?.evaluation?.employeeId, ACTORS.employeeB.id, 'Employee detail must return in-scope evaluation');
   const singleByEmployeeOutOfScope = await leaderAClient.action(
-    'getEvaluationByEmployeeAction',
+    'getEvaluationPageDataAction',
     [ACTORS.employeeC.id, '30000000-0000-4000-8000-000000000001'],
     'single-by-employee-out-of-scope'
   );
-  assert.equal(singleByEmployeeOutOfScope.result, null, 'Employee detail must deny out-of-scope evaluation');
+  assert.equal(singleByEmployeeOutOfScope.result?.employee, null, 'Employee detail must deny out-of-scope employee metadata');
+  assert.equal(singleByEmployeeOutOfScope.result?.evaluation, null, 'Employee detail must deny out-of-scope evaluation');
   caseReports.push({
     name: 'h3:single-detail-scope-parity',
     status: 'PASS',
