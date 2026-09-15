@@ -196,14 +196,56 @@ export async function run() {
     }
     browser = await openChrome();
 
+    let currentActorAlias = null;
+    const verifyAuthenticatedContext = async () => {
+      assert.ok(currentActorAlias, 'browser actor was not selected before assertion');
+      const expected = FIXTURE_ACTORS[currentActorAlias];
+      const session = sessions[currentActorAlias];
+      const db = psqlJson(target, `
+        SELECT row_to_json(x)::text FROM (
+          SELECT session.user_id, session.expires_at, actor.employee_code, actor.role, actor.is_active,
+                 actor.credential_revision AS user_credential_revision,
+                 session.credential_revision AS session_credential_revision
+          FROM public.sessions AS session
+          JOIN public.users AS actor ON actor.id = session.user_id
+          WHERE session.token_hash = ${sqlLiteral(session.tokenHash)}
+        ) x;
+      `);
+      assert.equal(db.user_id, expected.id, `${currentActorAlias} session user mismatch`);
+      assert.equal(db.employee_code, expected.employeeCode, `${currentActorAlias} session actor mismatch`);
+      assert.equal(db.role, expected.role, `${currentActorAlias} session role mismatch`);
+      assert.equal(db.is_active, true, `${currentActorAlias} actor is inactive`);
+      assert.ok(new Date(db.expires_at).getTime() > Date.now(), `${currentActorAlias} session expired`);
+      assert.equal(db.user_credential_revision, db.session_credential_revision, `${currentActorAlias} credential revision mismatch`);
+      const cookieState = await browser.page.command('Network.getAllCookies');
+      const cookie = cookieState.cookies.find((item) => item.name === 'auth_session');
+      assert.equal(cookie?.value, session.token, `${currentActorAlias} browser cookie mismatch`);
+      return { actor: expected, db, cookie: { name: cookie.name, domain: cookie.domain, path: cookie.path } };
+    };
+
     const useActor = async (alias) => {
       await deleteCookies(browser.page);
       await setSessionCookie(browser.page, next.url, sessions[alias].token);
+      currentActorAlias = alias;
+      await verifyAuthenticatedContext();
     };
     const body = () => browser.page.evaluate(`({ href: location.href, text: document.body.innerText, html: document.documentElement.outerHTML })`);
     const go = async (url, ready = null) => {
       try {
-        return await navigate(browser.page, `${next.url}${url}`, ready);
+        const result = await navigate(browser.page, `${next.url}${url}`, ready);
+        const context = await verifyAuthenticatedContext();
+        const targetId = new URL(result.href).pathname.match(/\/(?:history|evaluations)\/([^/]+)/)?.[1] || null;
+        const target = Object.values(FIXTURE_ACTORS).find((actor) => actor.id === targetId) || null;
+        return {
+          ...result,
+          context,
+          targetMetadata: {
+            targetId,
+            targetName: target?.name || null,
+            targetNameVisible: target ? result.text.includes(target.name) : false,
+            requestedPath: url,
+          },
+        };
       } catch (error) {
         const diagnostic = await body().catch(() => ({ href: 'unavailable', text: 'unavailable' }));
         throw new Error(`${safeError(error)} state=${safeError(JSON.stringify(diagnostic))}`);
@@ -214,8 +256,10 @@ export async function run() {
     await runCase(cases, 'h4:history-denied-target-non-disclosure', async () => {
       await useActor('employee_b');
       const result = await go(`/history/${FIXTURE_MANAGER_ID}`, "document.body.innerText.includes('Lịch sử đánh giá')");
-      assert.equal(new URL(result.href).pathname, `/history/${FIXTURE_EMPLOYEE_B_ID}`);
-      assert.doesNotMatch(result.text, /P103 Closed Period|P103 Manager/);
+      assert.equal(result.context.actor.id, FIXTURE_EMPLOYEE_B_ID);
+      assert.equal(result.targetMetadata.requestedPath, `/history/${FIXTURE_MANAGER_ID}`);
+      assert.equal(result.targetMetadata.targetNameVisible, false);
+      assert.doesNotMatch(result.text, /P103 Closed Period|P103 Employee B/);
     });
 
     await runCase(cases, 'h4:history-authorized-submitted-read', async () => {
@@ -343,6 +387,8 @@ export async function run() {
         button.click();
       })()`);
       await waitFor(() => browser.page.evaluate("location.pathname === '/login' && !document.body.innerText.includes('Tổng quan hệ thống')"));
+      const anonymousCookies = await browser.page.command('Network.getAllCookies');
+      assert.equal(anonymousCookies.cookies.some((item) => item.name === 'auth_session'), false, 'logout left authenticated cookie');
       const proof = await browser.page.evaluate(`(() => { window.__p103LogoutProofObserver?.disconnect(); return window.__p103LogoutProof; })()`);
       assert.equal(proof.oldScopeFlash, false);
     });
