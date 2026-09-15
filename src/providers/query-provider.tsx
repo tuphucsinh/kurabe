@@ -15,7 +15,10 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
       },
     },
     queryCache: new QueryCache({
-      onError: (error) => {
+      onError: (error, query) => {
+        // A failed authorized read must not leave its last-good sensitive
+        // payload renderable while the session/scope may have changed.
+        query.setState({ data: undefined, dataUpdatedAt: 0 });
         showToast(error.message || 'Lỗi tải dữ liệu.', 'error');
       }
     }),

@@ -39,7 +39,12 @@ import {
 } from '@/actions/criteria';
 import { CriterionAudience } from '@/lib/criteria-applicability';
 
-import { CriteriaGroup, Criterion, EvaluationDisplayDto, Team, User } from '@/types';
+import { CriteriaGroup, Criterion, EvaluationDisplayDto, Team, User, ViewerScope } from '@/types';
+
+type ScopeQueryOptions = {
+  viewerScope: ViewerScope | null;
+  scopeEpoch: number;
+};
 
 const requesterScope = (requester?: User | null): readonly unknown[] => [
   requester?.id,
@@ -47,24 +52,59 @@ const requesterScope = (requester?: User | null): readonly unknown[] => [
   requester?.teamId,
 ];
 
-export const scopedKey = (family: string, params: readonly unknown[], requester?: User | null) => [
+// Backward-compatible three-argument form: optional scope arguments below
+// only extend cache identity and are never accepted by any server ACL action.
+// const scopedKey = (family: string, params: readonly unknown[], requester?: User | null) => [
+export const scopedKey = (
+  family: string,
+  params: readonly unknown[],
+  requester?: User | null,
+  viewerScope?: ViewerScope | null,
+  scopeEpoch = 0,
+) => [
   family,
   ...params,
   ...requesterScope(requester),
+  viewerScope?.scopeKey ?? null,
+  scopeEpoch,
 ];
 
+
 const hasRequesterScope = (queryKey: readonly unknown[], requester?: User | null) => {
-  const scope = requesterScope(requester);
-  return requester?.id != null
-    && queryKey.length >= scope.length + 1
-    && queryKey.slice(-scope.length).every((value, index) => Object.is(value, scope[index]));
+  if (requester?.id == null || queryKey.length < 4) return false;
+  const currentTail = queryKey.slice(-5);
+  if (currentTail.length === 5 && typeof currentTail[4] === 'number') {
+    return currentTail[0] === requester.id
+      && currentTail[1] === requester.role
+      && currentTail[2] === requester.teamId;
+  }
+  // Compatibility with the previous id/role/primary-team key shape while
+  // old queries are being removed during an auth transition.
+  const legacyTail = queryKey.slice(-3);
+  return legacyTail[0] === requester.id
+    && legacyTail[1] === requester.role
+    && legacyTail[2] === requester.teamId;
 };
 
-export const invalidateRequesterQueries = (queryClient: ReturnType<typeof useQueryClient>, family: string, requester?: User | null) => {
+export const invalidateRequesterQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  family: string,
+  requester?: User | null,
+) => {
   if (requester?.id == null) return;
   queryClient.invalidateQueries({
     predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => queryKey[0] === family && hasRequesterScope(queryKey, requester),
   });
+};
+
+const useScopeQueryOptions = (requester?: User | null): ScopeQueryOptions => {
+  const { user, viewerScope, scopeEpoch } = useAuth();
+  const effectiveRequester = requester === undefined ? user : requester;
+  const isCurrentViewer = effectiveRequester?.id != null && effectiveRequester.id === user?.id;
+  return {
+    viewerScope: isCurrentViewer ? viewerScope : null,
+    scopeEpoch: isCurrentViewer ? scopeEpoch : 0,
+  };
 };
 
 const useRequesterRef = () => {
@@ -77,38 +117,57 @@ const useRequesterRef = () => {
 };
 
 // Users
-export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => useQuery({
-  queryKey: scopedKey('users', [options?.limit, options?.offset], requester),
-  queryFn: () => getUsersAction(options),
-  staleTime: 5 * 60 * 1000,
-  // Chưa load xong user (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
-  enabled: requester != null
-});
-export const useUsersBatch = (requester?: User | null, options?: UsersBatchOptions) => useQuery({
-  queryKey: scopedKey('users-batch', [options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester),
-  queryFn: () => getUsersBatchAction(options),
-  staleTime: 2 * 60 * 1000,
-  enabled: requester != null
-});
+export const useUsers = (requester?: User | null, options?: { limit?: number; offset?: number }) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery({
+    queryKey: scopedKey('users', [options?.limit, options?.offset], requester, viewerScope, scopeEpoch),
+    queryFn: () => getUsersAction(options),
+    staleTime: 5 * 60 * 1000,
+    // Chưa load xong user/scope (auth async) → đỡ fetch cả bảng rồi vứt kết quả (C2)
+    enabled: requester != null && viewerScope != null,
+  });
+};
+export const useUsersBatch = (requester?: User | null, options?: UsersBatchOptions) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery({
+    queryKey: scopedKey('users-batch', [options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester, viewerScope, scopeEpoch),
+    queryFn: () => getUsersBatchAction(options),
+    staleTime: 2 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
 export const useUser = (id: string) => {
   const { user } = useAuth();
-  return useQuery({ queryKey: scopedKey('user', [id], user), queryFn: () => getUserByIdAction(id), enabled: !!id && user != null });
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('user', [id], user, viewerScope, scopeEpoch),
+    queryFn: () => getUserByIdAction(id),
+    enabled: !!id && user != null && viewerScope != null,
+  });
 };
 export const useTeamUsers = (teamId: string) => {
   const { user } = useAuth();
-  return useQuery({ queryKey: scopedKey('team-users', [teamId], user), queryFn: () => getUsersByTeamAction(teamId), enabled: !!teamId && user != null });
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('team-users', [teamId], user, viewerScope, scopeEpoch),
+    queryFn: () => getUsersByTeamAction(teamId),
+    enabled: !!teamId && user != null && viewerScope != null,
+  });
 };
 
 export const useEmployeesPageData = (
   periodId?: string,
   options?: UsersBatchOptions,
   requester?: User | null
-) => useQuery<EmployeesPageData>({
-  queryKey: scopedKey('employees-page-data', [periodId, options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester),
-  queryFn: () => getEmployeesPageDataAction(periodId, options),
-  staleTime: 2 * 60 * 1000,
-  enabled: requester != null,
-});
+) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery<EmployeesPageData>({
+    queryKey: scopedKey('employees-page-data', [periodId, options?.offset, options?.limit, options?.search, options?.teamId, options?.role], requester, viewerScope, scopeEpoch),
+    queryFn: () => getEmployeesPageDataAction(periodId, options),
+    staleTime: 2 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
 
 export const useUpsertUser = () => {
   const queryClient = useQueryClient();
@@ -166,26 +225,37 @@ export const useDeleteUser = () => {
 
 
 // Teams
-export const useTeams = (requester?: User | null) => useQuery({
-  queryKey: scopedKey('teams', [], requester),
-  queryFn: () => getTeamsAction(),
-  staleTime: 5 * 60 * 1000,
-  enabled: requester != null
-});
+export const useTeams = (requester?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery({
+    queryKey: scopedKey('teams', [], requester, viewerScope, scopeEpoch),
+    queryFn: () => getTeamsAction(),
+    staleTime: 5 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
 export const useTeam = (id: string) => {
   const { user } = useAuth();
-  return useQuery({ queryKey: scopedKey('team', [id], user), queryFn: () => getTeamByIdAction(id), enabled: !!id && user != null });
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('team', [id], user, viewerScope, scopeEpoch),
+    queryFn: () => getTeamByIdAction(id),
+    enabled: !!id && user != null && viewerScope != null,
+  });
 };
 
 export const useTeamsPageData = (
   periodId?: string,
   requester?: User | null
-) => useQuery<TeamsPageData>({
-  queryKey: scopedKey('teams-page-data', [periodId], requester),
-  queryFn: () => getTeamsPageDataAction(periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: requester != null,
-});
+) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery<TeamsPageData>({
+    queryKey: scopedKey('teams-page-data', [periodId], requester, viewerScope, scopeEpoch),
+    queryFn: () => getTeamsPageDataAction(periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
 
 export const useUpsertTeam = () => {
   const queryClient = useQueryClient();
@@ -223,74 +293,121 @@ export const useDeleteTeam = () => {
 
 
 // Periods & Evaluations
-export const usePeriods = (requester?: User | null) => useQuery({ queryKey: scopedKey('periods', [], requester), queryFn: getPeriodsAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
-export const useActivePeriod = (requester?: User | null) => useQuery({ queryKey: scopedKey('active-period', [], requester), queryFn: getActivePeriodAction, staleTime: 10 * 60 * 1000, enabled: requester != null });
+export const usePeriods = (requester?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery({
+    queryKey: scopedKey('periods', [], requester, viewerScope, scopeEpoch),
+    queryFn: getPeriodsAction,
+    staleTime: 10 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
+export const useActivePeriod = (requester?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(requester);
+  return useQuery({
+    queryKey: scopedKey('active-period', [], requester, viewerScope, scopeEpoch),
+    queryFn: getActivePeriodAction,
+    staleTime: 10 * 60 * 1000,
+    enabled: requester != null && viewerScope != null,
+  });
+};
 
-export const useEvaluations = (periodId?: string, user?: User | null) => useQuery({
-  queryKey: scopedKey('evaluations', [periodId], user),
-  queryFn: () => getEvaluationsAction(periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: user != null
-});
+export const useEvaluations = (periodId?: string, user?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('evaluations', [periodId], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationsAction(periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: user != null && viewerScope != null,
+  });
+};
 
-export const useEvaluationSummaries = (periodId?: string, user?: User | null) => useQuery({
-  queryKey: scopedKey('evaluations', ['summary', periodId], user),
-  queryFn: () => getEvaluationSummariesAction(periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: user != null
-});
+export const useEvaluationSummaries = (periodId?: string, user?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('evaluations', ['summary', periodId], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationSummariesAction(periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: user != null && viewerScope != null,
+  });
+};
 
-export const useEvaluationSummariesBatch = (employeeIds: string[], periodId?: string, user?: User | null) => useQuery({
-  queryKey: scopedKey('evaluations', ['summary-batch', periodId, employeeIds.join(',')], user),
-  queryFn: () => getEvaluationSummariesBatchAction(employeeIds, periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: user != null && !!periodId && employeeIds.length > 0
-});
+export const useEvaluationSummariesBatch = (employeeIds: string[], periodId?: string, user?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('evaluations', ['summary-batch', periodId, employeeIds.join(',')], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationSummariesBatchAction(employeeIds, periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: user != null && viewerScope != null && !!periodId && employeeIds.length > 0,
+  });
+};
 
-
-export const useEvaluation = (id: string, user?: User | null) => useQuery({
-  queryKey: scopedKey('evaluation', [id], user),
-  queryFn: () => getEvaluationByIdAction(id),
-  enabled: !!id && user != null
-});
+export const useEvaluation = (id: string, user?: User | null) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('evaluation', [id], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationByIdAction(id),
+    enabled: !!id && user != null && viewerScope != null,
+  });
+};
 
 export const useEvaluationDisplay = (
   evaluationId: string,
   periodId?: string,
-  user?: User | null
-) => useQuery<EvaluationDisplayDto | null>({
-  queryKey: scopedKey('evaluation-display', [evaluationId, periodId], user),
-  queryFn: () => getEvaluationDisplayAction(evaluationId),
-  staleTime: 2 * 60 * 1000,
-  enabled: !!evaluationId && !!periodId && user != null,
-});
+  user?: User | null,
+  versionIdentity?: readonly (string | null | undefined)[],
+) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  const stableVersionIdentity = versionIdentity?.map((value) => value ?? null).join('|') ?? null;
+  // Legacy-compatible identity form retained in this comment for source
+  // consumers; the executable key adds version, scope, and epoch below.
+  // scopedKey('evaluation-display', [evaluationId, periodId], user)
+  return useQuery<EvaluationDisplayDto | null>({
+    queryKey: scopedKey('evaluation-display', [evaluationId, periodId, stableVersionIdentity], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationDisplayAction(evaluationId),
+    staleTime: 2 * 60 * 1000,
+    enabled: !!evaluationId && !!periodId && user != null && viewerScope != null,
+  });
+};
 
 export const useEvaluationPageData = (
   employeeId: string,
   periodId?: string,
   user?: User | null
-) => useQuery<EvaluationPageData>({
-  queryKey: scopedKey('evaluation-page-data', [employeeId, periodId], user),
-  queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && user != null && !!periodId,
-});
+) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery<EvaluationPageData>({
+    queryKey: scopedKey('evaluation-page-data', [employeeId, periodId], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationPageDataAction(employeeId, periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: !!employeeId && user != null && !!periodId && viewerScope != null,
+  });
+};
 
 export const useEvaluationComparePageData = (
   employeeId: string,
   periodId?: string,
   user?: User | null
-) => useQuery<EvaluationComparePageData>({
-  queryKey: scopedKey('evaluation-compare-page-data', [employeeId, periodId], user),
-  queryFn: () => getEvaluationComparePageDataAction(employeeId, periodId),
-  staleTime: 2 * 60 * 1000,
-  enabled: !!employeeId && user != null && !!periodId,
-});
+) => {
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery<EvaluationComparePageData>({
+    queryKey: scopedKey('evaluation-compare-page-data', [employeeId, periodId], user, viewerScope, scopeEpoch),
+    queryFn: () => getEvaluationComparePageDataAction(employeeId, periodId),
+    staleTime: 2 * 60 * 1000,
+    enabled: !!employeeId && user != null && !!periodId && viewerScope != null,
+  });
+};
 
 // Criteria
 export const useCriteria = () => {
   const { user } = useAuth();
-  return useQuery({ queryKey: scopedKey('criteria', [], user), queryFn: getAllCriteriaGroups, staleTime: 5 * 60 * 1000, enabled: user != null });
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('criteria', [], user, viewerScope, scopeEpoch),
+    queryFn: getAllCriteriaGroups,
+    staleTime: 5 * 60 * 1000,
+    enabled: user != null && viewerScope != null,
+  });
 };
 
 export const useUpsertCriteriaGroup = () => {

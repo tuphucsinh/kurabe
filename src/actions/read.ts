@@ -2,7 +2,17 @@
 
 import { requireAuth, requireRole } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { Evaluation, Role, CriteriaGroup, User, Team, EvaluationDisplayDto, EvaluationPeriod } from '@/types';
+import {
+  Evaluation,
+  Role,
+  CriteriaGroup,
+  User,
+  Team,
+  EvaluationDisplayDto,
+  EvaluationPeriod,
+  ViewerScope,
+  buildViewerScopeKey,
+} from '@/types';
 import { 
   getEvaluationsAdmin, 
   getEvaluationsByPeriodAdmin, 
@@ -25,7 +35,8 @@ import {
 } from '@/lib/db/users-admin';
 import { 
   getTeamsAdmin, 
-  getTeamByIdAdmin 
+  getTeamByIdAdmin,
+  getLeaderTeamIds,
 } from '@/lib/db/teams-admin';
 import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
@@ -52,6 +63,40 @@ export async function getCurrentUserAction(): Promise<User | null> {
     return null;
   }
   return auth.user;
+}
+
+/**
+ * Resolve the current authorization scope on the server. The payload is a
+ * cache identity only; every data action still resolves and enforces ACLs from
+ * its own session. Leader appointments are read through the authoritative
+ * server helper so a primary-team-stable appointment change changes scopeKey.
+ */
+export async function getViewerScopeAction(): Promise<ViewerScope | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) return null;
+
+  try {
+    const leaderTeamIds = auth.user.role === 'Leader'
+      ? await getLeaderTeamIds(auth.user)
+      : [];
+    const primaryTeamId = auth.user.teamId ?? null;
+    const sortedLeaderTeamIds = Array.from(new Set(leaderTeamIds)).sort((a, b) => a.localeCompare(b));
+    return {
+      userId: auth.user.id,
+      role: auth.user.role,
+      primaryTeamId,
+      leaderTeamIds: sortedLeaderTeamIds,
+      scopeKey: buildViewerScopeKey({
+        userId: auth.user.id,
+        role: auth.user.role,
+        primaryTeamId,
+        leaderTeamIds: sortedLeaderTeamIds,
+      }),
+    };
+  } catch (error) {
+    console.error('getViewerScopeAction error:', error);
+    return null;
+  }
 }
 
 /**

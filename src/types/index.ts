@@ -32,6 +32,31 @@ export interface User {
   gender: string;
 }
 
+/** Server-authoritative authorization scope used only as a cache identity. */
+export interface ViewerScope {
+  userId: string;
+  role: Role;
+  primaryTeamId: string | null;
+  leaderTeamIds: string[];
+  scopeKey: string;
+}
+
+/** Deterministic identity for a scope; never use this value as an ACL decision. */
+export function buildViewerScopeKey(input: {
+  userId: string;
+  role: Role;
+  primaryTeamId: string | null;
+  leaderTeamIds: readonly string[];
+}): string {
+  const leaderTeamIds = Array.from(new Set(input.leaderTeamIds)).sort((a, b) => a.localeCompare(b));
+  return JSON.stringify({
+    userId: input.userId,
+    role: input.role,
+    primaryTeamId: input.primaryTeamId,
+    leaderTeamIds,
+  });
+}
+
 export interface Team {
   id: string;
   name: string;
