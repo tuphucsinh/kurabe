@@ -152,7 +152,7 @@ function createDisposableRuntimeFromEnv() {
     return raw ? JSON.parse(raw) : null;
   };
   const origin = process.env.KURABE_H1H2_NEXT_URL.replace(/\/$/, '');
-  const actions = loadManifest(path.resolve(process.env.KURABE_H1H2_RUNTIME_SOURCE));
+  let actions = loadManifest(path.resolve(process.env.KURABE_H1H2_RUNTIME_SOURCE));
   const clients = new Map();
 
   class AuthenticatedClient {
@@ -206,6 +206,13 @@ function createDisposableRuntimeFromEnv() {
       assert.equal(login.result?.success, true, `AUTH_FAILED ${this.alias}`);
       const current = await this.action('getCurrentUserAction', [], `current-${this.alias}`);
       assert.equal(current.result?.id, actor.id, `SESSION_READBACK_FAILED ${this.alias}`);
+      const page = await fetch(`${origin}/evaluations/${ROUTE_EVALUATION}`, {
+        headers: this.cookieHeader() ? { Cookie: this.cookieHeader() } : {},
+        redirect: 'manual',
+        signal: AbortSignal.timeout(30000),
+      });
+      await page.arrayBuffer();
+      actions = loadManifest(path.resolve(process.env.KURABE_H1H2_RUNTIME_SOURCE));
       return current.result;
     }
   }
