@@ -327,6 +327,7 @@ export async function run() {
         return { ok: response.ok, value: root && Object.hasOwn(root, 'a') ? decode(root.a) : null };
       }, { endpoint, actionId: item.id, actionArgs: args });
       assert.equal(result.ok, true, `${name} browser action HTTP failure`);
+      assert.ok(result.value !== 'Invalid parameters', `${name} browser action returned invalid parameters: ${JSON.stringify(result)}`);
       await verifyAuthenticatedContext();
       return result.value;
     };
