@@ -659,7 +659,9 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     const replay = newId(14);
     addSeed(replay, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
-    await saveRound(runtime, 'subB', replay, 1, 'Employee', true, 'replay-original');
+    const replaySubmit = await saveRound(runtime, 'subB', replay, 1, 'Employee', true, 'replay-original');
+    assert.equal(replaySubmit.response.result?.success, true, 'REPLAY_SETUP_SUBMIT_FAILED');
+    assert.equal(roundRow(runtime, replay, 1).status, 'Submitted', 'REPLAY_SETUP_NOT_SUBMITTED');
     cases.push(await assertDenied(runtime, 'subB', replay, 'Employee', 1, 'backward-round', { isSubmit: false }));
     cases.push('h1h2:backward-round-denial');
     cases.push(await assertDenied(runtime, 'subB', replay, 'Employee', 1, 'conflicting-replay', { isSubmit: true, comment: 'replay-tampered' }));
