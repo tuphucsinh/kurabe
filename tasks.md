@@ -175,7 +175,7 @@ task:
 - **Rollback/risk:** additive DTO can revert locally without data rewrite. Broken required referenced version is surfaced; synthetic missing-row test must not disable FK guards (unit loader failure or valid legacy null fixture instead).
 - **Execution result:** PASS on fresh exact-SHA disposable PostgreSQL/PostgREST/Next authenticated runtime; candidate `d2142155fb633b70db4ad22d69edd426e50f5924`; base `04e6f95418e76af50092bab1c610b1fc5d166959`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/h7-evidence.json`; qualification `12/12`, production writes/migrations `0/0`, cleanup residue `0`. Read-only privilege diagnosis proved production `service_role` SELECT on all six snapshot/version tables while disposable bootstrap lacked them; only disposable bootstrap/harness grants were repaired, with no product migration change. Fresh direct `agy-readonly` review PASS is recorded in `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/direct-review-v2.log`; canonical exact candidate is `d2142155fb633b70db4ad22d69edd426e50f5924`.
 
-### [ ] [#P103M3T02] H7 detail/compare render historical snapshots
+### [x] [#P103M3T02] H7 detail/compare render historical snapshots
 
 ```yaml
 task:
@@ -194,8 +194,9 @@ task:
 - **Evidence:** before/after grade/criteria/role screenshots with stable-ready conditions, exact employee route ID vs evaluation action ID, browser console, same DB snapshots, inaccessible C UI.
 - **DB/security impact:** none; UI never becomes authorization authority, historical display not editable.
 - **Rollback/risk:** local component binding revert only; no current-config fallback for missing snapshot; no global scoring helper rewrite or design refactor.
+- **Execution result:** PASS on canonical exact candidate `36d696c1367fbfd76afd5d15db14a493b753f733`; fresh disposable H7 authenticated server qualification `QUALIFIED`, V0/full build PASS, independent review PASS. Browser-specific H7 evidence remains UNKNOWN and is covered by M4T01 actual-Next matrix; no production writes/migrations.
 
-### [ ] [#P103M3T03] Scope-aware cache and resident revoke freshness
+### [x] [#P103M3T03] Scope-aware cache and resident revoke freshness
 
 ```yaml
 task:
@@ -214,6 +215,7 @@ task:
 - **Evidence:** sorted key before/after with IDs redacted to aliases, timings bound, delayed-response timeline, no stale DOM screenshots, request counts proving no hidden-tab polling/broad fetch loop.
 - **DB/security impact:** none; no new table/event bus; server/RPC auth remains authoritative on every read/write.
 - **Rollback/risk:** async cancellation and network errors; fail-closed UI rather than reusing revoked cache. Do not invalidate every user globally or add polling infrastructure.
+- **Execution result:** PASS on canonical exact candidate `ea04a894bd4fee8214fa9a395fc5a279255fd596`; fresh disposable H7 authenticated server qualification `QUALIFIED`, V0/full build PASS, independent review PASS. Browser-specific cache-confirmation evidence remains UNKNOWN and is covered by M4T01 actual-Next matrix; no production writes/migrations.
 
 ### [ ] [#P103M4T01] Full integration and actual production-Next E2E matrix
 
