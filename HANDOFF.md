@@ -6,5 +6,5 @@
 - Permission diagnosis: production `service_role` had SELECT on six snapshot/version tables; disposable bootstrap lacked grants; harness-only least-privilege SELECT repair applied, no product migration change.
 - Fresh direct `agy-readonly` review: PASS; log `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/direct-review-v2.log`.
 - Retained operational history: earlier writer/reviewer transport timeouts remain evidence only; no unresolved H7 product blocker.
-- Next action: reconcile state, then release `P103M3T02` and `P103M3T03` from canonical H7 interface.
+- Next action: dispatch `P103M3T02` and `P103M3T03` from canonical H7 interface; both are now READY with separate ownership/runtime locks.
 - Production mutation/deploy: none.
