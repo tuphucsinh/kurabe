@@ -203,7 +203,7 @@ export async function run() {
 
     const fixture = makeFixture(env, target);
     next = await startNextApplication(fixture);
-    const actionManifest = loadActionManifest(env.KURABE_H7_RUNTIME_SOURCE);
+    const actionManifest = loadActionManifest(next.isolatedRoot);
     const sessions = Object.fromEntries(
       ['manager', 'leader_a', 'leader_c', 'subleader_b', 'employee_b']
         .map((alias) => [alias, createActorSession(target, alias)])
