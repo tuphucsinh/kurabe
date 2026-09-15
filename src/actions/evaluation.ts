@@ -7,8 +7,9 @@ import { logAudit } from '@/lib/audit';
 import { calculateRoundScore } from '@/lib/scoring';
 import { ensureServerGradeBands } from '@/lib/grade-bands-server';
 import { toClientError } from '@/lib/errors';
-import { RoundNumber, EvaluationRound, Role } from '@/types';
+import { RoundNumber, EvaluationRound, Role, EvalStatus } from '@/types';
 import {
+  ACTIVE_STEP_STATUSES,
   getEvaluationFlow,
   getNextEvaluationStep,
 } from '@/lib/evaluation-workflow';
@@ -37,6 +38,15 @@ import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-p
 
 type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VALID_EVALUATION_STATUSES = new Set<string>([
+  'NotStarted',
+  'Draft',
+  'Submitted',
+  'Reviewed',
+  'Approved',
+]);
+
 type EvaluationTransactionResult = {
   round_id: string;
   evaluation_id: string;
@@ -45,14 +55,29 @@ type EvaluationTransactionResult = {
 };
 
 function isEvaluationTransactionResult(value: unknown): value is EvaluationTransactionResult {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const result = value as Record<string, unknown>;
   return (
     typeof result.round_id === 'string' &&
+    UUID_REGEX.test(result.round_id) &&
     typeof result.evaluation_id === 'string' &&
-    (result.next_round_id === null || typeof result.next_round_id === 'string') &&
-    typeof result.final_status === 'string'
+    UUID_REGEX.test(result.evaluation_id) &&
+    (result.next_round_id === null ||
+      (typeof result.next_round_id === 'string' && UUID_REGEX.test(result.next_round_id))) &&
+    typeof result.final_status === 'string' &&
+    VALID_EVALUATION_STATUSES.has(result.final_status)
   );
+}
+
+function deriveExpectedAggregateStatus(
+  round: RoundNumber,
+  isSubmit: boolean,
+  nextStepStatus?: EvalStatus | null
+): EvalStatus | null {
+  if (isSubmit) {
+    return nextStepStatus ?? 'Approved';
+  }
+  return ACTIVE_STEP_STATUSES[round] ?? null;
 }
 type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
 type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
@@ -77,13 +102,22 @@ interface EvaluationCurrentAuthInfo {
   current_round: number | null;
 }
 
+interface WriteAuthSuccess {
+  success: true;
+  roundId: string;
+  roundStatus: string;
+  isLocked: boolean;
+}
+
+type WriteAuthResult = WriteAuthSuccess | { success: false; error: string };
+
 async function assertCurrentRoundWriteAuthorization(
   actorId: string,
   evaluationId: string,
   round: RoundNumber,
   evalInfo: EvaluationCurrentAuthInfo,
   options?: { isSubmit?: boolean | null; isInit?: boolean }
-): Promise<{ success: true } | { success: false; error: string }> {
+): Promise<WriteAuthResult> {
   const { data: actorUser, error: actorError } = await supabaseAdmin
     .from('users')
     .select('id, role, team_id, is_active')
@@ -172,7 +206,17 @@ async function assertCurrentRoundWriteAuthorization(
     return { success: false, error: 'Không xác định được thẩm quyền đánh giá.' };
   }
 
-  return { success: true };
+  const isLocked =
+    roundRecord.status === 'Submitted' ||
+    roundRecord.submitted_at !== null ||
+    evalInfo.status === 'Approved';
+
+  return {
+    success: true,
+    roundId: roundRecord.id,
+    roundStatus: roundRecord.status,
+    isLocked,
+  };
 }
 
 async function assertCurrentRoundReturnAuthorization(
@@ -450,10 +494,13 @@ export async function saveEvaluationRound(
       }
 
       const rpcResult: unknown = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-      const expectedStatus = nextStep?.status ?? (isSubmit ? 'Submitted' : 'Draft');
+      const expectedStatus = deriveExpectedAggregateStatus(round, isSubmit, nextStep?.status);
       if (
+        !expectedStatus ||
         !isEvaluationTransactionResult(rpcResult) ||
         rpcResult.evaluation_id !== evaluationId ||
+        (authGuard.roundId && rpcResult.round_id !== authGuard.roundId) ||
+        (!isSubmit && rpcResult.next_round_id !== null) ||
         rpcResult.final_status !== expectedStatus
       ) {
         return {
@@ -847,13 +894,27 @@ export async function initializeEvaluationRoundDraft(
     if (
       !isEvaluationTransactionResult(rpcResult) ||
       rpcResult.evaluation_id !== evaluationId ||
-      !['Draft', 'Submitted', 'Approved', 'NotStarted'].includes(rpcResult.final_status)
+      (authGuard.roundId && rpcResult.round_id !== authGuard.roundId) ||
+      rpcResult.next_round_id !== null ||
+      !VALID_EVALUATION_STATUSES.has(rpcResult.final_status)
     ) {
       return { success: false, error: 'Không nhận được kết quả khởi tạo bản nháp hợp lệ.' };
     }
-    if (rpcResult.final_status === 'Submitted' || rpcResult.final_status === 'Approved') {
+
+    if (
+      authGuard.isLocked ||
+      authGuard.roundStatus === 'Submitted' ||
+      rpcResult.final_status === 'Approved'
+    ) {
       return { success: true, initialized: false, skipped: 'locked' };
     }
+    if (authGuard.roundStatus === 'Draft') {
+      return { success: true, initialized: false, skipped: 'already_initialized' };
+    }
+    if (round > 1 && rpcResult.final_status === evalInfo.status) {
+      return { success: true, initialized: false, skipped: 'already_initialized' };
+    }
+
     revalidatePath(`/evaluations/${evaluationId}`);
     return { success: true, initialized: rpcResult.final_status === 'Draft' };
   } catch (err: unknown) {
