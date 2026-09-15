@@ -550,8 +550,12 @@ export async function runBehavioralConfirmationSuite(runtime) {
       VALUES
         ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subC.id}', 'SubLeader', 'NotStarted', NULL);
     `);
+    const revokedDraft = await subCClient.action('saveEvaluationRound', [
+      revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup-draft', false, configOptions,
+    ]);
+    assert.equal(revokedDraft.result?.success, true, `Revoked fixture draft setup must succeed: ${JSON.stringify(revokedDraft.result)}`);
     const revokedSetup = await subCClient.action('saveEvaluationRound', [
-      revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup', true, configOptions,
+      revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup-submit', true, configOptions,
     ]);
     assert.equal(revokedSetup.result?.success, true, `Revoked fixture setup must progress to Leader round: ${JSON.stringify(revokedSetup.result)}`);
     const revokedBefore = runtime.queryJson(`
