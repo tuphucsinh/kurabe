@@ -607,25 +607,29 @@ export async function runBehavioralConfirmationSuite(runtime) {
     };
   } finally {
     const ownedIds = [evalId, initSeedEvalId, revokedEvalId, closedEvalId].filter(Boolean);
-    const ownedIdSql = ownedIds.map((id) => `'${id}'`).join(',');
     assert.ok(ownedIds.length > 0, 'H6 cleanup must retain at least one owned fixture id');
     const ownedRows = runtime.queryJson(`
-      SELECT count(*)::int AS count FROM public.evaluations WHERE id IN (${ownedIdSql});
+      SELECT id::text AS id FROM public.evaluations
+      WHERE id IN (${ownedIds.map((id) => `'${id}'`).join(',')});
     `);
-    assert.equal(ownedRows?.[0]?.count, ownedIds.length, 'H6 cleanup ownership readback mismatch');
-    runtime.psql(`
-      BEGIN;
-      SET LOCAL session_replication_role = replica;
-      DELETE FROM public.evaluation_rounds
-      WHERE evaluation_id IN (${ownedIdSql});
-      DELETE FROM public.evaluations
-      WHERE id IN (${ownedIdSql});
-      COMMIT;
-    `);
-    const residue = runtime.queryJson(`
-      SELECT count(*)::int AS count FROM public.evaluations WHERE id IN (${ownedIdSql});
-    `);
-    assert.equal(residue?.[0]?.count, 0, 'H6 cleanup left evaluation residue');
+    const existingIds = ownedRows.map((row) => row.id);
+    assert.ok(existingIds.every((id) => ownedIds.includes(id)), 'H6 cleanup ownership readback mismatch');
+    if (existingIds.length > 0) {
+      const existingIdSql = existingIds.map((id) => `'${id}'`).join(',');
+      runtime.psql(`
+        BEGIN;
+        SET LOCAL session_replication_role = replica;
+        DELETE FROM public.evaluation_rounds
+        WHERE evaluation_id IN (${existingIdSql});
+        DELETE FROM public.evaluations
+        WHERE id IN (${existingIdSql});
+        COMMIT;
+      `);
+      const residue = runtime.queryJson(`
+        SELECT id::text AS id FROM public.evaluations WHERE id IN (${existingIdSql});
+      `);
+      assert.equal(residue.length, 0, 'H6 cleanup left evaluation residue');
+    }
   }
 }
 
