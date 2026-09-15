@@ -112,10 +112,11 @@ function activeFixtureState(target) {
 }
 
 function setCurrentRules(target, active) {
-  const value = active ? 'TRUE' : 'FALSE';
   psql(target, `
-    UPDATE public.criteria_config_versions SET is_active = ${value} WHERE id IN (${sqlLiteral(FIXTURE_CRITERIA_V1_ID)}, ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)});
-    UPDATE public.grade_band_versions SET is_active = ${value} WHERE id IN (${sqlLiteral(FIXTURE_GRADE_V1_ID)}, ${sqlLiteral(FIXTURE_GRADE_V2_ID)});
+    UPDATE public.criteria_config_versions SET is_active = FALSE WHERE id IN (${sqlLiteral(FIXTURE_CRITERIA_V1_ID)}, ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)});
+    UPDATE public.grade_band_versions SET is_active = FALSE WHERE id IN (${sqlLiteral(FIXTURE_GRADE_V1_ID)}, ${sqlLiteral(FIXTURE_GRADE_V2_ID)});
+    UPDATE public.criteria_config_versions SET is_active = ${active ? 'TRUE' : 'FALSE'} WHERE id = ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)};
+    UPDATE public.grade_band_versions SET is_active = ${active ? 'TRUE' : 'FALSE'} WHERE id = ${sqlLiteral(FIXTURE_GRADE_V2_ID)};
   `);
 }
 
