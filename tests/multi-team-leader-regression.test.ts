@@ -18,13 +18,15 @@ function user(id: string, role: Role, teamId: string, isActive = true, subleader
 }
 
 const leader = user('leader-a', 'Leader', 'team-a');
+const leaderC = user('leader-c', 'Leader', 'team-c');
 const employeeA = user('employee-a', 'Employee', 'team-a', true, 'sub-a');
 const employeeB = user('employee-b', 'Employee', 'team-b', true, 'sub-b');
+const workerB = user('worker-b', 'Worker', 'team-b', true, 'sub-b');
 const employeeC = user('employee-c', 'Employee', 'team-c', true, 'sub-c');
 const subA = user('sub-a', 'SubLeader', 'team-a');
 const subB = user('sub-b', 'SubLeader', 'team-b');
 const subC = user('sub-c', 'SubLeader', 'team-c');
-const users = [leader, employeeA, employeeB, employeeC, subA, subB, subC];
+const users = [leader, leaderC, employeeA, employeeB, workerB, employeeC, subA, subB, subC];
 const ledTeams = ['team-a', 'team-b'];
 
 function review(employee: TestUser): Evaluation {

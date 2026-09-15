@@ -80,7 +80,7 @@ export async function resolveEvaluatorFromDb(
       .from('teams')
       .select('leader_id')
       .eq('id', subject.teamId)
-      .single();
+      .maybeSingle();
 
     if (team?.leader_id) {
       const { data: teamLeader } = await supabaseAdmin
@@ -94,8 +94,24 @@ export async function resolveEvaluatorFromDb(
       if (teamLeader) {
         return { id: teamLeader.id, role: parseRole(teamLeader.role) };
       }
+      // Invalid or inactive appointed pointer -> reject, do not fallback
+      return null;
     }
 
+    // Appointed pointer absent: unique primary fallback only
+    const targetTeam = subject.teamId;
+    const { data: primaryLeaders } = await supabaseAdmin
+      .from('users')
+      .select('id, role')
+      .eq('team_id', targetTeam)
+      .eq('role', 'Leader')
+      .eq('is_active', true);
+
+    if (primaryLeaders && primaryLeaders.length === 1) {
+      return { id: primaryLeaders[0].id, role: parseRole(primaryLeaders[0].role) };
+    }
+
+    return null;
   }
 
   if (selector === 'Manager') {
@@ -149,10 +165,10 @@ export function resolveEvaluatorFromList(
     const candidates: Candidate[] = allUsers.map((u) => ({
       id: u.id,
       role: u.role,
-      isActive: u.isActive ?? true,
+      isActive: (u.isActive ?? true) && ((u as { is_active?: boolean }).is_active ?? true),
       teamId: u.teamId,
     }));
-    const leader = selectValidLeader(appointedId, subject.teamId, candidates);
+    const leader = selectValidLeader(appointedId, subject.teamId, candidates, { strict: true });
     return leader ? { id: leader.id, role: parseRole(leader.role) } : null;
   }
 
