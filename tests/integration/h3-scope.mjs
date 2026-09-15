@@ -194,6 +194,13 @@ function createDisposableRuntimeFromEnv() {
       assert.ok(password, 'KURABE_FIXTURE_PASSWORD is required for authenticated qualification');
       const login = await this.action('loginAction', [actor.code, password], `login-${this.alias}`);
       assert.equal(login.result?.success, true, `AUTH_FAILED ${this.alias}`);
+      const page = await fetch(`${origin}/evaluations/40000000-0000-4000-8000-000000000011`, {
+        headers: this.cookieHeader() ? { Cookie: this.cookieHeader() } : {},
+        redirect: 'manual',
+        signal: AbortSignal.timeout(30000),
+      });
+      await page.arrayBuffer();
+      actions = loadManifest(path.resolve(process.env.KURABE_H3_RUNTIME_SOURCE));
       const current = await this.action('getCurrentUserAction', [], `current-${this.alias}`);
       assert.equal(current.result?.id, actor.id, `SESSION_READBACK_FAILED ${this.alias}`);
       return current.result;
