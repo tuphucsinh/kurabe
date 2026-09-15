@@ -189,7 +189,14 @@ export async function run() {
       await setSessionCookie(browser.page, next.url, sessions[alias].token);
     };
     const body = () => browser.page.evaluate(`({ href: location.href, text: document.body.innerText, html: document.documentElement.outerHTML })`);
-    const go = async (url, ready = null) => navigate(browser.page, `${next.url}${url}`, ready);
+    const go = async (url, ready = null) => {
+      try {
+        return await navigate(browser.page, `${next.url}${url}`, ready);
+      } catch (error) {
+        const diagnostic = await body().catch(() => ({ href: 'unavailable', text: 'unavailable' }));
+        throw new Error(`${safeError(error)} state=${safeError(JSON.stringify(diagnostic))}`);
+      }
+    };
     const authoritative = "document.querySelector('[data-historical-snapshot-state=authoritative]') !== null";
 
     await runCase(cases, 'h4:history-denied-target-non-disclosure', async () => {
