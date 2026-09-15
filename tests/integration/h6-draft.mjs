@@ -368,6 +368,8 @@ export async function runBehavioralConfirmationSuite(runtime) {
     gradeConfigVersionId: gradeVersionId,
     renderedRules,
   };
+  const scores = Object.fromEntries(renderedRules.map((rule) => [rule.id, rule.levels[0].points]));
+  const selectedLevelIndexes = Object.fromEntries(renderedRules.map((rule) => [rule.id, 0]));
 
   // Seed fresh evaluation for Employee B
   const evalId = crypto.randomUUID();
@@ -389,7 +391,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 1: Authentic R1 Draft response matches DB
     const r1Draft = await subBClient.action('saveEvaluationRound', [
-      evalId, 1, {}, {}, {}, 'R1 Draft 1', false, configOptions,
+      evalId, 1, scores, {}, selectedLevelIndexes, 'R1 Draft 1', false, configOptions,
     ]);
     assert.equal(r1Draft.result?.success, true, `R1 draft must succeed: ${JSON.stringify(r1Draft.result)}`);
     const r1Db = runtime.queryJson(`
@@ -413,7 +415,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 3: Repeated identical draft creates no extra round
     const r1DraftDup = await subBClient.action('saveEvaluationRound', [
-      evalId, 1, {}, {}, {}, 'R1 Draft 1', false, configOptions,
+      evalId, 1, scores, {}, selectedLevelIndexes, 'R1 Draft 1', false, configOptions,
     ]);
     assert.equal(r1DraftDup.result?.success, true, 'Repeated R1 draft must succeed');
     const r1RoundCount = runtime.queryJson(`
@@ -424,7 +426,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 4: Authentic R1 Submit advances to R2
     const r1Submit = await subBClient.action('saveEvaluationRound', [
-      evalId, 1, {}, {}, {}, 'R1 Submit', true, configOptions,
+      evalId, 1, scores, {}, selectedLevelIndexes, 'R1 Submit', true, configOptions,
     ]);
     assert.equal(r1Submit.result?.success, true, 'R1 submit must succeed');
     const r1SubmitDb = runtime.queryJson(`
@@ -442,7 +444,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 5: Authentic R2 Draft response matches Submitted DB (THE CORE BUG FIX)
     const r2Draft = await leaderAClient.action('saveEvaluationRound', [
-      evalId, 2, {}, {}, {}, 'R2 Draft comment', false, configOptions,
+      evalId, 2, scores, {}, selectedLevelIndexes, 'R2 Draft comment', false, configOptions,
     ]);
     assert.equal(r2Draft.result?.success, true, 'R2 draft response must succeed for Submitted aggregate');
     const r2Db = runtime.queryJson(`
@@ -458,7 +460,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 6: Authentic R2 Submit advances to R3
     const r2Submit = await leaderAClient.action('saveEvaluationRound', [
-      evalId, 2, {}, {}, {}, 'R2 Submit', true, configOptions,
+      evalId, 2, scores, {}, selectedLevelIndexes, 'R2 Submit', true, configOptions,
     ]);
     assert.equal(r2Submit.result?.success, true, 'R2 submit must succeed');
     const r2SubmitDb = runtime.queryJson(`
@@ -476,7 +478,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 7: Authentic R3 Draft response matches Reviewed DB (THE CORE BUG FIX)
     const r3Draft = await managerClient.action('saveEvaluationRound', [
-      evalId, 3, {}, {}, {}, 'R3 Draft comment', false, configOptions,
+      evalId, 3, scores, {}, selectedLevelIndexes, 'R3 Draft comment', false, configOptions,
     ]);
     assert.equal(r3Draft.result?.success, true, 'R3 draft response must succeed for Reviewed aggregate');
     const r3Db = runtime.queryJson(`
@@ -492,7 +494,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 8: Authentic R3 Final Submit approves
     const r3Submit = await managerClient.action('saveEvaluationRound', [
-      evalId, 3, {}, {}, {}, 'R3 Approved', true, configOptions,
+      evalId, 3, scores, {}, selectedLevelIndexes, 'R3 Approved', true, configOptions,
     ]);
     assert.equal(r3Submit.result?.success, true, 'R3 final submit must succeed');
     const r3SubmitDb = runtime.queryJson(`
@@ -515,12 +517,12 @@ export async function runBehavioralConfirmationSuite(runtime) {
       VALUES ('${initSeedRoundId}', '${initSeedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'NotStarted');
     `);
     const initRes1 = await subBClient.action('initializeEvaluationRoundDraft', [
-      initSeedEvalId, 1, {}, {}, {}, '', configOptions,
+      initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', configOptions,
     ]);
     assert.equal(initRes1.result?.success, true);
     assert.equal(initRes1.result?.initialized, true);
     const initRes2 = await subBClient.action('initializeEvaluationRoundDraft', [
-      initSeedEvalId, 1, {}, {}, {}, '', configOptions,
+      initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', configOptions,
     ]);
     assert.equal(initRes2.result?.success, true);
     assert.equal(initRes2.result?.initialized, false);
@@ -529,7 +531,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Case 10: Atomic denial for stale / revoked / closed writes
     const staleConfig = await subBClient.action('saveEvaluationRound', [
-      initSeedEvalId, 1, {}, {}, {}, '', false,
+      initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', false,
       { ...configOptions, criteriaConfigVersionId: crypto.randomUUID() },
     ]);
     assert.equal(staleConfig.result?.success, false, 'Stale config must fail');
@@ -553,7 +555,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.B}';`);
     try {
       const revokedResult = await leaderAClient.action('saveEvaluationRound', [
-        revokedEvalId, 2, {}, {}, {}, 'revoked', false, configOptions,
+        revokedEvalId, 2, scores, {}, selectedLevelIndexes, 'revoked', false, configOptions,
       ]);
       assert.equal(revokedResult.result?.success, false, 'Revoked Leader write must fail');
     } finally {
@@ -583,7 +585,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
       WHERE e.id = '${closedEvalId}';
     `)[0];
     const closedResult = await managerClient.action('saveEvaluationRound', [
-      closedEvalId, 1, {}, {}, {}, 'closed', false, configOptions,
+      closedEvalId, 1, scores, {}, selectedLevelIndexes, 'closed', false, configOptions,
     ]);
     assert.equal(closedResult.result?.success, false, 'Closed-period write must fail');
     const closedAfter = runtime.queryJson(`
