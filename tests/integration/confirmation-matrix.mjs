@@ -153,6 +153,80 @@ COMMIT;`,
   });
 }
 
+function queryJson(env, sql) {
+  const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-At', '-v', 'ON_ERROR_STOP=1'];
+  const raw = execFileSync('psql', target, {
+    input: sql,
+    encoding: 'utf8',
+    env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+  }).trim();
+  assert.ok(raw, 'H6 manager isolation readback was empty');
+  return JSON.parse(raw);
+}
+
+function isolateH6ManagerResolver(env) {
+  const managers = queryJson(env, `
+    SELECT COALESCE(json_agg(row_to_json(manager) ORDER BY manager.id), '[]'::json)
+    FROM (
+      SELECT id::text AS id, employee_code, role, is_active
+      FROM public.users
+      WHERE role = 'Manager'
+    ) AS manager;
+  `);
+  const expected = managers.find((manager) => manager.employee_code === 'M2-MANAGER');
+  assert.ok(expected, 'H6 deterministic Manager actor is missing');
+  assert.equal(expected.role, 'Manager');
+  assert.equal(expected.is_active, true, 'H6 deterministic Manager actor must be active');
+
+  const unrelatedActive = managers.filter((manager) => manager.id !== expected.id && manager.is_active);
+  if (unrelatedActive.length > 0) {
+    const ids = unrelatedActive.map((manager) => `'${manager.id.replaceAll("'", "''")}'`).join(', ');
+    const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+    execFileSync('psql', target, {
+      input: `UPDATE public.users SET is_active=FALSE WHERE role='Manager' AND id IN (${ids});`,
+      encoding: 'utf8',
+      env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+    });
+  }
+
+  const activeAfterIsolation = queryJson(env, `
+    SELECT COALESCE(json_agg(row_to_json(manager) ORDER BY manager.id), '[]'::json)
+    FROM (
+      SELECT id::text AS id, employee_code, role, is_active
+      FROM public.users
+      WHERE role = 'Manager' AND is_active = TRUE
+    ) AS manager;
+  `);
+  assert.deepEqual(activeAfterIsolation.map((manager) => manager.id), [expected.id], 'H6 must have exactly one active Manager resolver input');
+
+  return {
+    expectedManagerId: expected.id,
+    expectedManagerCode: expected.employee_code,
+    originalManagerStates: managers.map((manager) => ({ id: manager.id, isActive: manager.is_active })),
+    deactivatedUnrelatedManagers: unrelatedActive.map((manager) => ({ id: manager.id, wasActive: manager.is_active })),
+    restore() {
+      if (unrelatedActive.length > 0) {
+        const ids = unrelatedActive.map((manager) => `'${manager.id.replaceAll("'", "''")}'`).join(', ');
+        const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+        execFileSync('psql', target, {
+          input: `UPDATE public.users SET is_active=TRUE WHERE role='Manager' AND id IN (${ids});`,
+          encoding: 'utf8',
+          env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+        });
+      }
+      const restoredManagers = queryJson(env, `
+        SELECT COALESCE(json_agg(row_to_json(manager) ORDER BY manager.id), '[]'::json)
+        FROM (
+          SELECT id::text AS id, is_active
+          FROM public.users
+          WHERE role = 'Manager'
+        ) AS manager;
+      `);
+      assert.deepEqual(restoredManagers.map((manager) => ({ id: manager.id, isActive: manager.is_active })), originalManagerStates, 'H6 manager isolation did not restore prior active states');
+    },
+  };
+}
+
 function seedH3ScopePrerequisites(env) {
   const seedScript = '/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-auth/seed-m2-prerequisites.mjs';
   assert.ok(fs.existsSync(seedScript), `H3 prerequisite seed is missing: ${seedScript}`);
@@ -254,6 +328,7 @@ async function runDelegate(delegate, env, options) {
     previous[key] = process.env[key];
     process.env[key] = delegateEnv[key];
   }
+  let h6ManagerIsolation = null;
   try {
     let freshH5Evidence = null;
     if (delegate.name === 'h5') freshH5Evidence = runFreshH5Harness(delegateEnv);
@@ -264,6 +339,7 @@ async function runDelegate(delegate, env, options) {
       });
     }
     if (delegate.name === 'h3') seedH3ScopePrerequisites(delegateEnv);
+    if (delegate.name === 'h6') h6ManagerIsolation = isolateH6ManagerResolver(delegateEnv);
     if (delegate.name === 'h7') {
       delete process.env.KURABE_H7_PREBOOTSTRAPPED;
       delete process.env.KURABE_H7_BOOTSTRAP_RESULT;
@@ -281,6 +357,23 @@ async function runDelegate(delegate, env, options) {
       suite: `confirmation-matrix-${delegate.name}`,
       options: { ...options, evidence: delegateEvidence },
     });
+    if (delegate.name === 'h6') {
+      const activeManagersAfterRun = queryJson(delegateEnv, `
+        SELECT COALESCE(json_agg(row_to_json(manager) ORDER BY manager.id), '[]'::json)
+        FROM (
+          SELECT id::text AS id, employee_code, role, is_active
+          FROM public.users
+          WHERE role = 'Manager' AND is_active = TRUE
+        ) AS manager;
+      `);
+      assert.deepEqual(activeManagersAfterRun.map((manager) => manager.id), [h6ManagerIsolation.expectedManagerId], 'H6 runtime changed deterministic Manager resolver inputs');
+      result.h6ManagerResolver = {
+        expectedManagerCode: h6ManagerIsolation.expectedManagerCode,
+        expectedManagerId: h6ManagerIsolation.expectedManagerId,
+        activeManagerCount: activeManagersAfterRun.length,
+        deactivatedUnrelatedManagers: h6ManagerIsolation.deactivatedUnrelatedManagers,
+      };
+    }
     if (freshH5Evidence) {
       result.cases = [...freshH5Evidence.cases];
       result.authenticatedCases = freshH5Evidence.authenticatedCases;
@@ -308,6 +401,7 @@ async function runDelegate(delegate, env, options) {
     // checks. Remove those static prerequisite rows before H6 creates its own
     // fresh Employee-B evaluation in the standalone H6 contract.
     if (delegate.name === 'h3') cleanupSharedM2Evaluations(delegateEnv);
+    if (delegate.name === 'h6' && h6ManagerIsolation) h6ManagerIsolation.restore();
     for (const key of [delegate.url, delegate.source]) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
