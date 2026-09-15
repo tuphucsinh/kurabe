@@ -255,8 +255,9 @@ function createDisposableRuntimeFromEnv() {
     stdio: ['pipe', 'pipe', 'pipe'],
   }).trim();
   const queryJson = (statement) => {
-    const raw = psql(statement);
-    return raw ? JSON.parse(raw) : null;
+    const query = statement.trim().replace(/;\s*$/, '');
+    const raw = psql(`SELECT COALESCE(json_agg(row_to_json(result)), '[]'::json) FROM (${query}) AS result;`);
+    return raw ? JSON.parse(raw) : [];
   };
   const origin = process.env.KURABE_H6_NEXT_URL.replace(/\/$/, '');
   let actions = loadManifest(path.resolve(process.env.KURABE_H6_RUNTIME_SOURCE));
