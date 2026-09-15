@@ -289,6 +289,10 @@ async function runDelegate(delegate, env, options) {
     return result;
   } finally {
     if (delegate.name === 'h1h2') cleanupH1H2Prerequisites(delegateEnv);
+    // H3 reseeds the shared M2 prerequisite graph for its authenticated scope
+    // checks. Remove those static prerequisite rows before H6 creates its own
+    // fresh Employee-B evaluation in the standalone H6 contract.
+    if (delegate.name === 'h3') cleanupH1H2Prerequisites(delegateEnv);
     for (const key of [delegate.url, delegate.source]) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
