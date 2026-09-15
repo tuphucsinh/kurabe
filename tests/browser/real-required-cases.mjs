@@ -240,6 +240,8 @@ export async function run() {
         const context = await verifyAuthenticatedContext();
         const targetId = new URL(result.href).pathname.match(/\/(?:history|evaluations)\/([^/]+)/)?.[1] || null;
         const target = Object.values(FIXTURE_ACTORS).find((actor) => actor.id === targetId) || null;
+        const requestedTargetId = url.match(/\/(?:history|evaluations)\/([^/]+)/)?.[1] || null;
+        const requestedTarget = Object.values(FIXTURE_ACTORS).find((actor) => actor.id === requestedTargetId) || null;
         return {
           ...result,
           context,
@@ -247,6 +249,9 @@ export async function run() {
             targetId,
             targetName: target?.name || null,
             targetNameVisible: target ? result.text.includes(target.name) : false,
+            requestedTargetId,
+            requestedTargetName: requestedTarget?.name || null,
+            requestedTargetNameVisible: requestedTarget ? result.text.includes(requestedTarget.name) : false,
             requestedPath: url,
           },
         };
@@ -262,8 +267,8 @@ export async function run() {
       const result = await go(`/history/${FIXTURE_MANAGER_ID}`, "document.body.innerText.includes('Lịch sử đánh giá')");
       assert.equal(result.context.actor.id, FIXTURE_EMPLOYEE_B_ID);
       assert.equal(result.targetMetadata.requestedPath, `/history/${FIXTURE_MANAGER_ID}`);
-      assert.equal(result.targetMetadata.targetNameVisible, false);
-      assert.doesNotMatch(result.text, /P103 Closed Period|P103 Employee B/);
+      assert.equal(result.targetMetadata.requestedTargetNameVisible, false);
+      assert.doesNotMatch(result.text, /P103 Closed Period|P103 Seed Manager/);
     });
 
     await runCase(cases, 'h4:history-authorized-submitted-read', async () => {
