@@ -517,16 +517,16 @@ export async function runBehavioralConfirmationSuite(runtime) {
     const initSeedRoundId = crypto.randomUUID();
     runtime.psql(`
       INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
-      VALUES ('${initSeedEvalId}', '${PERIODS.active}', '${ACTORS.workerB.id}', 'Worker', '${TEAMS.B}', 'NotStarted', 1);
+      VALUES ('${initSeedEvalId}', '${PERIODS.active}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'NotStarted', 1);
       INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status)
-      VALUES ('${initSeedRoundId}', '${initSeedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'NotStarted');
+      VALUES ('${initSeedRoundId}', '${initSeedEvalId}', 1, '${ACTORS.subC.id}', 'SubLeader', 'NotStarted');
     `);
-    const initRes1 = await subBClient.action('initializeEvaluationRoundDraft', [
+    const initRes1 = await subCClient.action('initializeEvaluationRoundDraft', [
       initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', configOptions,
     ]);
     assert.equal(initRes1.result?.success, true);
     assert.equal(initRes1.result?.initialized, true);
-    const initRes2 = await subBClient.action('initializeEvaluationRoundDraft', [
+    const initRes2 = await subCClient.action('initializeEvaluationRoundDraft', [
       initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', configOptions,
     ]);
     assert.equal(initRes2.result?.success, true);
@@ -535,7 +535,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h6:initialize-draft-consumer-parity');
 
     // Case 10: Atomic denial for stale / revoked / closed writes
-    const staleConfig = await subBClient.action('saveEvaluationRound', [
+    const staleConfig = await subCClient.action('saveEvaluationRound', [
       initSeedEvalId, 1, scores, {}, selectedLevelIndexes, '', false,
       { ...configOptions, criteriaConfigVersionId: crypto.randomUUID() },
     ]);
@@ -543,18 +543,19 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     // Revoked appointment denial must leave the current round and aggregate untouched.
     revokedEvalId = crypto.randomUUID();
+    runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderC.id}' WHERE id = '${TEAMS.B}';`);
     runtime.psql(`
       INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
-      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'NotStarted', 1);
+      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.workerB.id}', 'Worker', '${TEAMS.B}', 'NotStarted', 1);
       INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status, submitted_at)
       VALUES
-        ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subC.id}', 'SubLeader', 'NotStarted', NULL);
+        ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'NotStarted', NULL);
     `);
-    const revokedDraft = await subCClient.action('saveEvaluationRound', [
+    const revokedDraft = await subBClient.action('saveEvaluationRound', [
       revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup-draft', false, configOptions,
     ]);
     assert.equal(revokedDraft.result?.success, true, `Revoked fixture draft setup must succeed: ${JSON.stringify(revokedDraft.result)}`);
-    const revokedSetup = await subCClient.action('saveEvaluationRound', [
+    const revokedSetup = await subBClient.action('saveEvaluationRound', [
       revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup-submit', true, configOptions,
     ]);
     assert.equal(revokedSetup.result?.success, true, `Revoked fixture setup must progress to Leader round: ${JSON.stringify(revokedSetup.result)}`);
@@ -564,14 +565,14 @@ export async function runBehavioralConfirmationSuite(runtime) {
       JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 2
       WHERE e.id = '${revokedEvalId}';
     `)[0];
-    runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.C}';`);
+    runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.B}';`);
     try {
       const revokedResult = await leaderCClient.action('saveEvaluationRound', [
         revokedEvalId, 2, scores, {}, selectedLevelIndexes, 'revoked', false, configOptions,
       ]);
       assert.equal(revokedResult.result?.success, false, 'Revoked Leader write must fail');
     } finally {
-      runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderC.id}' WHERE id = '${TEAMS.C}';`);
+      runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderA.id}' WHERE id = '${TEAMS.B}';`);
     }
     const revokedAfter = runtime.queryJson(`
       SELECT e.status AS eval_status, e.current_round, er.status AS round_status
