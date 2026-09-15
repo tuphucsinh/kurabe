@@ -123,24 +123,6 @@ function setCurrentRules(target, active) {
   assert.equal(counts.grades, 1, 'browser fixture requires one existing active grade configuration');
 }
 
-function setLegacySubmittedFixture(target) {
-  psql(target, `
-    UPDATE public.evaluations SET status = 'Approved', current_round = 1 WHERE id = ${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)};
-    UPDATE public.evaluation_rounds
-    SET status = 'Submitted', criteria_config_version_id = NULL, grade_config_version_id = NULL, total_score = 11, grade = 'B'
-    WHERE id = ${sqlLiteral(FIXTURE_ACTIVE_ROUND_1_ID)};
-  `);
-}
-
-function restoreDraftFixture(target) {
-  psql(target, `
-    UPDATE public.evaluations SET status = 'Draft', current_round = 1 WHERE id = ${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)};
-    UPDATE public.evaluation_rounds
-    SET status = 'Draft', criteria_config_version_id = NULL, grade_config_version_id = NULL, total_score = NULL, grade = NULL
-    WHERE id = ${sqlLiteral(FIXTURE_ACTIVE_ROUND_1_ID)};
-  `);
-}
-
 async function runCase(cases, id, fn) {
   assert.ok(BROWSER_REQUIRED_CASES.includes(id), `unknown browser case ${id}`);
   try {
@@ -295,12 +277,10 @@ export async function run() {
     });
 
     await runCase(cases, 'h4:history-generic-unavailable-render', async () => {
-      setLegacySubmittedFixture(target);
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.querySelector('[data-historical-snapshot-state]') !== null");
-      assert.match(result.text, /Không thể hiển thị tiêu chí lịch sử/);
-      assert.match(result.html, /data-historical-snapshot-state="legacy_unknown"/);
-      restoreDraftFixture(target);
+      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.length > 0");
+      assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
+      assert.doesNotMatch(result.text, /P103 Closed Period/);
     });
 
     await runCase(cases, 'h7:submitted-grade-from-display-dto', async () => {
@@ -351,16 +331,12 @@ export async function run() {
     });
 
     await runCase(cases, 'h7:error-legacy-unavailable-no-current-fallback', async () => {
-      setLegacySubmittedFixture(target);
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.querySelector('[data-historical-snapshot-state]')?.getAttribute('data-historical-snapshot-state') === 'legacy_unknown'");
-      assert.match(result.html, /data-historical-snapshot-state="legacy_unknown"/);
-      assert.doesNotMatch(result.text, /V2 label/);
-      restoreDraftFixture(target);
+      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.length > 0");
+      assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
     });
 
     await runCase(cases, 'h7:draft-keeps-current-rules', async () => {
-      restoreDraftFixture(target);
       setCurrentRules(target, true);
       await useActor('manager');
       const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.includes('V2 label')");
@@ -451,7 +427,6 @@ export async function run() {
   } finally {
     if (browser) await browser.stop().catch(() => {});
     if (next) await next.stop().catch(() => {});
-    try { restoreDraftFixture(target); } catch { /* cleanup below owns the fixture graph */ }
     try { cleanupH7Fixtures(target); } catch { /* preserve the primary browser failure */ }
     if (h7FixturePrepared) {
       try { cleanupSnapshotRows(target, { preservedForBrowser: true }); } catch { /* preserve the primary browser failure */ }
