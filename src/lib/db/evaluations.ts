@@ -15,7 +15,7 @@ export function filterEvaluationsForViewer(
   allUsers?: User[],
   ledTeamIds?: readonly string[]
 ): Evaluation[] {
-  if (!viewer) return [];
+  if (!viewer || !Array.isArray(evaluations) || evaluations.length === 0) return [];
   return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers, ledTeamIds));
 }
 

@@ -65,12 +65,15 @@ export async function resolveCurrentPeriodAdmin(preferredId?: string, requester?
 /** Context SubLeader cho canViewEvaluation: stub User {id, subleaderId} của các NV mình quản. */
 async function getSubLeaderViewContextAdmin(user: User): Promise<User[] | undefined> {
   if (user.role !== 'SubLeader' || !user.teamId) return undefined;
-  const { data: subEmployees } = await supabaseAdmin
+  const { data: subEmployees, error } = await supabaseAdmin
     .from('users')
     .select('id, role, team_id, is_active, subleader_id')
     .eq('subleader_id', user.id)
     .eq('team_id', user.teamId)
     .eq('is_active', true);
+  if (error) {
+    throw new DatabaseError('Error fetching SubLeader view context (admin)', error);
+  }
   return (subEmployees || []).map((u: { id: string; role: string; team_id: string | null; subleader_id: string | null }) => ({
     id: u.id,
     role: parseRole(u.role),
@@ -112,6 +115,10 @@ export async function fetchEvaluationsForViewerAdmin(
       user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
     ]);
 
+    if (roundsRes.error) {
+      throw new DatabaseError(errorLabel, roundsRes.error);
+    }
+
     allUsers = subUsers;
     const assignedIds = (roundsRes.data || []).map(r => r.evaluation_id).filter(Boolean);
 
@@ -147,7 +154,7 @@ export async function fetchEvaluationsForViewerAdmin(
   }
 
   const evaluations = (data || []).map(mapEvaluationFromDb);
-  return filterEvaluationsForViewer(evaluations, user, allUsers);
+  return filterEvaluationsForViewer(evaluations, user, allUsers, leaderTeamIds);
 }
 
 export async function getEvaluationsAdmin(
@@ -331,6 +338,10 @@ export async function fetchEvaluationSummariesForViewerAdmin(
       user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
     ]);
 
+    if (roundsRes.error) {
+      throw new DatabaseError(errorLabel, roundsRes.error);
+    }
+
     allUsers = subUsers;
     const assignedIds = (roundsRes.data || []).map(r => r.evaluation_id).filter(Boolean);
 
@@ -411,11 +422,12 @@ export async function getEvaluationSummariesByEmployeeIdsAdmin(
 
   let authorizedIds: string[] = [];
   let allUsers: User[] | undefined = undefined;
+  let leaderTeamIds: string[] = [];
 
   if (requester.role === 'Manager') {
     authorizedIds = validIds;
   } else if (requester.role === 'Leader') {
-    const leaderTeamIds = await getLeaderTeamIds(requester);
+    leaderTeamIds = await getLeaderTeamIds(requester);
     if (leaderTeamIds.length === 0) {
       return [];
     }
@@ -427,7 +439,10 @@ export async function getEvaluationSummariesByEmployeeIdsAdmin(
       .in('team_id', leaderTeamIds)
       .eq('is_active', true);
 
-    if (teamErr || !teamMembers || teamMembers.length === 0) {
+    if (teamErr) {
+      throw new DatabaseError('Error fetching team members for evaluation summaries (admin)', teamErr);
+    }
+    if (!teamMembers || teamMembers.length === 0) {
       return [];
     }
     authorizedIds = teamMembers.map((u) => u.id);
@@ -463,7 +478,6 @@ export async function getEvaluationSummariesByEmployeeIdsAdmin(
   }
 
   const evaluations = (data || []).map(mapEvaluationBatchSummaryFromDb);
-  const leaderTeamIds = requester.role === 'Leader' ? await getLeaderTeamIds(requester) : [];
   return filterEvaluationsForViewer(evaluations, requester, allUsers, leaderTeamIds);
 }
 
@@ -472,7 +486,7 @@ export async function getEvaluationByIdAdmin(
   id: string,
   user?: User | null
 ): Promise<Evaluation | null> {
-  if (!id) return null;
+  if (!id || !user) return null;
 
   const { data, error } = await supabaseAdmin
     .from('evaluations')
@@ -486,12 +500,10 @@ export async function getEvaluationByIdAdmin(
   }
 
   const evaluation = mapEvaluationFromDb(data);
-  const [allUsers, leaderTeamIds] = user
-    ? await Promise.all([
-      getSubLeaderViewContextAdmin(user),
-      user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
-    ])
-    : [undefined, [] as string[]];
+  const [allUsers, leaderTeamIds] = await Promise.all([
+    getSubLeaderViewContextAdmin(user),
+    user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
+  ]);
 
   if (!canViewEvaluation(user, evaluation, allUsers, leaderTeamIds)) {
     return null;
@@ -505,7 +517,7 @@ export async function getEvaluationByEmployeeAdmin(
   periodId?: string,
   user?: User | null
 ): Promise<Evaluation | null> {
-  if (!employeeId || !periodId) return null;
+  if (!employeeId || !periodId || !user) return null;
 
   const query = supabaseAdmin
     .from('evaluations')
@@ -522,12 +534,10 @@ export async function getEvaluationByEmployeeAdmin(
   if (!data) return null;
 
   const evaluation = mapEvaluationFromDb(data);
-  const [allUsers, leaderTeamIds] = user
-    ? await Promise.all([
-      getSubLeaderViewContextAdmin(user),
-      user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
-    ])
-    : [undefined, [] as string[]];
+  const [allUsers, leaderTeamIds] = await Promise.all([
+    getSubLeaderViewContextAdmin(user),
+    user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
+  ]);
 
   if (!canViewEvaluation(user, evaluation, allUsers, leaderTeamIds)) {
     return null;
@@ -545,12 +555,15 @@ export async function getEvaluationHistoryByEmployeeAdmin(
     if (user.role !== 'Leader') return [];
     const leaderTeamIds = await getLeaderTeamIds(user);
     if (leaderTeamIds.length === 0) return [];
-    const { data: target } = await supabaseAdmin
+    const { data: target, error: targetError } = await supabaseAdmin
       .from('users')
       .select('team_id')
       .eq('id', employeeId)
       .eq('is_active', true)
       .maybeSingle();
+    if (targetError) {
+      throw new DatabaseError('Error fetching target user for evaluation history (admin)', targetError);
+    }
     if (!target?.team_id || !leaderTeamIds.includes(target.team_id)) return [];
   }
 
