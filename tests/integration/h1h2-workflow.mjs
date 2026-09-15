@@ -477,7 +477,24 @@ function evaluationRow(runtime, evaluationId) {
   return rows?.[0] ?? null;
 }
 
-async function buildPayload(runtime) {
+async function discardEvaluation(runtime, evaluationId) {
+  const owned = runtime.queryJson(`
+    SELECT count(*)::int AS count
+    FROM public.evaluations
+    WHERE id = ${quoteUuid(evaluationId)};
+  `);
+  assert.ok(owned?.[0]?.count === 1 || owned?.count === 1, `FIXTURE_EVALUATION_NOT_OWNED ${evaluationId}`);
+  runtime.psql(`
+    BEGIN;
+    SET LOCAL session_replication_role = replica;
+    DELETE FROM public.evaluation_rounds WHERE evaluation_id = ${quoteUuid(evaluationId)};
+    DELETE FROM public.evaluations WHERE id = ${quoteUuid(evaluationId)};
+    COMMIT;
+  `);
+  assert.equal(evaluationRow(runtime, evaluationId), null, `FIXTURE_EVALUATION_RESET_FAILED ${evaluationId}`);
+}
+
+function buildPayload(runtime) {
   const criteria = runtime.queryJson('SELECT public.get_active_criteria_config()::text;');
   const grades = runtime.queryJson('SELECT public.get_active_grade_config()::text;');
   return configFromResults(criteria, grades);
@@ -578,6 +595,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
   try {
     evaluationIds.push(newId(2));
     await runFlow(runtime, newId(2), ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader', cases);
+    discardEvaluation(runtime, newId(2));
     cases.push('h1h2:employee-flow-subleader-to-leader-to-manager');
     evaluationIds.push(newId(3));
     await runFlow(runtime, newId(3), ACTORS.workerB.id, 'Worker', TEAMS.B, ACTORS.subB.id, 'SubLeader', cases);
@@ -590,6 +608,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:leader-flow-self-to-manager');
     evaluationIds.push(newId(6));
     await runFlow(runtime, newId(6), ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager', cases);
+    discardEvaluation(runtime, newId(6));
     cases.push('h1h2:manager-flow-self-final');
 
     const selfEmployee = newId(7);
@@ -601,6 +620,8 @@ export async function runBehavioralConfirmationSuite(runtime) {
       await assertDenied(runtime, 'workerB', selfWorker, 'Worker', 1, 'worker-self-r1'),
     ];
     cases.push('h1h2:employee-worker-self-r1-denial', ...selfDenials);
+    discardEvaluation(runtime, selfEmployee);
+    discardEvaluation(runtime, selfWorker);
 
     const unrelated = newId(9);
     addSeed(unrelated, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
@@ -609,6 +630,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push({ label: 'h1h2:appointed-leader-independent-team-save', persisted: true });
     cases.push(await assertDenied(runtime, 'leaderC', unrelated, 'Employee', 2, 'unrelated-leader-c'));
     cases.push('h1h2:unrelated-leader-c-denial');
+    discardEvaluation(runtime, unrelated);
 
     const uniqueFallback = newId(10);
     runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = ${quoteUuid(TEAMS.C)};`);
@@ -618,6 +640,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     assert.equal(roundRow(runtime, uniqueFallback, 2).evaluator_id, ACTORS.leaderC.id);
     cases.push('h1h2:pointer-absent-unique-primary-fallback');
     runtime.psql(`UPDATE public.teams SET leader_id = ${quoteUuid(ACTORS.leaderC.id)} WHERE id = ${quoteUuid(TEAMS.C)};`);
+    discardEvaluation(runtime, uniqueFallback);
 
     // The personnel graph's unique active-primary-Leader index makes these two
     // defensive branches unreachable in a business-valid runtime. They remain
@@ -629,6 +652,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     addSeed(skipped, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
     cases.push(await assertDenied(runtime, 'leaderA', skipped, 'Employee', 2, 'skipped-round'));
     cases.push('h1h2:skipped-round-denial');
+    discardEvaluation(runtime, skipped);
 
     const replay = newId(14);
     addSeed(replay, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
@@ -637,6 +661,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:backward-round-denial');
     cases.push(await assertDenied(runtime, 'subB', replay, 'Employee', 1, 'conflicting-replay', { isSubmit: true, comment: 'replay-tampered' }));
     cases.push('h1h2:conflicting-replay-denial');
+    discardEvaluation(runtime, replay);
 
     const finalTampered = newId(15);
     addSeed(finalTampered, PERIODS.active, ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager');
@@ -654,6 +679,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     }
     assert.equal(makeSnapshot(runtime, finalTampered).hash, finalBefore.hash, 'final-tampered changed DB');
     cases.push({ label: 'h1h2:final-tampered-submit-denial', rollbackReadback: true });
+    discardEvaluation(runtime, finalTampered);
 
     const stale = newId(16);
     addSeed(stale, PERIODS.active, ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager');
@@ -661,11 +687,13 @@ export async function runBehavioralConfirmationSuite(runtime) {
       overrides: { criteriaConfigVersionId: '00000000-0000-4000-8000-000000009999' },
     }));
     cases.push('h1h2:stale-config-version-denial');
+    discardEvaluation(runtime, stale);
 
     const closed = newId(17);
     addSeed(closed, PERIODS.closed, ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager');
     cases.push(await assertDenied(runtime, 'manager', closed, 'Manager', 1, 'closed-period'));
     cases.push('h1h2:closed-period-denial');
+    discardEvaluation(runtime, closed);
 
     const caseLabels = cases.map((item) => typeof item === 'string' ? item : item.label).filter(Boolean);
     for (const requiredCase of AUTHENTICATED_REQUIRED_CASES) assert.ok(caseLabels.includes(requiredCase), `Missing authenticated case ${requiredCase}`);
