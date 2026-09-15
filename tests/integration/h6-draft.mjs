@@ -345,6 +345,9 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
   // Seed fresh evaluation for Employee B
   const evalId = crypto.randomUUID();
+  let initSeedEvalId = null;
+  let revokedEvalId = null;
+  let closedEvalId = null;
   const round1Id = crypto.randomUUID();
   runtime.psql(`
     INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
@@ -477,11 +480,11 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h6:authentic-r3-final-submit-approves');
 
     // Case 9: Initialize draft consumer parity
-    const initSeedEvalId = crypto.randomUUID();
+    initSeedEvalId = crypto.randomUUID();
     const initSeedRoundId = crypto.randomUUID();
     runtime.psql(`
       INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
-      VALUES ('${initSeedEvalId}', '${PERIODS.active}', '${ACTORS.employeeB.id}', 'Employee', '${TEAMS.B}', 'NotStarted', 1);
+      VALUES ('${initSeedEvalId}', '${PERIODS.active}', '${ACTORS.workerB.id}', 'Worker', '${TEAMS.B}', 'NotStarted', 1);
       INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status)
       VALUES ('${initSeedRoundId}', '${initSeedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'NotStarted');
     `);
@@ -504,6 +507,66 @@ export async function runBehavioralConfirmationSuite(runtime) {
       { ...configOptions, criteriaConfigVersionId: crypto.randomUUID() },
     ]);
     assert.equal(staleConfig.result?.success, false, 'Stale config must fail');
+
+    // Revoked appointment denial must leave the current round and aggregate untouched.
+    revokedEvalId = crypto.randomUUID();
+    runtime.psql(`
+      INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
+      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.workerB.id}', 'Worker', '${TEAMS.B}', 'Submitted', 2);
+      INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status, submitted_at)
+      VALUES
+        ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'Submitted', NOW()),
+        ('${crypto.randomUUID()}', '${revokedEvalId}', 2, '${ACTORS.leaderA.id}', 'Leader', 'NotStarted', NULL);
+    `);
+    const revokedBefore = runtime.queryJson(`
+      SELECT e.status AS eval_status, e.current_round, er.status AS round_status
+      FROM public.evaluations e
+      JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 2
+      WHERE e.id = '${revokedEvalId}';
+    `)[0];
+    runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.B}';`);
+    try {
+      const revokedResult = await leaderAClient.action('saveEvaluationRound', [
+        revokedEvalId, 2, {}, {}, {}, 'revoked', false, configOptions,
+      ]);
+      assert.equal(revokedResult.result?.success, false, 'Revoked Leader write must fail');
+    } finally {
+      runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderA.id}' WHERE id = '${TEAMS.B}';`);
+    }
+    const revokedAfter = runtime.queryJson(`
+      SELECT e.status AS eval_status, e.current_round, er.status AS round_status
+      FROM public.evaluations e
+      JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 2
+      WHERE e.id = '${revokedEvalId}';
+    `)[0];
+    assert.deepEqual(revokedAfter, revokedBefore, 'Revoked denial must not mutate evaluation state');
+
+    // Closed-period denial must fail before write and preserve the seeded state.
+    closedEvalId = crypto.randomUUID();
+    const closedRoundId = crypto.randomUUID();
+    runtime.psql(`
+      INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
+      VALUES ('${closedEvalId}', '${PERIODS.closed}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'NotStarted', 1);
+      INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status)
+      VALUES ('${closedRoundId}', '${closedEvalId}', 1, '${ACTORS.manager.id}', 'Manager', 'NotStarted');
+    `);
+    const closedBefore = runtime.queryJson(`
+      SELECT e.status AS eval_status, e.current_round, er.status AS round_status
+      FROM public.evaluations e
+      JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 1
+      WHERE e.id = '${closedEvalId}';
+    `)[0];
+    const closedResult = await managerClient.action('saveEvaluationRound', [
+      closedEvalId, 1, {}, {}, {}, 'closed', false, configOptions,
+    ]);
+    assert.equal(closedResult.result?.success, false, 'Closed-period write must fail');
+    const closedAfter = runtime.queryJson(`
+      SELECT e.status AS eval_status, e.current_round, er.status AS round_status
+      FROM public.evaluations e
+      JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 1
+      WHERE e.id = '${closedEvalId}';
+    `)[0];
+    assert.deepEqual(closedAfter, closedBefore, 'Closed-period denial must not mutate evaluation state');
     cases.push('h6:atomic-denial-stale-revoked-closed');
 
     return {
@@ -515,10 +578,26 @@ export async function runBehavioralConfirmationSuite(runtime) {
       target: 'fresh-loopback-next-login-server-action-db',
     };
   } finally {
-    runtime.psql(`
-      DELETE FROM public.evaluation_rounds WHERE evaluation_id IN ('${evalId}', '${initSeedEvalId}');
-      DELETE FROM public.evaluations WHERE id IN ('${evalId}', '${initSeedEvalId}');
+    const ownedIds = [evalId, initSeedEvalId, revokedEvalId, closedEvalId].filter(Boolean);
+    const ownedIdSql = ownedIds.map((id) => `'${id}'`).join(',');
+    assert.ok(ownedIds.length > 0, 'H6 cleanup must retain at least one owned fixture id');
+    const ownedRows = runtime.queryJson(`
+      SELECT count(*)::int AS count FROM public.evaluations WHERE id IN (${ownedIdSql});
     `);
+    assert.equal(ownedRows?.[0]?.count, ownedIds.length, 'H6 cleanup ownership readback mismatch');
+    runtime.psql(`
+      BEGIN;
+      SET LOCAL session_replication_role = replica;
+      DELETE FROM public.evaluation_rounds
+      WHERE evaluation_id IN (${ownedIdSql});
+      DELETE FROM public.evaluations
+      WHERE id IN (${ownedIdSql});
+      COMMIT;
+    `);
+    const residue = runtime.queryJson(`
+      SELECT count(*)::int AS count FROM public.evaluations WHERE id IN (${ownedIdSql});
+    `);
+    assert.equal(residue?.[0]?.count, 0, 'H6 cleanup left evaluation residue');
   }
 }
 
