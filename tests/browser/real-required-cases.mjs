@@ -182,6 +182,18 @@ export async function run() {
       ['manager', 'leader_a', 'leader_c', 'subleader_b', 'employee_b']
         .map((alias) => [alias, createActorSession(target, alias)])
     );
+    for (const session of Object.values(sessions)) {
+      // The auth guard compares the session revision with the user revision;
+      // align the disposable opaque session to the seeded actor's actual row
+      // instead of assuming a migration default.
+      psql(target, `
+        UPDATE public.sessions AS session
+        SET credential_revision = actor.credential_revision
+        FROM public.users AS actor
+        WHERE session.token_hash = ${sqlLiteral(session.tokenHash)}
+          AND actor.id = session.user_id;
+      `);
+    }
     browser = await openChrome();
 
     const useActor = async (alias) => {
