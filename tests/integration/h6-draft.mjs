@@ -61,6 +61,7 @@ const ACTORS = Object.freeze({
 const TEAMS = Object.freeze({
   A: '20000000-0000-4000-8000-000000000001',
   B: '20000000-0000-4000-8000-000000000002',
+  C: '20000000-0000-4000-8000-000000000003',
 });
 
 const PERIODS = Object.freeze({
