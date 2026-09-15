@@ -659,6 +659,9 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     const replay = newId(14);
     addSeed(replay, PERIODS.active, ACTORS.employeeB.id, 'Employee', TEAMS.B, ACTORS.subB.id, 'SubLeader');
+    const replayDraft = await saveRound(runtime, 'subB', replay, 1, 'Employee', false, 'replay-original-draft');
+    assert.equal(replayDraft.response.result?.success, true, 'REPLAY_SETUP_DRAFT_FAILED');
+    assert.equal(roundRow(runtime, replay, 1).status, 'Draft', 'REPLAY_SETUP_NOT_DRAFT');
     const replaySubmit = await saveRound(runtime, 'subB', replay, 1, 'Employee', true, 'replay-original');
     assert.equal(
       replaySubmit.response.result?.success,
