@@ -308,6 +308,13 @@ function createDisposableRuntimeFromEnv() {
       assert.ok(password, 'KURABE_FIXTURE_PASSWORD required');
       const login = await this.action('loginAction', [actor.code, password], `login-${this.alias}`);
       assert.equal(login.result?.success, true, `AUTH_FAILED ${this.alias}`);
+      const page = await fetch(`${origin}/evaluations/40000000-0000-4000-8000-000000000001`, {
+        headers: this.cookieHeader() ? { Cookie: this.cookieHeader() } : {},
+        redirect: 'manual',
+        signal: AbortSignal.timeout(30000),
+      });
+      await page.arrayBuffer();
+      actions = loadManifest(path.resolve(process.env.KURABE_H6_RUNTIME_SOURCE));
       return login.result;
     }
   }
@@ -319,7 +326,8 @@ function createDisposableRuntimeFromEnv() {
     return value;
   }
 
-  const candidateSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' }).trim();
+  const candidateSha = process.env.KURABE_CONFIRMATION_CANDIDATE_SHA
+    || fs.readFileSync(path.join(projectRoot, '.runtime-source-sha'), 'utf8').trim();
 
   return { candidateSha, target, psql, queryJson, origin, actions, client };
 }
