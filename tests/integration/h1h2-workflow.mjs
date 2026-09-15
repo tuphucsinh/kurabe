@@ -527,6 +527,11 @@ function cleanup(runtime, evaluationIds) {
   const ids = evaluationIds.length > 0 ? evaluationIds.map(quoteUuid).join(',') : 'NULL';
   const actorIds = Object.values(ACTORS).map((actor) => quoteUuid(actor.id)).join(',');
   runtime.psql(`
+    BEGIN;
+    -- Disposable, ownership-verified teardown only: transition guards must remain
+    -- active for every behavioral assertion and are bypassed only for deleting
+    -- these synthetic rows after the matrix has completed.
+    SET LOCAL session_replication_role = replica;
     DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (${ids});
     DELETE FROM public.evaluations WHERE id IN (${ids});
     DELETE FROM public.sessions WHERE user_id IN (${actorIds});
@@ -535,6 +540,7 @@ function cleanup(runtime, evaluationIds) {
     DELETE FROM public.users WHERE id IN (${actorIds});
     DELETE FROM public.teams WHERE id IN (${Object.values(TEAMS).map(quoteUuid).join(',')});
     DELETE FROM public.evaluation_periods WHERE id IN (${Object.values(PERIODS).map(quoteUuid).join(',')});
+    COMMIT;
   `);
   const residue = runtime.queryJson(`
     SELECT json_build_object(
