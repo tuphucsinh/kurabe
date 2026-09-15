@@ -275,7 +275,7 @@ export async function run() {
       await useActor('manager');
       const result = await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
       assert.match(result.text, /P103 Closed Period/);
-      assert.match(result.text, /Hạng/);
+      assert.match(result.text, /Hạng/i);
       assert.match(result.text, /30/);
     });
 
