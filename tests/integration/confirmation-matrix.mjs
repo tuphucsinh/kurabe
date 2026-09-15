@@ -139,6 +139,20 @@ COMMIT;`,
   });
 }
 
+function cleanupSharedM2Evaluations(env) {
+  const ids = [11, 12, 13, 14, 15].map((n) => `'40000000-0000-4000-8000-${String(n).padStart(12, '0')}'`).join(', ');
+  const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  execFileSync('psql', target, {
+    input: `BEGIN;
+SET LOCAL session_replication_role = replica;
+DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN (${ids}));
+DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (${ids});
+DELETE FROM public.evaluations WHERE id IN (${ids});
+COMMIT;`,
+    encoding: 'utf8', env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+  });
+}
+
 function seedH3ScopePrerequisites(env) {
   const seedScript = '/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-auth/seed-m2-prerequisites.mjs';
   assert.ok(fs.existsSync(seedScript), `H3 prerequisite seed is missing: ${seedScript}`);
@@ -293,7 +307,7 @@ async function runDelegate(delegate, env, options) {
     // H3 reseeds the shared M2 prerequisite graph for its authenticated scope
     // checks. Remove those static prerequisite rows before H6 creates its own
     // fresh Employee-B evaluation in the standalone H6 contract.
-    if (delegate.name === 'h3') cleanupH1H2Prerequisites(delegateEnv);
+    if (delegate.name === 'h3') cleanupSharedM2Evaluations(delegateEnv);
     for (const key of [delegate.url, delegate.source]) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
