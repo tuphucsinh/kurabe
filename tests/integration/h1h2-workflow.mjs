@@ -677,7 +677,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
     const finalTampered = newId(15);
     assert.equal(evaluationRow(runtime, finalTampered), null, `FIXTURE_ID_COLLISION ${JSON.stringify(evaluationRow(runtime, finalTampered))}`);
-    addSeed(finalTampered, PERIODS.active, ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager');
+    evaluationIds.push(finalTampered);
     await runFlow(runtime, finalTampered, ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager', cases);
     const finalBefore = makeSnapshot(runtime, finalTampered);
     try {
