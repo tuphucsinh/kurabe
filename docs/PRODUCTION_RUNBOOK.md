@@ -153,10 +153,21 @@ WHERE table_schema = 'public'
 
 ## 5. Gate 2: Verified Point-In-Time Backup
 
-Prior to executing any DDL on production:
-1. Trigger an on-demand database backup / snapshot via your managed provider console or CLI.
-2. [ASSUMED] Verify backup integrity and timestamp in backup management catalog.
-3. Record backup reference ID in the release ticket before proceeding.
+Prior to executing any DDL on production, Gate 2 must be satisfied by one of the following:
+
+- **A. Verified provider recovery point**: a provider-managed PITR point or daily backup whose reference/timestamp is readable from the provider catalog and is verified as restorable; or
+- **B. Verified restorable logical backup**: a production logical backup that has been independently restored and sanity-checked on a disposable database.
+
+Do not enable or purchase PITR merely to satisfy this gate. A logical backup is not valid evidence until every item below passes:
+
+1. Create separate `roles.sql`, `schema.sql`, and `data.sql` artifacts using the supported Supabase CLI / `pg_dump`-compatible procedure.
+2. Store the backup outside the repository and any public or tracked path; do not commit production data or credentials.
+3. Record the backup timestamp, target project reference, and SHA-256 for each artifact without recording sensitive contents.
+4. Restore all three artifacts into a disposable isolated PostgreSQL/Supabase target using the documented restore procedure.
+5. Verify restore command success, required application tables, migration ledger/schema baseline, row-count sanity, one active period, zero duplicate evaluations, zero duplicate rounds, zero orphan rounds, and zero orphan sessions.
+6. Record the disposable target and restore evidence, then mark `BACKUP_GATE=PASS` only after the readback succeeds.
+
+An untested dump, a partial dump, a hash without a restore test, or a logical dump substituted for a provider recovery point without the checks above is **not** a valid backup gate. Preserve the first backup/restore failure and do not execute production DDL until the gate passes.
 
 ---
 

@@ -1,212 +1,91 @@
-# AGENTS.md — Standard Mika → Runner → Mika/Reviewer Workflow
+<!-- MIKA_AGENTS_CONTRACT: hotcore-v3-2026-09-05 -->
+<!-- MIKA_PROJECT_PROTOCOL: mika-v3 -->
+# AGENTS.md — Mika / Runner / Review Hot Contract
 
-> One file. Four procedures. Clear roles. Full workflow enforcement.
-> Flow: **Mika** plans/controls/verifies → **Runner** implements → **Mika** verifies → **Reviewer** gates (CONTROLLED only).
+> Policy/invariants live here; routing is in `mika-engineering-orchestration`; exact HOW is in `references/project-execution-protocol.md` (`mika-v3`).
+> **Bootstrap:** before mutation, read this file fully, `HANDOFF.md`, relevant `tasks.md`, then reconcile durable state. Never act from chat memory when durable state exists.
 
-## RUNNER BRIEF (read once at onboarding — ~10 seconds)
+## 0. INTENT + LOAD GATE
 
-Runner (coder | agy | opencode | commandcode) — **do NOT re-read this file every turn**: each turn you receive a self-contained prompt from Mika (task + constraints + test commands already extracted).
+Vietnamese/English natural intent maps to `PLAN`, `PLAN_TO_TASKS`, `EXECUTE`, `FIX`, `DONE`. `CONTINUE` = reconcile durable state, then choose the route; never duplicate-dispatch.
 
-1. Implement ONLY the assigned task — no scope creep, no self-commit.
-2. **Test strategy by task type**: pure logic → TDD (RED → code → GREEN); UI/DOM/CDN → real browser verify (see `/do` + PROJECT TOOLING).
-3. 2-Strike: 2 failed test runs → HALT, write `.tmp/SYSTEM_ALERT.md`, report to Mika.
-4. Fast-path (config/typo/trivial): report to Mika — Mika decides, runner never self-decides.
-5. Follow **PROJECT TOOLING** (project test/lint commands — bottom of file).
-6. NEVER edit `tasks.md` (no ticking `[x]`, no notes) — Mika ticks only after independent verification.
+Before `EXECUTE`, `FIX`, dispatch, mutating recovery, candidate work, publish, or `DONE`, Mika **MUST** load the matching `project-execution-protocol.md` section and verify `MIKA_EXECUTION_PROTOCOL: mika-v3`. For PLAN/PLAN_TO_TASKS, load it when persisting canonical task/control state. Missing/incompatible ⇒ no mutation, `BLOCKED_CAPABILITY`.
 
-## ROLES (fixed — every task passes through all three)
+Continuity truth = `AGENTS.md` + `HANDOFF.md` + `tasks.md` + `.state` + canonical Git; chat is advisory. Persist execution-relevant constraints before dispatch.
 
-| Role | Responsibility | Never |
+## 1. ROLES + INVARIANTS
+
+| Role | Owns | Never |
 |---|---|---|
-| **Mika** (plan/control/verify) | Read rules + `.ai/` + `HANDOFF.md` on onboarding; `/plan` → `.ai/MASTER_PLAN.md`; `/plan2task` → WBS; pick runner from state; record BASE_SHA; verify git diff + independent tests + secret scan; `/done` closes | Trust runner self-reports; dispatch without clear WBS |
-| **Runner** (coder \| agy \| opencode \| commandcode) | Implement exactly the assigned task (test strategy per task type — see RUNNER BRIEF item 2) → code → audit → test | Expand scope; commit; decide fast-path |
-| **Reviewer** (fresh session, CONTROLLED only) | Receive package (diff + test evidence + known risks), verdict PASS / non-PASS | Edit code; receive runner transcripts |
+| **Mika** | scope, WBS/DAG, tier, state, verify, review gate, integration/publish, recovery | trust Runner self-report; ambiguous dispatch; bypass gates |
+| **Runner** | one bounded isolated task WT; scoped edits/checks allowed by runner contract | control files; canonical/integration WT; Git/ref/history mutation; scope creep; secrets |
+| **Review gate** | fresh CONTROLLED verdict from exact candidate/evidence/risks | edit/commit/publish; trust Runner transcript; downgrade tier |
 
-> **CONTROLLED thực tế** (2026-08-11, anh duyệt): dự án **static nhỏ** (không auth/DB/backend/production) → Mika verify + adversarial audit (Gate 3) **đủ, Reviewer không bắt buộc**. Reviewer bắt buộc khi chạm **auth/DB/schema/backend/production**. Áp dụng cho mọi dự án static tương tự.
+Runner = `coder|agy|opencode|commandcode`; review backend = `reviewer|agy`. If both use `agy`, review must be a separate fresh read-only session.
 
-## RULES
+1. No code/config mutation without assigned task or true ad-hoc FAST; extras are proposals only.
+2. Only Mika advances canonical Git. One verified planned task = one canonical task commit; control-plane commits never imply task completion.
+3. Runner never edits `tasks.md`, `AGENTS.md`, `.ai/*`, `.state/*`, canonical/integration WTs, or paths outside `owns`.
+4. Never expose raw secrets; use names/existence plus approved scans.
+5. `failure_count >= 2` ⇒ `HALTED` + `.state/SYSTEM_ALERT.md` + raw evidence. Operational events need reason/evidence and never imply PASS.
+6. Auth/DB/schema/payment/security/production/destructive scope escalates to CONTROLLED; FIX never downgrades tier.
+7. Tier is not approval: paid/external, credentials/permissions, destructive/irreversible, production/critical, or other SOUL-protected actions still require explicit approval.
+8. Never publish a dirty, conflicted, stale, unverified, or candidate-SHA-mismatched result.
 
-| # | Rule | Detail | Applies to |
-|---|---|---|---|
-| 1 | **Firewall** | No code without an assigned task (`/do`). Default: `.md`/`.json` only. | All agents |
-| 2 | **Strict Scope** | Do exactly what was asked; propose extras, don't implement them. Runner never commits. | All agents |
-| 3 | **Sweep** | Phase done (100% `[x]`): compress summary → `.ai/MASTER_PLAN.md` (mark phase DONE), **XÓA HẲN task `[x]` khỏi `tasks.md`** (chỉ giữ phase ACTIVE + pending/next; chi tiết đã ở MASTER_PLAN — KHÔNG duplicate summary). | Mika |
-| 4 | **2-Strike** | `/do` fails tests twice → HALT, write `.tmp/SYSTEM_ALERT.md`, alert user. **Mở rộng (retro 13-08)**: lỗi tái diễn ≥2 lần → DỪNG fix theo giả định cơ chế — THU BẰNG CHỨNG VẬN HÀNH thật (log đầy đủ, frame capture, response thô) rồi mới fix tiếp. | Runner/Mika |
-| 5 | **No Yapping** | No flattery; straight to the point. Diff/evidence for code, bullets for `.md`. | All agents |
-| 6 | **Adversarial Audit** | `/do` Gate 3: Sequential Thinking, prompt *"3 most serious issues vs requirement"*. No self-review ceremony. | Runner |
-| 7 | **Pushback First** | Strongest pushback (with data) BEFORE agreeing. Independent fact-check; don't anchor on user data. | Mika |
-| 8 | **No Compromise** | Don't cave under pushback. Change view only on new evidence. | Mika |
-| 9 | **Confidence Label** | Detailed explanations MUST carry **CAO / TRUNG BÌNH / THẤP / KHÔNG BIẾT** (High/Med/Low/Unknown). | All agents |
-| 10 | **Reasoning Gates** | Bắt buộc: **Sequential Thinking** trước task rủi ro/phức tạp/cross-profile/hệ thống (xem `sequential-thinking-policy`); **PDCA** khi cần lặp cải tiến nhiều vòng (xem `adaptive-pdca`). Simple task → làm thẳng, không gate. | All agents |
+## 2. ROUTES / ACCEPTANCE
 
-## MEMORY
-
-| Path | Role | Git? |
+| Tier | Scope | Path |
 |---|---|---|
-| `.ai/` | Architecture, schema, decisions, conventions, master plan, known bugs | Track |
-| `.tmp/` | Session ephemeral: `diary.md`, `global_context.md`, `SYSTEM_ALERT.md` | gitignore |
-| `tasks.md` | WBS task list, anchor for `/do` | Track |
-| `HANDOFF.md` | Session snapshot (overwrite on close) | Track |
+| **FAST** | ad-hoc docs/copy/comments/typo only; zero runtime/config/security impact | Mika isolated short-lived WT → verify → serialized canonical guard |
+| **STANDARD** | normal app/code/config or any planned task | Runner → Mika independent verify → exact candidate verify → publish |
+| **CONTROLLED** | auth/permissions, DB/schema/migration, backend boundary, payment, security/secrets, production/deploy, destructive/external mutable state | STANDARD + fresh selected review backend PASS |
 
-**Rule**: any `.ai/` file over **600 lines** MUST be split (e.g. `FRONTEND_ARCH.md`, `BACKEND_ARCH.md`) and linked via Markdown.
+Code, dependency/lockfile, runtime config, ambiguity, or planned work is >=STANDARD. Runner self-report/exit 0 is never PASS. Review independently checks requirements, cross-boundary/security/data/production risk, rollback/assumptions, and evidence; verdict = `PASS|REJECT`.
 
-## GIT & SECRETS
-- Commits: Mika only — 1 task = 1 commit, message `[#PxMyTzz] <summary>` (project small không milestone: `[#PxTzz]`).
-- Broken change → revert to BASE_SHA, report, re-plan.
-- Secrets (`.env`, keys, tokens): NEVER tracked, committed, printed, or included in runner prompts.
+## 3. STATE + TASK CONTRACT
 
-## TRIGGERS (user input → internal procedure)
+Tracked truth: `tasks.md`, `HANDOFF.md`, `.ai/*`. Recovery: `.state/agent-state.json`, `.state/control.lock`, `.state/SYSTEM_ALERT.md`; `.tmp/*` is disposable.
 
-Users give instructions in natural Vietnamese on Telegram/Desktop — **no slash commands typed by users**. `/plan /plan2task /do /fix /done` are Mika's internal procedure names only.
+Reconcile: **canonical Git > integration WT/branch > task WT/branch > state JSON**. Existing task/integration evidence means not READY until reconciled. Canonical Git is DONE truth; `tasks.md` stays `[ ]` until the exact verified candidate is canonical. State/reservation/failure/candidate/publish mutation uses one `control.lock` + atomic write; without lock support, one Mika writer only. State owns authoritative `BASE_SHA`.
 
-| User says | Mika runs |
-|---|---|
-| "lên kế hoạch / plan cho X" | `/plan` — phases → `.ai/MASTER_PLAN.md` |
-| "băm/chia task / plan2task" | `/plan2task` — phase → WBS tasks in `tasks.md` |
-| "làm task PxTxx" / "code feature X" | `/do` — dispatch runner per state |
-| "fix lỗi Y" / "bug Y đang hỏng" | `/fix` — triage |
-| "đóng phiên" / "tổng kết hôm nay" | `/done` — sweep + HANDOFF |
-| "đổi runner sang coder\|agy\|opencode\|commandcode" | update runner state file |
-| "review X" (risky task) | reviewer gate (CONTROLLED) |
-
-## PROCEDURES
-
-### /plan [feature|phase] — Mika (design phases & MASTER_PLAN)
-1. **Grillme đầy đủ** (dự án mới): hỏi + đề xuất phương án tối ưu ★ — **8 trục** (mục đích, phong cách, techstack, database, logic, deploy, Quy mô/độ phức tạp, Loại project/ràng buộc kỹ thuật — chi tiết `project-intake-workflow`) + feature menu toàn diện (gán `MVP ★ / Phase sau / Không cần`; MoSCoW nếu menu > 8-10 mục) + security (cơ bản ở MVP, toàn diện phase cuối).
-2. **MVP-first** (dự án mới): MVP đáp ứng đầy đủ tính năng cơ bản → nâng cấp dần: UI → tính năng → kỹ thuật → security. Số phase không cố định.
-3. `.ai/MASTER_PLAN.md` empty → ask scope → break project into phases → create it.
-4. Otherwise → append/update the new phase in `.ai/MASTER_PLAN.md` → hand over to `/plan2task`.
-5. Never pre-create empty files; `.ai/` design docs (ARCHITECT/SCHEMA/LOGIC_FLOW) only when data exists. Use Mermaid: structure `graph TD/LR`, data `erDiagram`, flow `sequenceDiagram`.
-6. Stack/architecture decisions → auto-append `.ai/DECISIONS_LOG.md`.
-7. Sweep first (prune `[x]`) + Sequential Thinking (1-2 steps) sanity-check WBS → viết.
-Stop after writing. One-line report.
-
-### /plan2task [phase] — Mika (break into WBS)
-- **Context-aware**: re-breaking an OLD phase → overwrite ONLY its `## Phase X` block; NEW phase → append at the end. NEVER delete tasks of in-progress phases.
-- **Task rules**: 1 logical block = 1 task; define interface contracts (name/input/output) upfront; no personas — technical constraints only (e.g. "O(1) time", "zero-dependency").
-- **Milestone** (dự án mid/large): trong Phase, nhóm task theo milestone `## Milestone M1: [Name]` (≤ ~15 task, acceptance riêng, gate riêng). Task ID = `[#PxMyTzz]` (Phase x, Milestone y, Task zz). Project small không milestone: giữ `[#PxTzz]`.
-- **Task self-contained (mọi dự án)**: task "tạo module" kèm luôn wire vào entry/app; KHÔNG tạo task chạy test-tổng riêng (gộp vào gate verify Mika); task ước lượng prompt > ~1.5KB → tách nhỏ.
-- **Task sửa interface/DEFAULTS/signature → PHẢI kèm cập nhật test tương ứng trong cùng task** (test cũ sẽ FAIL khi code đổi — verified P3T01 webclock 2026-08-12). Rule chung: mỗi task tạo/sửa route → viết test trong CÙNG commit → chạy full pytest ngay (pitfall 12, project-intake-workflow).
-- **Mandatory format** (ID = phase prefix + affected file; 8 fields):
-
-```markdown
-## Phase X: [Name]
-
-### [#PxMyT01] [src/target-file.ts] `functionName(args): ReturnType`
-
-**Goal**: 1-2 sentences — what and why.
-
-**Depends on**: `none` | `[#PxMyTzz]` — task tiên quyết (bắt buộc khai; `none` = độc lập, song song được).
-
-**Parallel-safe**: `yes` | `no` — `yes` = không đụng file task khác, chạy đồng thời được (chỉ khi Mika tách worktree riêng); `no` = cùng file/state, bắt buộc tuần tự.
-
-**New interface** (if any) + **Ví dụ gọi** (1-3 dòng code mẫu — model yếu bắt pattern nhanh hơn lời mô tả):
-~~~ts
-interface Example {
-  id: string;
-  newField: NewType; // NEW
-}
-// VD: const x = new Example({ id: "a" }); x.newField === ...
-~~~
-
-**Context hiện có** (bắt buộc, 1-3 dòng — file nào đã tồn tại, import path sẵn, điểm cần đọc lại; giúp runner không đọc cả repo):
-- `js/foo.js` đã có export `bar()`; import path: `./foo.js`
-- `index.html` hiện có `<script type="module" src="js/main.js">`
-
-**Concrete changes** (if editing existing file):
-1. Step 1 — imports/replacements
-2. Step 2 — core logic
-3. Step 3 — cleanup/side effects
-
-**Constraints**:
-- Technical requirements (e.g. "no UI change", "O(1) lookup")
-- Backward compatibility (e.g. "keep old export if consumers exist")
-- Edge cases to handle
-- Antipattern cấm cụ thể (VD: "KHÔNG innerHTML — textContent only"; "KHÔNG tạo rAF loop riêng")
-
-**Definition of Done** (bắt buộc, 1-3 dòng — thế nào là XONG, để runner không tự suy đoán):
-- `node tests/<file>.test.mjs` exit 0 (Mika chạy độc lập)
-- File nằm đúng path /home/pi5/projects/<tên>/... (không scratch)
-- Không edit tasks.md, không commit
-
-**Status**: `[ ]`
-
----
+```text
+READY → RUNNING → RUNNER_PASS → VERIFIED → CANDIDATE → READY_TO_PUBLISH → DONE
+                    │                    └→ REPAIRING → RUNNING
+                    └→ RUNNING
+Any active state may become BLOCKED/HALTED.
+HEAD moved before publish: READY_TO_PUBLISH → CANDIDATE → reverify → READY_TO_PUBLISH.
 ```
 
-- **Detail rules**: Goal always; interface only when created/changed (mark NEW fields); concrete steps ordered so `/do` never needs to ask; constraints = what is NOT allowed + boundaries + compatibility; data mappings (enums/34 criteria) MUST be full tables inside the task.
-Stop after writing. One-line report.
+One deliverable = one task including wiring + verification. IDs are unique/stable; `depends` is an acyclic canonical-input DAG; `owns` is exclusive Runner write scope excluding Mika control paths; `locks` name shared mutable/external resources. Concurrency = `depends + owns + locks + state`; no `parallel_safe`.
 
-### /do [Task_ID] — Runner (implement, 4 gates)
-1. **SCAN**: read real environment (`package.json`, `Makefile`, `.env`). **Test strategy theo loại task**: pure logic → chạy test thấy RED (proves bug/missing code) trước khi code (TDD); UI/DOM/CDN → ghi nhận verify browser (PROJECT TOOLING "Browser verify") — không ép RED cho DOM.
-2. **CODE**: runner's file tools (`patch`/`write_file`/equivalent). No rambling.
-3. **AUDIT**: static analysis (project lint — see PROJECT TOOLING) + Sequential Thinking *"3 most serious issues vs requirement"*.
-4. **TEST**: rerun test command (pipe `| tail -n 50`). Task UI/DOM/CDN → chạy thêm `tests/browser-verify.sh` (xem PROJECT TOOLING) trước khi báo Mika.
-   - PASS → report Mika; Mika independently verifies (git diff + rerun tests) BEFORE ticking `[x]`; phase 100% → auto-sync `.ai/MASTER_PLAN.md` + prune `[x]` tasks.
-   - FAIL #1 → stop coding; web-search docs + `@systematic-debugging` before retry (max 1 retry).
-   - FAIL #2 → 2-Strike HALT → `.tmp/SYSTEM_ALERT.md`.
-- **Fast-path**: config/typo/trivial → report to Mika; Mika decides to skip gates 3-4.
-- Runner never commits, never edits `tasks.md` (không tick `[x]`, không ghi chú) — Mika commits and ticks after independent verification.
+```yaml
+task:
+  id: P1M1T01
+  tier: STANDARD
+  depends: []
+  owns: [src/..., tests/...]
+  locks: []
+```
 
-### /fix [bug] — Triage (runner level 1-2, Mika level 3)
-Bypass 4 gates; use Sequential Thinking + `systematic-debugging`.
-- L1 (syntax): quick fix, test, report.
-- L2 (architecture): report user, propose task split.
-- L3 (deadlock/wide impact): `.tmp/SYSTEM_ALERT.md`, HALT → Mika (+ Reviewer khi chạm auth/DB/backend/production).
-- **MANDATORY diary**: after each fix → `[FIXED][#Txx] short note` in `.tmp/diary.md`.
+Task body: Goal, Interface/current context, Changes, Constraints, DoD with exact verification command(s). Re-check dependency interfaces before dependent dispatch.
 
-### /done — Mika (close session)
-1. Verify invariants (git diff + tests + secret scan) → tick remaining `[x]` → Sweep.
-2. Overwrite `HANDOFF.md` (snapshot ≤15 dòng: trạng thái + blockers + next; không lặp masterplan).
-3. Clear `.tmp/diary.md` + `.tmp/global_context.md`.
+`RUNNABLE = dependencies_integrated AND state==READY AND no_blocking_alert`  
+`DISPATCHABLE = RUNNABLE AND owns_free AND locks_free AND runner_capacity_available`
 
-## RUNNER DISPATCH
-- **State**: current runner stored in Mika's profile (`coding_runner.txt`); user switches anytime: "đổi runner sang X". Runner ∈ {coder, agy, opencode, commandcode}.
-- **Dispatch**: Mika packages a self-contained prompt (task + affected files + constraints + test commands) → **helper `dispatch-runner`** (tự cp `harness-run` sang path wrapper mới theo PID + dọn sau run — verified finanza P2M3; nếu chưa có helper: cp tay + chạy ngay cùng lệnh). Gọi: `dispatch-runner <runner> --add-dir <repo> '<prompt>'`. Chi tiết + guard rules: `mika-engineering-orchestration` references/runner-dispatch-prompt.md.
-- **Prompt chuẩn hóa**: PHẢI kèm `CODE ONLY — do NOT run any command` + `write to EXACT absolute path ... — NOT scratch`; tránh emoji (security scanner chặn). Chi tiết: `mika-engineering-orchestration`.
-- **Verify path sau dispatch**: kiểm tra file nằm đúng project path trước khi verify nội dung; nếu ghi scratch → copy + dọn residue.
-- **Verify invariants** (runner-independent): BASE_SHA before → git diff + status after (scope? secret leak?) → rerun tests independently → **Reviewer** (fresh) khi CONTROLLED chạm auth/DB/schema/backend/production (dự án static nhỏ: Mika verify + adversarial audit đủ — xem note ROLES) → close only on PASS.
+Reserve complete `owns+locks` atomically or nothing. Never dispatch an active ID twice. Runner liveness: `LIVE` keeps reservations; `DEAD` may release safe local/file reservations; `UNKNOWN` ⇒ `BLOCKED`, preserve evidence, never redispatch. Uncertain external/production mutations remain quarantined.
 
-## AUTO-BEHAVIORS
-| Trigger | Behavior |
-|---|---|
-| New conversation opens | Đọc `AGENTS.md` + `HANDOFF.md` + `tasks.md` + `.ai/KNOWN_BUGS.md`. One-line goal report. |
-| `.tmp/SYSTEM_ALERT.md` exists | Read immediately; warn user before anything else. |
-| Phase/milestone 100% `[x]` | **BẮT BUỘC sweep ngay** (RULE 3): ① compress summary → `.ai/MASTER_PLAN.md` (mark DONE + kết quả thực thi) ② **prune task `[x]` khỏi `tasks.md`** (giữ summary ≤ 4 dòng + phase active) ③ commit. KHÔNG đợi `/done`. |
-| Task `[x]` sau verify | Tick + commit ngay (1 task = 1 commit) — không dồn. |
-| Milestone gate có frontend chạy được | **BẮT BUỘC browser verify** (Chrome thật + CDP console + screenshot) ngay gate milestone — KHÔNG đợi cuối phase (bug thread-safety/CSS/JS chỉ lộ khi browser thật — verified finanza P1M3). |
+## 4. VERIFY / INTEGRATE / PUBLISH
 
-## ENGINEERING PRACTICE (retro kurabe 2026-08-13 — áp dụng mọi dự án)
-1. **Test-data discipline**: seed dữ liệu giả/test → BẮT BUỘC snapshot trước + restore sau + verify **ĐA CHIỀU** (mục tiêu chính + số liệu lân cận như pending count) — không chỉ check mục tiêu (bài học: DELETE jsonb `?` xóa nhầm round 1 → 20/22).
-2. **Action AI/LLM mới**: smoke test bằng tsx với **PROMPT THẬT (độ dài thực)** NGAY khi viết xong action — TRƯỚC khi wire UI (UI access gate có thể chặn test; model reasoning có thể trả content rỗng với prompt dài — phát hiện sớm).
-3. **Prompt tuning với user**: mỗi vòng feedback chỉ test **1 case đại diện** (role/loại anh quan tâm nhất); chạy full bộ case chỉ khi chốt — tiết kiệm 30-40% thời gian.
-4. **Lỗi tái diễn ≥2 lần** → xem RULE 4 (2-Strike mở rộng): thu bằng chứng vận hành thật trước khi fix tiếp, cấm fix theo giả định.
+Mika independently verifies BASE_SHA, full diff/status, owned/forbidden paths, secrets, DoD, and tier. Runner checks are supplemental. A verified task delta needs a recoverable immutable snapshot.
 
-## PROJECT TOOLING (project-specific — auto-filled, not part of template)
-**Auto-fill**: Mika detects the stack from root files (package.json → npm test / npm run lint; requirements.txt → pytest / ruff; go.mod → go test / gofmt; pyproject.toml → hatch/uv) and fills this table at the FIRST `/plan` — no manual step.
+STANDARD/CONTROLLED is never published from Runner WT. Mika builds an isolated candidate from current canonical HEAD, verifies the **exact** candidate, requires fresh review PASS for CONTROLLED, publishes only while candidate/base integrity matches state, rebuilds/reverifies after HEAD movement, and serializes canonical advances with older eligible publish turns first.
 
-| Item | Project value |
-|---|---|
-| Test command | none yet (TDD-first will add when needed) |
-| Lint/static | `npm run lint` (eslint) |
-| Browser verify | `tests/browser-verify.sh <assert.mjs> [url]` — chrome headless dump-dom + node assert + console-error check; assert mẫu: `tests/browser-assert.example.mjs`. Nguồn chuẩn: `~/.hermes/workspaces/browser-verify.sh` (copy vào tests/ khi cần). Dùng cho task UI/DOM/CDN. |
-| Code intelligence (optional) | none |
-| Build/verify | `npm run build` (next build — verified PASS 2026-08-12, ~20s on Pi5) |
+Repair starts from current canonical HEAD, preserves the exact owned delta, leaves no conflict/sequencer residue, and returns owned application conflicts to Runner. Review-result reuse after stale rebuild requires unchanged fingerprint (candidate tree + risk contract + dependency interfaces + canonical dependency SHAs), conflict-free reapply, and rerun automated verification.
 
-## SKILL ROUTING (project-specific — auto-filled by Mika at FIRST /plan; bổ sung 2026-08-12)
-**Rule**: mỗi bước chỉ 1 primary skill + tối đa 1-2 support. Xem chi tiết: `project-intake-workflow` (7 bước + bảng theo loại project).
+## 5. FIX / DONE / TOOLING
 
-| Bước | Skill |
-|---|---|
-| B2 Grillme | `project-intake-workflow` (menu chuẩn); `dec-coach` nếu so sánh phương án |
-| B3 Thiết kế (có UI/UX) | `design-taste-frontend` ★ BẮT BUỘC → DESIGN_CONTRACT.md + anti-slop; `popular-web-designs` nếu 'design like X'; `architecture-diagram` nếu cần sơ đồ |
-| B3 Thiết kế (python/backend/script) | `auto-builder` (plan/debug); `python-engineering-patterns` nếu SQLite/FTS5 |
-| B5 Masterplan / B6 WBS | `project-planning-workflows` |
-| B7 Thực thi (web/UI) | `static-landing-page-build`; `shadcn-component-system` nếu shadcn; verify = `browser-screenshot-verification` (browser thật Chrome stable) |
-| B7 Thực thi (logic thuần) | `development-quality-workflows` (TDD: RED → GREEN → REFACTOR) |
-| B7 Thực thi (python) | `python-test-harnesses` + `python-engineering-patterns` |
-| B7 Thực thi (automation/script) | `auto-builder`; `systemd-timer-python-controller` nếu timer; `cron-cli-automation` nếu cron |
-| B7 Debug | `debugging-workflows` (sau 2 fail cùng lý do) |
-| B7 Route/Review | `mika-engineering-orchestration` (FAST/STANDARD/CONTROLLED) |
+`FIX` skips planning ceremony only; never scope, tier, isolation, reservations, Mika verification, review, approval, or publish gates. Wide architecture work is re-planned; destructive/security/production deadlock may HALT for evidence/approval.
 
-**Verify browser**: LUÔN dùng `/usr/bin/google-chrome-stable` (Chrome thật — CẤM Chromium Debian). Assert mẫu + helper: `~/.hermes/workspaces/browser-verify.sh` + `browser-assert.example.mjs` (copy sẵn vào tests/ bởi `new-project`).
+`DONE` requires verified canonical history/project gate; no active/repair/candidate/publish residue, quarantine/alert, or dangling dependencies; `HANDOFF.md` <=15 lines (state/blockers/next); remaining control delta committed through canonical guard; final canonical WT clean. Never clear recovery/quarantine state prematurely.
+
+At first PLAN, record canonical verification/lint/build/browser/secret commands, disposable-output allowlist, `LIVE/DEAD/UNKNOWN` liveness check, canonical branch, separate Runner/integration WT roots, runner/verifier caps, and publish-refresh timeout. Use existing scripts; coding/style guidance belongs in lazy `.ai/*`.

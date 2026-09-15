@@ -91,7 +91,7 @@ task:
 - **Rollback/risk:** existing personnel table-fence order reused; contention/period-close/config-writer race bounded and recorded. Disposable restore exact captured functions; production rollback may not resurrect revoked-authority bypass, use containment/forward correction with approval.
 - **Execution result:** PASS after fresh exact-SHA authenticated qualification on candidate `6205ef475cd3a837697ff0d1fab932f914378482`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M1T03/H5-final-qualification.json` SHA-256 `b3bb127715118c204327a82cc4817083a4837795f216aaef99b2d414ca7ffe0b`; fresh independent review `PASS`; integrated canonical commit `2e2623af5dd01bef849f3ee713bea51e301b332f`; production writes/migrations `0`; known H6 response-contract interference unchanged and documented.
 
-### [ ] [#P103M2T01] H1/H2 workflow parity and multi-team SQL transition
+### [x] [#P103M2T01] H1/H2 workflow parity and multi-team SQL transition
 
 ```yaml
 task:
@@ -110,6 +110,7 @@ task:
 - **Evidence:** ordered fresh/upgrade ledger 001→002, role/round expected-vs-actual tuples, RPC errors with rollback proof, cross-team allow/deny, save/return guard hashes, no legacy migration diffs.
 - **DB/security impact:** migration 002 (NEW) replaces save body only; preserve 001 return guard unchanged; no historical score/evaluator updates.
 - **Rollback/risk:** downgrade local 002 only to reviewed 001 snapshot for diagnosis; 001 remains authoritative security fence. New/old app/DB compatibility measured again at release preparation, no partial production rollout.
+- **Execution result:** PASS on fresh exact-SHA authenticated runtime, candidate `8c2001f8ee5f639a211c982192ee28bd0f8ca44f`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T01/H1H2-final-qualification-8c2001f8.json` copied as `H1H2-final-qualification-8c2001f8.json`, SHA-256 `39c06f814af0262f9b96e846c0d41bb3f32f8ae116fa9a39515f37abaa48162e`; fresh read-only review `PASS`; canonical fast-forward integrated; production writes/migrations `0`; runtime residue `0`.
 
 ### [ ] [#P103M2T02] H3 full/summary/single scope parity
 

@@ -1,12 +1,10 @@
 # HANDOFF — Kurabe P103 execution
 
-- State: `RUNNING`; P103M1T01, P103M1T02, and P103M1T03 are canonically integrated and independently reviewed `PASS`; production remains read-only.
-- P103M1T02 frozen candidate: `7a7a759eef968ec7ec4204b8ae28e44155520815`; integrated task commit: `eddafaca9c197931499bd35edb7f1b5f28b84f50`.
-- H4 closure evidence: `/home/pi5/hermes-artifacts/kurabe-p103/P103M1T02/H4-final-closure.json`; populated authenticated qualification and route/action parity passed.
-- Existing owner changes in `AGENTS.md` and `docs/PRODUCTION_RUNBOOK.md` are preserved and excluded from task ownership.
-- P103M1T02 known H6 fixture interference remains documented; H6 implementation was not changed.
-- P103M1T03 H5 candidate `6205ef475cd3a837697ff0d1fab932f914378482` integrated as `2e2623af5dd01bef849f3ee713bea51e301b332f`; authenticated evidence hash `b3bb127715118c204327a82cc4817083a4837795f216aaef99b2d414ca7ffe0b`; review `PASS`.
-- All task Runner work uses isolated Git worktrees, disposable DB/runtime only, and fresh independent review for CONTROLLED tasks.
-- No production write, deployment, credential publication, migration apply, or unrelated refactor is authorized.
-- Next action: dispatch `P103M2T01` from canonical `2e2623af5dd01bef849f3ee713bea51e301b332f` after durable state readback.
-- Durable evidence/state paths: `.state/agent-state.json`, `.state/control.lock`, `.state/SYSTEM_ALERT.md` when blocked.
+- State: `RUNNING`; P103M1T01, P103M1T02, P103M1T03, and P103M2T01 are canonically integrated and independently reviewed `PASS`.
+- P103M2T01 candidate `8c2001f8ee5f639a211c982192ee28bd0f8ca44f` fast-forward integrated; authenticated evidence SHA-256 `39c06f814af0262f9b96e846c0d41bb3f32f8ae116fa9a39515f37abaa48162e`.
+- M2 H1/H2 proof: Employee, Worker, SubLeader, Leader, Manager flows; appointed Leader B; Team C denial; order/replay/tamper/stale/closed-period guards; rollback readback; residue `0`.
+- Final gates: test, typecheck, lint, build, secret scan, diff check PASS; production writes/migrations `0`; no H3/H6/H7 changes.
+- Existing owner changes in `AGENTS.md` and `docs/PRODUCTION_RUNBOOK.md` were preserved and are now included only in the separate control closure commit.
+- Runtime/debug artifacts and credential-bearing disposable files were removed; retained evidence is under `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T01/`.
+- Next DAG: P103M2T02 and P103M2T03 are unblocked after P103M2T01; no production action authorized.
+- Durable state: `.state/agent-state.json`; recovery lock: `.state/control.lock`.
