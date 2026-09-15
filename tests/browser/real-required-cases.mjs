@@ -72,7 +72,7 @@ async function waitFor(predicate, timeout = 20_000) {
 }
 
 async function deleteCookies(page) {
-  await page.command('Network.deleteCookies', { name: 'auth_session' });
+  await page.command('Network.clearBrowserCookies');
 }
 
 async function clickByText(page, text) {
