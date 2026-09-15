@@ -114,6 +114,27 @@ function delegateEnvironment(env, delegate) {
   return { ...env, [delegate.url]: nextUrl, [delegate.source]: source };
 }
 
+function cleanupH1H2Prerequisites(env) {
+  const actors = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `'10000000-0000-4000-8000-${String(n).padStart(12, '0')}'`).join(', ');
+  const teams = [1, 2, 3].map((n) => `'20000000-0000-4000-8000-${String(n).padStart(12, '0')}'`).join(', ');
+  const periods = [1, 2].map((n) => `'30000000-0000-4000-8000-${String(n).padStart(12, '0')}'`).join(', ');
+  const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  execFileSync('psql', target, {
+    input: `BEGIN;
+DELETE FROM public.sessions WHERE user_id IN (${actors});
+DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN (SELECT id FROM public.evaluations WHERE employee_id IN (${actors}) OR period_id IN (${periods})));
+DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (SELECT id FROM public.evaluations WHERE employee_id IN (${actors}) OR period_id IN (${periods}));
+DELETE FROM public.evaluations WHERE employee_id IN (${actors}) OR period_id IN (${periods});
+DELETE FROM public.evaluation_periods WHERE id IN (${periods});
+UPDATE public.teams SET leader_id=NULL WHERE id IN (${teams});
+DELETE FROM public.users WHERE id IN (${actors});
+DELETE FROM public.teams WHERE id IN (${teams});
+UPDATE public.evaluation_periods SET status='active' WHERE name='P103 Active Period' AND status='draft';
+COMMIT;`,
+    encoding: 'utf8', env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+  });
+}
+
 async function runDelegate(delegate, env, options) {
   const loaded = await import(pathToFileURL(path.join(moduleDir, delegate.path)).href);
   assert.equal(typeof loaded.run, 'function', `${delegate.name} delegate has no run() contract`);
@@ -132,6 +153,7 @@ async function runDelegate(delegate, env, options) {
     assert.ok(typeof result.target === 'string' && /next|action|db/i.test(result.target), `${delegate.name} lacks action/DB linkage`);
     return result;
   } finally {
+    if (delegate.name === 'h1h2') cleanupH1H2Prerequisites(delegateEnv);
     for (const key of [delegate.url, delegate.source]) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
