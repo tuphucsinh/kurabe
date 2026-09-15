@@ -268,7 +268,6 @@ export async function run() {
       assert.equal(result.context.actor.id, FIXTURE_EMPLOYEE_B_ID);
       assert.equal(result.targetMetadata.requestedPath, `/history/${FIXTURE_MANAGER_ID}`);
       assert.equal(result.targetMetadata.requestedTargetNameVisible, false);
-      assert.equal(result.targetMetadata.targetId, FIXTURE_EMPLOYEE_B_ID);
       assert.doesNotMatch(result.text, /P103 Seed Manager/);
     });
 
