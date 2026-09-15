@@ -199,10 +199,11 @@ function isolateH6ManagerResolver(env) {
   `);
   assert.deepEqual(activeAfterIsolation.map((manager) => manager.id), [expected.id], 'H6 must have exactly one active Manager resolver input');
 
+  const originalManagerStates = managers.map((manager) => ({ id: manager.id, isActive: manager.is_active }));
   return {
     expectedManagerId: expected.id,
     expectedManagerCode: expected.employee_code,
-    originalManagerStates: managers.map((manager) => ({ id: manager.id, isActive: manager.is_active })),
+    originalManagerStates,
     deactivatedUnrelatedManagers: unrelatedActive.map((manager) => ({ id: manager.id, wasActive: manager.is_active })),
     restore() {
       if (unrelatedActive.length > 0) {
