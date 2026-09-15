@@ -111,6 +111,8 @@ function delegateEnvironment(env, delegate) {
   assert.ok(source, `${delegate.source} is required for the real Next action path`);
   assert.match(nextUrl, /^https?:\/\/(127\.0\.0\.1|localhost|::1)(?::\d+)?$/);
   assert.ok(fs.existsSync(source), `Next runtime source is missing: ${source}`);
+  const sourceShaPath = path.join(source, '.runtime-source-sha');
+  if (fs.existsSync(sourceShaPath)) assert.equal(fs.readFileSync(sourceShaPath, 'utf8').trim(), env.KURABE_CONFIRMATION_CANDIDATE_SHA, `${delegate.name} source SHA mismatch`);
   return { ...env, [delegate.url]: nextUrl, [delegate.source]: source };
 }
 
@@ -136,6 +138,33 @@ COMMIT;`,
   });
 }
 
+function seedH3ScopePrerequisites(env) {
+  const seedScript = '/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-auth/seed-m2-prerequisites.mjs';
+  assert.ok(fs.existsSync(seedScript), `H3 prerequisite seed is missing: ${seedScript}`);
+  execFileSync(process.execPath, [seedScript], { cwd: path.dirname(seedScript), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  execFileSync('psql', target, {
+    input: `BEGIN;
+DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015'));
+DELETE FROM public.evaluation_rounds WHERE evaluation_id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015');
+DELETE FROM public.evaluations WHERE id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015');
+INSERT INTO public.evaluations (id,period_id,employee_id,employee_role,team_id,status,current_round) VALUES
+ ('40000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','Leader','20000000-0000-4000-8000-000000000001','NotStarted',1),
+ ('40000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000005','Employee','20000000-0000-4000-8000-000000000002','NotStarted',1),
+ ('40000000-0000-4000-8000-000000000013','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000006','Worker','20000000-0000-4000-8000-000000000002','NotStarted',1),
+ ('40000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000009','Employee','20000000-0000-4000-8000-000000000003','NotStarted',1),
+ ('40000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','SubLeader','20000000-0000-4000-8000-000000000002','NotStarted',1);
+INSERT INTO public.evaluation_rounds (id,evaluation_id,round,evaluator_id,evaluator_role,status) VALUES
+ ('50000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000011',1,'10000000-0000-4000-8000-000000000001','Manager','NotStarted'),
+ ('50000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000012',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
+ ('50000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000013',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
+ ('50000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000014',1,'10000000-0000-4000-8000-000000000003','Leader','NotStarted');
+COMMIT;`,
+    encoding: 'utf8',
+    env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+  });
+}
+
 async function runDelegate(delegate, env, options) {
   const loaded = await import(pathToFileURL(path.join(moduleDir, delegate.path)).href);
   assert.equal(typeof loaded.run, 'function', `${delegate.name} delegate has no run() contract`);
@@ -157,6 +186,11 @@ async function runDelegate(delegate, env, options) {
         encoding: 'utf8', env: { ...process.env, PGPASSWORD: delegateEnv.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
       });
     }
+    if (delegate.name === 'h3') seedH3ScopePrerequisites(delegateEnv);
+    if (delegate.name === 'h7') {
+      delete process.env.KURABE_H7_PREBOOTSTRAPPED;
+      delete process.env.KURABE_H7_BOOTSTRAP_RESULT;
+    }
     const result = await loaded.run({
       rootDir: projectRoot,
       suite: `confirmation-matrix-${delegate.name}`,
@@ -166,6 +200,11 @@ async function runDelegate(delegate, env, options) {
     assert.equal(result.passed, true, `${delegate.name} did not pass`);
     assert.equal(result.authenticated, true, `${delegate.name} did not identify authenticated execution`);
     assert.equal(result.tier, AUTHENTICATED_TIER, `${delegate.name} native action tier changed unexpectedly`);
+    if (delegate.name === 'h3') {
+      assert.equal(result.authenticatedCases, 11, 'h3 authenticated case count mismatch');
+      assert.deepEqual(result.reports?.map((report) => report.name).sort(), [...loaded.REQUIRED_CASES].sort(), 'h3 runtime case evidence mismatch');
+      result.target = 'fresh-loopback-next-login-server-action-db';
+    }
     assert.ok(typeof result.target === 'string' && /next|action|db/i.test(result.target), `${delegate.name} lacks action/DB linkage`);
     return result;
   } finally {
@@ -180,7 +219,9 @@ async function runDelegate(delegate, env, options) {
 function collectDelegateCases(results) {
   const caseReports = [];
   for (const { delegate, result } of results) {
-    const cases = Array.isArray(result.cases) ? result.cases.filter((item) => typeof item === 'string') : [];
+    const cases = delegate.name === 'h3' && Array.isArray(result.reports)
+      ? result.reports.map((report) => report.name)
+      : (Array.isArray(result.cases) ? result.cases.filter((item) => typeof item === 'string') : []);
     for (const name of cases) {
       if (INTEGRATION_REQUIRED_CASES.includes(name)) caseReports.push({ id: name, delegate: delegate.name, status: 'PASS', evidence: 'delegate-real-next-action-db' });
     }
