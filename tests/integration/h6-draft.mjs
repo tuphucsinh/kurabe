@@ -55,6 +55,7 @@ const ACTORS = Object.freeze({
   subB: { id: '10000000-0000-4000-8000-000000000004', code: 'M2-SUBLEADER-B', role: 'SubLeader' },
   employeeB: { id: '10000000-0000-4000-8000-000000000005', code: 'M2-EMPLOYEE-B', role: 'Employee' },
   workerB: { id: '10000000-0000-4000-8000-000000000006', code: 'M2-WORKER-B', role: 'Worker' },
+  employeeC: { id: '10000000-0000-4000-8000-000000000009', code: 'M2-EMPLOYEE-C', role: 'Employee' },
 });
 
 const TEAMS = Object.freeze({
@@ -387,6 +388,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
   try {
     const subBClient = await runtime.client('subB');
     const leaderAClient = await runtime.client('leaderA');
+    const leaderCClient = await runtime.client('leaderC');
     const managerClient = await runtime.client('manager');
 
     // Case 1: Authentic R1 Draft response matches DB
@@ -540,11 +542,11 @@ export async function runBehavioralConfirmationSuite(runtime) {
     revokedEvalId = crypto.randomUUID();
     runtime.psql(`
       INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
-      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.workerB.id}', 'Worker', '${TEAMS.B}', 'Submitted', 2);
+      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'Submitted', 2);
       INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status, submitted_at)
       VALUES
         ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'Submitted', NOW()),
-        ('${crypto.randomUUID()}', '${revokedEvalId}', 2, '${ACTORS.leaderA.id}', 'Leader', 'NotStarted', NULL);
+        ('${crypto.randomUUID()}', '${revokedEvalId}', 2, '${ACTORS.leaderC.id}', 'Leader', 'NotStarted', NULL);
     `);
     const revokedBefore = runtime.queryJson(`
       SELECT e.status AS eval_status, e.current_round, er.status AS round_status
@@ -552,14 +554,14 @@ export async function runBehavioralConfirmationSuite(runtime) {
       JOIN public.evaluation_rounds er ON er.evaluation_id = e.id AND er.round = 2
       WHERE e.id = '${revokedEvalId}';
     `)[0];
-    runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.B}';`);
+    runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = '${TEAMS.C}';`);
     try {
-      const revokedResult = await leaderAClient.action('saveEvaluationRound', [
+      const revokedResult = await leaderCClient.action('saveEvaluationRound', [
         revokedEvalId, 2, scores, {}, selectedLevelIndexes, 'revoked', false, configOptions,
       ]);
       assert.equal(revokedResult.result?.success, false, 'Revoked Leader write must fail');
     } finally {
-      runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderA.id}' WHERE id = '${TEAMS.B}';`);
+      runtime.psql(`UPDATE public.teams SET leader_id = '${ACTORS.leaderC.id}' WHERE id = '${TEAMS.C}';`);
     }
     const revokedAfter = runtime.queryJson(`
       SELECT e.status AS eval_status, e.current_round, er.status AS round_status
