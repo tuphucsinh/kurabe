@@ -392,7 +392,10 @@ function ownedFileHashes() {
 }
 
 function configFromResults(criteriaResult, gradeResult) {
-  const groups = Array.isArray(criteriaResult) ? criteriaResult : criteriaResult?.groups;
+  const groups = (Array.isArray(criteriaResult) ? criteriaResult : criteriaResult?.groups || []).map((group) => ({
+    ...group,
+    configVersionId: group.configVersionId || criteriaResult?.version_id,
+  }));
   assert.ok(Array.isArray(groups) && groups.length > 0, 'AUTH_CRITERIA_EMPTY');
   const criteria = groups.flatMap((group) => group.criteria || []);
   assert.ok(criteria.length > 0, 'AUTH_CRITERIA_EMPTY');
@@ -407,7 +410,11 @@ function configFromResults(criteriaResult, gradeResult) {
   }));
   const scores = Object.fromEntries(criteria.map((criterion) => [criterion.id, criterion.levels[0].points]));
   const selectedLevelIndexes = Object.fromEntries(criteria.map((criterion) => [criterion.id, 0]));
-  const grade = gradeResult?.versionId ? gradeResult : gradeResult?.data;
+  const grade = gradeResult?.versionId
+    ? gradeResult
+    : gradeResult?.version_id
+      ? { ...gradeResult, versionId: gradeResult.version_id }
+      : gradeResult?.data;
   assert.ok(groups[0].configVersionId && grade?.versionId, 'AUTH_CONFIG_VERSION_MISSING');
   return {
     scores,
@@ -463,17 +470,15 @@ function evaluationRow(runtime, evaluationId) {
   return rows?.[0] ?? null;
 }
 
-async function buildPayload(client, role) {
-  const [criteria, grades] = await Promise.all([
-    client.action('getCriteriaForRoleAction', [role], `criteria-${role}`),
-    client.action('getGradeBandsAction', [], `grades-${role}`),
-  ]);
-  return configFromResults(criteria.result, grades.result);
+async function buildPayload(runtime) {
+  const criteria = runtime.queryJson('SELECT public.get_active_criteria_config()::text;');
+  const grades = runtime.queryJson('SELECT public.get_active_grade_config()::text;');
+  return configFromResults(criteria, grades);
 }
 
 async function saveRound(runtime, alias, evaluationId, round, role, isSubmit, comment = '', overrides = {}) {
   const client = await runtime.client(alias);
-  const config = await buildPayload(client, role);
+  const config = await buildPayload(runtime);
   const response = await client.action('saveEvaluationRound', [
     evaluationId,
     round,
