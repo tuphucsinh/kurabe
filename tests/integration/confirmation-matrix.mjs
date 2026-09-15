@@ -210,6 +210,7 @@ function runFreshH5Harness(env) {
   } finally {
     try {
       runPsql(`BEGIN;
+SET LOCAL session_replication_role = replica;
 DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004'));
 DELETE FROM public.evaluation_rounds WHERE evaluation_id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004');
 DELETE FROM public.evaluations WHERE id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004');
