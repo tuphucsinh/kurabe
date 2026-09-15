@@ -483,7 +483,7 @@ async function discardEvaluation(runtime, evaluationId) {
     FROM public.evaluations
     WHERE id = ${quoteUuid(evaluationId)};
   `);
-  assert.ok(owned?.[0]?.count === 1 || owned?.count === 1, `FIXTURE_EVALUATION_NOT_OWNED ${evaluationId}`);
+  assert.ok(owned === 1 || owned?.[0]?.count === 1 || owned?.count === 1, `FIXTURE_EVALUATION_NOT_OWNED ${evaluationId}`);
   runtime.psql(`
     BEGIN;
     SET LOCAL session_replication_role = replica;
