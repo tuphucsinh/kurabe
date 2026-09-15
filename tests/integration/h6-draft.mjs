@@ -53,6 +53,7 @@ const ACTORS = Object.freeze({
   leaderA: { id: '10000000-0000-4000-8000-000000000002', code: 'M2-LEADER-A', role: 'Leader' },
   leaderC: { id: '10000000-0000-4000-8000-000000000003', code: 'M2-LEADER-C', role: 'Leader' },
   subB: { id: '10000000-0000-4000-8000-000000000004', code: 'M2-SUBLEADER-B', role: 'SubLeader' },
+  subC: { id: '10000000-0000-4000-8000-000000000007', code: 'M2-SUBLEADER-C', role: 'SubLeader' },
   employeeB: { id: '10000000-0000-4000-8000-000000000005', code: 'M2-EMPLOYEE-B', role: 'Employee' },
   workerB: { id: '10000000-0000-4000-8000-000000000006', code: 'M2-WORKER-B', role: 'Worker' },
   employeeC: { id: '10000000-0000-4000-8000-000000000009', code: 'M2-EMPLOYEE-C', role: 'Employee' },
@@ -388,6 +389,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
 
   try {
     const subBClient = await runtime.client('subB');
+    const subCClient = await runtime.client('subC');
     const leaderAClient = await runtime.client('leaderA');
     const leaderCClient = await runtime.client('leaderC');
     const managerClient = await runtime.client('manager');
@@ -543,12 +545,15 @@ export async function runBehavioralConfirmationSuite(runtime) {
     revokedEvalId = crypto.randomUUID();
     runtime.psql(`
       INSERT INTO public.evaluations (id, period_id, employee_id, employee_role, team_id, status, current_round)
-      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'Submitted', 2);
+      VALUES ('${revokedEvalId}', '${PERIODS.active}', '${ACTORS.employeeC.id}', 'Employee', '${TEAMS.C}', 'NotStarted', 1);
       INSERT INTO public.evaluation_rounds (id, evaluation_id, round, evaluator_id, evaluator_role, status, submitted_at)
       VALUES
-        ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subB.id}', 'SubLeader', 'Submitted', NOW()),
-        ('${crypto.randomUUID()}', '${revokedEvalId}', 2, '${ACTORS.leaderC.id}', 'Leader', 'NotStarted', NULL);
+        ('${crypto.randomUUID()}', '${revokedEvalId}', 1, '${ACTORS.subC.id}', 'SubLeader', 'NotStarted', NULL);
     `);
+    const revokedSetup = await subCClient.action('saveEvaluationRound', [
+      revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup', true, configOptions,
+    ]);
+    assert.equal(revokedSetup.result?.success, true, 'Revoked fixture setup must progress to Leader round');
     const revokedBefore = runtime.queryJson(`
       SELECT e.status AS eval_status, e.current_round, er.status AS round_status
       FROM public.evaluations e
