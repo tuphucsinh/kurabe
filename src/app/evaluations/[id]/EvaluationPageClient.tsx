@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { invalidateRequesterQueries, useEvaluationPageData } from '@/hooks/use-db';
+import { invalidateRequesterQueries, useEvaluationDisplay, useEvaluationPageData } from '@/hooks/use-db';
 import { User, EvaluationRound, RoundNumber, EvaluationPeriod } from '@/types';
 import type { EvaluationPeriodScope } from '@/lib/evaluation-period-scope';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,6 +75,12 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   const periods = pageData?.periods ?? EMPTY_PERIODS;
   const isLoadingUser = isLoading;
   const isLoadingEval = isLoading;
+  const evaluationDisplayQuery = useEvaluationDisplay(evaluationId ?? '', periodId, user);
+  const evaluationDisplayStatus = evaluationDisplayQuery.isLoading
+    ? 'loading'
+    : evaluationDisplayQuery.isError
+      ? 'error'
+      : 'ready';
 
   const isEmployeeOwner = isIndividualRole(user?.role) && evaluation?.employeeId === user?.id;
 
@@ -106,6 +112,11 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   const accessState = useMemo(() =>
     evaluation ? getEvaluationAccessState(user, evaluation, employee ? [employee] : undefined) : null,
   [evaluation, user, employee]);
+  const targetRoundNumber = accessState?.editableRound || accessState?.displayRound;
+  const targetRound = evaluation && targetRoundNumber
+    ? evaluation.rounds.find((round) => round.round === targetRoundNumber) ?? null
+    : null;
+  const isSubmittedRound = targetRound?.status === 'Submitted';
 
   // State + data loading (reducer, criteria, history, grade bands) — tách sang hook (D3 / Phase 94)
   const {
@@ -124,7 +135,17 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     criteriaConfigVersionId,
     gradeConfigVersionId,
     renderedCriteriaRules,
-  } = useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user });
+    historicalDisplayRound,
+    historicalSnapshotState,
+  } = useEvaluationPageState({
+    employee,
+    evaluation,
+    accessState,
+    isEmployeeOwner,
+    user,
+    evaluationDisplay: evaluationDisplayQuery.data,
+    evaluationDisplayStatus,
+  });
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
 
   useEffect(() => {
@@ -222,6 +243,10 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     return <EvaluationStaticFrame />;
   }
 
+  if (isSubmittedRound && evaluationDisplayStatus === 'loading') {
+    return <EvaluationStaticFrame />;
+  }
+
   if (!employee) {
     return (
       <AccessDenied
@@ -285,7 +310,6 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const isReadOnly = accessState.mode === 'readonly';
-  const usesLeaderGrading = isLeaderGradingRole(employee.role);
   const maxRound = getMaxEvaluationRound(employee.role);
   const activeRound = accessState.editableRound || accessState.displayRound;
   const activeRoundExists = activeRound
@@ -304,6 +328,44 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
         message="Vòng đánh giá hiện tại chưa sẵn sàng hoặc đã bị khóa."
         onBack={() => router.back()}
       />
+    );
+  }
+
+  const historicalRound = isSubmittedRound ? historicalDisplayRound : null;
+  const displayEmployee = isSubmittedRound && evaluationDisplayQuery.data?.evaluationId === evaluation.id
+    ? { ...employee, role: evaluationDisplayQuery.data.employeeRoleSnapshot }
+    : employee;
+  const historicalEvaluatorRole = historicalRound?.evaluatorRole ?? displayEmployee.role;
+  const usesLeaderGrading = isLeaderGradingRole(historicalEvaluatorRole);
+  const historicalSnapshotReady = !isSubmittedRound || historicalSnapshotState === 'authoritative';
+  const summaryGrade = isSubmittedRound && historicalRound ? historicalRound.grade : null;
+  const summaryTotalScore = isSubmittedRound && historicalRound ? historicalRound.totalScore : null;
+
+  if (isSubmittedRound && evaluationDisplayStatus === 'error') {
+    return (
+      <main className="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center space-y-3" role="alert" data-historical-snapshot-state="error">
+        <AlertTriangle className="w-10 h-10 text-rose-600" />
+        <h2 className="text-xl font-bold text-ink">Không thể tải dữ liệu lịch sử</h2>
+        <p className="text-ink-muted max-w-md">Không hiển thị tiêu chí hoặc kết quả theo cấu hình hiện tại khi dữ liệu lịch sử chưa sẵn sàng.</p>
+      </main>
+    );
+  }
+
+  if (isSubmittedRound && !historicalSnapshotReady) {
+    const stateMessage = historicalSnapshotState === 'legacy_unknown'
+      ? 'Vòng này không có phiên bản tiêu chí lịch sử được lưu.'
+      : historicalSnapshotState === 'unavailable'
+        ? 'Phiên bản tiêu chí lịch sử không khả dụng.'
+        : 'Không tìm thấy dữ liệu lịch sử của vòng đánh giá.';
+    return (
+      <main className="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center space-y-3" role="alert" data-historical-snapshot-state={historicalSnapshotState ?? 'unavailable'}>
+        <AlertTriangle className="w-10 h-10 text-amber-600" />
+        <h2 className="text-xl font-bold text-ink">Không thể hiển thị tiêu chí lịch sử</h2>
+        <p className="text-ink-muted max-w-md">{stateMessage} Không dùng cấu hình hiện tại để thay thế kết quả đã nộp.</p>
+        {historicalRound && (
+          <p className="text-sm font-bold text-ink-muted">L{historicalRound.round}: {historicalRound.totalScore} điểm · Hạng {historicalRound.grade} · {roleLabel(historicalRound.evaluatorRole)}</p>
+        )}
+      </main>
     );
   }
 
@@ -400,15 +462,18 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     scores,
     selectedLevelIndexes,
     notes,
-    totalScore: 0,
-    grade: 'Pending',
+    totalScore: summaryTotalScore ?? 0,
+    grade: summaryGrade ?? 'Pending',
     comment,
     status: activeRoundData.status || 'Draft',
     submittedAt: activeRoundData.submittedAt,
     createdAt: activeRoundData.createdAt || '',
   };
 
-  const { totalScore, grade } = calculateRoundScore(currentSummaryRound, gradeBands);
+  const calculatedSummary = isSubmittedRound && historicalRound
+    ? { totalScore: historicalRound.totalScore, grade: historicalRound.grade }
+    : calculateRoundScore(currentSummaryRound, gradeBands);
+  const { totalScore, grade } = calculatedSummary;
 
   const handleSuggestComment = async () => {
     if (!employee || user?.role !== 'Manager' || isReadOnly || criteriaStatus !== 'loaded') return;
@@ -571,8 +636,14 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
             </div>
           </div>
 
+          {isSubmittedRound && historicalRound && (
+            <div className="text-xs font-bold text-ink-muted" data-historical-snapshot-state="authoritative" data-evaluator-role={historicalRound.evaluatorRole}>
+              Người đánh giá lịch sử: {historicalRound.evaluatorRole}
+            </div>
+          )}
+
           <EvaluationHeader
-            employee={employee}
+            employee={displayEmployee}
             isLeader={usesLeaderGrading}
             scores={scores}
             criteriaGroups={criteriaGroups}
@@ -644,6 +715,11 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
             {criteriaStatus === 'loaded' && (
               <>
+                {isSubmittedRound && criteriaGroups[0]?.configVersionId && (
+                  <div className="mb-2 text-xs font-bold text-ink-muted" data-criteria-version={criteriaGroups[0].configVersionId}>
+                    Tiêu chí lịch sử · phiên bản {criteriaGroups[0].configVersion ?? criteriaGroups[0].configVersionId}
+                  </div>
+                )}
                 <GroupNavTabs
                   groups={criteriaGroups}
                   activeGroupId={activeGroup?.id ?? activeGroupId}

@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvaluationComparePageData } from '@/hooks/use-db';
+import { useEvaluationComparePageData, useEvaluationDisplay } from '@/hooks/use-db';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateRoundScore } from '@/lib/scoring';
 import { getGradeBandsSync } from '@/lib/grade-bands';
 import { getGradeBandsAction } from '@/actions/read';
 import { gradeBadgeClass } from '@/components/ui/GradeBadge';
 import { getEvaluationAccessState } from '@/data/workflow';
-import { CriteriaGroup, Criterion, User } from '@/types';
+import { CriteriaGroup, Criterion, Evaluation, EvaluationDisplayRound, User } from '@/types';
 import type { EvaluationPeriodScope } from '@/lib/evaluation-period-scope';
 import {
   ArrowLeft,
@@ -124,9 +124,17 @@ export function CompareFrame({
 
 export interface ComparisonRow {
   criterion: Criterion;
+  roundCriteria: Array<Criterion | null>;
   roundScores: number[];
   roundDeltas: number[];
   totalDelta: number;
+}
+
+interface CompareRoundView {
+  round: Evaluation['rounds'][number];
+  displayRound: EvaluationDisplayRound | null;
+  criteriaGroups: CriteriaGroup[];
+  isSubmitted: boolean;
 }
 
 interface ComparePageClientProps {
@@ -144,22 +152,26 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
 
   const handleBack = () => router.push(`/evaluations/${employeeId}`);
 
-  const { data: pageData, isLoading } = useEvaluationComparePageData(employeeId, periodId, user);
+  const { data: pageData, isLoading, isError } = useEvaluationComparePageData(employeeId, periodId, user);
   const employee = pageData?.employee;
   const evaluation = pageData?.evaluation;
   const users = pageData?.users ?? EMPTY_USERS;
   const groups = pageData?.groups ?? EMPTY_GROUPS;
   const loadingUser = isLoading;
   const loadingEval = isLoading;
-  const loadingCriteria = isLoading;
-
-  // Nạp thang điểm từ DB (load trang trực tiếp sẽ còn fallback hardcode nếu thiếu)
   const [gradeBands, setGradeBands] = useState(() => getGradeBandsSync());
   useEffect(() => {
     let cancelled = false;
-    getGradeBandsAction().then((bands) => { if (!cancelled) setGradeBands(bands); });
-    return () => { cancelled = true; };
+    getGradeBandsAction().then((bands) => {
+      if (!cancelled && bands) setGradeBands(bands);
+    }).catch((error) => {
+      console.error('Error loading grade bands:', error);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+  const displayQuery = useEvaluationDisplay(evaluation?.id ?? '', periodId, user);
 
   const accessState = useMemo(() =>
     evaluation ? getEvaluationAccessState(user, evaluation, users) : null,
@@ -173,66 +185,99 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
   }, [evaluation, accessState]);
   const activeVisibleRound = allRounds.length > 0 ? allRounds[allRounds.length - 1].round : null;
 
-  const criteria = useMemo(() => {
+  const liveCriteria = useMemo(() => {
     if (!employee || groups.length === 0) return [];
     const role = employee.role;
-
-    return groups.map(group => {
-      const filteredCriteria = group.criteria?.filter(
-        c => c.appliesTo.includes(role)
-      ) || [];
-      return { ...group, criteria: filteredCriteria };
-    }).filter(g => g.criteria.length > 0);
+    return groups.map(group => ({
+      ...group,
+      criteria: group.criteria?.filter(c => c.appliesTo.includes(role)) || [],
+    })).filter(g => g.criteria.length > 0);
   }, [employee, groups]);
 
-  const allCriteria = useMemo(() => criteria.flatMap(g => g.criteria), [criteria]);
+  const displayRounds = useMemo(() => new Map(
+    (displayQuery.data && displayQuery.data.evaluationId === evaluation?.id ? displayQuery.data.rounds : [])
+      .map((round) => [round.round, round] as const)
+  ), [displayQuery.data, evaluation?.id]);
 
-  // Score results for each round
+  const roundViews = useMemo<CompareRoundView[]>(() => allRounds.map((round) => {
+    const displayRound = displayRounds.get(round.round) ?? null;
+    const isSubmitted = round.status === 'Submitted';
+    return {
+      round,
+      displayRound,
+      isSubmitted,
+      // Submitted rounds never use live criteria. Drafts intentionally retain
+      // the current-rules workflow used by the edit page.
+      criteriaGroups: isSubmitted
+        ? displayRound?.snapshotState === 'authoritative' ? displayRound.criteriaGroups : []
+        : liveCriteria,
+    };
+  }), [allRounds, displayRounds, liveCriteria]);
+
+  const submittedRoundViews = roundViews.filter((view) => view.isSubmitted);
+  const loadingCriteria = loadingUser || loadingEval;
+  const historicalDisplayLoading = submittedRoundViews.length > 0 && displayQuery.isLoading;
+  const historicalDisplayError = submittedRoundViews.length > 0 && !displayQuery.isLoading
+    && (displayQuery.isError || !displayQuery.data);
+
+  const allCriteria = useMemo(() => {
+    const byId = new Map<string, Criterion>();
+    for (const view of roundViews) {
+      for (const criterion of view.criteriaGroups.flatMap((group) => group.criteria)) {
+        if (!byId.has(criterion.id)) byId.set(criterion.id, criterion);
+      }
+    }
+    return [...byId.values()];
+  }, [roundViews]);
+
   const roundResults = useMemo(() => {
     if (!employee) return [];
     const evaluatorRole = employee.role;
-
-    return allRounds.map(r => ({
-      round: r,
-      result: calculateRoundScore({ ...r, evaluatorRole }, gradeBands),
+    return roundViews.map((view) => ({
+      round: view.round,
+      displayRound: view.displayRound,
+      result: view.isSubmitted && view.displayRound
+        ? { totalScore: view.displayRound.totalScore, grade: view.displayRound.grade }
+        : calculateRoundScore({ ...view.round, evaluatorRole }, gradeBands),
     }));
-  }, [allRounds, employee, gradeBands]);
+  }, [roundViews, employee, gradeBands]);
 
-  // Tìm tiêu chí có thay đổi giữa BẤT KỲ 2 round nào
   const changedCriteriaIds = useMemo(() => {
     const ids = new Set<string>();
-    allCriteria.forEach(c => {
-      const scores = allRounds.map(r => r.scores?.[c.id]);
-      const unique = new Set(scores.filter(s => s !== undefined));
-      if (unique.size > 1) ids.add(c.id);
+    allCriteria.forEach((c) => {
+      const scores = roundViews
+        .map((view) => view.round.scores?.[c.id])
+        .filter((score): score is number => score !== undefined);
+      if (new Set(scores).size > 1) ids.add(c.id);
     });
     return ids;
-  }, [allCriteria, allRounds]);
+  }, [allCriteria, roundViews]);
 
-  // Derive a single memoized comparisonRows model for changed criteria
   const comparisonRows = useMemo<ComparisonRow[]>(() => {
     return allCriteria
-      .filter(c => changedCriteriaIds.has(c.id))
-      .map(criterion => {
-        const roundScores = allRounds.map(r => r.scores?.[criterion.id] ?? 0);
-        const roundDeltas = roundScores.map((score, rIdx) => {
-          if (rIdx === 0) return 0;
-          return score - roundScores[rIdx - 1];
-        });
-        const totalDelta = roundScores.length >= 2
-          ? roundScores[roundScores.length - 1] - roundScores[0]
-          : 0;
-
+      .filter((c) => changedCriteriaIds.has(c.id))
+      .map((criterion) => {
+        const roundCriteria = roundViews.map((view) =>
+          view.criteriaGroups.flatMap((group) => group.criteria).find((item) => item.id === criterion.id) ?? null
+        );
+        const roundScores = roundViews.map((view, index) =>
+          roundCriteria[index] ? view.round.scores?.[criterion.id] ?? 0 : 0
+        );
+        const roundDeltas = roundScores.map((score, index) => index === 0 ? 0 : score - roundScores[index - 1]);
         return {
           criterion,
+          roundCriteria,
           roundScores,
           roundDeltas,
-          totalDelta,
+          totalDelta: roundScores.length >= 2 ? roundScores[roundScores.length - 1] - roundScores[0] : 0,
         };
       });
+  // allCriteria and changedCriteriaIds are rebuilt from roundViews, covering its updates here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCriteria, changedCriteriaIds, allRounds]);
 
   const unchangedCriteria = allCriteria.filter(c => !changedCriteriaIds.has(c.id));
+
 
   if (scope.kind === 'NO_ACTIVE_PERIOD') {
     return (
@@ -258,6 +303,16 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
     return <CompareStaticFrame />;
   }
 
+  if (isError) {
+    return (
+      <CompareFrame onBack={handleBack}>
+        <main className="flex min-h-[240px] items-center justify-center px-6 py-12" role="alert" data-historical-snapshot-state="error">
+          <p className="text-center text-sm text-ink-muted">Không thể tải dữ liệu so sánh.</p>
+        </main>
+      </CompareFrame>
+    );
+  }
+
   if (!employee || !evaluation || !accessState) {
     return (
       <CompareFrame onBack={handleBack}>
@@ -266,6 +321,39 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
           <p className="text-ink font-bold">Không tìm thấy dữ liệu nhân viên hoặc đánh giá.</p>
           <button onClick={handleBack} className="text-brand font-bold">Quay lại</button>
         </div>
+      </CompareFrame>
+    );
+  }
+
+  if (historicalDisplayLoading) {
+    return (
+      <CompareFrame
+        onBack={handleBack}
+        employeeName={employee.name}
+        employeeCode={employee.employeeCode}
+        activeVisibleRound={activeVisibleRound}
+        loadState="loading"
+      >
+        <main className="flex min-h-[240px] items-center justify-center px-6 py-12" role="status" aria-live="polite" data-historical-snapshot-state="loading">
+          <p className="text-center text-sm text-ink-muted">Đang tải dữ liệu lịch sử của các vòng đã nộp…</p>
+        </main>
+      </CompareFrame>
+    );
+  }
+
+  if (historicalDisplayError) {
+    return (
+      <CompareFrame
+        onBack={handleBack}
+        employeeName={employee.name}
+        employeeCode={employee.employeeCode}
+        activeVisibleRound={activeVisibleRound}
+      >
+        <main className="flex min-h-[240px] flex-col items-center justify-center gap-3 px-6 py-12 text-center" role="alert" data-historical-snapshot-state="error">
+          <AlertCircle className="h-10 w-10 text-error" />
+          <p className="text-ink font-bold">Không thể tải dữ liệu lịch sử.</p>
+          <p className="text-sm text-ink-muted">Không dùng cấu hình hiện tại để thay thế kết quả đã nộp.</p>
+        </main>
       </CompareFrame>
     );
   }
@@ -317,7 +405,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
             </div>
           ) : (
             <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-3 scrollbar-hide touch-pan-x">
-              {roundResults.map(({ round: r, result }, idx) => {
+              {roundResults.map(({ round: r, displayRound, result }, idx) => {
                 const prevResult = idx > 0 ? roundResults[idx - 1].result : null;
                 const delta = prevResult ? result.totalScore - prevResult.totalScore : null;
 
@@ -353,6 +441,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                       <div className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-black uppercase shadow-md ${gradeBadgeClass(result.grade, 'solid')}`}>
                         Hạng {result.grade}
                       </div>
+                      {displayRound && (
+                        <span className="mt-1 text-[10px] font-bold text-ink-muted" data-evaluator-role={displayRound.evaluatorRole}>
+                          Người đánh giá: {displayRound.evaluatorRole}
+                        </span>
+                      )}
                       <button
                         onClick={() => router.push(`/evaluations/${employeeId}?round=${r.round}`)}
                         className="mt-2 sm:mt-3 flex items-center gap-1.5 text-[11px] font-black text-brand hover:underline uppercase tracking-tighter max-md:min-h-[36px]"
@@ -366,6 +459,18 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
             </div>
           )}
         </section>
+
+        {roundViews.filter((view) => view.isSubmitted && view.displayRound?.snapshotState !== 'authoritative').map((view) => {
+          const state = view.displayRound?.snapshotState ?? 'unavailable';
+          return (
+            <div key={`snapshot-${view.round.round}`} className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert" data-historical-snapshot-state={state}>
+              <span className="font-bold">Lần {view.round.round}: </span>
+              {state === 'legacy_unknown'
+                ? 'Không có phiên bản tiêu chí lịch sử; không dùng cấu hình hiện tại để gắn nhãn.'
+                : 'Phiên bản tiêu chí lịch sử không khả dụng; không dùng cấu hình hiện tại để gắn nhãn.'}
+            </div>
+          );
+        })}
 
         {/* ═══════ Main Comparison Table & Mobile Cards ═══════ */}
         <section data-load-phase="primary" data-load-layer="changed-criteria">
@@ -382,7 +487,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
             <>
               {/* Mobile: Card presentation with rounds stacked */}
               <div className="md:hidden space-y-3">
-                {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
+                {comparisonRows.map(({ criterion, roundCriteria, roundScores, roundDeltas, totalDelta }) => {
                   return (
                     <div key={criterion.id} className="p-3 sm:p-3.5 rounded-xl border border-outline-soft bg-surface-raised shadow-sm space-y-2">
                       <div className="flex items-start justify-between gap-2">
@@ -411,6 +516,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                               <span className={`text-[11px] font-black uppercase tracking-wider mb-1 ${isCurrent ? 'text-brand font-bold' : 'text-ink-muted'}`}>
                                 Lần {r.round} {isCurrent ? '(Hiện tại)' : ''}
                               </span>
+                              {roundCriteria[rIdx] && (
+                                <span className="mb-1 max-w-full text-[10px] leading-tight text-ink-muted" title={roundCriteria[rIdx]?.name}>
+                                  {roundCriteria[rIdx]?.code}: {roundCriteria[rIdx]?.name}
+                                </span>
+                              )}
                               <div className="flex items-center gap-1.5">
                                 <span className={`text-base font-black ${isCurrent ? 'text-brand' : 'text-ink'}`}>
                                   {score}
@@ -452,7 +562,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-soft">
-                      {comparisonRows.map(({ criterion, roundScores, roundDeltas, totalDelta }) => {
+                      {comparisonRows.map(({ criterion, roundCriteria, roundScores, roundDeltas, totalDelta }) => {
                         return (
                           <tr key={criterion.id} className="hover:bg-surface/30 transition-colors group">
                             <td className="px-4 py-2.5">
@@ -465,6 +575,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                               return (
                                 <td key={r.round} className="px-3 py-2.5 text-center">
                                   <div className="flex flex-col items-center">
+                                    {roundCriteria[rIdx] && (
+                                      <span className="mb-1 max-w-[130px] text-[10px] leading-tight text-ink-muted" title={roundCriteria[rIdx]?.name}>
+                                        {roundCriteria[rIdx]?.code}: {roundCriteria[rIdx]?.name}
+                                      </span>
+                                    )}
                                     <div className={`
                                       w-9 h-9 flex items-center justify-center rounded-lg text-base font-black transition-all
                                       ${r.round === evaluation.currentRound ? 'bg-brand text-white shadow-md' : 'bg-surface text-ink'}
@@ -574,13 +689,25 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
               </summary>
               <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 border-t border-outline-soft">
                 {unchangedCriteria.map(criterion => {
-                  const score = allRounds[0]?.scores?.[criterion.id] ?? 0;
+                  const roundCriteria = roundViews.map((view) =>
+                    view.criteriaGroups.flatMap((group) => group.criteria).find((item) => item.id === criterion.id) ?? null
+                  );
                   return (
-                    <div key={criterion.id} className="flex items-center justify-between p-2.5 rounded-xl bg-surface/20 border border-outline-soft/50 hover:border-brand/20 transition-colors">
+                    <div key={criterion.id} className="flex flex-col gap-2 p-2.5 rounded-xl bg-surface/20 border border-outline-soft/50 hover:border-brand/20 transition-colors">
                       <div className="flex flex-col pr-2 min-w-0">
                         <span className="text-xs font-bold text-ink/70 leading-tight">{criterion.name}</span>
                       </div>
-                      <span className="shrink-0 text-sm font-black text-ink-muted px-2.5 py-1 bg-surface-raised rounded-xl shadow-sm border border-outline-soft/30">{score}</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {roundViews.map((view, index) => {
+                          const roundCriterion = roundCriteria[index];
+                          if (!roundCriterion) return null;
+                          return (
+                            <span key={view.round.round} className="shrink-0 text-xs font-black text-ink-muted px-2 py-1 bg-surface-raised rounded-xl shadow-sm border border-outline-soft/30" title={`${roundCriterion.code}: ${roundCriterion.name}`}>
+                              L{view.round.round}: {view.round.scores?.[criterion.id] ?? 0}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}

@@ -1,7 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { User, Evaluation, EvaluationRound, CriteriaGroup, EvaluationAccessState, RoundNumber } from '@/types';
+import {
+  User,
+  Evaluation,
+  EvaluationRound,
+  CriteriaGroup,
+  EvaluationAccessState,
+  EvaluationDisplayDto,
+  EvaluationSnapshotState,
+  RoundNumber,
+} from '@/types';
 import { 
   getCriteriaForRoleAction, 
   getEvaluationHistoryAction, 
@@ -95,6 +104,8 @@ interface UseEvaluationPageStateArgs {
   accessState: EvaluationAccessState | null;
   isEmployeeOwner: boolean;
   user: User | null;
+  evaluationDisplay?: EvaluationDisplayDto | null;
+  evaluationDisplayStatus?: 'loading' | 'ready' | 'error';
 }
 
 /**
@@ -104,7 +115,27 @@ interface UseEvaluationPageStateArgs {
  * - Hydrate default levels & selectedLevelIndexes chỉ khi criteria sẵn sàng, khóa autosave trước khi hydrate.
  * - Layer 3: nạp history & grade bands non-blocking với guard riêng.
  */
-export function useEvaluationPageState({ employee, evaluation, accessState, isEmployeeOwner, user }: UseEvaluationPageStateArgs) {
+export function useEvaluationPageState({
+  employee,
+  evaluation,
+  accessState,
+  isEmployeeOwner,
+  user,
+  evaluationDisplay,
+  evaluationDisplayStatus = 'ready',
+}: UseEvaluationPageStateArgs) {
+  const targetRoundNumber = accessState?.editableRound || accessState?.displayRound;
+  const targetRound = evaluation && targetRoundNumber
+    ? evaluation.rounds.find((round) => round.round === targetRoundNumber) || null
+    : null;
+  const isSubmittedRound = targetRound?.status === 'Submitted';
+  const historicalDisplayRound = isSubmittedRound && evaluationDisplay && evaluationDisplay.evaluationId === evaluation?.id
+    ? evaluationDisplay.rounds.find((round) => round.round === targetRound?.round) || null
+    : null;
+  const historicalSnapshotState: EvaluationSnapshotState | null = isSubmittedRound
+    ? historicalDisplayRound?.snapshotState ?? null
+    : null;
+
   const [state, dispatch] = useReducer(evaluationReducer, initialState);
   const stateRef = useRef(state);
   useEffect(() => {
@@ -210,28 +241,25 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     setCriteriaStatus('loading');
     setCriteriaError(null);
 
-    const targetRoundNum = accessState.editableRound || accessState.displayRound;
-    const targetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
+    const hydrateCriteria = (dbCriteria: CriteriaGroup[]) => {
+      if (cancelled || criteriaGenRef.current !== currentGen) return;
 
-    getCriteriaForRoleAction(employee.role)
-      .then((dbCriteria) => {
-        if (cancelled || criteriaGenRef.current !== currentGen) return;
+      if (!dbCriteria || dbCriteria.length === 0) {
+        setCriteriaGroups([]);
+        setCriteriaStatus('empty');
+        return;
+      }
 
-        if (!dbCriteria || dbCriteria.length === 0) {
-          setCriteriaGroups([]);
-          setCriteriaStatus('empty');
-          return;
-        }
+      setCriteriaGroups(dbCriteria);
+      setCriteriaStatus('loaded');
 
-        setCriteriaGroups(dbCriteria);
-        setCriteriaStatus('loaded');
+      // Hydrate default levels & missing selectedLevelIndexes
+      const currentScores = { ...stateRef.current.scores };
+      let currentSelectedLevelIndexes = { ...stateRef.current.selectedLevelIndexes };
 
-        // Hydrate default levels & missing selectedLevelIndexes
-        const currentScores = { ...stateRef.current.scores };
-        let currentSelectedLevelIndexes = { ...stateRef.current.selectedLevelIndexes };
-
-        // Pre-fill defaults chỉ khi đang edit round và chưa có điểm nào
-        if (Object.keys(currentScores).length === 0 && !!accessState.editableRound) {
+      // Pre-fill defaults chỉ khi đang edit round và chưa có điểm nào
+      if (Object.keys(currentScores).length === 0 && !!accessState.editableRound) {
+        if (!isSubmittedRound) {
           for (const group of dbCriteria) {
             for (const criterion of group.criteria) {
               if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
@@ -241,42 +269,75 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
             }
           }
         }
+      }
 
-        currentSelectedLevelIndexes = fillMissingSelectedLevelIndexes(
-          currentScores,
-          currentSelectedLevelIndexes,
-          dbCriteria
-        );
+      currentSelectedLevelIndexes = fillMissingSelectedLevelIndexes(
+        currentScores,
+        currentSelectedLevelIndexes,
+        dbCriteria
+      );
 
-        dispatch({
-          type: 'SET_INITIAL_DATA',
-          payload: {
-            scores: currentScores,
-            selectedLevelIndexes: currentSelectedLevelIndexes,
-          }
-        });
-
-        const targetRoundNumber = (targetRound?.round ?? targetRoundNum ?? null) as RoundNumber | null;
-        const initKey = targetRound
-          ? `${evaluation.id}:${targetRound.round}`
-          : (targetRoundNum ? `${evaluation.id}:${targetRoundNum}` : '');
-        const firstOpenEligible =
-          accessState.mode === 'edit' &&
-          targetRound !== null &&
-          targetRound.status === 'NotStarted';
-
-        if (lastInitializedKeyRef.current !== initKey) {
-          userEditedRef.current = false;
-          lastInitializedKeyRef.current = initKey;
+      dispatch({
+        type: 'SET_INITIAL_DATA',
+        payload: {
+          scores: currentScores,
+          selectedLevelIndexes: currentSelectedLevelIndexes,
         }
+      });
 
-        setInitMetadata({
-          key: initKey,
-          round: targetRoundNumber,
-          initialized: true,
-          firstOpenEligible,
-        });
-      })
+      const roundForMetadata = (targetRound?.round ?? targetRoundNumber ?? null) as RoundNumber | null;
+      const initKey = targetRound
+        ? `${evaluation.id}:${targetRound.round}`
+        : (targetRoundNumber ? `${evaluation.id}:${targetRoundNumber}` : '');
+      const firstOpenEligible =
+        accessState.mode === 'edit' &&
+        targetRound !== null &&
+        targetRound.status === 'NotStarted';
+
+      if (lastInitializedKeyRef.current !== initKey) {
+        userEditedRef.current = false;
+        lastInitializedKeyRef.current = initKey;
+      }
+
+      setInitMetadata({
+        key: initKey,
+        round: roundForMetadata,
+        initialized: true,
+        firstOpenEligible,
+      });
+    };
+
+    if (isSubmittedRound) {
+      if (evaluationDisplayStatus === 'loading') return () => { cancelled = true; };
+      if (evaluationDisplayStatus === 'error') {
+        setCriteriaGroups([]);
+        setCriteriaStatus('error');
+        setCriteriaError('Không thể tải dữ liệu lịch sử của vòng đánh giá.');
+        return () => { cancelled = true; };
+      }
+      if (!historicalDisplayRound) {
+        setCriteriaGroups([]);
+        setCriteriaStatus('error');
+        setCriteriaError('Không tìm thấy dữ liệu lịch sử của vòng đánh giá.');
+        return () => { cancelled = true; };
+      }
+      if (historicalDisplayRound.snapshotState !== 'authoritative') {
+        setCriteriaGroups([]);
+        setCriteriaStatus('empty');
+        setCriteriaError(
+          historicalDisplayRound.snapshotState === 'legacy_unknown'
+            ? 'Vòng đánh giá này không có phiên bản tiêu chí lịch sử.'
+            : 'Phiên bản tiêu chí lịch sử không khả dụng.'
+        );
+        return () => { cancelled = true; };
+      }
+
+      hydrateCriteria(historicalDisplayRound.criteriaGroups);
+      return () => { cancelled = true; };
+    }
+
+    getCriteriaForRoleAction(employee.role)
+      .then(hydrateCriteria)
       .catch((err) => {
         if (cancelled || criteriaGenRef.current !== currentGen) return;
         console.error('Error fetching criteria for role:', err);
@@ -287,7 +348,18 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     return () => {
       cancelled = true;
     };
-  }, [employee, evaluation, accessState, criteriaRetryCount]);
+  }, [
+    employee,
+    evaluation,
+    accessState,
+    criteriaRetryCount,
+    evaluationDisplay,
+    evaluationDisplayStatus,
+    historicalDisplayRound,
+    isSubmittedRound,
+    targetRound,
+    targetRoundNumber,
+  ]);
 
   // 3. Layer 3: Tải lịch sử đánh giá các kỳ trước của Employee (non-blocking)
   useEffect(() => {
@@ -375,5 +447,8 @@ export function useEvaluationPageState({ employee, evaluation, accessState, isEm
     criteriaConfigVersionId,
     gradeConfigVersionId,
     renderedCriteriaRules,
+    historicalDisplayRound,
+    historicalSnapshotState,
+    isSubmittedRound,
   };
 }
