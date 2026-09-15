@@ -154,7 +154,7 @@ task:
 - **Rollback/risk:** action-only local revert; never rollback committed draft data. Network after-commit failure remains outcome-unverified until readback, no duplicate submit retry.
 - **Execution result:** PASS on fresh exact-SHA authenticated runtime, candidate `6514466e0e81f1ea33b5775ce315c35dd8fd467d`; base `a72c0d0cee2ff196c5903fca9528d8d3aa1323ae`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T03-auth/H6-final-qualification.json` SHA-256 `bd50bea4738b5fc8bfeb66fce5b6258d6953def0d52a650fef4cb37538aea748`; fresh independent `agy-readonly` review PASS at `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T03/independent-review-6514466-package.log` SHA-256 `77af3dc2b9585b7ca3fe19ac2949ab2256c9a1f72cc2f1a288e1ce7bb33b0280`; exact candidate is canonical merge parent in integration commit `f60102fce8af98eff50564dff27023f3b6d16680`; production writes/migrations `0`; cleanup residue `0`.
 
-### [ ] [#P103M3T01] H7 authorized per-round snapshot display DTO
+### [x] [#P103M3T01] H7 authorized per-round snapshot display DTO
 
 ```yaml
 task:
@@ -173,6 +173,7 @@ task:
 - **Evidence:** DTO before/after Manager config/role changes, immutable submitted/closed SQL digests, unique-version query counts (batch, no per-criterion waterfall), denied response, legacy/error output.
 - **DB/security impact:** no migration/new RPC; server-only version reads using existing permission path; no broad config dumps.
 - **Rollback/risk:** additive DTO can revert locally without data rewrite. Broken required referenced version is surfaced; synthetic missing-row test must not disable FK guards (unit loader failure or valid legacy null fixture instead).
+- **Execution result:** PASS on fresh exact-SHA disposable PostgreSQL/PostgREST/Next authenticated runtime; candidate `d2142155fb633b70db4ad22d69edd426e50f5924`; base `04e6f95418e76af50092bab1c610b1fc5d166959`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/h7-evidence.json`; qualification `12/12`, production writes/migrations `0/0`, cleanup residue `0`. Read-only privilege diagnosis proved production `service_role` SELECT on all six snapshot/version tables while disposable bootstrap lacked them; only disposable bootstrap/harness grants were repaired, with no product migration change. Fresh direct `agy-readonly` review PASS is recorded in `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/direct-review-v2.log`; canonical exact candidate is `d2142155fb633b70db4ad22d69edd426e50f5924`.
 
 ### [ ] [#P103M3T02] H7 detail/compare render historical snapshots
 
