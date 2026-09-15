@@ -123,6 +123,7 @@ function cleanupH1H2Prerequisites(env) {
   const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
   execFileSync('psql', target, {
     input: `BEGIN;
+SET LOCAL session_replication_role = replica;
 DELETE FROM public.sessions WHERE user_id IN (${actors});
 DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN (SELECT id FROM public.evaluations WHERE employee_id IN (${actors}) OR period_id IN (${periods})));
 DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (SELECT id FROM public.evaluations WHERE employee_id IN (${actors}) OR period_id IN (${periods}));
