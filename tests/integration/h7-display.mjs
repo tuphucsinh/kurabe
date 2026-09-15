@@ -22,8 +22,9 @@ import {
   FIXTURE_GRADE_V1_ID,
   FIXTURE_GRADE_V2_ID,
   FIXTURE_EMPLOYEE_B_ID,
+  FIXTURE_PERIODS,
+  FIXTURE_TEAMS,
   createActorSession,
-  cleanupConfirmationFixtures,
   psql,
   psqlJson,
   seedConfirmationFixtures,
@@ -267,6 +268,51 @@ function cleanupSnapshotRows(target, ids) {
   return { exactResidueZero: true, residue, supplementalIds: ids };
 }
 
+function cleanupH7Fixtures(target) {
+  const allActorIds = Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.id)).join(', ');
+  const allActorCodes = Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.employeeCode)).join(', ');
+  const allTeamIds = Object.values(FIXTURE_TEAMS).map((team) => sqlLiteral(team.id)).join(', ');
+  const allPeriodIds = Object.values(FIXTURE_PERIODS).map((period) => sqlLiteral(period.id)).join(', ');
+  const allEvalIds = [FIXTURE_ACTIVE_EVAL_ID, FIXTURE_CLOSED_EVAL_ID].map(sqlLiteral).join(', ');
+  const contextKey = crypto.randomUUID();
+
+  // The migration guard intentionally rejects direct progressed-round deletion.
+  // Use one ownership-scoped transaction context for disposable teardown only.
+  psql(target, `
+    BEGIN;
+    SELECT set_config('kurabe.p102m3t04.save_context_key', ${sqlLiteral(contextKey)}, true);
+    INSERT INTO public.evaluation_transition_context (context_key, txid, context)
+    VALUES (${sqlLiteral(contextKey)}, txid_current(), 'save_rpc');
+    DELETE FROM public.sessions WHERE user_id IN (${allActorIds});
+    DELETE FROM public.login_attempts WHERE employee_code IN (${allActorCodes});
+    DELETE FROM public.evaluation_responses WHERE round_id IN (
+      SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN (${allEvalIds})
+    );
+    DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (${allEvalIds});
+    DELETE FROM public.evaluations WHERE id IN (${allEvalIds}) OR period_id IN (${allPeriodIds}) OR employee_id IN (${allActorIds});
+    DELETE FROM public.evaluation_periods WHERE id IN (${allPeriodIds});
+    UPDATE public.teams SET leader_id = NULL WHERE id IN (${allTeamIds});
+    DELETE FROM public.users WHERE id IN (${allActorIds});
+    DELETE FROM public.teams WHERE id IN (${allTeamIds});
+    DELETE FROM public.evaluation_transition_context WHERE context_key = ${sqlLiteral(contextKey)} AND txid = txid_current();
+    COMMIT;
+  `);
+
+  const residue = psqlJson(target, `
+    SELECT json_build_object(
+      'sessions', (SELECT count(*) FROM public.sessions WHERE user_id IN (${allActorIds})),
+      'login_attempts', (SELECT count(*) FROM public.login_attempts WHERE employee_code IN (${allActorCodes})),
+      'evaluation_rounds', (SELECT count(*) FROM public.evaluation_rounds WHERE evaluation_id IN (${allEvalIds})),
+      'evaluations', (SELECT count(*) FROM public.evaluations WHERE id IN (${allEvalIds}) OR period_id IN (${allPeriodIds}) OR employee_id IN (${allActorIds})),
+      'evaluation_periods', (SELECT count(*) FROM public.evaluation_periods WHERE id IN (${allPeriodIds})),
+      'users', (SELECT count(*) FROM public.users WHERE id IN (${allActorIds})),
+      'teams', (SELECT count(*) FROM public.teams WHERE id IN (${allTeamIds}))
+    )::text;
+  `);
+  assert.equal(Object.values(residue).reduce((sum, value) => sum + Number(value), 0), 0);
+  return { exactResidueZero: true, residue, teardown: 'guard-aware-owned-transaction' };
+}
+
 async function runAuthenticated(env, rootDir) {
   const config = validateRuntimeEnvironment(env);
   const target = config.dbTarget;
@@ -329,7 +375,7 @@ async function runAuthenticated(env, rootDir) {
     const denied = await leaderC.action('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
     assert.equal(denied, null);
 
-    await cleanupConfirmationFixtures(target);
+    cleanupH7Fixtures(target);
     cleanupResult = cleanupSnapshotRows(target, snapshotIds);
     const finalResidue = psqlJson(target, `SELECT count(*)::int AS count FROM public.evaluation_rounds WHERE evaluation_id IN (${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)}, ${sqlLiteral(FIXTURE_CLOSED_EVAL_ID)});`);
     assert.equal(finalResidue.count, 0);
@@ -355,7 +401,7 @@ async function runAuthenticated(env, rootDir) {
     };
   } finally {
     // Cleanup is idempotent and remains bounded to deterministic fixture IDs.
-    try { await cleanupConfirmationFixtures(target); } catch { /* preserve primary failure */ }
+    try { cleanupH7Fixtures(target); } catch { /* preserve primary failure */ }
     if (snapshotIds) {
       try { cleanupSnapshotRows(target, snapshotIds); } catch { /* preserve primary failure */ }
     }
