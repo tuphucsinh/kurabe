@@ -553,7 +553,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     const revokedSetup = await subCClient.action('saveEvaluationRound', [
       revokedEvalId, 1, scores, {}, selectedLevelIndexes, 'revoked-setup', true, configOptions,
     ]);
-    assert.equal(revokedSetup.result?.success, true, 'Revoked fixture setup must progress to Leader round');
+    assert.equal(revokedSetup.result?.success, true, `Revoked fixture setup must progress to Leader round: ${JSON.stringify(revokedSetup.result)}`);
     const revokedBefore = runtime.queryJson(`
       SELECT e.status AS eval_status, e.current_round, er.status AS round_status
       FROM public.evaluations e
