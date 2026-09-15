@@ -129,6 +129,7 @@ DELETE FROM public.evaluation_periods WHERE id IN (${periods});
 UPDATE public.teams SET leader_id=NULL WHERE id IN (${teams});
 DELETE FROM public.users WHERE id IN (${actors});
 DELETE FROM public.teams WHERE id IN (${teams});
+UPDATE public.users SET is_active=TRUE WHERE employee_code='P103-MGR';
 UPDATE public.evaluation_periods SET status='active' WHERE name='P103 Active Period' AND status='draft';
 COMMIT;`,
     encoding: 'utf8', env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
@@ -140,11 +141,18 @@ async function runDelegate(delegate, env, options) {
   assert.equal(typeof loaded.run, 'function', `${delegate.name} delegate has no run() contract`);
   const previous = {};
   const delegateEnv = delegateEnvironment(env, delegate);
+  const target = ['-X', '-h', delegateEnv.KURABE_DB_HOST, '-p', String(delegateEnv.KURABE_DB_PORT), '-U', delegateEnv.KURABE_DB_USER, '-d', delegateEnv.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
   for (const key of [delegate.url, delegate.source]) {
     previous[key] = process.env[key];
     process.env[key] = delegateEnv[key];
   }
   try {
+    if (delegate.name === 'h1h2') {
+      execFileSync('psql', target, {
+        input: `UPDATE public.users SET is_active=FALSE WHERE employee_code='P103-MGR';`,
+        encoding: 'utf8', env: { ...process.env, PGPASSWORD: delegateEnv.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+      });
+    }
     const result = await loaded.run({ rootDir: projectRoot, suite: `confirmation-matrix-${delegate.name}`, options });
     assert.equal(result.real, true, `${delegate.name} did not execute a real runtime`);
     assert.equal(result.passed, true, `${delegate.name} did not pass`);
