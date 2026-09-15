@@ -683,7 +683,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     try {
       runtime.psql(`SELECT * FROM public.save_evaluation_round_transaction_active_only(
         ${quoteUuid(finalTampered)}, 1, ${quoteUuid(ACTORS.manager.id)}, '{}'::jsonb, '{}'::jsonb, 'tampered',
-        170, 'S', TRUE, now(), NULL, NULL, NULL, 'Approved', FALSE,
+        170, 'S', TRUE, now(), NULL, NULL, NULL, 'Approved', TRUE,
         (SELECT id FROM public.criteria_config_versions WHERE is_active ORDER BY version_no DESC LIMIT 1),
         (SELECT id FROM public.grade_band_versions WHERE is_active ORDER BY version_no DESC LIMIT 1));`);
       assert.fail('final-tampered SQL replay unexpectedly succeeded');
