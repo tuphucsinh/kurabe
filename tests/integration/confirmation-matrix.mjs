@@ -272,6 +272,9 @@ async function runDelegate(delegate, env, options) {
       result.candidateSha = freshH5Evidence.candidateSha;
       result.baseSha = BASE_SHA;
       result.target = 'fresh-loopback-next-login-server-action-db';
+      // h5-revoke.run() returns the authenticated evidence contract, whose
+      // qualification state is represented by status rather than passed.
+      result.passed = freshH5Evidence.status === 'QUALIFIED';
     }
     assert.equal(result.real, true, `${delegate.name} did not execute a real runtime`);
     assert.equal(result.passed, true, `${delegate.name} did not pass`);
