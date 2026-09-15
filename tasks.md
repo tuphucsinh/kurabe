@@ -3,7 +3,7 @@
 ## Planning authority and entry gate
 
 - `PLAN_REVISION=P103-r1`; source `ab4d6a798946ff26c565d17095685a1571688db9`; canonical `main` at `/home/pi5/projects/kurabe`.
-- **P103M1T01 and P103M1T02 are completed; 11 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
+- **P103M1T01, P103M1T02, P103M1T03, P103M2T01, P103M2T02 and P103M2T03 are completed; 9 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
 - `.ai/MASTER_PLAN.md` sections 1–7 are mandatory context for each task. Rules A–D settle authorization, multi-team selection, workflow/status and snapshots; a worker must not pick a different policy.
 - `Independent: yes` means no new P103 prerequisite; `no` means dependencies required. `Parallel-safe: yes` is a descriptive opportunity only after dependencies integrate and ownership/locks/live state allow it; it is not a scheduler bypass or runtime schema field.
 - `READY_TO_EXECUTE=YES`: owner authorized bounded P103 execution; production write, deploy, credential change, and migration remain unauthorized unless separately approved.
@@ -112,7 +112,7 @@ task:
 - **Rollback/risk:** downgrade local 002 only to reviewed 001 snapshot for diagnosis; 001 remains authoritative security fence. New/old app/DB compatibility measured again at release preparation, no partial production rollout.
 - **Execution result:** PASS on fresh exact-SHA authenticated runtime, candidate `a332e72737d055e38358f570363c13fe901e9e4b`; base `7a46233938e8a0636a388c9e0c8dda2b7373903a`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T01/H1H2-final-qualification-a332e727.json`, SHA-256 `5f6a7c51fef3f5abb94a3a3a0696a5c935e630b3d9fc340f598e86e93c9616af`; fresh read-only review `PASS`; canonical fast-forward integrated; production writes/migrations `0`; runtime residue `0`.
 
-### [ ] [#P103M2T02] H3 full/summary/single scope parity
+### [x] [#P103M2T02] H3 full/summary/single scope parity
 
 ```yaml
 task:
@@ -131,8 +131,9 @@ task:
 - **Evidence:** explicit runtime status red baseline then green, sorted expected/actual IDs for each surface, query/error scope traces, negative C payload check. If not reproduced, preserve evidence and revisit minimal patch; do not fabricate confirmation.
 - **DB/security impact:** none; service-role post-filter must remain mandatory.
 - **Rollback/risk:** local owned diff revert; watch false parity caused by limit/projection differences. Never relax permission to make count equal.
+- **Execution result:** PASS on fresh exact-SHA authenticated runtime, candidate `e91bfafba66960f74f3c98a12939f335344efc7c`; base `a72c0d0cee2ff196c5903fca9528d8d3aa1323ae`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T02-auth/H3-final-qualification.json` SHA-256 `0f6ce95a45124d41ec3dc8cffe6e2b4ae841e68e8b571166092cf14651b0bf92`; fresh independent `agy-readonly` review PASS at `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T02/independent-review-e91bfaf-safe.log` SHA-256 `8993e901d75b257019951676720a2cb31ed2ce5e8275e9dab0f0ff9bb59fe9bc`; canonical fast-forward integrated at candidate SHA; production writes/migrations `0`; cleanup residue `0`.
 
-### [ ] [#P103M2T03] H6 draft transaction response contract
+### [x] [#P103M2T03] H6 draft transaction response contract
 
 ```yaml
 task:
@@ -151,6 +152,7 @@ task:
 - **Evidence:** action response, before/after round score/comment/status/submitted_at and aggregate/next evaluator; malformed response units clearly labeled unit tier, no false authenticated evidence.
 - **DB/security impact:** no migration; preserve H5 prechecks and strict server/RPC response guards.
 - **Rollback/risk:** action-only local revert; never rollback committed draft data. Network after-commit failure remains outcome-unverified until readback, no duplicate submit retry.
+- **Execution result:** PASS on fresh exact-SHA authenticated runtime, candidate `6514466e0e81f1ea33b5775ce315c35dd8fd467d`; base `a72c0d0cee2ff196c5903fca9528d8d3aa1323ae`; evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T03-auth/H6-final-qualification.json` SHA-256 `bd50bea4738b5fc8bfeb66fce5b6258d6953def0d52a650fef4cb37538aea748`; fresh independent `agy-readonly` review PASS at `/home/pi5/hermes-artifacts/kurabe-p103/P103M2T03/independent-review-6514466-package.log` SHA-256 `77af3dc2b9585b7ca3fe19ac2949ab2256c9a1f72cc2f1a288e1ce7bb33b0280`; exact candidate is canonical merge parent in integration commit `f60102fce8af98eff50564dff27023f3b6d16680`; production writes/migrations `0`; cleanup residue `0`.
 
 ### [ ] [#P103M3T01] H7 authorized per-round snapshot display DTO
 
