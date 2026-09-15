@@ -142,6 +142,10 @@ async function runDelegate(delegate, env, options) {
   const previous = {};
   const delegateEnv = delegateEnvironment(env, delegate);
   const target = ['-X', '-h', delegateEnv.KURABE_DB_HOST, '-p', String(delegateEnv.KURABE_DB_PORT), '-U', delegateEnv.KURABE_DB_USER, '-d', delegateEnv.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  const delegateEvidence = options?.evidence
+    ? `${options.evidence}.${delegate.name}.json`
+    : undefined;
+  if (delegateEvidence) fs.rmSync(delegateEvidence, { force: true });
   for (const key of [delegate.url, delegate.source]) {
     previous[key] = process.env[key];
     process.env[key] = delegateEnv[key];
@@ -153,7 +157,11 @@ async function runDelegate(delegate, env, options) {
         encoding: 'utf8', env: { ...process.env, PGPASSWORD: delegateEnv.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
       });
     }
-    const result = await loaded.run({ rootDir: projectRoot, suite: `confirmation-matrix-${delegate.name}`, options });
+    const result = await loaded.run({
+      rootDir: projectRoot,
+      suite: `confirmation-matrix-${delegate.name}`,
+      options: { ...options, evidence: delegateEvidence },
+    });
     assert.equal(result.real, true, `${delegate.name} did not execute a real runtime`);
     assert.equal(result.passed, true, `${delegate.name} did not pass`);
     assert.equal(result.authenticated, true, `${delegate.name} did not identify authenticated execution`);
