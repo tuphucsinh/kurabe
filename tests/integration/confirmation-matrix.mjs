@@ -342,8 +342,8 @@ async function runDelegate(delegate, env, options) {
     if (delegate.name === 'h3') seedH3ScopePrerequisites(delegateEnv);
     if (delegate.name === 'h6') h6ManagerIsolation = isolateH6ManagerResolver(delegateEnv);
     if (delegate.name === 'h7') {
-      delete process.env.KURABE_H7_PREBOOTSTRAPPED;
-      delete process.env.KURABE_H7_BOOTSTRAP_RESULT;
+      assert.equal(process.env.KURABE_H7_PREBOOTSTRAPPED, '1', 'H7 must use the fresh disposable bootstrap from this matrix runtime');
+      assert.ok(process.env.KURABE_H7_BOOTSTRAP_RESULT && fs.existsSync(process.env.KURABE_H7_BOOTSTRAP_RESULT), 'H7 bootstrap evidence is missing');
     }
     if (freshH5Evidence && delegateEvidence) {
       writeEvidence(delegateEvidence, {
