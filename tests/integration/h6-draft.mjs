@@ -374,7 +374,7 @@ export async function runBehavioralConfirmationSuite(runtime) {
     const r1Draft = await subBClient.action('saveEvaluationRound', [
       evalId, 1, {}, {}, {}, 'R1 Draft 1', false, configOptions,
     ]);
-    assert.equal(r1Draft.result?.success, true, 'R1 draft must succeed');
+    assert.equal(r1Draft.result?.success, true, `R1 draft must succeed: ${JSON.stringify(r1Draft.result)}`);
     const r1Db = runtime.queryJson(`
       SELECT e.status AS eval_status, er.status AS round_status, er.submitted_at
       FROM public.evaluations e
