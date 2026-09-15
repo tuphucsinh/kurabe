@@ -308,7 +308,7 @@ function createDisposableRuntimeFromEnv() {
       assert.ok(password, 'KURABE_FIXTURE_PASSWORD required');
       const login = await this.action('loginAction', [actor.code, password], `login-${this.alias}`);
       assert.equal(login.result?.success, true, `AUTH_FAILED ${this.alias}`);
-      const page = await fetch(`${origin}/evaluations/40000000-0000-4000-8000-000000000001`, {
+      const page = await fetch(`${origin}/evaluations/10000000-0000-4000-8000-000000000005`, {
         headers: this.cookieHeader() ? { Cookie: this.cookieHeader() } : {},
         redirect: 'manual',
         signal: AbortSignal.timeout(30000),
