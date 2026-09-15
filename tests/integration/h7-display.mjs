@@ -377,7 +377,7 @@ async function runAuthenticated(env, rootDir) {
 
     cleanupH7Fixtures(target);
     cleanupResult = cleanupSnapshotRows(target, snapshotIds);
-    const finalResidue = psqlJson(target, `SELECT count(*)::int AS count FROM public.evaluation_rounds WHERE evaluation_id IN (${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)}, ${sqlLiteral(FIXTURE_CLOSED_EVAL_ID)});`);
+    const finalResidue = psqlJson(target, `SELECT row_to_json(residue)::text FROM (SELECT count(*)::int AS count FROM public.evaluation_rounds WHERE evaluation_id IN (${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)}, ${sqlLiteral(FIXTURE_CLOSED_EVAL_ID)})) residue;`);
     assert.equal(finalResidue.count, 0);
     return {
       real: true,
