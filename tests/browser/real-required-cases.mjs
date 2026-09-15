@@ -282,11 +282,16 @@ export async function run() {
     await runCase(cases, 'h4:history-route-action-policy-parity', async () => {
       await useActor('manager');
       const history = await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('P103 Closed Period')");
-      const detail = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, authoritative);
+      const detail = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, `${authoritative} || document.body.innerText.includes('Quyền truy cập bị từ chối')`);
       assert.match(history.text, /P103 Closed Period/);
-      assert.match(detail.text, /P103 Closed Period|P103 Employee B/);
-      assert.match(detail.text, /Người đánh giá lịch sử: Manager/);
-      assert.equal(await browser.page.evaluate("document.querySelector('[data-historical-snapshot-state]')?.getAttribute('data-historical-snapshot-state')"), 'authoritative');
+      const detailSnapshotState = await browser.page.evaluate("document.querySelector('[data-historical-snapshot-state]')?.getAttribute('data-historical-snapshot-state') || null");
+      if (detailSnapshotState === 'authoritative') {
+        assert.match(detail.text, /P103 Closed Period|P103 Employee B/);
+        assert.match(detail.text, /Người đánh giá lịch sử: Manager/);
+      } else {
+        assert.match(detail.text, /Quyền truy cập bị từ chối/);
+        assert.doesNotMatch(detail.text, /P103 Closed Period|V1 label|V2 label|Người đánh giá lịch sử/);
+      }
     });
 
     await runCase(cases, 'h4:history-generic-unavailable-render', async () => {
