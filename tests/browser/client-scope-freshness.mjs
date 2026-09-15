@@ -36,7 +36,7 @@ async function waitFor(predicate, timeout = 30_000) {
   throw lastError || new Error('browser assertion timed out');
 }
 
-class CdpPage {
+export class CdpPage {
   constructor(socket) {
     this.socket = socket;
     this.nextId = 1;
@@ -97,7 +97,7 @@ class CdpPage {
   }
 }
 
-async function openChrome() {
+export async function openChrome() {
   const portProbe = spawnSync(process.execPath, ['-e', "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})"], { encoding: 'utf8' });
   assert.equal(portProbe.status, 0);
   const debugPort = Number(String(portProbe.stdout).trim());
@@ -144,14 +144,14 @@ async function openChrome() {
   }
 }
 
-async function navigate(page, url, readyExpression = null) {
+export async function navigate(page, url, readyExpression = null) {
   await page.command('Page.navigate', { url });
   await waitFor(async () => (await page.evaluate("document.readyState === 'complete'")) === true);
   if (readyExpression) await waitFor(async () => (await page.evaluate(readyExpression)) === true);
   return page.evaluate("({ href: location.href, text: document.body.innerText, html: document.documentElement.outerHTML })");
 }
 
-async function setSessionCookie(page, baseUrl, token) {
+export async function setSessionCookie(page, baseUrl, token) {
   await page.command('Network.setCookie', {
     name: 'auth_session',
     value: token,

@@ -13,6 +13,8 @@ import {
   verifyCandidateSha,
 } from '../operations/p103-required-cases.mjs';
 import { validateRuntimeEnvironment } from '../support/confirmation-runtime.mjs';
+import { psql, sqlLiteral } from '../support/confirmation-fixtures.mjs';
+import { run as runRealRequiredCases } from './real-required-cases.mjs';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(moduleDir, '../..');
@@ -61,23 +63,29 @@ function assertNoSourceSubstitution(result) {
   assert.ok(!/mock|synthetic|source-contract|blocked|skipped/i.test(JSON.stringify(result)), 'browser result contains a forbidden substitution marker');
 }
 
-async function runExistingActualBrowserHelper() {
-  // release-matrix is the existing production-Next/CDP helper. It is invoked
-  // only as a runtime capability/readiness proof; its cases are not relabelled
-  // as H4/H7/cache cases. Missing integrated cases remain a hard failure.
-  const loaded = await import(pathToFileURL(path.join(projectRoot, 'tests/browser/release-matrix.mjs')).href);
-  assert.equal(typeof loaded.run, 'function', 'existing browser helper has no run() export');
-  const result = await loaded.run({ rootDir: projectRoot, suite: 'confirmation-matrix' });
-  assertNoSourceSubstitution(result);
-  return result;
-}
-
 function verifyCaseEvidence(caseReports) {
-  const ids = caseReports.map((item) => item.id);
+  const ids = caseReports.map((item) => typeof item === 'string' ? item : item.id);
   assert.equal(new Set(ids).size, ids.length, 'browser matrix contains duplicate case evidence');
   assert.ok(ids.every((id) => BROWSER_REQUIRED_CASES.includes(id)), 'browser evidence contains an unknown case');
   for (const required of BROWSER_REQUIRED_CASES) assert.ok(ids.includes(required), `browser case was not executed: ${required}`);
   return caseReports;
+}
+
+function verifyBrowserCleanup(target) {
+  const residue = psql(target, `
+    SELECT (
+      (SELECT count(*) FROM public.users WHERE employee_code LIKE 'P103-%') +
+      (SELECT count(*) FROM public.teams WHERE name LIKE 'P103 %') +
+      (SELECT count(*) FROM public.evaluation_periods WHERE name LIKE 'P103 %') +
+      (SELECT count(*) FROM public.evaluations WHERE id::text IN (
+        SELECT id::text FROM public.evaluations WHERE period_id IN (
+          SELECT id FROM public.evaluation_periods WHERE name LIKE 'P103 %'
+        )
+      ))
+    )::text;
+  `);
+  assert.equal(residue, '0', `browser cleanup residue=${residue}`);
+  return { residue: 0 };
 }
 
 export async function run(context = {}) {
@@ -88,13 +96,10 @@ export async function run(context = {}) {
     candidate = identity();
     const env = validateRuntimeEnvironment(process.env);
     assert.ok(env.supabaseUrl, 'PostgREST loopback URL is required');
-    const helper = await runExistingActualBrowserHelper();
-    // Never count a readiness/helper case as an H1-H7 case. This explicit
-    // assertion preserves UNKNOWN rather than converting isolated green output
-    // into a combined-browser PASS.
-    verifyCaseEvidence(helper.cases
-      .filter((id) => BROWSER_REQUIRED_CASES.includes(id))
-      .map((id) => ({ id, status: 'PASS', evidence: 'existing-actual-next-cdp-helper' })));
+    const helper = await runRealRequiredCases();
+    assertNoSourceSubstitution(helper);
+    verifyCaseEvidence(helper.cases);
+    const cleanup = verifyBrowserCleanup(env.dbTarget);
     const evidence = {
       format: 'kurabe-p103m4t01-confirmation-browser/v1',
       taskId: 'P103M4T01',
@@ -103,10 +108,10 @@ export async function run(context = {}) {
       authenticated: true,
       status: 'QUALIFIED',
       requiredCases: [...BROWSER_REQUIRED_CASES],
-      cases: [],
+      cases: helper.cases,
       candidate,
-      runtime: { stack: 'owned-loopback-disposable', restUrl: '[REDACTED_URL]', helper: 'tests/browser/release-matrix.mjs' },
-      cleanup: { ownedDisposableRuntimeOnly: true, residue: 0, productionWrites: 0, productionMigrations: 0 },
+      runtime: helper.browserRuntime,
+      cleanup: { ownedDisposableRuntimeOnly: true, ...cleanup, productionWrites: 0, productionMigrations: 0 },
     };
     const written = writeEvidence(evidencePath, evidence);
     return {
@@ -116,7 +121,7 @@ export async function run(context = {}) {
       nativeTier: NATIVE_TIER,
       authenticated: true,
       status: 'QUALIFIED',
-      cases: [...BROWSER_REQUIRED_CASES],
+      cases: helper.cases,
       authenticatedCases: BROWSER_REQUIRED_CASES.length,
       requiredCases: [...BROWSER_REQUIRED_CASES],
       candidateSha: candidate.candidateSha,

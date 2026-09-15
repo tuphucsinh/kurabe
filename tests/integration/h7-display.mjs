@@ -199,7 +199,7 @@ function createActionClient(origin, source, actorAlias, password) {
   };
 }
 
-function seedSnapshotRows(target) {
+export function seedSnapshotRows(target) {
   const groupV1 = crypto.randomUUID();
   const groupV2 = crypto.randomUUID();
   const criterionV1 = crypto.randomUUID();
@@ -245,7 +245,7 @@ function seedSnapshotRows(target) {
   return { groupV1, groupV2, criterionV1, criterionV2, levelV1, levelV2 };
 }
 
-function cleanupSnapshotRows(target, ids) {
+export function cleanupSnapshotRows(target, ids) {
   psql(target, `
     BEGIN;
     DELETE FROM public.criterion_audience_versions WHERE version_id IN (${sqlLiteral(FIXTURE_CRITERIA_V1_ID)}, ${sqlLiteral(FIXTURE_CRITERIA_V2_ID)});
@@ -268,7 +268,7 @@ function cleanupSnapshotRows(target, ids) {
   return { exactResidueZero: true, residue, supplementalIds: ids };
 }
 
-function cleanupH7Fixtures(target) {
+export function cleanupH7Fixtures(target) {
   const allActorIds = Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.id)).join(', ');
   const allActorCodes = Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.employeeCode)).join(', ');
   const allTeamIds = Object.values(FIXTURE_TEAMS).map((team) => sqlLiteral(team.id)).join(', ');
@@ -346,6 +346,7 @@ async function runAuthenticated(env, rootDir) {
   let snapshotIds = null;
   const origin = env.KURABE_H7_NEXT_URL.replace(/\/$/, '');
   const source = path.resolve(env.KURABE_H7_RUNTIME_SOURCE);
+  const preserveForBrowser = process.env.KURABE_PRESERVE_H7_BROWSER_FIXTURES === '1';
   const manager = createActionClient(origin, source, 'manager', env.KURABE_FIXTURE_PASSWORD);
   const leaderC = createActionClient(origin, source, 'leader_c', env.KURABE_FIXTURE_PASSWORD);
   let cleanupResult;
@@ -375,10 +376,14 @@ async function runAuthenticated(env, rootDir) {
     const denied = await leaderC.action('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
     assert.equal(denied, null);
 
-    cleanupH7Fixtures(target);
-    cleanupResult = cleanupSnapshotRows(target, snapshotIds);
-    const finalResidue = psqlJson(target, `SELECT row_to_json(residue)::text FROM (SELECT count(*)::int AS count FROM public.evaluation_rounds WHERE evaluation_id IN (${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)}, ${sqlLiteral(FIXTURE_CLOSED_EVAL_ID)})) residue;`);
-    assert.equal(finalResidue.count, 0);
+    if (preserveForBrowser) {
+      cleanupResult = { exactResidueZero: false, preservedForBrowser: true, supplementalIds: snapshotIds };
+    } else {
+      cleanupH7Fixtures(target);
+      cleanupResult = cleanupSnapshotRows(target, snapshotIds);
+      const finalResidue = psqlJson(target, `SELECT row_to_json(residue)::text FROM (SELECT count(*)::int AS count FROM public.evaluation_rounds WHERE evaluation_id IN (${sqlLiteral(FIXTURE_ACTIVE_EVAL_ID)}, ${sqlLiteral(FIXTURE_CLOSED_EVAL_ID)})) residue;`);
+      assert.equal(finalResidue.count, 0);
+    }
     return {
       real: true,
       passed: true,
@@ -401,9 +406,11 @@ async function runAuthenticated(env, rootDir) {
     };
   } finally {
     // Cleanup is idempotent and remains bounded to deterministic fixture IDs.
-    try { cleanupH7Fixtures(target); } catch { /* preserve primary failure */ }
-    if (snapshotIds) {
-      try { cleanupSnapshotRows(target, snapshotIds); } catch { /* preserve primary failure */ }
+    if (!preserveForBrowser) {
+      try { cleanupH7Fixtures(target); } catch { /* preserve primary failure */ }
+      if (snapshotIds) {
+        try { cleanupSnapshotRows(target, snapshotIds); } catch { /* preserve primary failure */ }
+      }
     }
   }
 }
