@@ -213,7 +213,11 @@ export async function run() {
       `);
       assert.equal(db.user_id, expected.id, `${currentActorAlias} session user mismatch`);
       assert.equal(db.employee_code, expected.employeeCode, `${currentActorAlias} session actor mismatch`);
-      assert.equal(db.role, expected.role, `${currentActorAlias} session role mismatch`);
+      // H7 deliberately changes Employee B's current role to Worker after
+      // historical rounds are submitted; identity/session binding remains the
+      // invariant while the display DTO must preserve the historical role.
+      if (currentActorAlias !== 'employee_b') assert.equal(db.role, expected.role, `${currentActorAlias} session role mismatch`);
+      else assert.ok(['Employee', 'Worker'].includes(db.role), 'employee_b current role is outside the individual-role contract');
       assert.equal(db.is_active, true, `${currentActorAlias} actor is inactive`);
       assert.ok(new Date(db.expires_at).getTime() > Date.now(), `${currentActorAlias} session expired`);
       assert.equal(db.user_credential_revision, db.session_credential_revision, `${currentActorAlias} credential revision mismatch`);
