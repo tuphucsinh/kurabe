@@ -165,6 +165,65 @@ COMMIT;`,
   });
 }
 
+function runFreshH5Harness(env) {
+  const harnessRoot = '/home/pi5/hermes-artifacts/kurabe-p103-h5-auth';
+  const harness = path.join(harnessRoot, 'matrix-h5.mjs');
+  const fixtures = path.join(harnessRoot, 'fixtures.mjs');
+  const seed = path.join(harnessRoot, 'seed-eval.mjs');
+  const evidence = path.join(harnessRoot, 'h5-authenticated-qualification.json');
+  for (const filePath of [harness, fixtures, seed]) assert.ok(fs.existsSync(filePath), `H5 harness file is missing: ${filePath}`);
+  fs.rmSync(evidence, { force: true });
+  fs.rmSync(path.join(harnessRoot, 'private-cookies.json'), { force: true });
+  fs.rmSync(path.join(harnessRoot, 'action-evidence.jsonl'), { force: true });
+  const nextUrl = new URL(env.KURABE_H5_NEXT_URL);
+  const privateRuntimePath = path.join(harnessRoot, 'private-runtime.json');
+  fs.writeFileSync(privateRuntimePath, `${JSON.stringify({
+    root: harnessRoot,
+    name: env.KURABE_SUPABASE_STACK_NAME,
+    db: env.KURABE_DB_NAME,
+    nextPort: Number(nextUrl.port),
+    source: env.KURABE_H5_RUNTIME_SOURCE,
+    fixturePassword: env.KURABE_FIXTURE_PASSWORD,
+    password: env.KURABE_DB_PASSWORD,
+    sha: env.KURABE_CONFIRMATION_CANDIDATE_SHA,
+  }, null, 2)}\n`, { mode: 0o600 });
+  const psqlTarget = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  const runPsql = (input) => execFileSync('psql', psqlTarget, {
+    input,
+    encoding: 'utf8',
+    env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+  });
+  try {
+    runPsql("UPDATE public.evaluation_periods SET status='draft' WHERE status='active';");
+    execFileSync(process.execPath, [fixtures], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execFileSync(process.execPath, [seed], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execFileSync(process.execPath, [harness], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const result = JSON.parse(fs.readFileSync(evidence, 'utf8'));
+    assert.equal(result.real, true, 'H5 harness evidence must be real');
+    assert.equal(result.authenticated, true, 'H5 harness evidence must be authenticated');
+    assert.equal(result.tier, AUTHENTICATED_TIER, 'H5 harness evidence tier mismatch');
+    assert.equal(result.status, 'QUALIFIED', 'H5 harness evidence must be qualified');
+    assert.equal(result.candidateSha, env.KURABE_CONFIRMATION_CANDIDATE_SHA, 'H5 harness candidate SHA mismatch');
+    assert.equal(result.sourceSha, env.KURABE_CONFIRMATION_CANDIDATE_SHA, 'H5 harness source SHA mismatch');
+    assert.deepEqual([...result.requiredCases].sort(), [...INTEGRATION_REQUIRED_CASES.filter((name) => name.startsWith('h5:'))].sort(), 'H5 harness case manifest mismatch');
+    return result;
+  } finally {
+    try {
+      runPsql(`BEGIN;
+DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004'));
+DELETE FROM public.evaluation_rounds WHERE evaluation_id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004');
+DELETE FROM public.evaluations WHERE id IN ('30000000-0000-0000-0000-000000000002','30000000-0000-0000-0000-000000000004');
+DELETE FROM public.evaluation_periods WHERE id='30000000-0000-0000-0000-000000000001';
+DELETE FROM public.sessions WHERE user_id IN ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000002','10000000-0000-0000-0000-000000000003','10000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000005','10000000-0000-0000-0000-000000000006','10000000-0000-0000-0000-000000000007','20000000-0000-0000-0000-000000000008');
+DELETE FROM public.login_attempts WHERE employee_code LIKE 'CF%';
+DELETE FROM public.users WHERE id LIKE '10000000-0000-0000-0000-%' OR id='20000000-0000-0000-0000-000000000008';
+DELETE FROM public.teams WHERE id LIKE '20000000-0000-0000-0000-%';
+UPDATE public.evaluation_periods SET status='active' WHERE id='30000000-0000-4000-8000-000000000001';
+COMMIT;`);
+    } catch { /* preserve the primary H5 failure; final runtime cleanup remains authoritative */ }
+  }
+}
+
 async function runDelegate(delegate, env, options) {
   const loaded = await import(pathToFileURL(path.join(moduleDir, delegate.path)).href);
   assert.equal(typeof loaded.run, 'function', `${delegate.name} delegate has no run() contract`);
@@ -180,6 +239,8 @@ async function runDelegate(delegate, env, options) {
     process.env[key] = delegateEnv[key];
   }
   try {
+    let freshH5Evidence = null;
+    if (delegate.name === 'h5') freshH5Evidence = runFreshH5Harness(delegateEnv);
     if (delegate.name === 'h1h2') {
       execFileSync('psql', target, {
         input: `UPDATE public.users SET is_active=FALSE WHERE employee_code='P103-MGR';`,
@@ -191,11 +252,26 @@ async function runDelegate(delegate, env, options) {
       delete process.env.KURABE_H7_PREBOOTSTRAPPED;
       delete process.env.KURABE_H7_BOOTSTRAP_RESULT;
     }
+    if (freshH5Evidence && delegateEvidence) {
+      writeEvidence(delegateEvidence, {
+        ...freshH5Evidence,
+        baseSha: BASE_SHA,
+        sourceSha: delegateEnv.KURABE_CONFIRMATION_CANDIDATE_SHA,
+        evidencePath: delegateEvidence,
+      });
+    }
     const result = await loaded.run({
       rootDir: projectRoot,
       suite: `confirmation-matrix-${delegate.name}`,
       options: { ...options, evidence: delegateEvidence },
     });
+    if (freshH5Evidence) {
+      result.cases = [...freshH5Evidence.cases];
+      result.authenticatedCases = freshH5Evidence.authenticatedCases;
+      result.candidateSha = freshH5Evidence.candidateSha;
+      result.baseSha = BASE_SHA;
+      result.target = 'fresh-loopback-next-login-server-action-db';
+    }
     assert.equal(result.real, true, `${delegate.name} did not execute a real runtime`);
     assert.equal(result.passed, true, `${delegate.name} did not pass`);
     assert.equal(result.authenticated, true, `${delegate.name} did not identify authenticated execution`);
