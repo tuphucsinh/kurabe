@@ -413,11 +413,17 @@ async function runDelegate(delegate, env, options) {
 function collectDelegateCases(results) {
   const caseReports = [];
   for (const { delegate, result } of results) {
+    const delegateCaseIds = new Set();
     const cases = delegate.name === 'h3' && Array.isArray(result.reports)
       ? result.reports.map((report) => report.name)
       : (Array.isArray(result.cases) ? result.cases.filter((item) => typeof item === 'string') : []);
     for (const name of cases) {
-      if (INTEGRATION_REQUIRED_CASES.includes(name)) caseReports.push({ id: name, delegate: delegate.name, status: 'PASS', evidence: 'delegate-real-next-action-db' });
+      // H7 returns source-contract names together with runtime names; the
+      // overlap is one executed case, not duplicate authenticated evidence.
+      if (INTEGRATION_REQUIRED_CASES.includes(name) && !delegateCaseIds.has(name)) {
+        delegateCaseIds.add(name);
+        caseReports.push({ id: name, delegate: delegate.name, status: 'PASS', evidence: 'delegate-real-next-action-db' });
+      }
     }
   }
   const ids = caseReports.map((item) => item.id);
