@@ -93,11 +93,12 @@ function decodeFlight(text) {
 }
 
 function actionWorker(name, item) {
-  if (name === 'loginAction') return item.workers.find((worker) => worker === 'app/login/page');
-  return item.workers.find((worker) => worker.includes('evaluations/[id]'))
-    ?? item.workers.find((worker) => worker.includes('settings/page'))
-    ?? item.workers.find((worker) => worker !== 'app/login/page')
-    ?? item.workers[0];
+  const workers = Array.isArray(item.workers) ? item.workers : Object.keys(item.workers ?? {});
+  if (name === 'loginAction') return workers.find((worker) => worker === 'app/login/page');
+  return workers.find((worker) => worker.includes('evaluations/[id]'))
+    ?? workers.find((worker) => worker.includes('settings/page'))
+    ?? workers.find((worker) => worker !== 'app/login/page')
+    ?? workers[0];
 }
 
 function loadManifest(source) {
