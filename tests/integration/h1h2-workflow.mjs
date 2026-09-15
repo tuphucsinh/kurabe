@@ -599,12 +599,15 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:employee-flow-subleader-to-leader-to-manager');
     evaluationIds.push(newId(3));
     await runFlow(runtime, newId(3), ACTORS.workerB.id, 'Worker', TEAMS.B, ACTORS.subB.id, 'SubLeader', cases);
+    discardEvaluation(runtime, newId(3));
     cases.push('h1h2:worker-flow-subleader-to-leader-to-manager');
     evaluationIds.push(newId(4));
     await runFlow(runtime, newId(4), ACTORS.subB.id, 'SubLeader', TEAMS.B, ACTORS.subB.id, 'SubLeader', cases);
+    discardEvaluation(runtime, newId(4));
     cases.push('h1h2:subleader-flow-self-to-leader-to-manager');
     evaluationIds.push(newId(5));
     await runFlow(runtime, newId(5), ACTORS.leaderA.id, 'Leader', TEAMS.A, ACTORS.leaderA.id, 'Leader', cases);
+    discardEvaluation(runtime, newId(5));
     cases.push('h1h2:leader-flow-self-to-manager');
     evaluationIds.push(newId(6));
     await runFlow(runtime, newId(6), ACTORS.manager.id, 'Manager', TEAMS.A, ACTORS.manager.id, 'Manager', cases);
