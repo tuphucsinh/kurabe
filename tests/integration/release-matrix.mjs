@@ -112,6 +112,123 @@ function migrationManifest() {
 
 export function buildManifest() { return migrationManifest(); }
 
+export const P103_BASE_SHA = 'e9e753bbd6369e168dbc02362941fa3a381ecf5c';
+export const P103_TASK_ID = 'P103M4T03';
+export const P103_MIGRATION_001 = '20260914000100_evaluation_current_authorization.sql';
+export const P103_MIGRATION_002 = '20260914000200_evaluation_workflow_multiteam.sql';
+
+function resolveP103CandidateSha() {
+  const explicit = process.env.KURABE_P103_CANDIDATE_SHA;
+  const result = explicit
+    ? { status: 0, stdout: explicit, stderr: '' }
+    : spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`cannot resolve P103 candidate SHA: ${result.stderr || result.error?.message || result.status}`);
+  const candidateSha = String(result.stdout || '').trim();
+  assert.match(candidateSha, /^[a-f0-9]{40}$/i, 'P103 candidate SHA must be a full Git SHA');
+  const ancestry = spawnSync('git', ['merge-base', '--is-ancestor', P103_BASE_SHA, candidateSha], { cwd: root });
+  assert.equal(ancestry.status, 0, `P103 candidate must descend from BASE_SHA ${P103_BASE_SHA}`);
+  return candidateSha;
+}
+
+function applicationTreeSha256(candidateSha) {
+  const result = spawnSync('git', ['ls-tree', '-r', candidateSha, '--', 'package.json', 'next.config.ts', 'src'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) throw new Error(`cannot resolve P103 application tree: ${result.stderr || result.error?.message || result.status}`);
+  return sha256(String(result.stdout || ''));
+}
+
+export function buildP103ReleaseSet() {
+  const candidateSha = resolveP103CandidateSha();
+  const m1Rel = path.join('supabase/migrations', P103_MIGRATION_001);
+  const m2Rel = path.join('supabase/migrations', P103_MIGRATION_002);
+  const m1Buffer = readBuffer(m1Rel);
+  const m2Buffer = readBuffer(m2Rel);
+  const pkgBuffer = readBuffer('package.json');
+  const nextConfigBuffer = readBuffer('next.config.ts');
+
+  return {
+    releaseId: 'P103',
+    taskId: P103_TASK_ID,
+    baseSha: P103_BASE_SHA,
+    candidateSha,
+    inseparable: true,
+    application: {
+      identityScope: 'package.json,next.config.ts,src/**',
+      candidateSha,
+      sourceTreeSha256: applicationTreeSha256(candidateSha),
+      packageJsonSha256: sha256(pkgBuffer),
+      nextConfigSha256: sha256(nextConfigBuffer),
+    },
+    migrations: [
+      {
+        id: '001',
+        filename: P103_MIGRATION_001,
+        forwardPath: m1Rel,
+        sha256: sha256(m1Buffer),
+        targetFunctions: [
+          'public.return_evaluation_round_transaction(uuid, integer, uuid, text)',
+          'public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid)',
+        ],
+        provenance: {
+          returnFunction: 'kurabe:p103m1t03:candidate:v1:function:return_evaluation_round_transaction',
+          saveFunction: 'kurabe:p103m1t03:candidate:v1:function:save_evaluation_round_transaction_active_only',
+        },
+        acl: {
+          revocations: [
+            'REVOKE ALL ON FUNCTION public.return_evaluation_round_transaction(uuid, integer, uuid, text) FROM PUBLIC, anon, authenticated',
+            'REVOKE ALL ON FUNCTION public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid) FROM PUBLIC, anon, authenticated',
+            'REVOKE EXECUTE ON FUNCTION public.save_evaluation_round_transaction(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean) FROM PUBLIC, service_role',
+          ],
+          grants: [
+            'GRANT EXECUTE ON FUNCTION public.return_evaluation_round_transaction(uuid, integer, uuid, text) TO service_role',
+            'GRANT EXECUTE ON FUNCTION public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid) TO service_role',
+          ],
+        },
+        rollbackStrategy: {
+          hasDownMigrationSql: false,
+          mechanism: 'function-capture-restore-or-containment',
+          rationale: 'Downgrading SQL restores vulnerable revoked-authority bypass (H5 vulnerability); security downgrade is not a safe rollback. Use containment / forward-fix.',
+        },
+      },
+      {
+        id: '002',
+        filename: P103_MIGRATION_002,
+        forwardPath: m2Rel,
+        sha256: sha256(m2Buffer),
+        targetFunctions: [
+          'public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid)',
+        ],
+        provenance: {
+          saveFunction: 'kurabe:p103m2t01:candidate:v1:function:save_evaluation_round_transaction_active_only',
+        },
+        acl: {
+          revocations: [
+            'REVOKE ALL ON FUNCTION public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid) FROM PUBLIC, anon, authenticated',
+          ],
+          grants: [
+            'GRANT EXECUTE ON FUNCTION public.save_evaluation_round_transaction_active_only(uuid, integer, uuid, jsonb, jsonb, text, numeric, text, boolean, timestamptz, integer, uuid, text, text, boolean, uuid, uuid) TO service_role',
+          ],
+        },
+        rollbackStrategy: {
+          hasDownMigrationSql: false,
+          mechanism: 'local-diagnostic-downgrade-only',
+          rationale: 'Downgrading to 001 snapshot allowed for local diagnostic isolation only; production downgrade resurrects H1/H2 multi-team workflow misalignment.',
+        },
+      },
+    ],
+    productionCatalog: {
+      status: 'UNKNOWN',
+      driftDetected: 'UNKNOWN',
+      blocking: true,
+      reason: 'Production catalog is unavailable in local environment. Cannot be assumed compatible without live readback.',
+    },
+    deployAuthorized: false,
+    securityDowngradeSafe: false,
+  };
+}
+
 function verifyPrivilegeOrder(manifest) {
   let pairedMigrationCount = 0;
   for (const entry of manifest) {
@@ -311,6 +428,17 @@ export async function run() {
     const found = evidenceCandidates.some((relative) => fs.existsSync(path.join(root, relative)));
     assert.equal(found, false, 'unexpected historical evidence path requires primary review before use');
   });
+  check('P103 matched release set is inseparable and deterministic', () => {
+    const p103Set = buildP103ReleaseSet();
+    assert.equal(p103Set.inseparable, true);
+    assert.equal(p103Set.baseSha, P103_BASE_SHA);
+    assert.equal(p103Set.migrations.length, 2);
+    assert.match(p103Set.migrations[0].sha256, /^[a-f0-9]{64}$/);
+    assert.match(p103Set.migrations[1].sha256, /^[a-f0-9]{64}$/);
+    assert.equal(p103Set.productionCatalog.status, 'UNKNOWN');
+    assert.equal(p103Set.productionCatalog.blocking, true);
+    assert.equal(p103Set.securityDowngradeSafe, false);
+  });
 
   const runtime = {
     status: process.env.KURABE_RELEASE_DB_ENABLED === '1' ? 'REQUESTED' : 'NOT_RUN',
@@ -343,6 +471,7 @@ export async function run() {
     } : null,
     roles,
     manifest,
+    p103ReleaseSet: buildP103ReleaseSet(),
     cases: runtime.status === 'EXECUTED' ? [...cases, ...runtime.cases] : cases,
     target: 'repository-production-boundaries-plus-disposable-runtime-gate',
   };
