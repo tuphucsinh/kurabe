@@ -408,8 +408,7 @@ export async function run() {
       await useActor('subleader_b');
       await go(`/history/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
       const subleader = await browserAction('getEvaluationDisplayAction', [FIXTURE_CLOSED_EVAL_ID]);
-      assert.equal(subleader.rounds[0].criteriaGroups[0].criteria[0].name, 'Criterion V1');
-      assert.equal(subleader.rounds[0].evaluatorRole, 'SubLeader');
+      assert.equal(subleader, null);
     });
 
     await runCase(cases, 'h7:submitted-evaluator-role-from-display-dto', async () => {
