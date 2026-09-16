@@ -263,7 +263,7 @@ task:
 - **Independent review/integration:** fresh bounded retry reviewer `PASS` at `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T02/final-review-v3.log`; candidate fast-forwarded into canonical `main`; canonical candidate ancestor verified; no M4T01 finding reopened.
 - **Cleanup:** disposable containers/networks/processes/ports and temporary fixture/runtime residue `0`; H5 executable source is candidate-owned under `tests/fixtures/release/app-auth/h5`, generated state stayed under bounded external artifact root.
 
-### [ ] [#P103M4T03] Matched release package and disposable rollback rehearsal
+### [x] [#P103M4T03] Matched release package and disposable rollback rehearsal
 
 ```yaml
 task:
@@ -282,6 +282,9 @@ task:
 - **Evidence:** exact source/tree/migration/ACL/function/evidence hashes, compatibility and rehearsal outputs, rollback limitations, no-write production query template, pending approvals and remote CI status. No private data dump in package.
 - **DB/security impact:** fixture migration/rollback only; production apply/backup/deploy/write-pause require new explicit approval.
 - **Rollback/risk:** new DB + old app can reintroduce H4 client/server read leak even if H5 SQL stays; don't treat old app as safe universal fallback. After real user writes, no wholesale DB restore or snapshot rewrite.
+- **Execution result:** PASS on exact frozen candidate `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3`, tree `2dbe885643beab1ee0443980c2654cb3b8f30a6c`, base `e9e753bbd6369e168dbc02362941fa3a381ecf5c`; preflight `15/15`, release verifier PASS, tests `59/59`, lint `0 errors` (existing warnings retained), typecheck/build/diff-check/source-secret scan PASS; authoritative evidence `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T03/p103-final-exact-sha.json.authoritative.json` SHA-256 `bc6d4428105c0ce3dd34514e711ce6a1589b6546b09dd69886d2ef93707210af`; production writes/migrations `0/0`, production catalog `UNKNOWN`, cleanup residue `0`.
+- **Independent review/integration:** fresh strict read-only reviewer PASS with self-contained review root/package; review stream `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T03/agy-review-selfcontained-9f07ce3.stream.json` SHA-256 `8570aa21e18e65e4adaa36054dbbfbdb962d8fcfd0e17c9cc7bd90bb05a5f6d4`, `REVIEW_VERDICT=PASS`, `BLOCKING_FINDINGS=NONE`; canonical `main` fast-forwarded from the exact base to the frozen candidate; post-integration gates `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T03/post-integration-gates-9f07ce3.log` SHA-256 `2f480661ab44749dd46b8b86abb186501cab3da9ae1218c4d4aac4f947a3f228`.
+- **Scope preserved:** only `new-app-p103 × db-after-002` is release-eligible; no production writes/migrations, deploy, production catalog claim, release architecture, or unrelated hardening was added.
 
 ### [ ] [#P103M4T04] Fresh independent cross-feature review and release gate
 
