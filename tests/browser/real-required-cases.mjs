@@ -316,6 +316,15 @@ export async function run() {
           if (typeof value === 'string') {
             const ref = value.match(/^\$(?:@)?([0-9a-f]+)$/);
             if (ref && chunks.has(ref[1])) return decode(chunks.get(ref[1]), depth + 1);
+            const pathRef = value.match(/^\$([0-9a-f]+)(?::(.+))?$/);
+            if (pathRef && chunks.has(pathRef[1])) {
+              let resolved = decode(chunks.get(pathRef[1]), depth + 1);
+              for (const segment of (pathRef[2] || '').split(':').filter(Boolean)) {
+                if (resolved === null || resolved === undefined) return undefined;
+                resolved = resolved[segment];
+              }
+              return resolved;
+            }
             if (value === '$undefined') return undefined;
             return value;
           }
