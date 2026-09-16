@@ -3,7 +3,7 @@
 ## Planning authority and entry gate
 
 - `PLAN_REVISION=P103-r1`; source `ab4d6a798946ff26c565d17095685a1571688db9`; canonical `main` at `/home/pi5/projects/kurabe`.
-- **P103M1T01, P103M1T02, P103M1T03, P103M2T01, P103M2T02, P103M2T03 and P103M4T02 are completed; 8 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
+- **All 13 P103 execution tasks are completed; no P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
 - `.ai/MASTER_PLAN.md` sections 1–7 are mandatory context for each task. Rules A–D settle authorization, multi-team selection, workflow/status and snapshots; a worker must not pick a different policy.
 - `Independent: yes` means no new P103 prerequisite; `no` means dependencies required. `Parallel-safe: yes` is a descriptive opportunity only after dependencies integrate and ownership/locks/live state allow it; it is not a scheduler bypass or runtime schema field.
 - `READY_TO_EXECUTE=YES`: owner authorized bounded P103 execution; production write, deploy, credential change, and migration remain unauthorized unless separately approved.
@@ -286,7 +286,7 @@ task:
 - **Independent review/integration:** fresh strict read-only reviewer PASS with self-contained review root/package; review stream `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T03/agy-review-selfcontained-9f07ce3.stream.json` SHA-256 `8570aa21e18e65e4adaa36054dbbfbdb962d8fcfd0e17c9cc7bd90bb05a5f6d4`, `REVIEW_VERDICT=PASS`, `BLOCKING_FINDINGS=NONE`; canonical `main` fast-forwarded from the exact base to the frozen candidate; post-integration gates `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T03/post-integration-gates-9f07ce3.log` SHA-256 `2f480661ab44749dd46b8b86abb186501cab3da9ae1218c4d4aac4f947a3f228`.
 - **Scope preserved:** only `new-app-p103 × db-after-002` is release-eligible; no production writes/migrations, deploy, production catalog claim, release architecture, or unrelated hardening was added.
 
-### [ ] [#P103M4T04] Fresh independent cross-feature review and release gate
+### [x] [#P103M4T04] Fresh independent cross-feature review and release gate
 
 ```yaml
 task:
@@ -304,7 +304,9 @@ task:
 - **Mandatory tests / verification:** Mika V0 + `npm run build` and `node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated --evidence "$EVIDENCE/final-exact-candidate.json"` before review; reviewer independently verifies risk-selected raw evidence, checksums and boundaries without tracked edits. Changed candidate/base/evidence => fresh gates/review, not reuse PASS.
 - **Evidence:** fresh session/process identity, exact reviewed SHA/fingerprint, verdict/findings, verified manifest/required case set, explicit `IMPLEMENTATION_READY` vs `PRODUCTION_APPROVED` vs `REMOTE_CI` statuses.
 - **DB/security impact:** none; read-only review, no production mutation. No debug fixture exception becomes production capability.
-- **Rollback/risk:** REJECT routes bounded rework to owning task; no self-approval or review on a moving candidate. This task remains pending at planning like every other task.
+- **Rollback/risk:** REJECT routes bounded rework to owning task; no self-approval or review on a moving candidate. After PASS and control-plane verification, this task is closed without deploying.
+- **Execution result:** PASS through one fresh `TOOL_FREE_PACKET_IN_PROMPT_REVIEW` process. The immutable 9-file packet manifest SHA-256 is `4b209e8f333a9154845a35f05299ac65aaf2f9f13931797845749d5fbadf7374`; deterministic review payload SHA-256 is `a62f36817f37eceaa89d01c5948fffc1f5e61eee903ae31db65f804d4195fd0c`; ordered source files are recorded in `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T04/tool-free-review-r2/review-payload-record.json`. Fresh `agy-cli` process returned `PROCESS_RC=0`, `VERDICT=PASS`, with `toolUse=NONE`, `filesystemAccess=NONE`, `repositoryMutation=NONE`, `runtimeMutation=NONE`, and `qualificationRerun=false`. Frozen candidate/tree/base, matrix `54/54`, authenticated evidence, H1/H2/H3/H5/H6/H7 qualification, production `0/0`, and cleanup residue `0` remained unchanged.
+- **Control-plane closure:** canonical `main` was updated by control commit after independent PASS; final canonical Git status is clean and no P103 runtime remains. Production approval, live catalog readback, deployment, and remote CI remain separate gates and were not performed.
 
 ## Required test matrix / acceptance coverage
 

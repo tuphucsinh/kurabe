@@ -1,6 +1,6 @@
 # HANDOFF — Kurabe P103 execution
 
-- State: `P103M4T01/P103M4T02/P103M4T03=DONE`; `P103M4T04` is the next DAG task.
+- State: `P103M1T01..P103M4T04=DONE`; the P103 execution DAG is closed.
 - M4T03 frozen candidate `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3`, tree `2dbe885643beab1ee0443980c2654cb3b8f30a6c`, base `e9e753bbd6369e168dbc02362941fa3a381ecf5c`.
 - Canonical `main` fast-forwarded from the exact base to the frozen candidate; no product/test/release logic changed after freeze.
 - Fresh self-contained strict review: `PASS`, `BLOCKING_FINDINGS=NONE`; review artifact is hashed in `tasks.md`.
@@ -8,5 +8,6 @@
 - Production writes/migrations: `0/0`; production catalog remains `UNKNOWN`; no deploy or production mutation.
 - Release eligibility remains only `new-app-p103 × db-after-002`; no release architecture or unrelated hardening added.
 - Cleanup: M4T03 disposable residue `0`; M4T03 runner/integration worktrees removed; canonical worktree clean.
+- P103M4T04 received a fresh `TOOL_FREE_PACKET_IN_PROMPT_REVIEW` PASS from an independent `agy-cli` process using the deterministic 9-file payload; packet manifest and payload hashes are recorded under `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T04/tool-free-review-r2/`.
 - Control-plane closure is recorded in the tracked task ledger and this handoff; runtime `.state` readback records the exact closure SHA.
-- Next action: await the separately scoped `P103M4T04` review/release gate; do not reopen M4T03.
+- Next action: keep production approval, live catalog/env readback, deployment, and remote CI as explicit separate gates; do not reopen the frozen candidate or qualification evidence.
