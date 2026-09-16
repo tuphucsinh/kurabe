@@ -1,11 +1,10 @@
 # HANDOFF — Kurabe P103 execution
 
-- State: `P103M3T01/P103M3T02/P103M3T03=DONE`; canonical `main` is `8e80485a0f9678813361900421b2b128b46395df` (code candidate `ea04a894bd4fee8214fa9a395fc5a279255fd596`).
-- H7 qualification: fresh disposable PostgreSQL/PostgREST/Next authenticated runtime, `12/12` PASS; production writes/migrations `0/0`; cleanup residue `0`.
-- H7 gates: test `57/57`, lint (0 errors; 28 existing warnings), typecheck, source-secret scan, diff-check and isolated build PASS on canonical.
-- Permission diagnosis: production `service_role` had SELECT on six snapshot/version tables; disposable bootstrap lacked grants; harness-only least-privilege SELECT repair applied, no product migration change.
-- Fresh direct `agy-readonly` review: PASS; log `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/direct-review-v2.log`.
-- Retained operational history: earlier writer/reviewer transport timeouts remain evidence only; no unresolved H7 product blocker.
-- M3T02/M3T03: exact-SHA disposable server qualification PASS, fresh independent reviews PASS; browser-specific evidence remains UNKNOWN and is owned by M4T01 actual-Next matrix.
-- Next action: execute `P103M4T01` combined H1–H7 authenticated production-Next matrix; preserve first browser failure and do not downgrade UNKNOWN.
-- Production mutation/deploy: none.
+- State: `P103M3T01/P103M3T02/P103M3T03/P103M4T01=DONE`; canonical task SHA `117215934afaaca9553815db462d2e5fb8da68e8`, tree `e5f35ef3bd5fc12378fe25ff49409beaad076be5`.
+- M4T01 gates: focused `4/4`, full tests `58/58`, authenticated integration `54/54`, H5/H6/H7 `QUALIFIED`, real browser `15/15`, lint/typecheck/diff-check/build PASS.
+- Build used explicit disposable Supabase environment; production writes/migrations `0/0`; no production mutation/deploy.
+- Fresh reviewer session `20260916_110418_7d7597` PASS; canonical checker PASS; recovered review package is retained under `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-review-1172159-r2-recovered`.
+- Cleanup readback: containers/networks/processes/ports and temporary fixture/runtime residue `0`; credential-bearing runtime metadata removed.
+- Client classification remains `NO_CLIENT_BUG_REPRODUCED`; root cause remains harness route/fixture lifecycle, with no reopened authorization logic.
+- Historical Next launcher `exit 1` after `NEXT_READY` is retained as operational process-lifecycle evidence only.
+- Next action: execute `P103M4T02` CI fail-closed enforcement for confirmation evidence.

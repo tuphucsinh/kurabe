@@ -217,7 +217,7 @@ task:
 - **Rollback/risk:** async cancellation and network errors; fail-closed UI rather than reusing revoked cache. Do not invalidate every user globally or add polling infrastructure.
 - **Execution result:** PASS on canonical exact candidate `ea04a894bd4fee8214fa9a395fc5a279255fd596`; fresh disposable H7 authenticated server qualification `QUALIFIED`, V0/full build PASS, independent review PASS. Browser-specific cache-confirmation evidence remains UNKNOWN and is covered by M4T01 actual-Next matrix; no production writes/migrations.
 
-### [ ] [#P103M4T01] Full integration and actual production-Next E2E matrix
+### [x] [#P103M4T01] Full integration and actual production-Next E2E matrix
 
 ```yaml
 task:
@@ -236,6 +236,9 @@ task:
 - **Evidence:** exact built source/candidate SHA, migration hashes/ledger/ACL, required case ID set, action+DB/browser linkage, closed snapshot digests, old+new suite outputs, full console/readiness and teardown proof.
 - **DB/security impact:** disposable changes only, current auth and historical immutability cross-feature checks.
 - **Rollback/risk:** no production writes; first failure retained even if targeted suites green. Combined failure returns to owning implementation task through Mika, not stealth patch in verifier task.
+- **Execution result:** PASS on exact candidate `117215934afaaca9553815db462d2e5fb8da68e8`; focused Manager regression `4/4`, full tests `58/58`, authenticated integration `54/54`, H5/H6/H7 `QUALIFIED`, real browser `15/15`, explicit disposable-environment build PASS, lint/typecheck/diff-check PASS, production writes/migrations `0/0`.
+- **Independent review/integration:** fresh reviewer session `20260916_110418_7d7597` PASS; canonical `main` fast-forwarded to the exact candidate/tree, then control closure recorded separately. Review gate: `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-review-1172159-r2-recovered`.
+- **Cleanup:** disposable containers, owned networks/processes/ports and temporary fixture/runtime residue `0`; credential-bearing runtime metadata removed after evidence capture. Historical Next launcher `exit 1` after `NEXT_READY` remains operational lifecycle evidence only.
 
 ### [ ] [#P103M4T02] CI fail-closed enforcement for confirmation evidence
 
