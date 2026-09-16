@@ -377,7 +377,7 @@ export async function run() {
 
     await runCase(cases, 'h4:history-generic-unavailable-render', async () => {
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.length > 0");
+      const result = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
       assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
       assert.doesNotMatch(result.text, /P103 Closed Period/);
     });
@@ -430,14 +430,14 @@ export async function run() {
 
     await runCase(cases, 'h7:error-legacy-unavailable-no-current-fallback', async () => {
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.length > 0");
+      const result = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.length > 0");
       assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
     });
 
     await runCase(cases, 'h7:draft-keeps-current-rules', async () => {
       setCurrentRules(target, true);
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.includes('V2 label')");
+      const result = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('V2 label')");
       assert.match(result.text, /V2 label/);
       assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
     });
@@ -447,7 +447,7 @@ export async function run() {
       const denied = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, "document.body.innerText.length > 0");
       assert.doesNotMatch(denied.text, /V1 label|V2 label|Người đánh giá lịch sử/);
       await useActor('manager');
-      const active = await go(`/evaluations/${FIXTURE_ACTIVE_EVAL_ID}`, "document.body.innerText.includes('V2 label')");
+      const active = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('V2 label')");
       assert.match(active.text, /V2 label/);
     });
 
