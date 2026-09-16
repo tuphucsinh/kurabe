@@ -338,6 +338,12 @@ export async function run({ rootDir = projectRoot, suite = 'p103-release-preflig
 
   // 3. Old/New App x Baseline/001/002 Compatibility Rehearsal
   let compatibilityMatrix;
+  const functionEvidence = {
+    baseline: {},
+    matchedRelease: {},
+    restoredBaseline: {},
+    reappliedRelease: {},
+  };
   check('compatibility-rehearsal-app-x-db-matrix', () => {
     compatibilityMatrix = evaluateCompatibilityMatrix();
     assert.equal(compatibilityMatrix.length, 6);
@@ -461,6 +467,7 @@ COMMIT;`);
     let baselineReturnFn = '';
     let baselineSaveComment = '';
     let baselineDataDigest = '';
+    let m1ReturnComment = '';
 
     check('disposable-baseline-seed-and-function-capture', () => {
       baselineSaveFn = runSql(container, `
@@ -487,6 +494,15 @@ COMMIT;`);
         SELECT md5(string_agg(id::text || status || current_round::text, ',' ORDER BY id))
         FROM public.evaluations;`);
       assert.ok(baselineDataDigest.length === 32, 'baseline data digest must be captured');
+      functionEvidence.baseline = {
+        save: {
+          definitionSha256: crypto.createHash('sha256').update(baselineSaveFn).digest('hex'),
+          provenance: baselineSaveComment,
+        },
+        return: {
+          definitionSha256: crypto.createHash('sha256').update(baselineReturnFn).digest('hex'),
+        },
+      };
     });
 
     // Apply migration 001
@@ -494,7 +510,7 @@ COMMIT;`);
       const m1Sql = fs.readFileSync(path.join(rootDir, releaseSet.migrations[0].forwardPath), 'utf8');
       runSql(container, m1Sql);
 
-      const m1ReturnComment = runSql(container, `
+      m1ReturnComment = runSql(container, `
         SELECT obj_description(oid, 'pg_proc')
         FROM pg_proc
         WHERE proname = 'return_evaluation_round_transaction'
@@ -520,6 +536,31 @@ COMMIT;`);
         WHERE proname = 'save_evaluation_round_transaction_active_only'
           AND pronargs = 17;`);
       assert.equal(m2SaveComment, 'kurabe:p103m2t01:candidate:v1:function:save_evaluation_round_transaction_active_only');
+      const matchedSaveFn = runSql(container, `
+        SELECT pg_get_functiondef(oid)
+        FROM pg_proc
+        WHERE proname = 'save_evaluation_round_transaction_active_only'
+          AND pronargs = 17;`);
+      const matchedReturnFn = runSql(container, `
+        SELECT pg_get_functiondef(oid)
+        FROM pg_proc
+        WHERE proname = 'return_evaluation_round_transaction'
+          AND pronargs = 4;`);
+      functionEvidence.matchedRelease = {
+        save: {
+          definitionSha256: crypto.createHash('sha256').update(matchedSaveFn).digest('hex'),
+          provenance: m2SaveComment,
+        },
+        return: {
+          definitionSha256: crypto.createHash('sha256').update(matchedReturnFn).digest('hex'),
+          provenance: m1ReturnComment,
+        },
+        acl: runSql(container, `
+          SELECT proname || '|' || pg_get_function_identity_arguments(oid) || '|' || COALESCE(array_to_string(proacl, ','), '')
+          FROM pg_proc
+          WHERE proname IN ('save_evaluation_round_transaction_active_only', 'return_evaluation_round_transaction')
+          ORDER BY proname, pg_get_function_identity_arguments(oid);`),
+      };
     });
 
     // Interrupted apply simulation & function capture/restore rehearsal
@@ -549,6 +590,12 @@ COMMIT;`);
           AND pronargs = 17;`);
       assert.equal(restoredSaveComment, baselineSaveComment, 'restored provenance must match baseline capture');
       assert.equal(restoredSaveComment.includes('p103m2t01'), false, 'restored state must not pretend to preserve P103 protections');
+      functionEvidence.restoredBaseline = {
+        save: {
+          definitionSha256: crypto.createHash('sha256').update(restoredSaveFn).digest('hex'),
+          provenance: restoredSaveComment,
+        },
+      };
     });
 
     check('rollback-containment-preserves-existing-data-unmodified', () => {
@@ -564,6 +611,20 @@ COMMIT;`);
       const m2Sql = fs.readFileSync(path.join(rootDir, releaseSet.migrations[1].forwardPath), 'utf8');
       runSql(container, m1Sql);
       runSql(container, m2Sql);
+      const reappliedSaveFn = runSql(container, `
+        SELECT pg_get_functiondef(oid)
+        FROM pg_proc
+        WHERE proname = 'save_evaluation_round_transaction_active_only'
+          AND pronargs = 17;`);
+      const reappliedReturnFn = runSql(container, `
+        SELECT pg_get_functiondef(oid)
+        FROM pg_proc
+        WHERE proname = 'return_evaluation_round_transaction'
+          AND pronargs = 4;`);
+      functionEvidence.reappliedRelease = {
+        save: { definitionSha256: crypto.createHash('sha256').update(reappliedSaveFn).digest('hex') },
+        return: { definitionSha256: crypto.createHash('sha256').update(reappliedReturnFn).digest('hex') },
+      };
     });
 
     // 5. Safe forward-fix / write-pause fallback & read-only smoke envelope
@@ -645,6 +706,32 @@ COMMIT;`;
     productionWrites,
     productionMigrations,
     target: 'loopback-disposable-postgresql',
+    richEvidence: {
+      format: 'kurabe-p103-release-evidence/v1',
+      taskId: P103_TASK_ID,
+      baseSha: releaseSet.baseSha,
+      candidateSha: releaseSet.candidateSha,
+      application: releaseSet.application,
+      migrations: releaseSet.migrations,
+      compatibilityMatrix,
+      functionEvidence,
+      rollback: {
+        mechanism: 'exact-function-capture-restore-on-disposable-target',
+        dataDigestPreserved: true,
+        securityDowngradeSafe: releaseSet.securityDowngradeSafe,
+      },
+      productionWrites,
+      productionMigrations,
+      productionCatalog: releaseSet.productionCatalog,
+      deployAuthorized: releaseSet.deployAuthorized,
+      cleanup: {
+        target: 'loopback-disposable-postgresql',
+        containerRemoved: true,
+        productionWrites,
+        productionMigrations,
+      },
+      cases,
+    },
   };
 }
 
