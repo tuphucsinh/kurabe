@@ -266,6 +266,14 @@ export function getEvaluationAccessState(
 
   // Manager Rule
   if (viewer.role === 'Manager') {
+    // Managers retain view access even before any round has a visible draft.
+    // In that state, use the current round as the read-only display target so
+    // the page can render current rules without turning an empty draft state
+    // into an authorization denial.
+    if (state.displayRound === null) {
+      state.displayRound = evaluation.currentRound;
+    }
+
     // Nếu manager là evaluator hiện tại (Round cuối hoặc round duy nhất)
     const currentStep = flow.find(s => s.round === evaluation.currentRound);
     const currentRoundData = evaluation.rounds.find(r => r.round === evaluation.currentRound);
@@ -295,10 +303,6 @@ export function getEvaluationAccessState(
       state.displayRound = evaluation.currentRound;
     }
     
-    if (!hasAnyDraft && state.mode !== 'edit') {
-      state.mode = 'blocked';
-      state.reason = 'NO_DRAFT';
-    }
     return state;
   }
 
