@@ -3,7 +3,7 @@
 ## Planning authority and entry gate
 
 - `PLAN_REVISION=P103-r1`; source `ab4d6a798946ff26c565d17095685a1571688db9`; canonical `main` at `/home/pi5/projects/kurabe`.
-- **P103M1T01, P103M1T02, P103M1T03, P103M2T01, P103M2T02 and P103M2T03 are completed; 9 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
+- **P103M1T01, P103M1T02, P103M1T03, P103M2T01, P103M2T02, P103M2T03 and P103M4T02 are completed; 8 P103 tasks remain pending.** This owner-requested WBS supersedes old “no open work” prose for P103 only. Historical IDs below remain historical, never redispatched.
 - `.ai/MASTER_PLAN.md` sections 1–7 are mandatory context for each task. Rules A–D settle authorization, multi-team selection, workflow/status and snapshots; a worker must not pick a different policy.
 - `Independent: yes` means no new P103 prerequisite; `no` means dependencies required. `Parallel-safe: yes` is a descriptive opportunity only after dependencies integrate and ownership/locks/live state allow it; it is not a scheduler bypass or runtime schema field.
 - `READY_TO_EXECUTE=YES`: owner authorized bounded P103 execution; production write, deploy, credential change, and migration remain unauthorized unless separately approved.
@@ -240,14 +240,14 @@ task:
 - **Independent review/integration:** fresh reviewer session `20260916_110418_7d7597` PASS; canonical `main` fast-forwarded to the exact candidate/tree, then control closure recorded separately. Review gate: `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-review-1172159-r2-recovered`.
 - **Cleanup:** disposable containers, owned networks/processes/ports and temporary fixture/runtime residue `0`; credential-bearing runtime metadata removed after evidence capture. Historical Next launcher `exit 1` after `NEXT_READY` remains operational lifecycle evidence only.
 
-### [ ] [#P103M4T02] CI fail-closed enforcement for confirmation evidence
+### [x] [#P103M4T02] CI fail-closed enforcement for confirmation evidence
 
 ```yaml
 task:
   id: P103M4T02
   tier: CONTROLLED
   depends: [P103M4T01]
-  owns: [scripts/verify-release.mjs, tests/verify-release-confirmation.test.ts, tests/operations/ci-suite-manifest.mjs, .github/workflows/ci.yml]
+  owns: [scripts/verify-release.mjs, tests/verify-release-confirmation.test.ts, tests/operations/ci-suite-manifest.mjs, .github/workflows/ci.yml, tests/integration/confirmation-matrix.mjs, tests/fixtures/release/app-auth/h5]
   locks: [P103M4T02_LOCAL_RUNTIME]
 ```
 - **Independent:** no. **Parallel-safe:** no (consumes actual M4T01 schema/IDs).
@@ -259,6 +259,9 @@ task:
 - **Evidence:** each poisoned payload + rejection, valid matrix acceptance, exact workflow commands/diff, unchanged classification of existing suites, real local CI-equivalent log and remote URL/SHA only if actually run.
 - **DB/security impact:** no application/migration changes; isolated CI fixtures only, no secret artifact uploads.
 - **Rollback/risk:** preserve evidence enforcement; avoid broad evidence-schema rewrite breaking unrelated suites. If remote CI not available, mark remote gate UNKNOWN/pending, no fake PASS.
+- **Execution result:** PASS on exact candidate `5f934b9f885f0e2ddd32f9ad5151e200891cee8f`; fresh authenticated matrix `54/54`, `status=QUALIFIED`, `authenticated=true`, native `real-DB`, exact M4T02 base/source binding (`base=36e431b34c1139d1ce978e8a6017f79146939e8`, 9 changed-file hashes), production writes/migrations `0/0`; V0 `npm test 59/59`, lint `0 errors`, typecheck, build with CI placeholders, diff-check and source-secret scan PASS.
+- **Independent review/integration:** fresh bounded retry reviewer `PASS` at `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T02/final-review-v3.log`; candidate fast-forwarded into canonical `main`; canonical candidate ancestor verified; no M4T01 finding reopened.
+- **Cleanup:** disposable containers/networks/processes/ports and temporary fixture/runtime residue `0`; H5 executable source is candidate-owned under `tests/fixtures/release/app-auth/h5`, generated state stayed under bounded external artifact root.
 
 ### [ ] [#P103M4T03] Matched release package and disposable rollback rehearsal
 
