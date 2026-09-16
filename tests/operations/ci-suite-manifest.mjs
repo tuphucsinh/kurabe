@@ -8,6 +8,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 export const CI_SUITE_MANIFEST = Object.freeze([
   {
+    id: 'confirmation-matrix',
+    command: 'node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated --evidence "$EVIDENCE/ci-local-matrix.json"',
+    modules: ['tests/integration/confirmation-matrix.mjs'],
+    tiers: ['real-DB', 'authenticated'],
+    roles: ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'],
+    localQualification: 'workflow-baseline',
+  },
+  {
     id: 'release-matrix',
     command: 'node scripts/verify-release.mjs --suite release-matrix',
     modules: ['tests/integration/release-matrix.mjs', 'tests/browser/release-matrix.mjs'],
@@ -92,9 +100,13 @@ function verifyManifestContract() {
 function verifyCiWorkflow() {
   const workflow = fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8');
   assert.match(workflow, /node scripts\/verify-release\.mjs --suite ci-suite-manifest/);
+  assert.match(workflow, /node scripts\/verify-release\.mjs --suite confirmation-matrix --tier authenticated/);
   for (const command of ['npm run lint', 'npm run typecheck', 'npm test', 'npm run build', 'node scripts/scan-source-secrets.mjs']) {
     assert.match(workflow, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `CI workflow is missing ${command}`);
   }
+  assert.doesNotMatch(workflow, /continue-on-error:\s*true/i, 'CI workflow must not permit continue-on-error');
+  assert.doesNotMatch(workflow, /allow-failure/i, 'CI workflow must not permit allow-failure');
+  assert.doesNotMatch(workflow, /(?:prod_password|prod_key|production_url|production_key)/i, 'CI workflow must not reference production credentials');
   return true;
 }
 
@@ -106,7 +118,13 @@ export async function run() {
     passed: true,
     tier: 'source-contract',
     status: 'EXECUTED',
-    cases: [...ids.map((id) => `manifest-entry:${id}`), 'workflow-invokes-checked-in-manifest', 'workflow-baseline-gates-present'],
+    cases: [
+      ...ids.map((id) => `manifest-entry:${id}`),
+      'workflow-invokes-checked-in-manifest',
+      'workflow-baseline-gates-present',
+      'workflow-invokes-confirmation-matrix',
+      'workflow-disallows-bypass-or-failure',
+    ],
     target: 'checked-in-CI-suite-manifest-and-existing-workflow',
   };
 }

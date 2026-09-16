@@ -53,6 +53,38 @@ jobs:
       - name: Run unit and regression tests
         run: npm test
 
+      - name: Bind disposable confirmation evidence to checked-out candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_sha="$(git rev-parse HEAD)"
+          changed_hashes="$(node - <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const files = [
+            'tests/confirmation-harness-contract.test.ts',
+            'tests/support/confirmation-fixtures.mjs',
+            'tests/support/confirmation-runtime.mjs',
+          ];
+          const hashes = Object.fromEntries(files.map((file) => [
+            file,
+            crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),
+          ]));
+          process.stdout.write(JSON.stringify(hashes));
+          NODE
+          )"
+          {
+            printf 'KURABE_LOCAL_STACK_OWNED=1\n'
+            printf 'KURABE_CONFIRMATION_CANDIDATE_SHA=%s\n' "$candidate_sha"
+            printf 'KURABE_CONFIRMATION_CHANGED_FILES_SHA256=%s\n' "$changed_hashes"
+            printf 'KURABE_CONFIRMATION_INTEGRATION_EVIDENCE=%s\n' "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Run authenticated confirmation matrix
+        run: >-
+          node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated
+          --evidence "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
+
       - name: Verify disposable loopback DB and real browser
         run: >-
           node scripts/verify-release.mjs --suite harness
