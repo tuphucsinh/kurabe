@@ -29,6 +29,21 @@ function safeError(error) {
     .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]');
 }
 
+function sanitizeEvidence(value, key = '') {
+  if (/(password|secret|token|key)/i.test(key)) return '[REDACTED]';
+  if (typeof value === 'string') {
+    return value
+      .replace(/https?:\/\/[^\s)]+/gi, '[REDACTED_URL]')
+      .replace(/(?:postgres(?:ql)?:\/\/)[^\s)]+/gi, '[REDACTED_DB_TARGET]')
+      .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]');
+  }
+  if (Array.isArray(value)) return value.map((item) => sanitizeEvidence(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, sanitizeEvidence(entryValue, entryKey)]));
+  }
+  return value;
+}
+
 function git(args) {
   return execFileSync('git', args, { cwd: projectRoot, encoding: 'utf8' }).trim();
 }
@@ -48,7 +63,7 @@ function writeEvidence(filePath, payload) {
   if (!filePath) return null;
   assert.ok(path.isAbsolute(filePath), 'matrix evidence path must be absolute');
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const sanitized = JSON.parse(safeError(JSON.stringify(payload)));
+  const sanitized = sanitizeEvidence(payload);
   const temporaryPath = `${filePath}.tmp-${process.pid}`;
   fs.writeFileSync(temporaryPath, `${JSON.stringify(sanitized, null, 2)}\n`, { mode: 0o600 });
   fs.renameSync(temporaryPath, filePath);
