@@ -292,7 +292,7 @@ export async function run() {
       const worker = actionWorker(name, item);
       assert.ok(worker, `ACTION_WORKER_NOT_FOUND ${name}`);
       const endpoint = worker.replace(/^app/, '').replace(/\/page$/, '') || '/';
-      const result = await browser.page.evaluate(async ({ endpoint: actionEndpoint, actionId, actionArgs }) => {
+      const actionExpression = `(${(async ({ endpoint: actionEndpoint, actionId, actionArgs }) => {
         const response = await fetch(`${location.origin}${actionEndpoint}`, {
           method: 'POST',
           headers: {
@@ -325,7 +325,8 @@ export async function run() {
         }
         const root = chunks.get('0');
         return { ok: response.ok, value: root && Object.hasOwn(root, 'a') ? decode(root.a) : null };
-      }, { endpoint, actionId: item.id, actionArgs: args });
+      }).toString()})(${JSON.stringify({ endpoint, actionId: item.id, actionArgs: args })})`;
+      const result = await browser.page.evaluate(actionExpression);
       assert.equal(result.ok, true, `${name} browser action HTTP failure`);
       assert.ok(result.value !== 'Invalid parameters', `${name} browser action returned invalid parameters: ${JSON.stringify(result)}`);
       await verifyAuthenticatedContext();
@@ -335,7 +336,7 @@ export async function run() {
 
     await runCase(cases, 'h4:history-denied-target-non-disclosure', async () => {
       await useActor('employee_b');
-      const result = await go(`/history/${FIXTURE_MANAGER_ID}`, "document.body.innerText.includes('Lịch sử đánh giá')");
+      const result = await go(`/history/${FIXTURE_MANAGER_ID}`, "document.body.innerText.includes('Lịch sử đánh giá') || location.pathname === '/login' || document.body.innerText.includes('Quyền truy cập')");
       assert.equal(result.context.actor.id, FIXTURE_EMPLOYEE_B_ID);
       assert.equal(result.targetMetadata.requestedPath, `/history/${FIXTURE_MANAGER_ID}`);
       assert.equal(result.targetMetadata.requestedTargetNameVisible, false);
