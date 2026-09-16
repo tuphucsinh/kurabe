@@ -156,14 +156,22 @@ function activeFixtureState(target) {
 
 function setCurrentRules(target, active) {
   if (!active) return;
-  const counts = psqlJson(target, `
+  const current = psqlJson(target, `
     SELECT json_build_object(
       'criteria', (SELECT count(*) FROM public.criteria_config_versions WHERE is_active = TRUE),
-      'grades', (SELECT count(*) FROM public.grade_band_versions WHERE is_active = TRUE)
+      'grades', (SELECT count(*) FROM public.grade_band_versions WHERE is_active = TRUE),
+      'levelLabel', (SELECT cl.label
+        FROM public.criterion_level_versions cl
+        JOIN public.criteria_config_versions cc ON cc.id = cl.version_id
+        WHERE cc.is_active = TRUE
+        ORDER BY cl.sort_order, cl.label
+        LIMIT 1)
     )::text;
   `);
-  assert.equal(counts.criteria, 1, 'browser fixture requires one existing active criteria configuration');
-  assert.equal(counts.grades, 1, 'browser fixture requires one existing active grade configuration');
+  assert.equal(current.criteria, 1, 'browser fixture requires one existing active criteria configuration');
+  assert.equal(current.grades, 1, 'browser fixture requires one existing active grade configuration');
+  assert.equal(typeof current.levelLabel, 'string', 'browser fixture requires an active current-rule label');
+  return current;
 }
 
 async function runCase(cases, id, fn) {
@@ -435,10 +443,10 @@ export async function run() {
     });
 
     await runCase(cases, 'h7:draft-keeps-current-rules', async () => {
-      setCurrentRules(target, true);
+      const currentRules = setCurrentRules(target, true);
       await useActor('manager');
-      const result = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('V2 label')");
-      assert.match(result.text, /V2 label/);
+      const result = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, `document.body.innerText.includes(${JSON.stringify(currentRules.levelLabel)})`);
+      assert.equal(result.text.includes(currentRules.levelLabel), true);
       assert.doesNotMatch(result.html, /data-historical-snapshot-state="authoritative"/);
     });
 
@@ -447,8 +455,9 @@ export async function run() {
       const denied = await go(`/evaluations/${FIXTURE_CLOSED_EVAL_ID}`, "document.body.innerText.length > 0");
       assert.doesNotMatch(denied.text, /V1 label|V2 label|Người đánh giá lịch sử/);
       await useActor('manager');
-      const active = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, "document.body.innerText.includes('V2 label')");
-      assert.match(active.text, /V2 label/);
+      const currentRules = setCurrentRules(target, true);
+      const active = await go(`/evaluations/${FIXTURE_EMPLOYEE_B_ID}`, `document.body.innerText.includes(${JSON.stringify(currentRules.levelLabel)})`);
+      assert.equal(active.text.includes(currentRules.levelLabel), true);
     });
 
     await runCase(cases, 'cache:server-authoritative-scope-in-query-identity', async () => {
