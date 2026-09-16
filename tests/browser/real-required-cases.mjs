@@ -490,6 +490,9 @@ export async function run() {
       assert.equal(anonymousCookies.cookies.some((item) => item.name === 'auth_session'), false, 'logout left authenticated cookie');
       const proof = await browser.page.evaluate(`(() => { window.__p103LogoutProofObserver?.disconnect(); return window.__p103LogoutProof; })()`);
       assert.equal(proof.oldScopeFlash, false);
+      // Logout invalidates the disposable Manager session. Re-seed only the
+      // fixture session so later cache-isolation cases start authenticated.
+      sessions.manager = createActorSession(target, 'manager');
     });
 
     await runCase(cases, 'cache:visible-scope-refresh-is-bounded', async () => {
