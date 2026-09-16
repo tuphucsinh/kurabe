@@ -531,7 +531,7 @@ export async function run() {
     assert.equal(ids.length, BROWSER_REQUIRED_CASES.length, 'browser case count mismatch');
     assert.equal(new Set(ids).size, ids.length, 'duplicate browser case evidence');
     assert.deepEqual([...ids].sort(), [...BROWSER_REQUIRED_CASES].sort(), 'browser required manifest mismatch');
-    assert.equal(psql(target, `SELECT count(*) FROM public.users WHERE id IN (${Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.id)).join(',')});`), '5');
+    assert.equal(psql(target, `SELECT count(*) FROM public.users WHERE id IN (${Object.values(FIXTURE_ACTORS).map((actor) => sqlLiteral(actor.id)).join(',')});`), String(Object.values(FIXTURE_ACTORS).length));
     return {
       real: true,
       passed: true,
