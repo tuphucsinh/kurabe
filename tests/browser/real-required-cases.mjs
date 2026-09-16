@@ -492,7 +492,15 @@ export async function run() {
       assert.equal(proof.oldScopeFlash, false);
       // Logout invalidates the disposable Manager session. Re-seed only the
       // fixture session so later cache-isolation cases start authenticated.
-      sessions.manager = createActorSession(target, 'manager');
+      const freshManagerSession = createActorSession(target, 'manager');
+      psql(target, `
+        UPDATE public.sessions AS session
+        SET credential_revision = actor.credential_revision
+        FROM public.users AS actor
+        WHERE session.token_hash = ${sqlLiteral(freshManagerSession.tokenHash)}
+          AND actor.id = session.user_id;
+      `);
+      sessions.manager = freshManagerSession;
     });
 
     await runCase(cases, 'cache:visible-scope-refresh-is-bounded', async () => {
