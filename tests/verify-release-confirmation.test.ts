@@ -436,7 +436,7 @@ async function runTests() {
             defaultOptions,
           );
         },
-        /base SHA.*expected p103 manifest BASE_SHA/,
+        /base SHA.*expected ["0-9a-f]{40}/,
       );
 
       // Changed-file SHA-256 mismatch from actual disk file
@@ -757,6 +757,19 @@ async function runTests() {
       // Discover modules for confirmation-matrix uses manifest
       const discovered = discoverSuiteModules('confirmation-matrix');
       assert.deepEqual(discovered, [path.join(rootDir, 'tests/integration/confirmation-matrix.mjs')]);
+      const matrixSource = fs.readFileSync(path.join(rootDir, 'tests/integration/confirmation-matrix.mjs'), 'utf8');
+      assert.doesNotMatch(
+        matrixSource,
+        /\/home\/pi5\/hermes-artifacts\/kurabe-p103\/P103M4T01-auth\/seed-m2-prerequisites\.mjs/,
+        'H3 prerequisite lifecycle must not depend on an artifact-local runtime state',
+      );
+      assert.match(matrixSource, /validateRuntimeEnvironment\(env\)/, 'H3 seed must use the validated disposable runtime target');
+      assert.doesNotMatch(matrixSource, /\/home\/pi5\/hermes-artifacts\/kurabe-p103-h5-auth/, 'H5 must not depend on external harness source');
+      assert.match(matrixSource, /tests\/fixtures\/release\/app-auth\/h5/, 'H5 executable harness must be candidate-owned');
+      for (const file of ['client.mjs', 'fixtures.mjs', 'seed-eval.mjs', 'matrix-h5.mjs']) {
+        assert.ok(fs.existsSync(path.join(rootDir, 'tests/fixtures/release/app-auth/h5', file)), `candidate-owned H5 harness file missing: ${file}`);
+      }
+      assert.match(matrixSource, /KURABE_H5_ARTIFACT_ROOT/, 'H5 generated output must use the bounded artifact root');
 
       // Check workflow content directly
       const workflowContent = fs.readFileSync(path.join(rootDir, '.github/workflows/ci.yml'), 'utf8');
@@ -772,6 +785,7 @@ async function runTests() {
         /(?:prod_password|prod_key|production_url|production_key)/i,
         'Workflow must not contain production credentials',
       );
+      assert.match(workflowContent, /KURABE_H5_ARTIFACT_ROOT=/, 'Workflow must bind H5 generated output outside the repository');
       console.log('✓ Group 7: CI manifest and workflow require confirmation matrix with no bypass');
     }
 

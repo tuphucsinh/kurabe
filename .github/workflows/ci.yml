@@ -78,6 +78,7 @@ jobs:
             printf 'KURABE_CONFIRMATION_CANDIDATE_SHA=%s\n' "$candidate_sha"
             printf 'KURABE_CONFIRMATION_CHANGED_FILES_SHA256=%s\n' "$changed_hashes"
             printf 'KURABE_CONFIRMATION_INTEGRATION_EVIDENCE=%s\n' "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
+            printf 'KURABE_H5_ARTIFACT_ROOT=%s\n' "$RUNNER_TEMP/kurabe-h5-auth"
           } >> "$GITHUB_ENV"
 
       - name: Run authenticated confirmation matrix

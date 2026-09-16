@@ -6,8 +6,6 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  BASE_SHA,
-  CANONICAL_ANCESTORS,
   INTEGRATION_REQUIRED_CASES,
   REQUIRED_CASES,
   verifyRequiredCaseManifest,
@@ -17,6 +15,12 @@ import {
   captureServerIdentity,
   validateRuntimeEnvironment,
 } from '../support/confirmation-runtime.mjs';
+import { psql } from '../support/confirmation-fixtures.mjs';
+import {
+  P103M4T02_BASE_SHA,
+  P103M4T02_CHANGED_FILES,
+  P103M4T02_TASK_ID,
+} from '../operations/ci-suite-manifest.mjs';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(moduleDir, '../..');
@@ -51,16 +55,16 @@ function candidateIdentity(env = process.env) {
   const candidateSha = env.KURABE_CONFIRMATION_CANDIDATE_SHA || git(['rev-parse', 'HEAD']);
   verifyCandidateSha(candidateSha, env);
   if (fs.existsSync(path.join(projectRoot, '.git'))) {
-    for (const ancestor of CANONICAL_ANCESTORS) {
+    for (const ancestor of [P103M4T02_BASE_SHA]) {
       execFileSync('git', ['merge-base', '--is-ancestor', ancestor, candidateSha], { cwd: projectRoot });
     }
   }
   return {
-    baseSha: BASE_SHA,
+    baseSha: P103M4T02_BASE_SHA,
     candidateSha,
-    canonicalAncestors: [...CANONICAL_ANCESTORS],
+    canonicalAncestors: [P103M4T02_BASE_SHA],
     changedFileSha256: Object.fromEntries(
-      ['tests/integration/confirmation-matrix.mjs', 'tests/browser/confirmation-matrix.mjs', 'tests/operations/p103-required-cases.mjs']
+      P103M4T02_CHANGED_FILES
         .map((relative) => [relative, sha256(path.join(projectRoot, relative))]),
     ),
   };
@@ -228,38 +232,114 @@ function isolateH6ManagerResolver(env) {
   };
 }
 
+function seedM2Prerequisites(env) {
+  const { dbTarget } = validateRuntimeEnvironment(env);
+  psql(dbTarget, `
+    BEGIN;
+    UPDATE public.evaluation_periods SET status='draft'
+      WHERE name='P103 Active Period' AND status='active';
+    INSERT INTO public.teams (id, name, is_active, leader_id) VALUES
+      ('20000000-0000-4000-8000-000000000001','M2 Team A',true,NULL),
+      ('20000000-0000-4000-8000-000000000002','M2 Team B',true,NULL),
+      ('20000000-0000-4000-8000-000000000003','M2 Team C',true,NULL)
+    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.users (id, employee_code, name, role, team_id, join_date, is_active, password_hash, gender) VALUES
+      ('10000000-0000-4000-8000-000000000001','M2-MANAGER','M2 Manager','Manager','20000000-0000-4000-8000-000000000001','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000002','M2-LEADER-A','M2 Leader A','Leader','20000000-0000-4000-8000-000000000001','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000003','M2-LEADER-C','M2 Leader C','Leader','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000004','M2-SUBLEADER-B','M2 SubLeader B','SubLeader','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000005','M2-EMPLOYEE-B','M2 Employee B','Employee','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000006','M2-WORKER-B','M2 Worker B','Worker','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000007','M2-SUBLEADER-C','M2 SubLeader C','SubLeader','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000008','M2-LEADER-C2','M2 Leader C2','Leader','20000000-0000-4000-8000-000000000003','2026-01-01',false,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000009','M2-EMPLOYEE-C','M2 Employee C','Employee','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nữ')
+    ON CONFLICT (id) DO NOTHING;
+    UPDATE public.users SET subleader_id='10000000-0000-4000-8000-000000000004'
+      WHERE id IN ('10000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000006');
+    UPDATE public.users SET subleader_id='10000000-0000-4000-8000-000000000007'
+      WHERE id='10000000-0000-4000-8000-000000000009';
+    UPDATE public.teams SET leader_id='10000000-0000-4000-8000-000000000002'
+      WHERE id IN ('20000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002');
+    UPDATE public.teams SET leader_id='10000000-0000-4000-8000-000000000003'
+      WHERE id='20000000-0000-4000-8000-000000000003';
+    INSERT INTO public.evaluation_periods (id, year, name, status, created_by, target_rate, target_grade) VALUES
+      ('30000000-0000-4000-8000-000000000001',2097,'M2 Active Period','active','10000000-0000-4000-8000-000000000001',75,'AB'),
+      ('30000000-0000-4000-8000-000000000002',2096,'M2 Closed Period','closed','10000000-0000-4000-8000-000000000001',75,'AB')
+    ON CONFLICT (id) DO NOTHING;
+    COMMIT;
+  `);
+}
+
 function seedH3ScopePrerequisites(env) {
-  const seedScript = '/home/pi5/hermes-artifacts/kurabe-p103/P103M4T01-auth/seed-m2-prerequisites.mjs';
-  assert.ok(fs.existsSync(seedScript), `H3 prerequisite seed is missing: ${seedScript}`);
-  execFileSync(process.execPath, [seedScript], { cwd: path.dirname(seedScript), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  const target = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
-  execFileSync('psql', target, {
-    input: `BEGIN;
-DELETE FROM public.evaluation_responses WHERE round_id IN (SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015'));
-DELETE FROM public.evaluation_rounds WHERE evaluation_id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015');
-DELETE FROM public.evaluations WHERE id IN ('40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000015');
-INSERT INTO public.evaluations (id,period_id,employee_id,employee_role,team_id,status,current_round) VALUES
- ('40000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','Leader','20000000-0000-4000-8000-000000000001','NotStarted',1),
- ('40000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000005','Employee','20000000-0000-4000-8000-000000000002','NotStarted',1),
- ('40000000-0000-4000-8000-000000000013','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000006','Worker','20000000-0000-4000-8000-000000000002','NotStarted',1),
- ('40000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000009','Employee','20000000-0000-4000-8000-000000000003','NotStarted',1),
- ('40000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','SubLeader','20000000-0000-4000-8000-000000000002','NotStarted',1);
-INSERT INTO public.evaluation_rounds (id,evaluation_id,round,evaluator_id,evaluator_role,status) VALUES
- ('50000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000011',1,'10000000-0000-4000-8000-000000000001','Manager','NotStarted'),
- ('50000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000012',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
- ('50000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000013',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
- ('50000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000014',1,'10000000-0000-4000-8000-000000000003','Leader','NotStarted');
-COMMIT;`,
-    encoding: 'utf8',
-    env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
-  });
+  const { dbTarget } = validateRuntimeEnvironment(env);
+  psql(dbTarget, `
+    BEGIN;
+    UPDATE public.evaluation_periods SET status='draft'
+      WHERE name='P103 Active Period' AND status='active';
+    INSERT INTO public.teams (id, name, is_active, leader_id) VALUES
+      ('20000000-0000-4000-8000-000000000001','M2 Team A',true,NULL),
+      ('20000000-0000-4000-8000-000000000002','M2 Team B',true,NULL),
+      ('20000000-0000-4000-8000-000000000003','M2 Team C',true,NULL)
+    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.users (id, employee_code, name, role, team_id, join_date, is_active, password_hash, gender) VALUES
+      ('10000000-0000-4000-8000-000000000001','M2-MANAGER','M2 Manager','Manager','20000000-0000-4000-8000-000000000001','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000002','M2-LEADER-A','M2 Leader A','Leader','20000000-0000-4000-8000-000000000001','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000003','M2-LEADER-C','M2 Leader C','Leader','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000004','M2-SUBLEADER-B','M2 SubLeader B','SubLeader','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000005','M2-EMPLOYEE-B','M2 Employee B','Employee','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000006','M2-WORKER-B','M2 Worker B','Worker','20000000-0000-4000-8000-000000000002','2026-01-01',true,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000007','M2-SUBLEADER-C','M2 SubLeader C','SubLeader','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nữ'),
+      ('10000000-0000-4000-8000-000000000008','M2-LEADER-C2','M2 Leader C2','Leader','20000000-0000-4000-8000-000000000003','2026-01-01',false,NULL,'Nam'),
+      ('10000000-0000-4000-8000-000000000009','M2-EMPLOYEE-C','M2 Employee C','Employee','20000000-0000-4000-8000-000000000003','2026-01-01',true,NULL,'Nữ')
+    ON CONFLICT (id) DO NOTHING;
+    UPDATE public.users SET subleader_id='10000000-0000-4000-8000-000000000004'
+      WHERE id IN ('10000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000006');
+    UPDATE public.users SET subleader_id='10000000-0000-4000-8000-000000000007'
+      WHERE id='10000000-0000-4000-8000-000000000009';
+    UPDATE public.teams SET leader_id='10000000-0000-4000-8000-000000000002'
+      WHERE id IN ('20000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002');
+    UPDATE public.teams SET leader_id='10000000-0000-4000-8000-000000000003'
+      WHERE id='20000000-0000-4000-8000-000000000003';
+    INSERT INTO public.evaluation_periods (id, year, name, status, created_by, target_rate, target_grade) VALUES
+      ('30000000-0000-4000-8000-000000000001',2097,'M2 Active Period','active','10000000-0000-4000-8000-000000000001',75,'AB'),
+      ('30000000-0000-4000-8000-000000000002',2096,'M2 Closed Period','closed','10000000-0000-4000-8000-000000000001',75,'AB')
+    ON CONFLICT (id) DO NOTHING;
+    DELETE FROM public.evaluation_responses WHERE round_id IN (
+      SELECT id FROM public.evaluation_rounds WHERE evaluation_id IN (
+        '40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012',
+        '40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014',
+        '40000000-0000-4000-8000-000000000015'));
+    DELETE FROM public.evaluation_rounds WHERE evaluation_id IN (
+      '40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012',
+      '40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014',
+      '40000000-0000-4000-8000-000000000015');
+    DELETE FROM public.evaluations WHERE id IN (
+      '40000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000012',
+      '40000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000014',
+      '40000000-0000-4000-8000-000000000015');
+    INSERT INTO public.evaluations (id,period_id,employee_id,employee_role,team_id,status,current_round) VALUES
+      ('40000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','Leader','20000000-0000-4000-8000-000000000001','NotStarted',1),
+      ('40000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000005','Employee','20000000-0000-4000-8000-000000000002','NotStarted',1),
+      ('40000000-0000-4000-8000-000000000013','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000006','Worker','20000000-0000-4000-8000-000000000002','NotStarted',1),
+      ('40000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000009','Employee','20000000-0000-4000-8000-000000000003','NotStarted',1),
+      ('40000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','SubLeader','20000000-0000-4000-8000-000000000002','NotStarted',1);
+    INSERT INTO public.evaluation_rounds (id,evaluation_id,round,evaluator_id,evaluator_role,status) VALUES
+      ('50000000-0000-4000-8000-000000000011','40000000-0000-4000-8000-000000000011',1,'10000000-0000-4000-8000-000000000001','Manager','NotStarted'),
+      ('50000000-0000-4000-8000-000000000012','40000000-0000-4000-8000-000000000012',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
+      ('50000000-0000-4000-8000-000000000013','40000000-0000-4000-8000-000000000013',1,'10000000-0000-4000-8000-000000000004','SubLeader','NotStarted'),
+      ('50000000-0000-4000-8000-000000000014','40000000-0000-4000-8000-000000000014',1,'10000000-0000-4000-8000-000000000003','Leader','NotStarted');
+    COMMIT;
+  `);
 }
 
 function runFreshH5Harness(env) {
-  const harnessRoot = '/home/pi5/hermes-artifacts/kurabe-p103-h5-auth';
-  const harness = path.join(harnessRoot, 'matrix-h5.mjs');
-  const fixtures = path.join(harnessRoot, 'fixtures.mjs');
-  const seed = path.join(harnessRoot, 'seed-eval.mjs');
+  const harnessRoot = env.KURABE_H5_ARTIFACT_ROOT;
+  assert.ok(harnessRoot && path.isAbsolute(harnessRoot), 'KURABE_H5_ARTIFACT_ROOT must be an absolute disposable artifact path');
+  const harnessSource = path.join(projectRoot, 'tests/fixtures/release/app-auth/h5');
+  const harness = path.join(harnessSource, 'matrix-h5.mjs');
+  const fixtures = path.join(harnessSource, 'fixtures.mjs');
+  const seed = path.join(harnessSource, 'seed-eval.mjs');
+  fs.mkdirSync(harnessRoot, { recursive: true });
   const evidence = path.join(harnessRoot, 'h5-authenticated-qualification.json');
   for (const filePath of [harness, fixtures, seed]) assert.ok(fs.existsSync(filePath), `H5 harness file is missing: ${filePath}`);
   fs.rmSync(evidence, { force: true });
@@ -278,16 +358,17 @@ function runFreshH5Harness(env) {
     sha: env.KURABE_CONFIRMATION_CANDIDATE_SHA,
   }, null, 2)}\n`, { mode: 0o600 });
   const psqlTarget = ['-X', '-h', env.KURABE_DB_HOST, '-p', String(env.KURABE_DB_PORT), '-U', env.KURABE_DB_USER, '-d', env.KURABE_DB_NAME, '-v', 'ON_ERROR_STOP=1'];
+  const childEnv = { ...process.env, KURABE_H5_ARTIFACT_ROOT: harnessRoot };
   const runPsql = (input) => execFileSync('psql', psqlTarget, {
     input,
     encoding: 'utf8',
-    env: { ...process.env, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
+    env: { ...childEnv, PGPASSWORD: env.KURABE_DB_PASSWORD, PGPASSFILE: '/dev/null' },
   });
   try {
     runPsql("UPDATE public.evaluation_periods SET status='draft' WHERE status='active';");
-    execFileSync(process.execPath, [fixtures], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    execFileSync(process.execPath, [seed], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    execFileSync(process.execPath, [harness], { cwd: harnessRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execFileSync(process.execPath, [fixtures], { cwd: harnessRoot, env: childEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execFileSync(process.execPath, [seed], { cwd: harnessRoot, env: childEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    execFileSync(process.execPath, [harness], { cwd: harnessRoot, env: childEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     const result = JSON.parse(fs.readFileSync(evidence, 'utf8'));
     assert.equal(result.real, true, 'H5 harness evidence must be real');
     assert.equal(result.authenticated, true, 'H5 harness evidence must be authenticated');
@@ -348,7 +429,7 @@ async function runDelegate(delegate, env, options) {
     if (freshH5Evidence && delegateEvidence) {
       writeEvidence(delegateEvidence, {
         ...freshH5Evidence,
-        baseSha: BASE_SHA,
+        baseSha: P103M4T02_BASE_SHA,
         sourceSha: delegateEnv.KURABE_CONFIRMATION_CANDIDATE_SHA,
         evidencePath: delegateEvidence,
       });
@@ -379,7 +460,7 @@ async function runDelegate(delegate, env, options) {
       result.cases = [...freshH5Evidence.cases];
       result.authenticatedCases = freshH5Evidence.authenticatedCases;
       result.candidateSha = freshH5Evidence.candidateSha;
-      result.baseSha = BASE_SHA;
+      result.baseSha = P103M4T02_BASE_SHA;
       result.target = 'fresh-loopback-next-login-server-action-db';
       // h5-revoke.run() returns the authenticated evidence contract, whose
       // qualification state is represented by status rather than passed.
@@ -453,13 +534,14 @@ export async function run(context = {}) {
     identity = candidateIdentity(process.env);
     provenance = migrationProvenance();
     runtime = runtimeEnvironment(process.env);
+    seedM2Prerequisites(process.env);
     const results = [];
     for (const delegate of delegates) results.push({ delegate, result: await runDelegate(delegate, process.env, context.options || {}) });
     const caseReports = collectDelegateCases(results);
     const evidence = {
-      format: 'kurabe-p103m4t01-confirmation-integration/v1',
-      taskId: 'P103M4T01',
-      requiredCaseManifest: manifest,
+      format: 'kurabe-p103m4t02-confirmation-integration/v1',
+      taskId: P103M4T02_TASK_ID,
+      requiredCaseManifest: { ...manifest, taskId: P103M4T02_TASK_ID, baseSha: P103M4T02_BASE_SHA },
       tier: NATIVE_TIER,
       authenticated: true,
       status: 'QUALIFIED',
@@ -485,6 +567,7 @@ export async function run(context = {}) {
       requiredCases: [...INTEGRATION_REQUIRED_CASES],
       candidateSha: identity.candidateSha,
       baseSha: identity.baseSha,
+      taskId: P103M4T02_TASK_ID,
       evidencePath: written,
       productionWrites: 0,
       productionMigrations: 0,
@@ -492,15 +575,15 @@ export async function run(context = {}) {
     };
   } catch (error) {
     const failure = {
-      format: 'kurabe-p103m4t01-confirmation-integration/v1',
-      taskId: 'P103M4T01',
+      format: 'kurabe-p103m4t02-confirmation-integration/v1',
+      taskId: P103M4T02_TASK_ID,
       tier: NATIVE_TIER,
       authenticated: false,
       status: error?.code === 'MISSING_RUNTIME_CAPABILITY' ? 'BLOCKED_CAPABILITY' : 'UNKNOWN',
       requiredCases: [...INTEGRATION_REQUIRED_CASES],
       cases: [],
       firstFailure: safeError(error),
-      candidate: identity || { baseSha: BASE_SHA, candidateSha: process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || 'UNKNOWN' },
+      candidate: identity || { baseSha: P103M4T02_BASE_SHA, candidateSha: process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || 'UNKNOWN' },
       migrations: provenance || null,
       cleanup: { ownedDisposableRuntimeOnly: true, residue: 'UNKNOWN', productionWrites: 0, productionMigrations: 0 },
     };

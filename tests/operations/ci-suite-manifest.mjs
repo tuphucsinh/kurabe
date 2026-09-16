@@ -6,6 +6,20 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+export const P103M4T02_TASK_ID = 'P103M4T02';
+export const P103M4T02_BASE_SHA = '36e431b34c1139d1ce978e8a6017f79146939e32';
+export const P103M4T02_CHANGED_FILES = Object.freeze([
+  '.github/workflows/ci.yml',
+  'scripts/verify-release.mjs',
+  'tests/fixtures/release/app-auth/h5/client.mjs',
+  'tests/fixtures/release/app-auth/h5/fixtures.mjs',
+  'tests/fixtures/release/app-auth/h5/matrix-h5.mjs',
+  'tests/fixtures/release/app-auth/h5/seed-eval.mjs',
+  'tests/integration/confirmation-matrix.mjs',
+  'tests/operations/ci-suite-manifest.mjs',
+  'tests/verify-release-confirmation.test.ts',
+]);
+
 export const CI_SUITE_MANIFEST = Object.freeze([
   {
     id: 'confirmation-matrix',

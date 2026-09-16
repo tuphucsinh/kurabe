@@ -5,7 +5,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { INTEGRATION_REQUIRED_CASES, BASE_SHA as P103_BASE_SHA } from '../tests/operations/p103-required-cases.mjs';
-import { CI_SUITE_MANIFEST } from '../tests/operations/ci-suite-manifest.mjs';
+import {
+  CI_SUITE_MANIFEST,
+  P103M4T02_BASE_SHA,
+  P103M4T02_CHANGED_FILES,
+  P103M4T02_TASK_ID,
+} from '../tests/operations/ci-suite-manifest.mjs';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(moduleDir, '..');
@@ -163,6 +168,14 @@ export function verifyChangedFileHashes(changedFiles, modulePath, rootDir = proj
   }
 }
 
+function verifyExactM4T02ChangedFiles(changedFiles, modulePath) {
+  const expected = [...P103M4T02_CHANGED_FILES].sort();
+  const actual = Object.keys(changedFiles || {}).sort();
+  if (actual.length !== expected.length || actual.some((file, index) => file !== expected[index])) {
+    usageError(`${modulePath} M4T02 changedFileSha256 paths do not match the exact candidate scope`);
+  }
+}
+
 function verifyExactCaseManifest(actualCases, expectedCases, modulePath, label) {
   if (!Array.isArray(actualCases) || actualCases.length === 0) {
     usageError(`${modulePath} ${label} is missing or empty`);
@@ -246,12 +259,18 @@ export function verifyConfirmationEvidence(evidencePath, result, modulePath, opt
   if (!evCandidateSha || evCandidateSha !== candidateSha) {
     usageError(`${modulePath} evidence candidate SHA mismatch: expected ${candidateSha}, received ${evCandidateSha}`);
   }
+  const isM4T02 = result.taskId === P103M4T02_TASK_ID;
+  const expectedBaseSha = isM4T02 ? P103M4T02_BASE_SHA : P103_BASE_SHA;
   const evBaseSha = rich.candidate?.baseSha || rich.baseSha;
-  if (!evBaseSha || evBaseSha !== P103_BASE_SHA) {
-    usageError(`${modulePath} evidence base SHA mismatch: expected ${P103_BASE_SHA}, received ${evBaseSha}`);
+  if (!evBaseSha || evBaseSha !== expectedBaseSha) {
+    usageError(`${modulePath} evidence base SHA mismatch: expected ${expectedBaseSha}, received ${evBaseSha}`);
+  }
+  if (isM4T02 && rich.taskId !== P103M4T02_TASK_ID) {
+    usageError(`${modulePath} evidence task ID mismatch: expected ${P103M4T02_TASK_ID}, received ${rich.taskId}`);
   }
 
   const evChangedFiles = rich.candidate?.changedFileSha256 || rich.changedFileSha256;
+  if (isM4T02) verifyExactM4T02ChangedFiles(evChangedFiles, `${modulePath} (evidence)`);
   verifyChangedFileHashes(evChangedFiles, `${modulePath} (evidence)`, options.rootDir || projectRoot);
 
   verifyExactCaseManifest(rich.requiredCases, INTEGRATION_REQUIRED_CASES, modulePath, 'evidence requiredCases');
@@ -372,13 +391,19 @@ export function validateConfirmationMatrix(result, modulePath, options = {}) {
     usageError(`${modulePath} candidate SHA cannot be verified: neither current Git HEAD nor env KURABE_CONFIRMATION_CANDIDATE_SHA is available`);
   }
 
+  const isM4T02 = result.taskId === P103M4T02_TASK_ID;
+  const expectedBaseSha = isM4T02 ? P103M4T02_BASE_SHA : P103_BASE_SHA;
   const baseSha = result.baseSha || result.candidate?.baseSha;
-  if (!baseSha || baseSha !== P103_BASE_SHA) {
-    usageError(`${modulePath} reported base SHA ${JSON.stringify(baseSha)}, expected p103 manifest BASE_SHA "${P103_BASE_SHA}"`);
+  if (!baseSha || baseSha !== expectedBaseSha) {
+    usageError(`${modulePath} reported base SHA ${JSON.stringify(baseSha)}, expected "${expectedBaseSha}"`);
+  }
+  if (isM4T02 && result.taskId !== P103M4T02_TASK_ID) {
+    usageError(`${modulePath} reported task ID ${JSON.stringify(result.taskId)}, expected ${P103M4T02_TASK_ID}`);
   }
 
   const changedFiles = result.changedFileSha256 || result.candidate?.changedFileSha256;
   if (changedFiles) {
+    if (isM4T02) verifyExactM4T02ChangedFiles(changedFiles, modulePath);
     verifyChangedFileHashes(changedFiles, modulePath, options.rootDir || projectRoot);
   }
 
