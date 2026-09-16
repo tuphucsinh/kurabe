@@ -8,6 +8,6 @@
 - Production writes/migrations: `0/0`; production catalog remains `UNKNOWN`; no deploy or production mutation.
 - Release eligibility remains only `new-app-p103 × db-after-002`; no release architecture or unrelated hardening added.
 - Cleanup: M4T03 disposable residue `0`; M4T03 runner/integration worktrees removed; canonical worktree clean.
-- P103M4T04 received a fresh `TOOL_FREE_PACKET_IN_PROMPT_REVIEW` PASS from an independent `agy-cli` process using the deterministic 9-file payload; packet manifest and payload hashes are recorded under `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T04/tool-free-review-r2/`.
+- P103M4T04 final disposition: `INDEPENDENT_REVIEW=WAIVED_BY_OWNER` by explicit owner instruction; prior tool-free PASS/interrupt evidence remains historical only, with packet manifest and payload hashes under `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T04/tool-free-review-r2/`.
 - Control-plane closure is recorded in the tracked task ledger and this handoff; runtime `.state` readback records the exact closure SHA.
 - Next action: keep production approval, live catalog/env readback, deployment, and remote CI as explicit separate gates; do not reopen the frozen candidate or qualification evidence.
