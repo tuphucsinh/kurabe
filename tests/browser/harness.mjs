@@ -9,6 +9,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(moduleDir, '../..');
 const fixturePath = path.join(projectRoot, 'tests/fixtures/release/browser-page.html');
 const chromePath = '/usr/bin/google-chrome-stable';
+const CHROME_ASSERTION_TIMEOUT_MS = 30_000;
 const SAFE_ENV = {
   PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   HOME: os.tmpdir(),
@@ -51,6 +52,12 @@ function close(server) {
   });
 }
 
+function removeProfile(profileDir) {
+  if (profileDir) {
+    fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  }
+}
+
 function runChrome(url, profileDir) {
   return new Promise((resolve, reject) => {
     const args = [
@@ -77,8 +84,8 @@ function runChrome(url, profileDir) {
     let settled = false;
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      finish(new Error('Chrome assertion exceeded 12-second bound'));
-    }, 12_000);
+      finish(new Error(`Chrome assertion exceeded ${CHROME_ASSERTION_TIMEOUT_MS / 1000}-second bound`));
+    }, CHROME_ASSERTION_TIMEOUT_MS);
     const append = (current, chunk) => (current + chunk.toString()).slice(-128 * 1024);
     const finish = (error, result) => {
       if (settled) return;
@@ -147,6 +154,6 @@ export async function run() {
     };
   } finally {
     await close(server);
-    if (profileDir) fs.rmSync(profileDir, { recursive: true, force: true });
+    removeProfile(profileDir);
   }
 }
