@@ -6,7 +6,7 @@
 - Canonical before normalization: `/home/pi5/projects/kurabe`, `main`, `f8b60677ab3944721e864ea7ad92ef8908bc024b`.
 - P103 execution DAG: **13/13 DONE**. Detailed task contracts and full evidence remain recoverable from Git history and `/home/pi5/hermes-artifacts/kurabe-p103/`; this file contains the compact status only.
 - State readback: `active_task=null`, `active_reservations={}`, `blocking_alerts=[]`, `task_state=DONE`.
-- Current production release: Vercel deployment `dpl_8BJ3yxnZ4RatRWsGxyGGcVBgDkby`, `READY`, exact application SHA `f0eab9d67bac367a96f3ae3e3daa541c97ea92f9`, bound to `https://lykiv.vercel.app`. Previous release was `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; no database migration or manual production data write was run.
+- Current production release and alias binding are verified in `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/final-provenance.json`, including exact canonical SHA, READY deployment ID, and `https://lykiv.vercel.app`. Previous release was `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; no database migration or manual production data write was run.
 
 ## Closed P103 execution record
 

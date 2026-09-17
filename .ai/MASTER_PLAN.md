@@ -7,7 +7,7 @@
 - P103 execution DAG is closed: **13/13 tasks DONE**. The final control closure is `f8b6067`; application/release candidate was frozen at `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3` and no product logic changed in the later control commits.
 - `.state/agent-state.json` readback: `active_task=null`, `active_reservations={}`, `task_state=DONE`, `blocking_alerts=[]`, `cleanup_residue=0`.
 - Worktree normalization: only the canonical worktree is intentionally retained. Former P103 worktrees were closed or superseded; the candidate branch refs remain only as historical provenance.
-- Current production deployment: Vercel deployment `dpl_8BJ3yxnZ4RatRWsGxyGGcVBgDkby`, `READY`, target `production`, is bound to `https://lykiv.vercel.app` and the exact pushed canonical application SHA `f0eab9d67bac367a96f3ae3e3daa541c97ea92f9`. Previous recorded deployment was source SHA `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; readback is under `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/`.
+- Current production deployment and alias binding are verified in `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/final-provenance.json`; the evidence records the exact latest canonical SHA, READY deployment ID, target, and `https://lykiv.vercel.app` binding. Previous recorded deployment was source SHA `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
 - This sweep changes control/documentation state only. It does not implement F01–F08, add tasks, alter schema/data, or change application behavior.
 
 ## Closed P103 provenance
@@ -47,7 +47,7 @@ Primary P103 evidence root: `/home/pi5/hermes-artifacts/kurabe-p103/`. Detailed 
 
 1. Reconcile worktrees and these ledgers against canonical Git and existing evidence.
 2. Commit only cleanup/control-plane documentation.
-3. Push `main`, read back the remote SHA, then deploy the exact pushed canonical application through the existing Vercel procedure without migration/data writes. **Completed:** remote and deployed SHA `f0eab9d`.
+3. Push `main`, read back the remote SHA, then deploy the exact pushed canonical application through the existing Vercel procedure without migration/data writes. **Completed;** immutable readback is in `kurabe-normalization-deploy/final-provenance.json`.
 4. Read back deployment, health, service, migration/write, and residue evidence.
 
 Deployment closure is complete. F01–F08 remain untouched; any future fix work requires a separate explicit request.
