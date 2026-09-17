@@ -11,19 +11,6 @@ jobs:
   ci:
     name: Lint, Typecheck, Test & Build
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: kurabe_harness
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d kurabe_harness"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
 
     steps:
       - name: Checkout repository
@@ -60,15 +47,11 @@ jobs:
         run: |
           set -euo pipefail
           candidate_sha="$(git rev-parse HEAD)"
-          changed_hashes="$(node - <<'NODE'
-          const crypto = require('node:crypto');
-          const fs = require('node:fs');
-          const files = [
-            'tests/confirmation-harness-contract.test.ts',
-            'tests/support/confirmation-fixtures.mjs',
-            'tests/support/confirmation-runtime.mjs',
-          ];
-          const hashes = Object.fromEntries(files.map((file) => [
+          changed_hashes="$(node --input-type=module - <<'NODE'
+          import crypto from 'node:crypto';
+          import fs from 'node:fs';
+          import { P103M4T02_CHANGED_FILES } from './tests/operations/ci-suite-manifest.mjs';
+          const hashes = Object.fromEntries(P103M4T02_CHANGED_FILES.map((file) => [
             file,
             crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),
           ]));
@@ -76,23 +59,40 @@ jobs:
           NODE
           )"
           {
-            printf 'KURABE_LOCAL_STACK_OWNED=1\n'
             printf 'KURABE_CONFIRMATION_CANDIDATE_SHA=%s\n' "$candidate_sha"
             printf 'KURABE_CONFIRMATION_CHANGED_FILES_SHA256=%s\n' "$changed_hashes"
             printf 'KURABE_CONFIRMATION_INTEGRATION_EVIDENCE=%s\n' "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
             printf 'KURABE_H5_ARTIFACT_ROOT=%s\n' "$RUNNER_TEMP/kurabe-h5-auth"
           } >> "$GITHUB_ENV"
 
+      - name: Provision real disposable confirmation runtime
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node .github/ci/confirmation-runtime.mjs start
+          node .github/ci/confirmation-runtime.mjs bootstrap
+          node .github/ci/confirmation-runtime.mjs export-env
+
       - name: Run authenticated confirmation matrix
-        run: >-
-          node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated
-          --evidence "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated \
+            --evidence "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
 
       - name: Verify disposable loopback DB and real browser
-        run: >-
-          node scripts/verify-release.mjs --suite harness
-          --db-host 127.0.0.1 --db-port 5432
-          --db-name kurabe_harness --db-user postgres
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs --suite harness \
+            --db-host "$KURABE_DB_HOST" --db-port "$KURABE_DB_PORT" \
+            --db-name "$KURABE_DB_NAME" --db-user "$KURABE_DB_USER"
 
       - name: Scan source for secrets
         run: node scripts/scan-source-secrets.mjs
@@ -104,3 +104,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-anon-key-placeholder
           SUPABASE_SERVICE_ROLE_KEY: synthetic-service-role-key-placeholder
+
+      - name: Cleanup disposable confirmation runtime
+        if: always()
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node .github/ci/confirmation-runtime.mjs cleanup

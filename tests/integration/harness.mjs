@@ -120,9 +120,11 @@ export async function run({ options = {} } = {}) {
            current_setting('is_superuser') || '|' || current_user;
   `);
   const [database, address, serverPort, isSuperuser, currentUser] = identity.split('|');
+  const serverAddressIsLoopback = ['127.0.0.1', '::1'].includes(address);
+  const serverAddressIsDockerBridge = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(address);
   if (
     database !== target.database ||
-    !['127.0.0.1', '::1'].includes(address) ||
+    (!serverAddressIsLoopback && !(serverAddressIsDockerBridge && /^kurabe_harness(?:_[a-z0-9_]+)?$/.test(target.database))) ||
     serverPort !== String(target.port) ||
     currentUser !== target.user ||
     !['on', 'off'].includes(isSuperuser)
