@@ -1,53 +1,80 @@
-# Kurabe — current state and closed execution record
+# Kurabe — current plan and closed execution record
 
 ## Current control state
 
-- `PLAN_STATUS=EXECUTED_CLOSED`; no new development phase is open.
-- Canonical repository: `/home/pi5/projects/kurabe`; branch `main`; current canonical SHA before this normalization is `f8b60677ab3944721e864ea7ad92ef8908bc024b`.
-- P103 execution DAG is closed: **13/13 tasks DONE**. The final control closure is `f8b6067`; application/release candidate was frozen at `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3` and no product logic changed in the later control commits.
-- `.state/agent-state.json` readback: `active_task=null`, `active_reservations={}`, `task_state=DONE`, `blocking_alerts=[]`, `cleanup_residue=0`.
-- Worktree normalization: only the canonical worktree is intentionally retained. Former P103 worktrees were closed or superseded; the candidate branch refs remain only as historical provenance.
-- Current production deployment and alias binding are verified in `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/final-provenance.json`; the evidence records the exact latest canonical SHA, READY deployment ID, target, and `https://lykiv.vercel.app` binding. Previous recorded deployment was source SHA `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
-- This sweep changes control/documentation state only. It does not implement F01–F08, add tasks, alter schema/data, or change application behavior.
+- `PLAN_STATUS=ACTIVE_BOUNDED_REMEDIATION`
+- Canonical repository: `/home/pi5/projects/kurabe`
+- Branch: `main`
+- Baseline for this phase: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- P103 remains closed: **13/13 DONE**.
+- CI repair task `t_7c812262` is closed at the baseline above; remote CI is green.
+- F06 is closed and must not be reopened by this phase.
+- Remaining confirmed MEDIUM findings: **F01–F05 + F07–F09**.
+- F09 is confirmed as a current-read authorization bug after secondary-team Leader revocation; it is not a write bypass.
+- Production deployment, production catalog reconciliation, and production DB mutation are outside this phase.
+
+## P104 — bounded audit remediation
+
+### Goal
+
+Fix the remaining eight confirmed MEDIUM findings without changing the approved five-role evaluation workflow, scoring policy, passwordless compatibility, historical P103 provenance, or overall architecture.
+
+### Execution model
+
+- Three implementation tasks may run in parallel in isolated worktrees when ownership is non-overlapping.
+- One qualification task runs only after all implementation tasks are integrated.
+- Runners do **not** edit `tasks.md` or this plan; Mika owns task state, integration, and evidence.
+- Keep fixes local and reuse existing primitives/DTOs. No new auth framework, cache framework, result framework, or broad rewrite.
+- Ordinary test/tool/runtime blockers are self-resolved inside the owning task.
+- No production writes, production migrations, or deployment in P104.
+
+### Task groups
+
+| Task | Scope | Findings | Dependency | Parallel-safe |
+|---|---|---|---|---|
+| `P104M1T01` | Scope/state correctness | F01, F05, F09 | none | yes |
+| `P104M1T02` | Output/data correctness | F02, F03, F04 | none | yes |
+| `P104M1T03` | Release-gate truth | F07, F08 | none | yes |
+| `P104M2T01` | Consolidated qualification | all above | T01 + T02 + T03 integrated | no |
+
+### Exit criteria
+
+P104 closes only when:
+
+1. F01–F05 and F07–F09 each have a focused regression proving the old failure and the corrected behavior.
+2. Root tests, typecheck, lint, build, secret scan, and relevant authenticated/runtime checks pass on one frozen integrated candidate.
+3. F07 ACL verification detects PUBLIC/direct/inherited effective EXECUTE correctly and binds the exact overload.
+4. F08 cleanup failures affect verdict and residue is read back as zero.
+5. F09 denies fresh current-read access after Leader revocation while preserving legitimate submitted/Approved historical read.
+6. Production writes/migrations remain `0/0`.
+7. One consolidated final review is run after candidate freeze; no per-finding review loop.
+8. Canonical repository is clean and exact candidate SHA/evidence are recorded.
+
+### Non-goals
+
+- Do not reopen F06.
+- Do not redesign the five-role workflow.
+- Do not change evaluation scoring policy or grade semantics beyond fixing score `0` nullish handling.
+- Do not remove existing transaction locks without separate measured concurrency evidence.
+- Do not mass-delete P103 tests/docs/evidence.
+- Do not deploy or mutate production as part of P104.
 
 ## Closed P103 provenance
 
-| ID | Disposition | Candidate/integration anchor | Evidence / note |
-|---|---|---|---|
-| P103M1T01 | DONE | `4af6cd911b7c411b3a21243ad1dda49ea3d6ee38` | reusable disposable confirmation harness; writes/residue `0` |
-| P103M1T02 | DONE | candidate `7a7a759eef968ec7ec4204b8ae28e44155520815`; integration `eddafaca9c197931499bd35edb7f1b5f28b84f50` | H4 history authorization; production writes/migrations/deploy `0` |
-| P103M1T03 | DONE | candidate `6205ef475cd3a837697ff0d1fab932f914378482`; integration `2e2623af5dd01bef849f3ee713bea51e301b332f` | H5 revoke/current authorization; evidence under `/home/pi5/hermes-artifacts/kurabe-p103/P103M1T03/` |
-| P103M2T01 | DONE | candidate `a332e72737d055e38358f570363c13fe901e9e4b`; canonical integration `7a46233938e8a0636a388c9e0c8dda2b7373903a` | H1/H2 multi-team workflow; production writes/migrations `0` |
-| P103M2T02 | DONE | `e91bfafba66960f74f3c98a12939f335344efc7c` | H3 scope parity; independent `agy-readonly` review PASS |
-| P103M2T03 | DONE | candidate `6514466e0e81f1ea33b5775ce315c35dd8fd467d`; integration `f60102fce8af98eff50564dff27023f3b6d16680` | H6 draft response contract; independent review PASS |
-| P103M3T01 | DONE | candidate `d2142155fb633b70db4ad22d69edd426e50f5924` | H7 authorized snapshot DTO; evidence under `/home/pi5/hermes-artifacts/kurabe-p103/P103M3T01-auth/` |
-| P103M3T02 | DONE | `36d696c1367fbfd76afd5d15db14a493b753f733` | H7 historical detail/compare rendering; browser-specific lane covered by M4T01 |
-| P103M3T03 | DONE | `ea04a894bd4fee8214fa9a395fc5a279255fd596` | scope-aware cache/resident freshness; browser-specific lane covered by M4T01 |
-| P103M4T01 | DONE | `117215934afaaca9553815db462d2e5fb8da68e8` | integrated authenticated matrix: integration `54/54`, browser `15/15`, production writes/migrations `0/0` |
-| P103M4T02 | DONE | `5f934b9f885f0e2ddd32f9ad5151e200891cee8f` | fail-closed evidence/CI contract; tests `59/59`, production writes/migrations `0/0` |
-| P103M4T03 | DONE | `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3` | matched app+001+002 package; preflight `15/15`; production writes/migrations `0/0`; catalog was `UNKNOWN` at preparation time |
-| P103M4T04 | DONE / `WAIVED_BY_OWNER` | control closure `f8b60677ab3944721e864ea7ad92ef8908bc024b` | owner waiver closed the final review gate; it did not authorize a deployment or database mutation |
+P103 remains historical and closed. Primary evidence root:
+`/home/pi5/hermes-artifacts/kurabe-p103/`
 
-Primary P103 evidence root: `/home/pi5/hermes-artifacts/kurabe-p103/`. Detailed contracts remain in Git history and are not an active WBS.
+Key closure anchors:
 
-## Post-closure audit boundary
+- P103M4T01: `117215934afaaca9553815db462d2e5fb8da68e8`
+- P103M4T02: `5f934b9f885f0e2ddd32f9ad5151e200891cee8f`
+- P103M4T03: `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3`
+- P103M4T04 control closure: `f8b60677ab3944721e864ea7ad92ef8908bc024b`
 
-- Independent AGY source review was run separately with `REVIEW_BACKEND=agy`, `REVIEW_MODEL=gemini-3.8-flash-high`, exact source SHA `f8b60677ab3944721e864ea7ad92ef8908bc024b`, read-only source hashes unchanged.
-- That review returned `REJECT` and confirmed findings F01–F08 as bounded MEDIUM issues. Evidence: `/home/pi5/hermes-artifacts/kurabe-audit-f8b6067-61hIIY/agy-gemini-3.8-review/` and consolidated report `/home/pi5/hermes-artifacts/kurabe-audit-f8b6067-61hIIY/KURABE_AUDIT.md`.
-- F01–F08 are **audit findings only**, not tasks or a new phase. No fix is started by this normalization.
+The post-closure audit confirmed F01–F08 as bounded MEDIUM findings. F09 was subsequently reproduced and confirmed separately. P104 is the first executable remediation phase for those remaining findings.
 
-## Historical records and non-active boundaries
+## Historical / owner-gated records
 
-- P102 release and its production closure remain historical provenance; the previously deployed source was `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`.
-- Optional-password compatibility remains current; strict-password go-live and broad credential migration are deferred and owner-gated.
-- `P102M2T01` repository-settings governance and `P96T11–P96T13` lifecycle/rollback work remain deferred owner-gated records, not runnable tasks.
-- No `READY`, `RUNNING`, `BLOCKED`, or zombie task is created or retained by this sweep.
-
-## Operating boundary for this normalization
-
-1. Reconcile worktrees and these ledgers against canonical Git and existing evidence.
-2. Commit only cleanup/control-plane documentation.
-3. Push `main`, read back the remote SHA, then deploy the exact pushed canonical application through the existing Vercel procedure without migration/data writes. **Completed;** immutable readback is in `kurabe-normalization-deploy/final-provenance.json`.
-4. Read back deployment, health, service, migration/write, and residue evidence.
-
-Deployment closure is complete. F01–F08 remain untouched; any future fix work requires a separate explicit request.
+- P102 production closure remains historical provenance.
+- Strict-password go-live and broad credential migration remain deferred by the optional-password decision.
+- `P102M2T01` repository-settings governance and `P96T11–P96T13` lifecycle/rollback work remain owner-gated and are not part of P104.

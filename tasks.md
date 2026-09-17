@@ -1,44 +1,189 @@
-# Kurabe — reconciled task ledger
+# Kurabe — active task ledger
 
 ## Current status
 
-- `LEDGER_STATUS=CLOSED`; no active execution task, no pending P103 task, and no new phase/task is created by this sweep.
-- Canonical before normalization: `/home/pi5/projects/kurabe`, `main`, `f8b60677ab3944721e864ea7ad92ef8908bc024b`.
-- P103 execution DAG: **13/13 DONE**. Detailed task contracts and full evidence remain recoverable from Git history and `/home/pi5/hermes-artifacts/kurabe-p103/`; this file contains the compact status only.
-- State readback: `active_task=null`, `active_reservations={}`, `blocking_alerts=[]`, `task_state=DONE`.
-- Current production release and alias binding are verified in `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/final-provenance.json`, including exact canonical SHA, READY deployment ID, and `https://lykiv.vercel.app`. Previous release was `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; no database migration or manual production data write was run.
+- `LEDGER_STATUS=ACTIVE`
+- Canonical repo: `/home/pi5/projects/kurabe`
+- Branch: `main`
+- P104 baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- P103: **13/13 DONE**
+- CI repair `t_7c812262`: **DONE**
+- F06: **CLOSED**
+- Active remediation scope: **F01–F05 + F07–F09**
+- Production writes/migrations allowed in this phase: `0/0`
 
-## Closed P103 execution record
+## Dispatch rules
 
-| Task | Status | Canonical/candidate evidence anchor | Result |
-|---|---|---|---|
-| P103M1T01 | DONE | `4af6cd911b7c411b3a21243ad1dda49ea3d6ee38` | disposable confirmation harness; residue `0` |
-| P103M1T02 | DONE | `eddafaca9c197931499bd35edb7f1b5f28b84f50` | H4 history authorization; production mutation `0` |
-| P103M1T03 | DONE | `2e2623af5dd01bef849f3ee713bea51e301b332f` | H5 revoke/current authorization; production mutation `0` |
-| P103M2T01 | DONE | `7a46233938e8a0636a388c9e0c8dda2b7373903a` | H1/H2 workflow parity and multi-team SQL; production mutation `0` |
-| P103M2T02 | DONE | `e91bfafba66960f74f3c98a12939f335344efc7c` | H3 full/summary/single scope parity; `agy-readonly` review PASS |
-| P103M2T03 | DONE | `f60102fce8af98eff50564dff27023f3b6d16680` | H6 draft response contract; independent review PASS |
-| P103M3T01 | DONE | `d2142155fb633b70db4ad22d69edd426e50f5924` | H7 authorized snapshot DTO; qualification `12/12` |
-| P103M3T02 | DONE | `36d696c1367fbfd76afd5d15db14a493b753f733` | H7 historical detail/compare rendering |
-| P103M3T03 | DONE | `ea04a894bd4fee8214fa9a395fc5a279255fd596` | scope-aware cache/resident freshness |
-| P103M4T01 | DONE | `117215934afaaca9553815db462d2e5fb8da68e8` | integrated matrix: authenticated `54/54`, browser `15/15`, production mutation `0/0` |
-| P103M4T02 | DONE | `5f934b9f885f0e2ddd32f9ad5151e200891cee8f` | fail-closed CI/evidence; tests `59/59`, production mutation `0/0` |
-| P103M4T03 | DONE | `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3` | matched release package; preflight `15/15`, production mutation `0/0` |
-| P103M4T04 | DONE / `WAIVED_BY_OWNER` | closure control `f8b60677ab3944721e864ea7ad92ef8908bc024b` | owner-dispositioned final review gate; no product change |
+- Mika owns this ledger. Runners must not modify `tasks.md` or `.ai/MASTER_PLAN.md`.
+- Use isolated worktrees/branches for parallel implementation.
+- Respect file ownership below. If a task truly needs an owned file from another task, Mika resolves ownership before continuing.
+- Each implementation task must finish with focused regressions and a clean worktree before integration.
+- Do not create subtask explosions. One finding group = one task.
+- Do not review each finding separately. Final review happens once in `P104M2T01`.
 
-## Post-closure audit, not executable work
+## P104 tasks
 
-- AGY independent source review: `REVIEW_BACKEND=agy`, `REVIEW_MODEL=gemini-3.8-flash-high`, exact source `f8b60677ab3944721e864ea7ad92ef8908bc024b`, source hashes unchanged.
-- Verdict `REJECT`; F01–F08 confirmed as bounded MEDIUM findings. Evidence root: `/home/pi5/hermes-artifacts/kurabe-audit-f8b6067-61hIIY/agy-gemini-3.8-review/`; report: `/home/pi5/hermes-artifacts/kurabe-audit-f8b6067-61hIIY/KURABE_AUDIT.md`.
-- F01–F08 are deliberately not represented as tasks here. This normalization does not fix them or open a phase.
+### P104M1T01 — Scope/state correctness
 
-## Historical / deferred records
+- `Status: READY`
+- `Findings: F01, F05, F09`
+- `Depends on: none`
+- `Parallel-safe: YES`
+- `Goal:` eliminate stale/resident authorization state, distinguish report errors from successful empty results, and deny revoked Leader fresh current-read access while preserving legitimate historical read.
 
-- P102 production closure is historical at source SHA `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; its evidence remains under `/home/pi5/hermes-artifacts/kurabe-execution/`.
-- `P102M2T01` repository-settings governance and `P96T11–P96T13` lifecycle/rollback records are `DEFERRED / OWNER-GATED`, not runnable.
-- Strict-password go-live and broad credential migration remain deferred by the optional-password decision.
-- No `READY`, `RUNNING`, `BLOCKED`, `UNKNOWN`, duplicate, or zombie task is retained. Do not auto-dispatch any ID in this ledger.
+**Primary ownership**
+- `src/contexts/AuthContext.tsx`
+- `src/components/employees/EmployeesClient.tsx`
+- `src/components/dashboard/DashboardDataLayer.tsx`
+- `src/components/reports/ReportsDataLayer.tsx`
+- `src/actions/reports.ts`
+- `src/data/workflow.ts`
+- focused regression tests for this scope
 
-## Normalization boundary
+**Required behavior**
+- F01: reuse existing `viewerScope.scopeKey` / scope epoch for local reset, request generation, and late-response rejection; clear resident data on unknown/denied scope.
+- F05: report read/auth/aggregation failures must render an explicit error/unavailable state with retry; successful zero-row responses remain empty-state, not error.
+- F09: current in-progress evaluation read must require current authorization, not merely a stale unfinished `evaluator_id`. Submitted/Approved historical evaluator access remains supported.
+- Do not weaken Manager/self/current-team access.
+- Prefer fixing the current-read authorization rule over broad SQL rewrites. If a DB mutation is truly required, Mika must assign one bounded migration explicitly before implementation.
 
-This ledger records only the current closed state and provenance. The authorized sequence worktree cleanup → control/docs commit → push/readback → exact current-canonical deployment → post-deploy readback is complete. Any future F01–F08 work requires a separate explicit request; it is not created now.
+**Focused regressions**
+- same-tab secondary-team revoke removes resident data;
+- late response from old scope cannot restore it;
+- report DB/auth failure vs successful empty vs retry;
+- revoked Leader with stale unfinished assignment cannot fresh-read;
+- submitted/Approved historical evaluator positive control still reads;
+- unchanged-scope and normal Manager/Leader/SubLeader/Employee/Worker controls remain valid.
+
+**Done when**
+- focused tests PASS;
+- no unrelated product behavior changes;
+- no production writes/migrations;
+- candidate commit recorded and worktree clean.
+
+---
+
+### P104M1T02 — Output/data correctness
+
+- `Status: READY`
+- `Findings: F02, F03, F04`
+- `Depends on: none`
+- `Parallel-safe: YES`
+- `Goal:` make historical export/versioned display correct, preserve valid score `0`, and make Leader selected-team pagination/counts honor the requested authorized team.
+
+**Primary ownership**
+- `src/lib/export.ts`
+- `src/lib/db/evaluations.ts`
+- `src/lib/db/evaluations-admin.ts`
+- `src/lib/db/users-admin.ts`
+- directly related DTO/display helpers if needed
+- focused regression tests for this scope
+
+**Required behavior**
+- F02: historical Excel export uses each round's pinned criteria snapshot/version. Preserve historical criterion **ID and label**. No silent fallback to current/live criteria; legacy unknown must be explicit.
+- F03: map nullable scores with nullish semantics (`??`), not truthiness. Audit directly related consumers so numeric `0` remains valid through full/summary/batch/history/export/report/AI paths.
+- F04: Leader requested team is `requestedTeam ∩ authorizedLedTeams`; rows, count, hasMore, and page boundaries must reflect that effective filter. Out-of-scope requested team remains denied.
+
+**Focused regressions**
+- historical export after criteria rename/delete/add;
+- multiple criteria versions in one export;
+- zero/null/undefined/positive score mapping through relevant read/export paths;
+- Leader scope A+B: all teams vs selected B vs unauthorized C;
+- selected-team counts and pagination boundaries;
+- other roles unchanged.
+
+**Done when**
+- focused tests PASS;
+- no silent live-config fallback;
+- no production writes/migrations;
+- candidate commit recorded and worktree clean.
+
+---
+
+### P104M1T03 — Release-gate truth
+
+- `Status: READY`
+- `Findings: F07, F08`
+- `Depends on: none`
+- `Parallel-safe: YES`
+- `Goal:` ensure ACL and cleanup gates report real security/cleanup outcomes instead of false PASS.
+
+**Primary ownership**
+- `docs/P103_RELEASE_CHECKLIST.md`
+- `tests/operations/p103-release-preflight.mjs`
+- directly related operation/verifier tests only
+
+**Required behavior**
+- F07: ACL verification must retain `PUBLIC` (`grantee=0`) instead of losing it through inner join; verify effective EXECUTE for anon/authenticated, including direct/inherited/PUBLIC cases and the exact function overload.
+- F08: cleanup result participates in verdict; verify actual container absence instead of hardcoding `containerRemoved:true`; preserve both primary failure and cleanup failure when both occur.
+- Do not weaken fail-closed release semantics.
+- Do not alter production catalog or run production ACL changes.
+
+**Focused regressions**
+- clean ACL;
+- PUBLIC grant;
+- direct anon/authenticated grant;
+- inherited effective grant;
+- extra overload / wrong signature;
+- cleanup success;
+- `docker rm` nonzero;
+- container still exists;
+- inspect unavailable;
+- primary failure + cleanup failure dual-reporting.
+
+**Done when**
+- focused negative and positive cases PASS;
+- cleanup residue readback is truthful;
+- no production writes/migrations;
+- candidate commit recorded and worktree clean.
+
+---
+
+### P104M2T01 — Consolidated qualification
+
+- `Status: BLOCKED_DEPENDENCY`
+- `Findings: qualification for F01–F05 + F07–F09`
+- `Depends on: P104M1T01 + P104M1T02 + P104M1T03 integrated`
+- `Parallel-safe: NO`
+- `Goal:` qualify one frozen integrated candidate and run one final review.
+
+**Ownership**
+- Mika/integration worktree only.
+- No feature ownership. Do not turn this into a catch-all patch task.
+- Trivial merge/integration fixes are allowed; functional defects go back to the owning task.
+
+**Qualification**
+1. freeze exact candidate SHA;
+2. verify changed-path inventory and no accidental generated files;
+3. focused regressions for all eight remaining findings;
+4. `npm test`;
+5. `npm run typecheck`;
+6. `npm run lint`;
+7. production/synthetic `npm run build`;
+8. source secret scan;
+9. authenticated confirmation matrix / real DB-browser harness only where relevant to changed surfaces;
+10. verify production writes/migrations `0/0`;
+11. verify cleanup residue `0`;
+12. one consolidated independent final review against the exact frozen SHA.
+
+**Acceptance**
+- F01–F05 and F07–F09 all closed with evidence;
+- no HIGH/CRITICAL regression introduced;
+- root gates PASS;
+- relevant authenticated/runtime checks PASS;
+- final review PASS, or explicit owner disposition if reviewer infrastructure alone is unavailable after bounded retries;
+- canonical repo clean;
+- exact candidate SHA and evidence paths recorded.
+
+**Next state after PASS**
+- `P104=DONE`
+- no automatic deployment
+- production readiness/deployment remains a separate owner-approved step.
+
+## Closed / historical record
+
+- P103 execution DAG: **13/13 DONE**.
+- P103 final control closure: `f8b60677ab3944721e864ea7ad92ef8908bc024b`.
+- CI repair `t_7c812262`: DONE at `ea7b64fb0eafac1406780b0c0632757638d1f8f3`; remote GitHub Actions PASS.
+- F06 is closed and excluded from P104.
+- Historical evidence remains in Git history and `/home/pi5/hermes-artifacts/kurabe-p103/`.
