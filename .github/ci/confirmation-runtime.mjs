@@ -12,7 +12,10 @@ import { runBootstrap } from '../../scripts/db-bootstrap.mjs';
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const statePath = path.join(process.env.KURABE_CI_RUNTIME_ROOT || path.join(os.tmpdir(), 'kurabe-ci-runtime'), 'runtime-state.json');
 const runtimeRoot = path.dirname(statePath);
-const safeError = (error) => String(error?.stderr || error?.message || error).replace(/(?:postgres(?:ql)?:\/\/)[^\s)]+/gi, '[REDACTED_DB_TARGET]');
+const safeError = (error) => String(error?.stderr || error?.message || error)
+  .replace(/(?:postgres(?:ql)?:\/\/)[^\s)]+/gi, '[REDACTED_DB_TARGET]')
+  .replace(/(password|secret|token|key)(?:\s*[:=]\s*|\s+)[^\s,;]+/gi, '$1=[REDACTED]')
+  .replace(/[A-Za-z0-9_-]{64,}/g, '[REDACTED_LONG_VALUE]');
 const run = (command, args, options = {}) => execFileSync(command, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], ...options }).trim();
 const sleep = (seconds) => execFileSync('sleep', [String(seconds)]);
 const readState = () => JSON.parse(fs.readFileSync(statePath, 'utf8'));
@@ -260,6 +263,14 @@ function postgrestState(state) {
   }
 }
 
+function postgrestDiagnostics(state) {
+  try {
+    return safeError(run('docker', ['logs', '--tail', '80', `${state.name}-rest`])).replace(/\s+/g, ' ').slice(-2000);
+  } catch {
+    return 'unavailable';
+  }
+}
+
 async function bootstrap() {
   const state = readState();
   if (run('git', ['rev-parse', 'HEAD'], { cwd: projectRoot }) !== state.sha) throw new Error('RUNTIME_CANDIDATE_SHA_MISMATCH');
@@ -275,7 +286,7 @@ async function bootstrap() {
     startProxy(state);
     waitHttp(`${state.supabaseUrl}/rest/v1/`, 'POSTGREST_NOT_READY');
   } catch (error) {
-    throw new Error(`${safeError(error)} container_state=${postgrestState(state)}`);
+    throw new Error(`${safeError(error)} container_state=${postgrestState(state)} container_logs=${postgrestDiagnostics(state)}`);
   }
   waitHttp(`http://127.0.0.1:${state.nextPort}/login`, 'NEXT_NOT_READY');
   const bootstrapResult = path.join(runtimeRoot, 'bootstrap-result.json');
