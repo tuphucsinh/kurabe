@@ -124,7 +124,6 @@ async function start() {
     ]);
     waitFor('pg_isready', ['-h', '127.0.0.1', '-p', String(state.dbPort), '-U', 'postgres', '-d', state.db], 'POSTGRES_NOT_READY');
     startNext(state);
-    startProxy(state);
     writeState(state);
   } catch (error) {
     try { cleanup(); } catch { /* preserve the original bootstrap failure */ }
@@ -246,6 +245,21 @@ function waitHttp(url, label, attempts = 90) {
   waitFor('curl', ['--fail', '--silent', '--show-error', '--max-time', '3', url], label, attempts);
 }
 
+function waitTcp(port, label, attempts = 90) {
+  waitFor('curl', ['--silent', '--output', '/dev/null', '--max-time', '3', `http://127.0.0.1:${port}/`], label, attempts);
+}
+
+function postgrestState(state) {
+  try {
+    return run('docker', [
+      'inspect', '--format', '{{.State.Status}}|{{.State.ExitCode}}|{{.State.OOMKilled}}|{{.State.Error}}',
+      `${state.name}-rest`,
+    ]);
+  } catch {
+    return 'missing';
+  }
+}
+
 async function bootstrap() {
   const state = readState();
   if (run('git', ['rev-parse', 'HEAD'], { cwd: projectRoot }) !== state.sha) throw new Error('RUNTIME_CANDIDATE_SHA_MISMATCH');
@@ -256,7 +270,13 @@ async function bootstrap() {
   const migrations = applyForwardMigrations(state);
   const seeded = await seedH7BaseFixtures(state);
   startPostgrest(state);
-  waitHttp(`${state.supabaseUrl}/rest/v1/`, 'POSTGREST_NOT_READY');
+  try {
+    waitTcp(state.backendRestPort, 'POSTGREST_BACKEND_NOT_READY');
+    startProxy(state);
+    waitHttp(`${state.supabaseUrl}/rest/v1/`, 'POSTGREST_NOT_READY');
+  } catch (error) {
+    throw new Error(`${safeError(error)} container_state=${postgrestState(state)}`);
+  }
   waitHttp(`http://127.0.0.1:${state.nextPort}/login`, 'NEXT_NOT_READY');
   const bootstrapResult = path.join(runtimeRoot, 'bootstrap-result.json');
   fs.writeFileSync(bootstrapResult, `${JSON.stringify({
