@@ -2,15 +2,16 @@
 
 ## Current control state
 
-- `PLAN_STATUS=ACTIVE_BOUNDED_REMEDIATION`
+- `PLAN_STATUS=P104_DONE`
 - Canonical repository: `/home/pi5/projects/kurabe`
 - Branch: `main`
-- Baseline for this phase: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- Historical P104 phase baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- P104 execution baseline after control activation: `03a13da06ce549b6212bf9f32c28937e994dd048`
 - P103 remains closed: **13/13 DONE**.
 - CI repair task `t_7c812262` is closed at the baseline above; remote CI is green.
 - F06 is closed and must not be reopened by this phase.
-- Remaining confirmed MEDIUM findings: **F01–F05 + F07–F09**.
-- F09 is confirmed as a current-read authorization bug after secondary-team Leader revocation; it is not a write bypass.
+- Remaining confirmed MEDIUM findings: **none; F01–F05 and F07–F09 are closed**.
+- F09 was confirmed as a current-read authorization bug after secondary-team Leader revocation and is closed without a write-path change.
 - Production deployment, production catalog reconciliation, and production DB mutation are outside this phase.
 
 ## P104 — bounded audit remediation
@@ -72,6 +73,14 @@ Key closure anchors:
 - P103M4T04 control closure: `f8b60677ab3944721e864ea7ad92ef8908bc024b`
 
 The post-closure audit confirmed F01–F08 as bounded MEDIUM findings. F09 was subsequently reproduced and confirmed separately. P104 is the first executable remediation phase for those remaining findings.
+
+## P104 closure
+
+- Integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`.
+- All focused/root/authenticated/runtime gates passed; production writes/migrations remained `0/0`.
+- Fresh independent review: AGY `gemini-3.8-flash-high`, exact candidate/tree verified, verdict `PASS`, blocking findings `NONE`.
+- Remote GitHub Actions CI run `35193543798` passed on the exact integrated candidate; remote `main` matches it.
+- Evidence root: `/home/pi5/hermes-artifacts/kurabe-p104/`; no P104 runtime/worktree residue remains.
 
 ## Historical / owner-gated records
 

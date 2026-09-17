@@ -5,6 +5,12 @@
 - Owner authorizes Mika to execute the remaining WBS directly without Runner. Dependency-coupled tasks stay serial; each candidate still requires independent verification, and each CONTROLLED task retains its fresh review gate.
 - Local/source implementation may proceed without waiting for production permission. Production, credentials, permissions, paid/external actions, GitHub settings, deploy and irreversible lifecycle actions still require their exact approval, rollback and readback gates.
 
+## P104 closure — 2026-09-17
+
+- P104 integrated candidate `9a8c988be603507142a4a8afe854deec108560a0` closes F01–F05 and F07–F09 without production writes, migrations, deployment, workflow/scoring changes, or passwordless compatibility changes.
+- Exact-candidate root/runtime gates and GitHub Actions run `35193543798` passed; fresh AGY `gemini-3.8-flash-high` review verified the candidate and returned `PASS` with no blocking findings.
+- Canonical `main` and `origin/main` match the integrated candidate; P104 disposable runtime/worktrees were removed with residue `0`. Future work requires a new explicit owner request.
+
 ## Release-hardening replan — source baseline 53b83f1
 
 - Owner requests full remaining WBS now: phases 98–102 and retained 96E, superseding active-phase-only planning. Historical IDs/statuses remain unchanged; planning does not authorize implementation or external actions.

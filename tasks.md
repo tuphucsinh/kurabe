@@ -5,11 +5,13 @@
 - `LEDGER_STATUS=ACTIVE`
 - Canonical repo: `/home/pi5/projects/kurabe`
 - Branch: `main`
-- P104 baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- P104 initial phase baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
+- P104 execution baseline after control activation: `03a13da06ce549b6212bf9f32c28937e994dd048`
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active remediation scope: **F01–F05 + F07–F09**
+- Active remediation scope: **none; P104 is DONE**
+- P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - Production writes/migrations allowed in this phase: `0/0`
 
 ## Dispatch rules
@@ -25,7 +27,7 @@
 
 ### P104M1T01 — Scope/state correctness
 
-- `Status: READY`
+- `Status: DONE`
 - `Findings: F01, F05, F09`
 - `Depends on: none`
 - `Parallel-safe: YES`
@@ -65,7 +67,7 @@
 
 ### P104M1T02 — Output/data correctness
 
-- `Status: READY`
+- `Status: DONE`
 - `Findings: F02, F03, F04`
 - `Depends on: none`
 - `Parallel-safe: YES`
@@ -102,7 +104,7 @@
 
 ### P104M1T03 — Release-gate truth
 
-- `Status: READY`
+- `Status: DONE`
 - `Findings: F07, F08`
 - `Depends on: none`
 - `Parallel-safe: YES`
@@ -141,7 +143,7 @@
 
 ### P104M2T01 — Consolidated qualification
 
-- `Status: BLOCKED_DEPENDENCY`
+- `Status: DONE`
 - `Findings: qualification for F01–F05 + F07–F09`
 - `Depends on: P104M1T01 + P104M1T02 + P104M1T03 integrated`
 - `Parallel-safe: NO`
@@ -174,6 +176,10 @@
 - final review PASS, or explicit owner disposition if reviewer infrastructure alone is unavailable after bounded retries;
 - canonical repo clean;
 - exact candidate SHA and evidence paths recorded.
+
+**Closure evidence**
+- Integrated candidate `9a8c988be603507142a4a8afe854deec108560a0` passed focused regressions, root gates, authenticated/runtime checks, and the fresh AGY review.
+- Remote `main` and verified CI run `35193543798` match the integrated candidate; production writes/migrations remained `0/0`.
 
 **Next state after PASS**
 - `P104=DONE`

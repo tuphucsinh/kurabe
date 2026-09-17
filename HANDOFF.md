@@ -1,12 +1,11 @@
-# HANDOFF — Kurabe normalization closed
+# HANDOFF — P104 bounded remediation closed
 
-- State: P103M1T01..P103M4T04 `DONE`; 13/13 execution tasks closed; no active/pending task or new F01–F08 phase.
-- Current canonical push, production deployment ID/SHA, and alias `https://lykiv.vercel.app` binding are recorded and verified in `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/final-provenance.json`.
-- This normalization commit sequence changes control/docs only; no product logic, schema, or application behavior was changed.
-- Post-closure AGY source review remains `REJECT` for F01–F08; those are audit findings only and were not fixed or converted into tasks.
-- Post-deploy public checks: `/login` and `/support` return `200`; protected routes redirect `307` to `/login`; browser render and console/error readback are clean.
-- Production migration ledger was read back through `20260913112244`; source `20260914...` migrations were not applied by this deployment. No migration command or manual production data write was run.
-- Worktree cleanup: only `/home/pi5/projects/kurabe` remains registered; stale P103 worktrees removed after status/diff review, dirty runner snapshot preserved under `/home/pi5/hermes-artifacts/kurabe-worktree-cleanup/`.
-- Unrelated local services/workloads were preserved; no Kurabe process/container/temporary port residue remains.
-- Evidence: `/home/pi5/hermes-artifacts/kurabe-normalization-prepush/`, `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/`, and `/home/pi5/hermes-artifacts/kurabe-worktree-cleanup/`.
-- Next state: remain closed; wait for an explicit owner request before any F01–F08 implementation phase.
+- State: P104 `DONE`; F01–F05 and F07–F09 are closed.
+- Published code candidate: `9a8c988be603507142a4a8afe854deec108560a0` from execution baseline `03a13da06ce549b6212bf9f32c28937e994dd048`.
+- Focused suites, unit `62/62`, lint, typecheck, build, secret scan, authenticated matrix, and real DB/browser checks passed.
+- Fresh AGY `gemini-3.8-flash-high` review passed the exact candidate with no blocking findings.
+- GitHub Actions run `35193543798` passed on the exact published code candidate.
+- Production writes `0`; production migrations `0`; no deployment or production catalog mutation was performed.
+- P104 runtime, linked worktrees, runner worktrees, and review clone were removed; residue readback was `0`.
+- Original AGY runner exit `1` events remain provenance only and were not used as PASS evidence.
+- Canonical `main` was clean after publish; future work requires a new explicit owner request.
