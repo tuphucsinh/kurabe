@@ -1,13 +1,12 @@
-# HANDOFF — Kurabe P103 execution
+# HANDOFF — Kurabe normalization closed
 
-- State: `P103M1T01..P103M4T04=DONE`; the P103 execution DAG is closed.
-- M4T03 frozen candidate `9f07ce3bdb06c1b5fe9f8cb315644b1444493ac3`, tree `2dbe885643beab1ee0443980c2654cb3b8f30a6c`, base `e9e753bbd6369e168dbc02362941fa3a381ecf5c`.
-- Canonical `main` fast-forwarded from the exact base to the frozen candidate; no product/test/release logic changed after freeze.
-- Fresh self-contained strict review: `PASS`, `BLOCKING_FINDINGS=NONE`; review artifact is hashed in `tasks.md`.
-- Preflight `15/15`, release verifier, tests `59/59`, lint, typecheck, build, diff-check and source-secret scan: PASS.
-- Production writes/migrations: `0/0`; production catalog remains `UNKNOWN`; no deploy or production mutation.
-- Release eligibility remains only `new-app-p103 × db-after-002`; no release architecture or unrelated hardening added.
-- Cleanup: M4T03 disposable residue `0`; M4T03 runner/integration worktrees removed; canonical worktree clean.
-- P103M4T04 final disposition: `INDEPENDENT_REVIEW=WAIVED_BY_OWNER` by explicit owner instruction; prior tool-free PASS/interrupt evidence remains historical only, with packet manifest and payload hashes under `/home/pi5/hermes-artifacts/kurabe-p103/P103M4T04/tool-free-review-r2/`.
-- Control-plane closure is recorded in the tracked task ledger and this handoff; runtime `.state` readback records the exact closure SHA.
-- Next action: keep production approval, live catalog/env readback, deployment, and remote CI as explicit separate gates; do not reopen the frozen candidate or qualification evidence.
+- State: P103M1T01..P103M4T04 `DONE`; 13/13 execution tasks closed; no active/pending task or new F01–F08 phase.
+- Canonical application was pushed as `f0eab9d67bac367a96f3ae3e3daa541c97ea92f9`; current production deployment is Vercel `dpl_8BJ3yxnZ4RatRWsGxyGGcVBgDkby`, `READY`, target `production`, alias `https://lykiv.vercel.app` verified.
+- This normalization commit sequence changes control/docs only; no product logic, schema, or application behavior was changed.
+- Post-closure AGY source review remains `REJECT` for F01–F08; those are audit findings only and were not fixed or converted into tasks.
+- Post-deploy public checks: `/login` and `/support` return `200`; protected routes redirect `307` to `/login`; browser render and console/error readback are clean.
+- Production migration ledger was read back through `20260913112244`; source `20260914...` migrations were not applied by this deployment. No migration command or manual production data write was run.
+- Worktree cleanup: only `/home/pi5/projects/kurabe` remains registered; stale P103 worktrees removed after status/diff review, dirty runner snapshot preserved under `/home/pi5/hermes-artifacts/kurabe-worktree-cleanup/`.
+- Unrelated local services/workloads were preserved; no Kurabe process/container/temporary port residue remains.
+- Evidence: `/home/pi5/hermes-artifacts/kurabe-normalization-prepush/`, `/home/pi5/hermes-artifacts/kurabe-normalization-deploy/`, and `/home/pi5/hermes-artifacts/kurabe-worktree-cleanup/`.
+- Next state: remain closed; wait for an explicit owner request before any F01–F08 implementation phase.

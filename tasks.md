@@ -6,7 +6,7 @@
 - Canonical before normalization: `/home/pi5/projects/kurabe`, `main`, `f8b60677ab3944721e864ea7ad92ef8908bc024b`.
 - P103 execution DAG: **13/13 DONE**. Detailed task contracts and full evidence remain recoverable from Git history and `/home/pi5/hermes-artifacts/kurabe-p103/`; this file contains the compact status only.
 - State readback: `active_task=null`, `active_reservations={}`, `blocking_alerts=[]`, `task_state=DONE`.
-- Previous production release: `76221ca0a3e2813a2743a0ad74d3be7fb57306d4` at `https://lykiv.vercel.app`. Current canonical deployment is pending the explicitly requested push/deploy operation; no database migration or manual production write is part of that operation.
+- Current production release: Vercel deployment `dpl_8BJ3yxnZ4RatRWsGxyGGcVBgDkby`, `READY`, exact application SHA `f0eab9d67bac367a96f3ae3e3daa541c97ea92f9`, bound to `https://lykiv.vercel.app`. Previous release was `76221ca0a3e2813a2743a0ad74d3be7fb57306d4`; no database migration or manual production data write was run.
 
 ## Closed P103 execution record
 
@@ -41,4 +41,4 @@
 
 ## Normalization boundary
 
-This ledger records only the current closed state and provenance. The authorized sequence is worktree cleanup → control/docs commit → push/readback → exact current-canonical deployment → post-deploy readback. Any future F01–F08 work requires a separate explicit request; it is not created now.
+This ledger records only the current closed state and provenance. The authorized sequence worktree cleanup → control/docs commit → push/readback → exact current-canonical deployment → post-deploy readback is complete. Any future F01–F08 work requires a separate explicit request; it is not created now.
