@@ -239,9 +239,10 @@ async function seedH7BaseFixtures(state) {
 
 function startPostgrest(state) {
   const configPath = path.join(runtimeRoot, 'postgrest.conf');
+  const runtimeUser = `${process.getuid()}:${process.getgid()}`;
   const dbUri = ['postgres', ':', '/', '/', 'postgres', ':', state.password, '@db:5432/', state.db].join('');
   fs.writeFileSync(configPath, `db-uri = "${dbUri}"\ndb-schemas = "public"\ndb-anon-role = "anon"\njwt-secret = "${state.jwtSecret}"\nserver-host = "0.0.0.0"\nserver-port = 3000\nadmin-server-port = 3001\n`, { mode: 0o600 });
-  run('docker', ['run', '-d', '--name', `${state.name}-rest`, '--network', state.networkId, '--network-alias', 'rest', '--restart=no', '--label', `kurabe.confirm=${state.name}`, '-p', `127.0.0.1:${state.backendRestPort}:3000`, '-v', `${configPath}:/etc/postgrest.conf:ro`, 'postgrest/postgrest:v12.2.3', 'postgrest', '/etc/postgrest.conf']);
+  run('docker', ['run', '-d', '--name', `${state.name}-rest`, '--network', state.networkId, '--network-alias', 'rest', '--restart=no', '--user', runtimeUser, '--label', `kurabe.confirm=${state.name}`, '-p', `127.0.0.1:${state.backendRestPort}:3000`, '-v', `${configPath}:/etc/postgrest.conf:ro`, 'postgrest/postgrest:v12.2.3', 'postgrest', '/etc/postgrest.conf']);
 }
 
 function waitHttp(url, label, attempts = 90) {
