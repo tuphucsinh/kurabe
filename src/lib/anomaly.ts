@@ -1,4 +1,4 @@
-import { Evaluation } from '@/types';
+import type { Evaluation, EvaluationRound } from '@/types';
 
 export interface Anomaly {
   evaluationId: string;
@@ -16,23 +16,35 @@ export interface Anomaly {
 const HIGH_DIFF = 30;
 const MEDIUM_DIFF = 20;
 
+function isScoredRound(r: EvaluationRound): boolean {
+  if (r.submittedAt || r.status === 'Submitted' || (r.status as string) === 'Reviewed' || (r.status as string) === 'Approved') {
+    return typeof r.totalScore === 'number';
+  }
+  if (r.status === 'Draft' || r.status === 'NotStarted') {
+    return false;
+  }
+  return typeof r.totalScore === 'number';
+}
+
 /**
  * Phát hiện đánh giá bất thường — RULE-BASED (chính xác 100%, không phải AI đoán):
  * chênh lệch điểm giữa 2 vòng liên tiếp ≥ 20 (medium) hoặc ≥ 30 (high).
- * Chỉ xét các round CÓ điểm thật (totalScore > 0).
+ * Xét các round đã chấm/nộp điểm (kể cả điểm 0 hợp lệ).
  */
 export function detectAnomalies(evaluations: Evaluation[], nameById: Map<string, string>): Anomaly[] {
   const anomalies: Anomaly[] = [];
 
   for (const ev of evaluations) {
     const scoredRounds = (ev.rounds || [])
-      .filter((r) => (r.totalScore || 0) > 0)
+      .filter(isScoredRound)
       .sort((a, b) => a.round - b.round);
 
     for (let i = 1; i < scoredRounds.length; i++) {
       const prev = scoredRounds[i - 1];
       const curr = scoredRounds[i];
-      const diff = Math.abs((curr.totalScore || 0) - (prev.totalScore || 0));
+      const prevScore = prev.totalScore ?? 0;
+      const currScore = curr.totalScore ?? 0;
+      const diff = Math.abs(currScore - prevScore);
 
       if (diff >= MEDIUM_DIFF) {
         anomalies.push({
@@ -41,8 +53,8 @@ export function detectAnomalies(evaluations: Evaluation[], nameById: Map<string,
           name: nameById.get(ev.employeeId) || 'Không xác định',
           round: curr.round,
           prevRound: prev.round,
-          prevScore: prev.totalScore || 0,
-          score: curr.totalScore || 0,
+          prevScore,
+          score: currScore,
           diff: Math.round(diff),
           severity: diff >= HIGH_DIFF ? 'high' : 'medium',
         });

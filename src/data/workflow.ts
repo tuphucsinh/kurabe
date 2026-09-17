@@ -1,4 +1,4 @@
-import {
+import type {
   User,
   Evaluation,
   EvaluationRound,
@@ -7,7 +7,7 @@ import {
   EvaluationAccessState,
 } from '@/types';
 import {
-  EvaluatorSelector,
+  type EvaluatorSelector,
   getEvaluationFlow,
   getNextEvaluationStep,
 } from '@/lib/evaluation-workflow';
@@ -155,6 +155,9 @@ export function canViewEvaluation(
   ledTeamIds?: readonly string[]
 ): boolean {
   if (!user) return false;
+  if ((user as { isActive?: boolean; is_active?: boolean }).isActive === false || (user as { isActive?: boolean; is_active?: boolean }).is_active === false) {
+    return false;
+  }
   
   // Manager xem tất cả
   if (user.role === 'Manager') return true;
@@ -162,17 +165,27 @@ export function canViewEvaluation(
   // Chủ sở hữu xem của mình
   if (user.id === evaluation.employeeId) return true;
 
-  // Người đã/đang được assign làm evaluator xem được.
-  // Đối với evaluation đã Approved (hoặc đã kết thúc), chỉ evaluator đã thực sự submit round mới có quyền xem theo historical snapshot (tránh cấp quyền từ unfinished/withdrawn assignment).
-  if (evaluation.rounds.some(r => r.evaluatorId === user.id && (evaluation.status !== 'Approved' || isRoundSubmitted(r)))) return true;
+  // Legitimate submitted historical evaluator access:
+  // Evaluator đã thực sự submit ít nhất một round trên evaluation này (dù evaluation đang in-progress hay Approved)
+  if (evaluation.rounds.some(r => r.evaluatorId === user.id && isRoundSubmitted(r))) {
+    return true;
+  }
 
-  // Thành viên trong flow của người được đánh giá (nếu cùng team)
+  // Quyền theo flow hiện tại (current authorization):
+  // Yêu cầu viewer thỏa mãn selector của flow ứng với role nhân viên và team hiện tại
   const flow = getEvaluationFlow(evaluation.employeeRole);
   const isInFlow = flow.some(step => matchesEvaluatorSelector(step.evaluator, user, evaluation, allUsers, ledTeamIds));
 
-  // Future reviewer được phép xem draft trước khi đến lượt:
-  // chỉ mở cho Leader cùng team. SubLeader phải có assign evaluator cụ thể.
-  if (user.role === 'Leader' && isInFlow) return true;
+  // Current-team access: Leader quản lý team của nhân viên (primary team hoặc ledTeamIds)
+  if (user.role === 'Leader' && isInFlow) {
+    return true;
+  }
+
+  // Assigned evaluator trên round chưa submit:
+  // Bắt buộc phải có current authorization (isInFlow), không cấp quyền từ stale unfinished evaluator_id
+  if (isInFlow && evaluation.rounds.some(r => r.evaluatorId === user.id)) {
+    return true;
+  }
 
   return false;
 }

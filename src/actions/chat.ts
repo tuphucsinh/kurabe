@@ -138,20 +138,28 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       const role = roleLabel(ev.employeeRole || emp?.role || 'Employee');
 
       const scoredRounds = (ev.rounds || [])
-        .filter((r) => (r.totalScore || 0) > 0)
+        .filter((r) => {
+          if (r.submittedAt || r.status === 'Submitted' || (r.status as string) === 'Reviewed' || (r.status as string) === 'Approved') {
+            return typeof r.totalScore === 'number';
+          }
+          if (r.status === 'Draft' || r.status === 'NotStarted') {
+            return false;
+          }
+          return typeof r.totalScore === 'number';
+        })
         .sort((a, b) => a.round - b.round);
 
       let delta: number | null = null;
       let lastScore = 0;
-      const roundsStr = scoredRounds.map((r) => `V${r.round}:${r.totalScore}`).join(' ');
+      const roundsStr = scoredRounds.map((r) => `V${r.round}:${r.totalScore ?? 0}`).join(' ');
 
       if (scoredRounds.length > 0) {
-        lastScore = scoredRounds[scoredRounds.length - 1].totalScore || 0;
+        lastScore = scoredRounds[scoredRounds.length - 1].totalScore ?? 0;
       }
 
       if (scoredRounds.length >= 2) {
-        const prev = scoredRounds[scoredRounds.length - 2].totalScore || 0;
-        const curr = scoredRounds[scoredRounds.length - 1].totalScore || 0;
+        const prev = scoredRounds[scoredRounds.length - 2].totalScore ?? 0;
+        const curr = scoredRounds[scoredRounds.length - 1].totalScore ?? 0;
         delta = curr - prev;
       }
 

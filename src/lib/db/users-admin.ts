@@ -24,6 +24,31 @@ export interface UsersBatchResult {
 }
 
 /**
+ * Resolves the effective team filter for a Leader:
+ * effective filter = requestedTeam ∩ authorizedLedTeams.
+ * Out-of-scope requested teams must remain denied (fail closed).
+ */
+export function resolveLeaderEffectiveTeamFilter(
+  requestedTeamId: string | undefined,
+  authorizedLedTeamIds: readonly string[]
+): {
+  allowed: boolean;
+  effectiveTeamId?: string;
+  effectiveTeamIds: string[];
+} {
+  if (authorizedLedTeamIds.length === 0) {
+    return { allowed: false, effectiveTeamIds: [] };
+  }
+  if (!requestedTeamId) {
+    return { allowed: true, effectiveTeamIds: [...authorizedLedTeamIds] };
+  }
+  if (!authorizedLedTeamIds.includes(requestedTeamId)) {
+    return { allowed: false, effectiveTeamIds: [] };
+  }
+  return { allowed: true, effectiveTeamId: requestedTeamId, effectiveTeamIds: [requestedTeamId] };
+}
+
+/**
  * Đọc danh sách users theo lô (batch) 20 dòng bằng service_role (supabaseAdmin).
  * - Hard cap limit = 20, offset >= 0
  * - Fixed sort: name ASC, id ASC
@@ -54,10 +79,8 @@ export async function getUsersBatchAdmin(
         return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
     } else if (requester.role === 'Leader') {
-      if (leaderTeamIds.length === 0) {
-        return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
-      }
-      if (teamId && !leaderTeamIds.includes(teamId)) {
+      const leaderFilter = resolveLeaderEffectiveTeamFilter(teamId, leaderTeamIds);
+      if (!leaderFilter.allowed) {
         return { items: [], hasMore: false, totalCount: 0, subleaderMap: {} };
       }
     } else if (requester.role === 'SubLeader') {
@@ -79,7 +102,12 @@ export async function getUsersBatchAdmin(
     if (isIndividualRole(requester.role)) {
       query = query.eq('id', requester.id);
     } else if (requester.role === 'Leader') {
-      query = query.in('team_id', leaderTeamIds);
+      const leaderFilter = resolveLeaderEffectiveTeamFilter(teamId, leaderTeamIds);
+      if (leaderFilter.effectiveTeamId) {
+        query = query.eq('team_id', leaderFilter.effectiveTeamId);
+      } else {
+        query = query.in('team_id', leaderFilter.effectiveTeamIds);
+      }
     } else if (requester.role === 'SubLeader') {
       query = query.eq('team_id', requester.teamId);
     }

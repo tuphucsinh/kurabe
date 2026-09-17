@@ -46,7 +46,7 @@ interface EmployeesClientProps {
 }
 
 export default function EmployeesClient({ initialViewer }: EmployeesClientProps) {
-  const { user: contextUser, currentPeriod, isLoading: authLoading } = useAuth();
+  const { user: contextUser, viewerScope, scopeEpoch, currentPeriod, isLoading: authLoading } = useAuth();
 
   // Bootstrap-only effective viewer: initialViewer is active only while auth is loading;
   // after auth resolves (including resolve-to-null / logout), initialViewer is inactive.
@@ -122,22 +122,35 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   useEffect(() => {
     effectiveViewerRef.current = effectiveViewer;
   }, [effectiveViewer]);
-  const viewerScopeKey = `${viewerId ?? 'anonymous'}:${viewerRole ?? 'norole'}:${viewerTeamId ?? 'noteam'}`;
+  const activeScopeKey = viewerScope?.scopeKey ?? null;
+  const currentScopeEpoch = scopeEpoch;
 
-  // Track viewer state to handle logout / identity change / scope mismatch
-  const prevViewerRef = useRef<{ id: string | null; role: string | null; teamId: string | null } | null>({
-    id: initialViewer?.id ?? null,
-    role: initialViewer?.role ?? null,
-    teamId: initialViewer?.teamId ?? null,
+  // Track viewer state to handle logout / identity change / scope revocation / scope mismatch
+  const prevViewerRef = useRef<{
+    viewerId: string | null;
+    scopeKey: string | null;
+    scopeEpoch: number;
+  }>({
+    viewerId: initialViewer?.id ?? null,
+    scopeKey: null,
+    scopeEpoch: 0,
   });
 
-  // Reconcile viewer changes: clear state on logout or identity/scope change
+  // Reconcile viewer/scope changes: clear state on logout or identity/scope change
   useEffect(() => {
     let isCancelled = false;
     const prev = prevViewerRef.current;
-    const current = { id: viewerId, role: viewerRole, teamId: viewerTeamId };
+    const current = {
+      viewerId,
+      scopeKey: activeScopeKey,
+      scopeEpoch: currentScopeEpoch,
+    };
 
-    const hasChanged = !prev || prev.id !== current.id || prev.role !== current.role || prev.teamId !== current.teamId;
+    const hasChanged =
+      !prev ||
+      prev.viewerId !== current.viewerId ||
+      prev.scopeKey !== current.scopeKey ||
+      prev.scopeEpoch !== current.scopeEpoch;
 
     if (hasChanged) {
       prevViewerRef.current = current;
@@ -162,7 +175,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setEditingEmployee(null);
         setTokenHandoff(null);
 
-        if (!effectiveViewer) {
+        if (!effectiveViewer || !viewerScope) {
           setIsInitialLoading(false);
           setTeamsLoading(false);
         }
@@ -172,11 +185,17 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
     return () => {
       isCancelled = true;
     };
-  }, [viewerId, viewerRole, viewerTeamId, effectiveViewer]);
+  }, [viewerId, activeScopeKey, currentScopeEpoch, effectiveViewer, viewerScope]);
 
   // Fetch evaluations batch for a list of employee IDs
-  const fetchEvaluationsForIds = useCallback(async (ids: string[], periodId: string, gen: number) => {
-    if (!ids.length || !periodId) return;
+  const fetchEvaluationsForIds = useCallback(async (
+    ids: string[],
+    periodId: string,
+    gen: number,
+    expectedScopeKey?: string | null,
+    expectedEpoch?: number
+  ) => {
+    if (!ids.length || !periodId || !viewerScope) return;
 
     setEvalLoadingMap((prev) => {
       const next = { ...prev };
@@ -191,7 +210,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     try {
       const evals = await getEvaluationSummariesBatchAction(ids, periodId);
-      if (generationRef.current !== gen) return;
+      if (
+        generationRef.current !== gen ||
+        (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+        (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+        !viewerScope
+      ) return;
 
       setEvaluationsMap((prev) => {
         const next = { ...prev };
@@ -204,7 +228,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       });
     } catch (err) {
       console.error('Error fetching evaluation summaries batch:', err);
-      if (generationRef.current === gen) {
+      if (
+        generationRef.current === gen &&
+        (expectedScopeKey === undefined || viewerScope?.scopeKey === expectedScopeKey) &&
+        (expectedEpoch === undefined || scopeEpoch === expectedEpoch) &&
+        viewerScope
+      ) {
         setEvalErrorMap((prev) => {
           const next = { ...prev };
           for (const id of ids) next[id] = true;
@@ -212,7 +241,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         });
       }
     } finally {
-      if (generationRef.current === gen) {
+      if (
+        generationRef.current === gen &&
+        (expectedScopeKey === undefined || viewerScope?.scopeKey === expectedScopeKey) &&
+        (expectedEpoch === undefined || scopeEpoch === expectedEpoch)
+      ) {
         setEvalLoadingMap((prev) => {
           const next = { ...prev };
           for (const id of ids) delete next[id];
@@ -220,14 +253,20 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         });
       }
     }
-  }, []);
+  }, [viewerScope, scopeEpoch]);
 
   // Prefetch next employee batch in background
   const prefetchNextBatch = useCallback(
     (nextOffset: number) => {
-      if (!effectiveViewer) return;
+      if (!effectiveViewer || !viewerScope) return;
       void queryClient.prefetchQuery({
-        queryKey: scopedKey('employee-batch', [nextOffset, debouncedSearchTerm, teamFilter, roleFilter], effectiveViewer),
+        queryKey: scopedKey(
+          'employee-batch',
+          [nextOffset, debouncedSearchTerm, teamFilter, roleFilter],
+          effectiveViewer,
+          viewerScope,
+          scopeEpoch
+        ),
         queryFn: () =>
           getUsersBatchAction({
             offset: nextOffset,
@@ -239,17 +278,18 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         staleTime: 5 * 60 * 1000,
       });
     },
-    [effectiveViewer, queryClient, debouncedSearchTerm, teamFilter, roleFilter]
+    [effectiveViewer, viewerScope, scopeEpoch, queryClient, debouncedSearchTerm, teamFilter, roleFilter]
   );
 
   // Fetch initial batch (teams + first 20 users + summaries) using effective viewer
   const loadInitialBatch = useCallback(async () => {
-    if (!viewerId || !viewerScopeKey) {
+    if (!viewerId || !effectiveViewer || !viewerScope || !activeScopeKey) {
       setIsInitialLoading(false);
       setTeamsLoading(false);
       return;
     }
-    const currentScopeKey = viewerScopeKey;
+    const currentScopeKey = activeScopeKey;
+    const currentEpoch = currentScopeEpoch;
     generationRef.current += 1;
     const currentGen = generationRef.current;
 
@@ -271,7 +311,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         role: roleFilter,
       });
 
-      if (generationRef.current !== currentGen || viewerScopeKey !== currentScopeKey) return;
+      if (
+        generationRef.current !== currentGen ||
+        viewerScope?.scopeKey !== currentScopeKey ||
+        scopeEpoch !== currentEpoch ||
+        !viewerScope
+      ) return;
 
       // Handle teams
       if (pageData.teamsError) {
@@ -313,7 +358,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       }
     } catch (err) {
       console.error('Error fetching initial employees page data:', err);
-      if (generationRef.current === currentGen) {
+      if (
+        generationRef.current === currentGen &&
+        viewerScope?.scopeKey === currentScopeKey &&
+        scopeEpoch === currentEpoch
+      ) {
         setUserBatchError('Không thể tải danh sách nhân viên. Vui lòng thử lại.');
       }
     } finally {
@@ -322,7 +371,19 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
         setTeamsLoading(false);
       }
     }
-  }, [viewerId, viewerScopeKey, debouncedSearchTerm, teamFilter, roleFilter, currentPeriodId, prefetchNextBatch]);
+  }, [
+    viewerId,
+    effectiveViewer,
+    viewerScope,
+    activeScopeKey,
+    currentScopeEpoch,
+    debouncedSearchTerm,
+    teamFilter,
+    roleFilter,
+    currentPeriodId,
+    prefetchNextBatch,
+    scopeEpoch,
+  ]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -338,7 +399,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
   // Load more users (next 20 users)
   const handleLoadMore = async () => {
-    if (isLoadingMore || isInitialLoading || !hasMore || !effectiveViewer) return;
+    if (isLoadingMore || isInitialLoading || !hasMore || !effectiveViewer || !viewerScope || !activeScopeKey) return;
+    const currentScopeKey = activeScopeKey;
+    const currentEpoch = currentScopeEpoch;
     const currentGen = generationRef.current;
 
     setIsLoadingMore(true);
@@ -346,13 +409,15 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     try {
       const nextOffset = users.length;
-      const cached = queryClient.getQueryData<Awaited<ReturnType<typeof getUsersBatchAction>>>([
-        'employee-batch',
-        nextOffset,
-        debouncedSearchTerm,
-        teamFilter,
-        roleFilter,
-      ]);
+      const cached = queryClient.getQueryData<Awaited<ReturnType<typeof getUsersBatchAction>>>(
+        scopedKey(
+          'employee-batch',
+          [nextOffset, debouncedSearchTerm, teamFilter, roleFilter],
+          effectiveViewer,
+          viewerScope,
+          currentEpoch
+        )
+      );
 
       const res = cached?.items
         ? cached
@@ -364,7 +429,12 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             role: roleFilter,
           });
 
-      if (generationRef.current !== currentGen) return;
+      if (
+        generationRef.current !== currentGen ||
+        viewerScope?.scopeKey !== currentScopeKey ||
+        scopeEpoch !== currentEpoch ||
+        !viewerScope
+      ) return;
 
       const merged = mergeUserBatches(users, res.items);
       setUsers(merged);
@@ -376,7 +446,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
       const newIds = res.items.map((u) => u.id).filter((id) => !evaluationsMap[id]);
       if (newIds.length > 0 && currentPeriodId) {
-        fetchEvaluationsForIds(newIds, currentPeriodId, currentGen);
+        fetchEvaluationsForIds(newIds, currentPeriodId, currentGen, currentScopeKey, currentEpoch);
       }
 
       if (res.hasMore) {
@@ -384,7 +454,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       }
     } catch (err) {
       console.error('Error loading more users:', err);
-      if (generationRef.current === currentGen) {
+      if (
+        generationRef.current === currentGen &&
+        viewerScope?.scopeKey === currentScopeKey &&
+        scopeEpoch === currentEpoch
+      ) {
         setUserBatchError('Không thể tải thêm nhân viên. Vui lòng thử lại.');
       }
     } finally {
@@ -397,8 +471,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   // Retry evaluation fetch for an employee
   const handleRetryEvaluation = useCallback((employeeId: string) => {
     if (!currentPeriodId) return;
-    fetchEvaluationsForIds([employeeId], currentPeriodId, generationRef.current);
-  }, [currentPeriodId, fetchEvaluationsForIds]);
+    fetchEvaluationsForIds([employeeId], currentPeriodId, generationRef.current, activeScopeKey, currentScopeEpoch);
+  }, [currentPeriodId, fetchEvaluationsForIds, activeScopeKey, currentScopeEpoch]);
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 

@@ -5,6 +5,7 @@ import { Users, Target, TrendingUp, Clock, AlertTriangle, RotateCcw } from 'luci
 import dynamic from 'next/dynamic';
 import { User } from '@/types';
 import { getReportAggregation, ReportAggregationData } from '@/actions/reports';
+import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/layout/PageHeader';
 import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
@@ -32,6 +33,8 @@ export default function ReportsDataLayer({
   selectedTeam,
   teams,
 }: ReportsDataLayerProps) {
+  const { user, viewerScope, scopeEpoch } = useAuth();
+  const effectiveViewer = user ?? viewer;
   const [reportData, setReportData] = useState<ReportAggregationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
@@ -40,11 +43,13 @@ export default function ReportsDataLayer({
 
   const fetchReportData = useCallback(() => {
     const currentReq = ++activeReqRef.current;
+    const currentScopeKey = viewerScope?.scopeKey ?? null;
+    const currentEpoch = scopeEpoch;
 
     void Promise.resolve().then(async () => {
       if (activeReqRef.current !== currentReq) return;
 
-      if (!periodId) {
+      if (!periodId || !effectiveViewer || !viewerScope) {
         setReportData(null);
         setIsLoading(false);
         setIsError(false);
@@ -58,22 +63,43 @@ export default function ReportsDataLayer({
 
       try {
         const result = await getReportAggregation(periodId, selectedTeam);
-        if (activeReqRef.current === currentReq) {
-          setReportData(result);
+        if (
+          activeReqRef.current === currentReq &&
+          viewerScope?.scopeKey === currentScopeKey &&
+          scopeEpoch === currentEpoch &&
+          viewerScope
+        ) {
+          if (!result && periodId) {
+            setIsError(true);
+            setErrorMessage('Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+            setReportData(null);
+          } else {
+            setReportData(result);
+          }
         }
       } catch (err) {
         console.error('getReportAggregation error:', err);
-        if (activeReqRef.current === currentReq) {
+        if (
+          activeReqRef.current === currentReq &&
+          viewerScope?.scopeKey === currentScopeKey &&
+          scopeEpoch === currentEpoch &&
+          viewerScope
+        ) {
           setIsError(true);
-          setErrorMessage('Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+          setErrorMessage(err instanceof Error ? err.message : 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+          setReportData(null);
         }
       } finally {
-        if (activeReqRef.current === currentReq) {
+        if (
+          activeReqRef.current === currentReq &&
+          viewerScope?.scopeKey === currentScopeKey &&
+          scopeEpoch === currentEpoch
+        ) {
           setIsLoading(false);
         }
       }
     });
-  }, [periodId, selectedTeam]);
+  }, [periodId, selectedTeam, effectiveViewer, viewerScope, scopeEpoch]);
 
   useEffect(() => {
     const reqRef = activeReqRef;

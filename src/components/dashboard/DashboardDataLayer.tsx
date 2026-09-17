@@ -6,6 +6,7 @@ import type { DashboardLightData, DashboardHeavyData } from '@/actions/dashboard
 import type { User } from '@/types';
 import DashboardLightSection from '@/components/dashboard/DashboardLightSection';
 import DashboardHeavySection from '@/components/dashboard/DashboardHeavySection';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardDataLayerProps {
   viewer: User | null;
@@ -31,6 +32,9 @@ export default function DashboardDataLayer({
   viewer,
   periodId,
 }: DashboardDataLayerProps) {
+  const { user, viewerScope, scopeEpoch } = useAuth();
+  const effectiveViewer = user ?? viewer;
+
   const [lightState, setLightState] = useState<{
     isLoading: boolean;
     error: string | null;
@@ -51,18 +55,44 @@ export default function DashboardDataLayer({
     data: null,
   });
 
+  const [renderScope, setRenderScope] = useState<{ scopeKey: string; scopeEpoch: number } | null>(null);
+  const renderScopeRef = useRef<{ scopeKey: string; scopeEpoch: number } | null>(null);
   const reqIdRef = useRef(0);
 
   const fetchHeavy = useCallback(
-    async (targetPeriodId: string, currentReqId: number, userNameMap: Record<string, string> = {}) => {
-      if (!targetPeriodId) {
-        setHeavyState({ isLoading: false, error: null, data: null });
+    async (
+      targetPeriodId: string,
+      currentReqId: number,
+      userNameMap: Record<string, string> = {},
+      expectedScopeKey?: string | null,
+      expectedEpoch?: number
+    ) => {
+      if (!targetPeriodId || !effectiveViewer || !viewerScope) {
         return;
       }
-      setHeavyState((prev) => ({ ...prev, isLoading: true, error: null }));
+      const requestScope = {
+        scopeKey: expectedScopeKey ?? viewerScope.scopeKey,
+        scopeEpoch: expectedEpoch ?? scopeEpoch,
+      };
+      const scopeChanged =
+        renderScopeRef.current?.scopeKey !== requestScope.scopeKey ||
+        renderScopeRef.current?.scopeEpoch !== requestScope.scopeEpoch;
+      renderScopeRef.current = requestScope;
+      setRenderScope(requestScope);
+      setHeavyState((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+        data: scopeChanged ? null : prev.data,
+      }));
       try {
         const result = await getDashboardHeavyData(targetPeriodId, userNameMap);
-        if (currentReqId !== reqIdRef.current) return;
+        if (
+          currentReqId !== reqIdRef.current ||
+          (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+          (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+          !viewerScope
+        ) return;
         if (!result) {
           setHeavyState({
             isLoading: false,
@@ -77,7 +107,12 @@ export default function DashboardDataLayer({
           });
         }
       } catch (err) {
-        if (currentReqId !== reqIdRef.current) return;
+        if (
+          currentReqId !== reqIdRef.current ||
+          (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+          (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+          !viewerScope
+        ) return;
         setHeavyState({
           isLoading: false,
           error: err instanceof Error ? err.message : 'Lỗi kết nối máy chủ',
@@ -85,19 +120,42 @@ export default function DashboardDataLayer({
         });
       }
     },
-    []
+    [effectiveViewer, viewerScope, scopeEpoch]
   );
 
   const fetchLightAndHeavy = useCallback(
-    async (targetPeriodId: string, currentReqId: number) => {
-      if (!targetPeriodId) {
-        setLightState({ isLoading: false, error: null, data: null });
-        setHeavyState({ isLoading: false, error: null, data: null });
+    async (
+      targetPeriodId: string,
+      currentReqId: number,
+      expectedScopeKey?: string | null,
+      expectedEpoch?: number
+    ) => {
+      if (!targetPeriodId || !effectiveViewer || !viewerScope) {
         return;
       }
 
-      setLightState((prev) => ({ ...prev, isLoading: true, error: null }));
-      setHeavyState((prev) => ({ ...prev, isLoading: true, error: null }));
+      const requestScope = {
+        scopeKey: expectedScopeKey ?? viewerScope.scopeKey,
+        scopeEpoch: expectedEpoch ?? scopeEpoch,
+      };
+      const scopeChanged =
+        renderScopeRef.current?.scopeKey !== requestScope.scopeKey ||
+        renderScopeRef.current?.scopeEpoch !== requestScope.scopeEpoch;
+      renderScopeRef.current = requestScope;
+      setRenderScope(requestScope);
+
+      setLightState((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+        data: scopeChanged ? null : prev.data,
+      }));
+      setHeavyState((prev) => ({
+        ...prev,
+        isLoading: true,
+        error: null,
+        data: scopeChanged ? null : prev.data,
+      }));
 
       // These requests have independent server-side authorization and data sources.
       // Start heavy immediately; wait for light only to hydrate its display names.
@@ -109,7 +167,12 @@ export default function DashboardDataLayer({
 
       try {
         const lightResult = await getDashboardLightData(targetPeriodId);
-        if (currentReqId !== reqIdRef.current) return;
+        if (
+          currentReqId !== reqIdRef.current ||
+          (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+          (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+          !viewerScope
+        ) return;
         if (!lightResult) {
           setLightState({
             isLoading: false,
@@ -125,7 +188,12 @@ export default function DashboardDataLayer({
           });
         }
       } catch (err) {
-        if (currentReqId !== reqIdRef.current) return;
+        if (
+          currentReqId !== reqIdRef.current ||
+          (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+          (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+          !viewerScope
+        ) return;
         setLightState({
           isLoading: false,
           error: err instanceof Error ? err.message : 'Lỗi kết nối máy chủ',
@@ -134,7 +202,12 @@ export default function DashboardDataLayer({
       }
 
       const heavyOutcome = await heavyPromise;
-      if (currentReqId !== reqIdRef.current) return;
+      if (
+        currentReqId !== reqIdRef.current ||
+        (expectedScopeKey !== undefined && viewerScope?.scopeKey !== expectedScopeKey) ||
+        (expectedEpoch !== undefined && scopeEpoch !== expectedEpoch) ||
+        !viewerScope
+      ) return;
       if (!heavyOutcome.ok) {
         setHeavyState({
           isLoading: false,
@@ -155,49 +228,76 @@ export default function DashboardDataLayer({
         });
       }
     },
-    []
+    [effectiveViewer, viewerScope, scopeEpoch]
   );
 
   useEffect(() => {
     const currentReqId = ++reqIdRef.current;
-    fetchLightAndHeavy(periodId, currentReqId);
-  }, [periodId, fetchLightAndHeavy]);
+    if (!effectiveViewer || !viewerScope) {
+      return;
+    }
+    fetchLightAndHeavy(periodId, currentReqId, viewerScope.scopeKey, scopeEpoch);
+  }, [periodId, effectiveViewer, viewerScope, scopeEpoch, fetchLightAndHeavy]);
 
   const handleRetryLight = useCallback(() => {
+    if (!effectiveViewer || !viewerScope) return;
     const currentReqId = ++reqIdRef.current;
-    fetchLightAndHeavy(periodId, currentReqId);
-  }, [fetchLightAndHeavy, periodId]);
+    fetchLightAndHeavy(periodId, currentReqId, viewerScope.scopeKey, scopeEpoch);
+  }, [fetchLightAndHeavy, periodId, effectiveViewer, viewerScope, scopeEpoch]);
 
   const handleRetryHeavy = useCallback(() => {
+    if (!effectiveViewer || !viewerScope) return;
     const currentReqId = ++reqIdRef.current;
     const userNameMap = lightState.data?.userNameById || {};
-    fetchHeavy(periodId, currentReqId, userNameMap);
-  }, [fetchHeavy, periodId, lightState.data?.userNameById]);
+    fetchHeavy(periodId, currentReqId, userNameMap, viewerScope.scopeKey, scopeEpoch);
+  }, [fetchHeavy, periodId, lightState.data?.userNameById, effectiveViewer, viewerScope, scopeEpoch]);
+
+  const currentScopeKey = viewerScope?.scopeKey;
+  const hasCurrentLightState = Boolean(
+    currentScopeKey &&
+      renderScope?.scopeKey === currentScopeKey &&
+      renderScope.scopeEpoch === scopeEpoch
+  );
+  const hasCurrentHeavyState = Boolean(
+    currentScopeKey &&
+      renderScope?.scopeKey === currentScopeKey &&
+      renderScope.scopeEpoch === scopeEpoch
+  );
+  const visibleLightState =
+    effectiveViewer && viewerScope && hasCurrentLightState
+      ? lightState
+      : { isLoading: Boolean(effectiveViewer && viewerScope), error: null, data: null };
+  const visibleHeavyState =
+    effectiveViewer && viewerScope && hasCurrentHeavyState
+      ? heavyState
+      : { isLoading: Boolean(effectiveViewer && viewerScope), error: null, data: null };
 
   // userNameById from light data or heavy data
-  const userNameById = lightState.data?.userNameById || heavyState.data?.userNameById || {};
+  const userNameById =
+    visibleLightState.data?.userNameById || visibleHeavyState.data?.userNameById || {};
 
   // If light data has finished loading and total === 0, empty state is displayed by LightSection
-  const isZeroTotal = !lightState.isLoading && lightState.data && lightState.data.stats.total === 0;
+  const isZeroTotal =
+    !visibleLightState.isLoading && visibleLightState.data && visibleLightState.data.stats.total === 0;
 
   return (
     <div className="space-y-8">
       {/* Light Data Region: KPI, Team status, Grade distribution */}
       <DashboardLightSection
-        data={lightState.data}
-        isLoading={lightState.isLoading}
-        error={lightState.error}
+        data={visibleLightState.data}
+        isLoading={visibleLightState.isLoading}
+        error={visibleLightState.error}
         onRetry={handleRetryLight}
       />
 
       {/* Heavy Data Region: Pending reviews, Anomaly alerts, Radar chart, Recent activities */}
       {!isZeroTotal && (
         <DashboardHeavySection
-          data={heavyState.data}
+          data={visibleHeavyState.data}
           userNameById={userNameById}
           viewer={viewer}
-          isLoading={heavyState.isLoading}
-          error={heavyState.error}
+          isLoading={visibleHeavyState.isLoading}
+          error={visibleHeavyState.error}
           onRetry={handleRetryHeavy}
         />
       )}

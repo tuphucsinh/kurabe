@@ -1,3 +1,5 @@
+import type { XLSX$Utils, WorkBook, WritingOptions } from 'xlsx';
+
 export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee' | 'Worker';
 
 export type AppliesTo = 'leader' | 'staff' | 'both';
@@ -174,9 +176,24 @@ export interface EvaluationDisplayDto {
   rounds: EvaluationDisplayRound[];
 }
 
+export type XlsxExportApi = {
+  utils: Pick<XLSX$Utils, 'book_new' | 'json_to_sheet' | 'book_append_sheet'>;
+  writeFile: (data: WorkBook, filename: string, opts?: WritingOptions) => void;
+};
+
 export interface EvaluationTransitionResult {
   roundId: string;
   evaluationId: string;
   nextRoundId: string | null;
   finalStatus: string;
+}
+
+export interface ExportEvaluationsOptions {
+  includeRoundDetails?: boolean;
+  displayDtos?: Map<string, EvaluationDisplayDto> | Record<string, EvaluationDisplayDto>;
+  evaluations?: Evaluation[];
+  users?: User[];
+  teams?: Team[];
+  periodData?: EvaluationPeriod | null;
+  XLSX?: XlsxExportApi;
 }

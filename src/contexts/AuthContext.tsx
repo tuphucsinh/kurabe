@@ -20,6 +20,7 @@ interface AuthContextType {
   currentPeriod: EvaluationPeriod | null;
   allPeriods: EvaluationPeriod[];
   setCurrentPeriod: (period: EvaluationPeriod) => void;
+  refreshViewerScope: (options?: { clearBeforeRender?: boolean }) => Promise<ViewerScope | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -282,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentPeriod,
       allPeriods,
       setCurrentPeriod,
+      refreshViewerScope,
     }}>
       {children}
     </AuthContext.Provider>

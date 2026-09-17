@@ -167,18 +167,32 @@ ORDER BY p.proname;
 -- return_evaluation_round_transaction:
 --   'kurabe:p103m1t03:candidate:v1:function:return_evaluation_round_transaction'
 
--- 4. Verify function permissions (service_role ONLY, no public/anon execute)
+-- 4. Verify explicit function permissions (service_role ONLY; retains PUBLIC grantee=0 via LEFT JOIN)
 SELECT
   p.proname AS function_name,
-  r.rolname AS grantee,
+  pg_get_function_identity_arguments(p.oid) AS arguments,
+  CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE r.rolname END AS grantee,
   a.privilege_type
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f'::"char", p.proowner))) a
-JOIN pg_roles r ON r.oid = a.grantee
+LEFT JOIN pg_roles r ON r.oid = a.grantee
 WHERE n.nspname = 'public'
   AND p.proname IN ('save_evaluation_round_transaction_active_only', 'return_evaluation_round_transaction')
-ORDER BY p.proname, r.rolname;
+ORDER BY p.proname, arguments, grantee;
+
+-- 4b. Verify effective exact-overload EXECUTE privileges (anon=false, authenticated=false, service_role=true)
+SELECT
+  p.proname AS function_name,
+  pg_get_function_identity_arguments(p.oid) AS arguments,
+  has_function_privilege('anon', p.oid, 'EXECUTE') AS anon_execute,
+  has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_execute,
+  has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role_execute
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname IN ('save_evaluation_round_transaction_active_only', 'return_evaluation_round_transaction')
+ORDER BY p.proname, arguments;
 
 -- 5. Read-only sanity read of evaluation periods and evaluations
 SELECT id, year, name, status, created_at, closed_at
@@ -213,6 +227,9 @@ COMMIT;
 ### Post-Deployment Verification
 - [ ] Run Production Read-Only Smoke Query Template (Section 6) inside `BEGIN TRANSACTION READ ONLY;`.
 - [ ] Verify provenance comments match exact P103 hashes.
+- [ ] Verify explicit function permissions retain `PUBLIC` (`grantee=0`) via `LEFT JOIN` and confirm zero public/anon/authenticated grants.
+- [ ] Verify effective exact-overload `EXECUTE` privileges: `anon=false`, `authenticated=false`, `service_role=true` for both target functions.
+- [ ] Confirm disposable rehearsal cleanup truth: verified container absence with no swallowed removal errors.
 - [ ] Perform non-mutating UI smoke test (Dashboard, Evaluation list, History page).
 - [ ] Confirm no 5xx errors or unexpected RLS rejections in operational logs.
 - [ ] Keep write-pause fallback command accessible in event of anomaly.

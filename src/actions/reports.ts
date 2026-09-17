@@ -98,8 +98,9 @@ async function getReportAggregationInner(
     };
 
     filteredEvals.forEach(e => {
-      const score = e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0);
-      const grade = (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : null)) as string;
+      const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
+      const score = e.finalScore ?? lastRound?.totalScore ?? 0;
+      const grade = (e.finalGrade ?? lastRound?.grade ?? null) as string | null;
 
       totalScore += score;
 
@@ -108,11 +109,11 @@ async function getReportAggregationInner(
         if (gradeCounts[grade] !== undefined) gradeCounts[grade]++;
       }
 
-      const latestScores = (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].scores : {}) as Record<string, number>;
+      const latestScores = (lastRound?.scores || {}) as Record<string, number>;
       Object.entries(latestScores).forEach(([cid, s]) => {
         const groupId = criteriaGroupIdMap.get(cid);
         if (groupId && criteriaGroupScores[groupId]) {
-          criteriaGroupScores[groupId].totalGroupScore += s;
+          criteriaGroupScores[groupId].totalGroupScore += s ?? 0;
           criteriaGroupScores[groupId].count++;
         }
       });
@@ -150,7 +151,8 @@ async function getReportAggregationInner(
     evaluations.forEach(e => {
       const user = userMap.get(e.employeeId);
       if (user && teamStatsMap.has(user.teamId)) {
-        const score = e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0);
+        const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
+        const score = e.finalScore ?? lastRound?.totalScore ?? 0;
         const teamStat = teamStatsMap.get(user.teamId)!;
         teamStat.totalScore += score;
         teamStat.count++;
@@ -187,12 +189,15 @@ async function getReportAggregationInner(
       .map(e => {
         const user = userMap.get(e.employeeId);
         const team = teamMap.get(user?.teamId ?? '');
+        const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
+        const score = e.finalScore ?? lastRound?.totalScore ?? 0;
+        const grade = (e.finalGrade ?? lastRound?.grade ?? '-') as string;
         return {
           id: e.employeeId,
           name: user?.name || 'Unknown',
           teamName: team?.name || '—',
-          score: e.finalScore || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].totalScore : 0),
-          grade: (e.finalGrade || (e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1].grade : '-')) as string
+          score,
+          grade
         };
       })
       .sort((a, b) => b.score - a.score)
@@ -212,7 +217,7 @@ async function getReportAggregationInner(
     };
   } catch (error) {
     console.error('Error in getReportAggregation:', error);
-    return null;
+    throw error instanceof Error ? error : new Error('Không thể tổng hợp dữ liệu báo cáo');
   }
 }
 
@@ -222,7 +227,9 @@ export async function getReportAggregation(
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
-  if (auth.error !== null) return null;
+  if (auth.error !== null) {
+    throw new Error(auth.error || 'Unauthorized');
+  }
   // KHÔNG unstable_cache — bỏ cache trong hàm (gây lag Vercel + trang trắng, Fix A 2026-08-16)
   return getReportAggregationInner(periodId, selectedTeam, auth.user);
 }

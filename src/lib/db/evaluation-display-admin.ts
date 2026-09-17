@@ -42,7 +42,7 @@ type CriterionAudienceVersionRow = Pick<
 >;
 type GradeConfigVersionRow = Pick<Tables<'grade_band_versions'>, 'id'>;
 
-type CriteriaSnapshot = {
+export type CriteriaSnapshot = {
   groups: Map<string, CriteriaGroup>;
   unavailable: Set<string>;
 };
@@ -56,7 +56,7 @@ const uniqueNonEmpty = (values: Array<string | null | undefined>): string[] => [
   ...new Set(values.filter((value): value is string => typeof value === 'string' && value.length > 0)),
 ];
 
-function buildCriteriaSnapshot(
+export function buildCriteriaSnapshot(
   versionIds: readonly string[],
   configs: CriteriaConfigVersionRow[],
   groups: CriteriaGroupVersionRow[],
@@ -151,7 +151,7 @@ function buildCriteriaSnapshot(
   return { groups: result, unavailable };
 }
 
-async function loadCriteriaSnapshots(versionIds: readonly string[]): Promise<CriteriaSnapshot> {
+export async function loadCriteriaSnapshots(versionIds: readonly string[]): Promise<CriteriaSnapshot> {
   if (versionIds.length === 0) return { groups: new Map(), unavailable: new Set() };
 
   const [configResult, groupsResult, criteriaResult, levelsResult, audiencesResult] = await Promise.all([
@@ -226,7 +226,7 @@ function roundSnapshotState(
   return 'authoritative';
 }
 
-function groupsForVersion(versionId: string | null | undefined, snapshot: CriteriaSnapshot): CriteriaGroup[] {
+export function groupsForVersion(versionId: string | null | undefined, snapshot: CriteriaSnapshot): CriteriaGroup[] {
   if (!versionId) return [];
   return [...snapshot.groups.entries()]
     .filter(([key]) => key.startsWith(`${versionId}:`))
