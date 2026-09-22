@@ -199,6 +199,62 @@ export async function deleteSmokeSession(config, tokenHash) {
   } catch {}
 }
 
+// R4 preflight: NEXT_PUBLIC_* is inlined into .next/server at build time, and
+// scripts/run-with-env.mjs deliberately forces .env.local over shell env. A
+// bundle inlined against a different Supabase URL can never pass the auth
+// cases, so fail with an explicit diagnostic instead of marker=absent.
+export function assertInlinedBuildUrl(config) {
+  if (!config.supabaseUrl) return;
+  const serverDir = path.join(projectRoot, '.next', 'server');
+  if (!fs.existsSync(serverDir)) {
+    throw new Error('smoke preflight: .next/server missing — run the production build first');
+  }
+  let found = false;
+  const walk = (dir) => {
+    if (found) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (found) return;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.name.endsWith('.js') && fs.readFileSync(full, 'utf8').includes(config.supabaseUrl)) {
+        found = true;
+        return;
+      }
+    }
+  };
+  walk(serverDir);
+  if (!found) {
+    throw new Error(
+      `smoke preflight: build-url-mismatch — .next/server does not contain disposable URL ${config.supabaseUrl} ` +
+      '(inlined NEXT_PUBLIC_SUPABASE_URL differs; check scripts/run-with-env.mjs/.env.local override)'
+    );
+  }
+}
+
+// R4 fail-closed: a silently failed session INSERT (PostgREST or SQL fallback)
+// would make every auth case fail as an opaque marker=absent. Verify the row
+// through the same PostgREST path getSessionUser reads before spawning Next.
+export async function verifySmokeSessionRow(config, tokenHash) {
+  if (!config.supabaseUrl || !config.serviceRoleKey) {
+    throw new Error('smoke preflight: session-insert-verify skipped — missing supabaseUrl/serviceRoleKey');
+  }
+  const res = await fetch(
+    `${config.supabaseUrl}/rest/v1/sessions?token_hash=eq.${tokenHash}&select=token_hash`,
+    {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    }
+  );
+  const rows = res.ok ? await res.json() : null;
+  if (!res.ok || !Array.isArray(rows) || rows.length !== 1) {
+    throw new Error(`smoke preflight: session-insert-failed (verify HTTP ${res.status}, rows=${JSON.stringify(rows)})`);
+  }
+}
+
 export function findNextBin() {
   const localBin = path.join(projectRoot, 'node_modules/.bin/next');
   if (fs.existsSync(localBin)) return localBin;
@@ -238,6 +294,9 @@ export async function run(runOptions = {}) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const user = await getManagerUser(config);
   const session = await createSmokeSession(config, user);
+  // R4: fail closed before spawning anything.
+  await verifySmokeSessionRow(config, session.tokenHash);
+  assertInlinedBuildUrl(config);
 
   const nextBin = findNextBin();
   const nextEnv = {
@@ -307,12 +366,21 @@ export async function run(runOptions = {}) {
       });
       const html = await res.text();
       const status = res.status;
-      const marker = (status === 200 && (html.includes('Tổng quan hệ thống') || html.includes('data-load-layer="shell"')))
+      // R4: distinguish auth rejection (redirect / streamed NEXT_REDIRECT) from a marker miss.
+      if (status === 302 || status === 303 || status === 307 || status === 308 || html.includes('NEXT_REDIRECT')) {
+        throw new Error(`Smoke case (b) dashboard failed: auth-rejected session (status=${status}, flightRedirect=${html.includes('NEXT_REDIRECT')})`);
+      }
+      // R4: Next16 loading-boundary pages deliver resolved content via the RSC
+      // flight payload instead of body markup — accept either as the marker.
+      // Flight escapes quotes (\"viewer\":), so flatten before matching props.
+      const flatHtml = html.replaceAll('\\', '');
+      const flightResolved = flatHtml.includes('"viewer":') && flatHtml.includes('"periodId":');
+      const marker = (status === 200 && (html.includes('Tổng quan hệ thống') || html.includes('data-load-layer="shell"') || flightResolved))
         ? 'present'
         : 'absent';
-      console.log(`route=/dashboard status=${status} marker=${marker}`);
+      console.log(`route=/dashboard status=${status} marker=${marker} flightResolved=${flightResolved}`);
       if (status !== 200 || marker !== 'present') {
-        throw new Error(`Smoke case (b) dashboard failed: status=${status} marker=${marker}`);
+        throw new Error(`Smoke case (b) dashboard failed: status=${status} marker=${marker} flightResolved=${flightResolved}`);
       }
       results.push({ name: 'dashboard-loads-with-marker', route: '/dashboard', status, marker, passed: true });
     }
@@ -326,12 +394,17 @@ export async function run(runOptions = {}) {
       });
       const html = await res.text();
       const status = res.status;
-      const marker = (status === 200 && (html.includes('Quản lý Nhân sự QAQC') || html.includes('data-load-layer="shell"')))
+      if (status === 302 || status === 303 || status === 307 || status === 308 || html.includes('NEXT_REDIRECT')) {
+        throw new Error(`Smoke case (c) employees failed: auth-rejected session (status=${status}, flightRedirect=${html.includes('NEXT_REDIRECT')})`);
+      }
+      const flatHtml = html.replaceAll('\\', '');
+      const flightResolved = flatHtml.includes('"initialViewer":');
+      const marker = (status === 200 && (html.includes('Quản lý Nhân sự QAQC') || html.includes('data-load-layer="shell"') || flightResolved))
         ? 'present'
         : 'absent';
-      console.log(`route=/employees status=${status} marker=${marker}`);
+      console.log(`route=/employees status=${status} marker=${marker} flightResolved=${flightResolved}`);
       if (status !== 200 || marker !== 'present') {
-        throw new Error(`Smoke case (c) employees failed: status=${status} marker=${marker}`);
+        throw new Error(`Smoke case (c) employees failed: status=${status} marker=${marker} flightResolved=${flightResolved}`);
       }
       results.push({ name: 'employees-loads', route: '/employees', status, marker, passed: true });
     }
@@ -345,17 +418,25 @@ export async function run(runOptions = {}) {
       });
       const html = await res.text();
       const status = res.status;
-      const marker = (status === 200 && (html.includes('Báo cáo QAQC') || html.includes('data-load-layer="shell"')))
+      if (status === 302 || status === 303 || status === 307 || status === 308 || html.includes('NEXT_REDIRECT')) {
+        throw new Error(`Smoke case (d) reports failed: auth-rejected session (status=${status}, flightRedirect=${html.includes('NEXT_REDIRECT')})`);
+      }
+      const flatHtml = html.replaceAll('\\', '');
+      const flightResolved = flatHtml.includes('"viewer":') && flatHtml.includes('"periodId":');
+      const marker = (status === 200 && (html.includes('Báo cáo QAQC') || html.includes('data-load-layer="shell"') || flightResolved))
         ? 'present'
         : 'absent';
-      console.log(`route=/reports status=${status} marker=${marker}`);
+      console.log(`route=/reports status=${status} marker=${marker} flightResolved=${flightResolved}`);
       if (status !== 200 || marker !== 'present') {
-        throw new Error(`Smoke case (d) reports failed: status=${status} marker=${marker}`);
+        throw new Error(`Smoke case (d) reports failed: status=${status} marker=${marker} flightResolved=${flightResolved}`);
       }
       results.push({ name: 'reports-loads', route: '/reports', status, marker, passed: true });
     }
 
-    // Case (e): One protected route redirect for an unauthenticated session
+    // Case (e): One protected route redirect for an unauthenticated session.
+    // R4: /dashboard has a loading.tsx boundary, so Next flushes the shell first
+    // and the redirect streams as NEXT_REDIRECT inside an HTTP 200 — an HTTP 307
+    // header can never arrive. Accept either transport of the same redirect.
     {
       const res = await fetch(`${baseUrl}/dashboard`, {
         redirect: 'manual',
@@ -363,13 +444,15 @@ export async function run(runOptions = {}) {
       });
       const status = res.status;
       const location = res.headers.get('location') || '';
-      const isRedirect = status === 307 || status === 302 || status === 303 || status === 308;
-      const marker = (isRedirect && (location === '/login' || location.endsWith('/login') || location.includes('/login')))
-        ? 'present'
-        : 'absent';
-      console.log(`route=/dashboard status=${status} marker=${marker}`);
-      if (!isRedirect || marker !== 'present') {
-        throw new Error(`Smoke case (e) protected redirect failed: status=${status} location=${location} marker=${marker}`);
+      const html = status === 200 ? await res.text() : '';
+      const httpRedirect = status === 307 || status === 302 || status === 303 || status === 308;
+      const flightRedirect = !httpRedirect && html.includes('NEXT_REDIRECT') && html.includes('/login');
+      const locationOk = location === '/login' || location.endsWith('/login') || location.includes('/login');
+      const isRedirect = (httpRedirect && locationOk) || flightRedirect;
+      const marker = isRedirect ? 'present' : 'absent';
+      console.log(`route=/dashboard status=${status} mode=${httpRedirect ? 'http' : flightRedirect ? 'flight' : 'none'} marker=${marker}`);
+      if (!isRedirect) {
+        throw new Error(`Smoke case (e) protected redirect failed: status=${status} location=${location} flightRedirect=${flightRedirect} marker=${marker}`);
       }
       results.push({ name: 'protected-route-redirect-unauthenticated', route: '/dashboard', status, marker, passed: true });
     }
