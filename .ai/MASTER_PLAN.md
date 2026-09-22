@@ -2,7 +2,7 @@
 
 ## Current control state
 
-- `PLAN_STATUS=P105_REGISTERED` (P104 closed — see "P104 closure" below)
+- `PLAN_STATUS=P105_DONE` (T01–T03 integrated 2026-09-22 — see outcome under "P105" below)
 - Canonical repository: `/home/pi5/projects/kurabe`
 - Branch: `main`
 - Historical P104 phase baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`

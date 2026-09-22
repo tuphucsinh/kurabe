@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active remediation scope: **P105 bounded cleanup — T01 DONE (`74b84f3`), T02 DONE (`3ec6f84`), T03 next (perf rerun); P104 is DONE**
+- Active remediation scope: **none — P105 CLOSED (T01–T03 all DONE); P104 is DONE**
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -252,7 +252,7 @@ DoD:
 
 ---
 
-### [ ] [#P105M1T03] Rerun authenticated performance baseline on current code
+### [x] [#P105M1T03] Rerun authenticated performance baseline on current code
 
 ```yaml
 task:
