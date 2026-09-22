@@ -308,6 +308,30 @@ Goal: When a NEW user row is created through `upsertUserAction`/`upsertUsersActi
   - `npm run build` exit 0
   - secret scan clean; edits remain inside `owns`
 
+### [ ] [#P106M1T02] Stop 30-50s scoped-cache blink on /teams (poll must not clearBeforeRender)
+
+```yaml
+task:
+  id: P106M1T02
+  tier: CONTROLLED
+  depends: []
+  owns: [src/contexts/AuthContext.tsx, tests/auth-context-poll.test.mjs]
+  locks: []
+```
+
+Goal: The 30s viewer-scope poll (interval + focus/pageshow/visibility handlers) calls `refreshViewerScope({ clearBeforeRender: true })`, which nulls `viewerScope` and removes every `SCOPED_QUERY_FAMILIES` cache entry before the server answer arrives. `/teams` renders a full skeleton for ~1-2s every ~40-50s (owner screenshot 2026-09-22). Dashboard/Reports are RSC server-rendered and partly outside the family set, so they do not blink — consistent with "other pages seem fine".
+
+- Change: inside `maybeRefreshViewerScope` ONLY, call `refreshViewerScope()` with no options (default `clearBeforeRender` falsy). Keep `clearBeforeRender?: boolean` on the context interface; keep the `login()` refresh call (~L236) untouched; do NOT modify `scopeFingerprint`, the scope-epoch effect (L92-99), `clearScopedQueries`, `SCOPED_QUERY_FAMILIES`, logout, or any component.
+- Invariants that MUST remain true (pinned by the new test): identity/scope change still clears exactly once via the fingerprint-diff effect (epoch bump + cancelQueries + removeQueries); a `null` scope response (action failure / session end) changes the fingerprint → clear still happens (fail-closed); same-identity refresh keeps data on screen while queries refetch in background.
+- Focused regressions (`tests/auth-context-poll.test.mjs`, `node:test`, static source-contract style of `tests/password-seed.test.mjs`): (1) `src/contexts/AuthContext.tsx` contains no `clearBeforeRender: true` (the only allowed occurrence of the token `clearBeforeRender` is the interface type declaration); (2) `maybeRefreshViewerScope` body calls `refreshViewerScope()` with no argument object; (3) anchors proving fingerprint + epoch-effect + `clearScopedQueries` logic still present; (4) `SCOPED_QUERY_FAMILIES` still contains `'teams'`, `'teams-page-data'`, `'employees-page-data'`.
+- Constraints: no new dependencies; no DB/SQL/RPC/config/AGENTS.md/HANDOFF edits; edits strictly inside `owns`.
+- DoD:
+  - `npm run lint` exit 0
+  - `npm run typecheck` exit 0
+  - `node --test tests/` exit 0 (existing 65 + new file)
+  - `npm run build` exit 0
+  - secret scan clean; edits remain inside `owns`
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
