@@ -280,7 +280,7 @@ DoD:
 
 ## P106 tasks
 
-### [ ] [#P106M1T01] Seed default password = employee_code for newly created users
+### [x] [#P106M1T01] Seed default password = employee_code for newly created users
 
 ```yaml
 task:
