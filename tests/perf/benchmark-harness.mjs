@@ -719,10 +719,11 @@ async function waitForDevToolsPort(portFile) {
 
 function summarizeValues(values) {
   const numeric = values.filter((value) => typeof value === 'number' && Number.isFinite(value));
-  if (numeric.length === 0) return { sampleCount: 0, min: null, max: null, mean: null, median: null, spreadPercent: null, aggregation: 'unavailable', value: null };
+  if (numeric.length === 0) return { sampleCount: 0, min: null, max: null, mean: null, median: null, p95: null, spreadPercent: null, aggregation: 'unavailable', value: null };
   const sorted = [...numeric].sort((a, b) => a - b);
   const median = sorted.length === 1 ? sorted[0] : (sorted[0] + sorted[sorted.length - 1]) / 2;
   const mean = sorted.reduce((sum, value) => sum + value, 0) / sorted.length;
+  const p95 = sorted[Math.max(0, Math.ceil(0.95 * sorted.length) - 1)];
   const spreadPercent = median === 0 ? 0 : ((sorted[sorted.length - 1] - sorted[0]) / median) * 100;
   const useMedian = spreadPercent > 5;
   const round = (value) => Math.round(value * 10) / 10;
@@ -732,6 +733,7 @@ function summarizeValues(values) {
     max: round(sorted[sorted.length - 1]),
     mean: round(mean),
     median: round(median),
+    p95: round(p95),
     spreadPercent: round(spreadPercent),
     aggregation: useMedian ? 'median' : 'mean',
     value: round(useMedian ? median : mean),
@@ -840,6 +842,8 @@ async function runLocalFixtureBenchmark() {
   }
 }
 
+const ACTUAL_LOCAL_SAMPLES_PER_POINT = 5;
+
 async function runActualLocalBenchmark() {
   const { createAppAuthFixture, createBrowserSession, startNextApplication } = await import('../browser/app-auth-harness.mjs');
   const fixture = await createAppAuthFixture();
@@ -865,6 +869,7 @@ async function runActualLocalBenchmark() {
     { role: 'manager', routes: TARGET_ROUTES, denied: false },
     { role: 'employee', routes: ['/reports'], denied: true },
   ];
+  const states = ['cold', 'warm'];
   const browserVersion = spawnSync('/usr/bin/google-chrome-stable', ['--version'], { encoding: 'utf8' }).stdout.trim();
   try {
     next = await startNextApplication(fixture);
@@ -898,8 +903,8 @@ async function runActualLocalBenchmark() {
         const cookie = await cdp.send('Network.setCookie', { name: 'auth_session', value: session.token, url: next.url, path: '/', httpOnly: true, sameSite: 'Lax' });
         if (cookie.success !== true) throw new Error(`could not install ${entry.role} local auth cookie`);
         for (const route of entry.routes) {
-          for (const state of ['cold', 'warm']) {
-            for (let sample = 1; sample <= 2; sample += 1) {
+          for (const state of states) {
+            for (let sample = 1; sample <= ACTUAL_LOCAL_SAMPLES_PER_POINT; sample += 1) {
               const errorStart = browserErrors.length;
               if (state === 'cold') await cdp.send('Network.clearBrowserCache');
               let documentStatus = null;
@@ -947,7 +952,10 @@ async function runActualLocalBenchmark() {
         }
       }
     }
-    if (runs.length !== 32) throw new Error(`Expected 32 actual local samples, got ${runs.length}`);
+    const deniedRouteCount = matrix.filter((entry) => entry.denied).reduce((sum, entry) => sum + entry.routes.length, 0);
+    const deniedRouteSamples = deniedRouteCount * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT;
+    const expectedRuns = (TARGET_ROUTES.length * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT) + deniedRouteSamples;
+    if (runs.length !== expectedRuns) throw new Error(`Expected ${expectedRuns} actual local samples, got ${runs.length}`);
     if (runs.some((run) => run.browserErrors.length > 0)) throw new Error(`Actual local performance recorded browser/runtime errors: ${JSON.stringify(browserErrors.slice(0, 5))}`);
     const summary = {};
     for (const run of runs) {
@@ -965,13 +973,14 @@ async function runActualLocalBenchmark() {
         mode: 'actual-local', target: 'loopback-owned-supabase-plus-private-next-production', candidateSha, browser: browserVersion,
         liveBrowser: true, authenticated: true, stack: fixture.stackHandle.stackName, network: fixture.stackHandle.networkId,
         api: fixture.restUrl, db: fixture.stackHandle.dbTarget, next: { appRoot: next.sourceIdentity.appRoot, nextConfig: next.sourceIdentity.nextConfig, buildMode: next.sourceIdentity.buildMode, candidateSha }, routes: TARGET_ROUTES,
-        viewports, roles: ['manager', 'employee'], samplesPerPoint: 2, deniedRouteSamples: 8, metricAvailability,
+        viewports, roles: ['manager', 'employee'], samplesPerPoint: ACTUAL_LOCAL_SAMPLES_PER_POINT, deniedRouteSamples, metricAvailability,
+        measuredAtUtc: new Date().toISOString(),
       },
       limitations: ['Employee role is measured on the explicit denied /reports route; manager is measured on all required data routes.', 'FCP/LCP are reported as UNKNOWN where Chrome exposes no paint entry; no fallback value is invented.'],
       runs, summary: Object.values(summary), runtimeReadback: { seed: fixture.seedHandle.seedIdentity, postCleanup: 'verified-by-fixture-stop' },
     };
     fs.writeFileSync(REPORT_FILE, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    console.log(`ACTUAL_LOCAL_PERF_PASS runs=${runs.length} routes=3 viewports=2 manager=3-routes employee=denied-reports samples=2`);
+    console.log(`ACTUAL_LOCAL_PERF_PASS runs=${runs.length} routes=3 viewports=2 manager=3-routes employee=denied-reports samples=${ACTUAL_LOCAL_SAMPLES_PER_POINT}`);
     console.log(`ACTUAL_LOCAL_PERF_REPORT ${REPORT_FILE}`);
   } finally {
     if (cdp) cdp.close();
