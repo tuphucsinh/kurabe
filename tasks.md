@@ -308,7 +308,7 @@ Goal: When a NEW user row is created through `upsertUserAction`/`upsertUsersActi
   - `npm run build` exit 0
   - secret scan clean; edits remain inside `owns`
 
-### [ ] [#P106M1T02] Stop 30-50s scoped-cache blink on /teams (poll must not clearBeforeRender)
+### [x] [#P106M1T02] Stop 30-50s scoped-cache blink on /teams (poll must not clearBeforeRender)
 
 ```yaml
 task:
