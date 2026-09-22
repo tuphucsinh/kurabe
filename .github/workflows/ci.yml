@@ -101,9 +101,20 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: synthetic-anon-key-placeholder
-          SUPABASE_SERVICE_ROLE_KEY: synthetic-service-role-key-placeholder
+          # P105M1T01 R1: NEXT_PUBLIC_* is inlined into the server bundle at build
+          # time, so production smoke on `next start` must be built against the real
+          # disposable runtime exported by export-env, not the legacy placeholders.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.KURABE_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.KURABE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.KURABE_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Production smoke
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs --suite production-smoke
 
       - name: Cleanup disposable confirmation runtime
         if: always()

@@ -308,9 +308,35 @@ async function bootstrap() {
   console.log(JSON.stringify({ candidateSha: state.sha, migrations: migrations.length, authenticatedRuntime: true }));
 }
 
-function exportEnv() {
-  const state = readState();
-  const envPath = process.env.GITHUB_ENV || path.join(runtimeRoot, 'runtime.env');
+export function getSensitiveValues(state = {}, values = {}) {
+  const maskCandidates = new Set();
+  const explicitKeys = [
+    'KURABE_DB_PASSWORD',
+    'KURABE_FIXTURE_PASSWORD',
+    'KURABE_SUPABASE_ANON_KEY',
+    'KURABE_SUPABASE_SERVICE_ROLE_KEY',
+  ];
+  for (const key of explicitKeys) {
+    const val = values[key];
+    if (typeof val === 'string' && val.length > 0) {
+      maskCandidates.add(val);
+    }
+  }
+  if (state && typeof state === 'object') {
+    for (const [key, val] of Object.entries(state)) {
+      if (/(?:password|jwt|secret)/i.test(key)) {
+        if (typeof val === 'string' && val.length > 0) {
+          maskCandidates.add(val);
+        }
+      }
+    }
+  }
+  return [...maskCandidates];
+}
+
+export function exportEnv(options = {}) {
+  const state = options.state || readState();
+  const envPath = options.envPath || process.env.GITHUB_ENV || path.join(runtimeRoot, 'runtime.env');
   const values = {
     KURABE_LOCAL_STACK_OWNED: '1',
     KURABE_SUPABASE_URL: state.supabaseUrl,
@@ -335,6 +361,10 @@ function exportEnv() {
   for (const name of ['H1H2', 'H3', 'H5', 'H6', 'H7']) {
     values[`KURABE_${name}_NEXT_URL`] = values.KURABE_CONFIRMATION_NEXT_URL;
     values[`KURABE_${name}_RUNTIME_SOURCE`] = projectRoot;
+  }
+  const sensitiveValues = getSensitiveValues(state, values);
+  for (const secret of sensitiveValues) {
+    console.log(`::add-mask::${secret}`);
   }
   const lines = Object.entries(values).map(([name, value]) => `${name}=${value}`).join('\n') + '\n';
   fs.appendFileSync(envPath, lines, { mode: 0o600 });
@@ -376,15 +406,17 @@ function cleanup() {
   console.log(JSON.stringify({ cleaned: true, residue: 0 }));
 }
 
-const action = process.argv[2];
-try {
-  if (action === 'start') await start();
-  else if (action === 'bootstrap') await bootstrap();
-  else if (action === 'export-env') exportEnv();
-  else if (action === 'proxy') proxy();
-  else if (action === 'cleanup') cleanup();
-  else throw new Error('Usage: confirmation-runtime.mjs <start|bootstrap|export-env|cleanup>');
-} catch (error) {
-  console.error(`CI_RUNTIME_FAIL ${safeError(error)}`);
-  process.exitCode = 1;
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const action = process.argv[2];
+  try {
+    if (action === 'start') await start();
+    else if (action === 'bootstrap') await bootstrap();
+    else if (action === 'export-env') exportEnv();
+    else if (action === 'proxy') proxy();
+    else if (action === 'cleanup') cleanup();
+    else throw new Error('Usage: confirmation-runtime.mjs <start|bootstrap|export-env|cleanup>');
+  } catch (error) {
+    console.error(`CI_RUNTIME_FAIL ${safeError(error)}`);
+    process.exitCode = 1;
+  }
 }
