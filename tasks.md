@@ -278,6 +278,36 @@ DoD:
 - dataComplete median < 1000 ms on LAN/loopback closes perf; otherwise at most 2 bounded fixes then re-measure (no new phase)
 - `npm run lint` (0 errors), `npm run typecheck`, `npm run build` still exit 0 on the final code
 
+## P106 tasks
+
+### [ ] [#P106M1T01] Seed default password = employee_code for newly created users
+
+```yaml
+task:
+  id: P106M1T01
+  tier: CONTROLLED
+  depends: []
+  owns: [src/actions/users.ts, src/lib/db/password-seed.ts, tests/password-seed.test.mjs]
+  locks: []
+```
+
+Goal: When a NEW user row is created through `upsertUserAction`/`upsertUsersAction`, give it a default login credential equal to its `employee_code` so the person can sign in immediately (owner instruction 2026-09-22: default password = employee code). Today new rows are created with `password_hash` NULL, which either blocks login (require mode) or silently skips the password check (optional mode). The personnel RPC must stay credential-free (design invariant: "credentials remain outside personnel mutation").
+
+- Interface: new export `seedDefaultPasswords(userIds: string[]): Promise<{ seeded: string[]; failed: Array<{ id: string; reason: string }> }>` in `src/lib/db/password-seed.ts`; upsert actions surface a non-empty `failed` through their existing `warning` field.
+- Current context: `src/actions/users.ts` (`upsertUserAction` `isNewUser` at L94-121; `upsertUsersAction` `prepared[].isNew` at L142-167; `softDeleteUserAction` must NOT seed); `src/lib/db/evaluations-write.ts` `applyPersonnelTransaction` returns `result.data.users`; login gates at `src/actions/auth.ts` L136-173 (NULL-hash behaviour); bcryptjs cost 10 matches `src/actions/account.ts` L119.
+- Changes:
+  1. Create `src/lib/db/password-seed.ts`: select `id, employee_code, password_hash, credential_revision` for the given ids where `password_hash IS NULL`; per row `hash = bcryptjs.hash(employee_code, 10)`; update `password_hash`, `password_setup_required=false`, `credential_revision=(current ?? 0)+1`; never log/print hash or password; collect `seeded` vs `failed({id, reason})` without throwing.
+  2. `upsertUserAction`: after personnel-transaction success, if `isNewUser`, call `seedDefaultPasswords([userId])`; attach `warning` when `failed.length > 0`; return stays success (personnel write already committed; Manager reset is the fallback).
+  3. `upsertUsersAction`: seed only `prepared[].isNew` ids after success; same warning rule.
+  4. Do not touch: `softDeleteUserAction`, `teams.ts`, RPC/SQL migrations, users that already have `password_hash`.
+- Constraints: empty `employee_code` ⇒ that row goes to `failed` (fail-closed per row); no credential values in audit detail/logs/warning text; bcryptjs only, no new deps; edits strictly inside `owns`; no control-file edits.
+- DoD:
+  - `npm run lint` exit 0
+  - `npm run typecheck` exit 0
+  - `npm test` exit 0, including new `tests/password-seed.test.mjs` covering: NULL-hash row gets a working bcrypt password equal to `employee_code` + setup flag cleared + revision bumped; already-hashed row untouched; empty `employee_code` → `failed` entry; action surfaces `warning` on failure
+  - `npm run build` exit 0
+  - secret scan clean; edits remain inside `owns`
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
