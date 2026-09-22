@@ -10,6 +10,7 @@ import { mapUserFromDb } from '@/lib/db/users';
 import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 import { applyPersonnelTransaction, PersonnelTransactionUserInput } from '@/lib/db/evaluations-write';
 import { toClientError } from '@/lib/errors';
+import { seedDefaultPasswords } from '@/lib/db/password-seed';
 
 type DbUser = Partial<Database['public']['Tables']['users']['Row']>;
 
@@ -118,7 +119,16 @@ export async function upsertUserAction(
       { name: saved.name, role: saved.role, teamId: saved.teamId }
     );
     revalidateUserPaths();
-    return { success: true, user: saved };
+
+    let warning: string | undefined;
+    if (isNewUser) {
+      const seed = await seedDefaultPasswords([userId]);
+      if (seed.failed.length > 0) {
+        warning = `Không thể đặt mật khẩu mặc định cho ${seed.failed.length} nhân viên (ID: ${seed.failed.map((f) => f.id).join(', ')}). Quản lý có thể đặt lại mật khẩu thủ công.`;
+      }
+    }
+
+    return { success: true, user: saved, ...(warning ? { warning } : {}) };
   } catch (error: unknown) {
     return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu nhân viên.') };
   }
@@ -164,7 +174,17 @@ export async function upsertUsersAction(
       }))
     );
     revalidateUserPaths();
-    return { success: true, users: saved };
+
+    const newIds = prepared.filter((p) => p.isNew).map((p) => p.id);
+    let warning: string | undefined;
+    if (newIds.length > 0) {
+      const seed = await seedDefaultPasswords(newIds);
+      if (seed.failed.length > 0) {
+        warning = `Không thể đặt mật khẩu mặc định cho ${seed.failed.length} nhân viên (ID: ${seed.failed.map((f) => f.id).join(', ')}). Quản lý có thể đặt lại mật khẩu thủ công.`;
+      }
+    }
+
+    return { success: true, users: saved, ...(warning ? { warning } : {}) };
   } catch (error: unknown) {
     return { success: false, error: toClientError(error, 'Lỗi không xác định khi lưu hàng loạt nhân viên.') };
   }
