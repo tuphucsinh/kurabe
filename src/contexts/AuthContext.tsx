@@ -137,7 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const maybeRefreshViewerScope = useCallback(() => {
     if (typeof document === 'undefined' || document.visibilityState !== 'visible' || !userRef.current) return;
     if (Date.now() - lastScopeRefreshAtRef.current < 30_000) return;
-    void refreshViewerScope({ clearBeforeRender: true });
+    // Same-identity poll: refresh silently in the background. Do NOT clearBeforeRender —
+    // removing scoped queries before the answer arrives blanks the UI (skeleton blink every
+    // ~40-50s). Identity/scope changes still clear exactly once via the fingerprint-diff
+    // effect above; a null scope response changes the fingerprint too (fail-closed).
+    void refreshViewerScope();
   }, [refreshViewerScope]);
 
   useEffect(() => {
