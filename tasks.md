@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active remediation scope: **P105 bounded cleanup (T01–T03); P104 is DONE**
+- Active remediation scope: **P105 bounded cleanup — T01 DONE (integrated `74b84f3`), T02 next, T03 last; P104 is DONE**
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -191,7 +191,7 @@
 
 Reviewed plan: `/home/pi5/hermes-artifacts/kurabe-p105-plan/plan.md` (agy/gemini-3.1-pro-high `PASS`, 3 minor suggestions applied).
 
-### [ ] [#P105M1T01] CI hygiene: mask disposable credentials + production smoke
+### [x] [#P105M1T01] CI hygiene: mask disposable credentials + production smoke
 
 ```yaml
 task:

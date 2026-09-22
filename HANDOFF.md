@@ -1,11 +1,11 @@
-# HANDOFF — P104 bounded remediation closed
+# HANDOFF — Kurabe project
 
-- State: P104 `DONE`; F01–F05 and F07–F09 are closed.
-- Published code candidate: `9a8c988be603507142a4a8afe854deec108560a0` from execution baseline `03a13da06ce549b6212bf9f32c28937e994dd048`.
-- Focused suites, unit `62/62`, lint, typecheck, build, secret scan, authenticated matrix, and real DB/browser checks passed.
-- Fresh AGY `gemini-3.8-flash-high` review passed the exact candidate with no blocking findings.
-- GitHub Actions run `35193543798` passed on the exact published code candidate.
-- Production writes `0`; production migrations `0`; no deployment or production catalog mutation was performed.
-- P104 runtime, linked worktrees, runner worktrees, and review clone were removed; residue readback was `0`.
-- Original AGY runner exit `1` events remain provenance only and were not used as PASS evidence.
-- Canonical `main` was clean after publish; future work requires a new explicit owner request.
+**READ `AGENTS.md` FIRST.** It defines the Mika/Coder/Reviewer authority and operating contract (`mika-v3`).
+
+**Current phase:** P105 bounded cleanup — T01 integrated, T02 next, T03 last.
+**P105M1T01 integrated candidate:** `74b84f30d86cc9af28608d61f61f1668905ec0a8` — CONTROLLED review `VERDICT=PASS / SEVERITY=NONE / FINDINGS=none` (REVIEW_EXIT=0).
+**Gates on exact candidate:** npm ci / lint / typecheck / test / scan-source-secrets / build all rc=0 — `/home/pi5/hermes-artifacts/kurabe-p105/P105M1T01/gates-candidate.log`.
+**T01 content:** `::add-mask::` for every disposable CI credential before `$GITHUB_ENV` (empty-value guarded); fail-closed `production-smoke` suite (5 cases, `next start`, loopback) wired after build; repair R1 maps build `NEXT_PUBLIC_*` to the disposable runtime (inlining verified in `.next/server` — legacy placeholder build would fail the smoke); new `tests/ci-export-mask.test.mjs` (4 cases PASS).
+**Residual:** production-smoke's first real execution is GitHub CI after push — **push needs owner approval**; KNOWN_BUGS archived as historical index in control commit `4f9cf2b`.
+**Next:** dispatch `P105M1T02` (delete the two unreachable legacy evaluation blocks in `src/actions/evaluation.ts`), then `P105M1T03` (perf rerun, 5 samples/point, median+p95).
+**Rules:** read tasks.md; baseline `4f9cf2b667c92c506ca637754faeb4eaded4e826`; production writes/migrations `0/0`.
