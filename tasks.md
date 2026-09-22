@@ -10,8 +10,9 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active remediation scope: **none; P104 is DONE**
+- Active remediation scope: **P105 bounded cleanup (T01–T03); P104 is DONE**
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
+- `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
 
 ## Dispatch rules
@@ -21,7 +22,7 @@
 - Respect file ownership below. If a task truly needs an owned file from another task, Mika resolves ownership before continuing.
 - Each implementation task must finish with focused regressions and a clean worktree before integration.
 - Do not create subtask explosions. One finding group = one task.
-- Do not review each finding separately. Final review happens once in `P104M2T01`.
+- Do not review each finding separately. P104's consolidated review happened once in `P104M2T01`; in P105 the CONTROLLED review runs once on the `P105M1T01` candidate.
 
 ## P104 tasks
 
@@ -185,6 +186,97 @@
 - `P104=DONE`
 - no automatic deployment
 - production readiness/deployment remains a separate owner-approved step.
+
+## P105 tasks
+
+Reviewed plan: `/home/pi5/hermes-artifacts/kurabe-p105-plan/plan.md` (agy/gemini-3.1-pro-high `PASS`, 3 minor suggestions applied).
+
+### [ ] [#P105M1T01] CI hygiene: mask disposable credentials + production smoke
+
+```yaml
+task:
+  id: P105M1T01
+  tier: CONTROLLED
+  depends: []
+  owns:
+    - .github/ci/confirmation-runtime.mjs
+    - .github/workflows/ci.yml
+    - tests/operations/production-smoke.mjs
+    - tests/operations/ci-suite-manifest.mjs
+    - tests/ci-export-mask.test.mjs
+  locks: [KURABE_TEST_CONTRACT]
+```
+
+Goal: mask every disposable-runtime credential before it reaches `$GITHUB_ENV`, and close the production-runtime verification gap with a small fail-closed `next start` smoke after `npm run build`.
+Interface: exported env names from `exportEnv()` stay identical; new suite reachable via `scripts/verify-release.mjs --suite production-smoke`.
+Current context: `.github/ci/confirmation-runtime.mjs:311` (`exportEnv`), `:70`/`:72` (`NODE_ENV=development`, `next dev`); `.github/workflows/ci.yml` `Run build` → `Cleanup` steps; job log of run `35193543798` showed `KURABE_DB_PASSWORD` (48 hex) and `KURABE_FIXTURE_PASSWORD` (45 chars) clear-text in a public repo.
+Changes:
+1. In `exportEnv()`, before appending to `$GITHUB_ENV`, emit `::add-mask::<value>` for every sensitive value (`KURABE_DB_PASSWORD`, `KURABE_FIXTURE_PASSWORD`, `KURABE_SUPABASE_ANON_KEY`, `KURABE_SUPABASE_SERVICE_ROLE_KEY`, plus any state field typed password/jwt/secret) — only when the value is a non-empty string; never emit a mask for `undefined`/empty.
+2. Add `tests/operations/production-smoke.mjs`: after `npm run build`, start `next start` on the loopback disposable runtime and run exactly 5 cases (login, dashboard, employees, reports, one protected redirect or server-action); log `route + HTTP status + marker` per case; any failure fails the suite.
+3. Wire the smoke step into `.github/workflows/ci.yml` between `Run build` and `Cleanup`; register the suite in `tests/operations/ci-suite-manifest.mjs` if the manifest requires registration.
+Constraints: no Vault/secret manager; keep the existing `next dev` authenticated matrix untouched; no `src/**` edits; no Git ref/history or control-file edits; do not weaken fail-closed release semantics; production writes/migrations stay `0/0`.
+DoD:
+- `node scripts/run-tests.mjs` exits 0 including new `tests/ci-export-mask.test.mjs`
+- `npm run lint` 0 errors, `npm run typecheck`, `npm run build`, `node scripts/scan-source-secrets.mjs` exit 0
+- source-contract test proves every sensitive key declared in `exportEnv()` is masked before the env write (assert key names, never hard-code secret values)
+- smoke suite logs route/status/marker for all 5 cases and fails closed on any failure
+- all edits stay inside `owns`
+
+---
+
+### [ ] [#P105M1T02] Remove unreachable legacy evaluation fallbacks
+
+```yaml
+task:
+  id: P105M1T02
+  tier: STANDARD
+  depends: []
+  owns:
+    - src/actions/evaluation.ts
+    - tests/evaluation-fallback-removal.test.mjs
+  locks: []
+```
+
+Goal: delete the two provably unreachable legacy sequential blocks left behind by the fail-closed transactional-RPC gates (~400 lines of dead code) without changing any reachable behavior.
+Interface: exports `saveEvaluationRound` / `returnEvaluationRound` keep identical signatures and behavior.
+Current context: `src/actions/evaluation.ts:460-525` (fail-closed gate + RPC branch) with dead sequential block from `:527` to the end of `saveEvaluationRound` (~`:737`); `:974-1021` for return, dead "Guarded sequential return branch" `:1024-1220`.
+Changes:
+1. Delete exactly those two unreachable blocks.
+2. Remove imports/helpers/types that become unused **only as a consequence** of the deletion.
+3. Add `tests/evaluation-fallback-removal.test.mjs`: source-contract asserting both fail-closed gates and both transactional RPC branches remain, and no sequential/legacy fallback path remains in either function.
+Constraints: no behavior change on any reachable branch; no refactor/rewrite/framework; no edits outside `owns`; no Git ref/history or control-file edits.
+DoD:
+- `node scripts/run-tests.mjs`, `npm run lint`, `npm run typecheck`, `npm run build` exit 0
+- grep proves zero sequential/legacy fallback remains in the two functions; gate + RPC branch lines unchanged
+- diff is deletions plus the new focused test only
+
+---
+
+### [ ] [#P105M1T03] Rerun authenticated performance baseline on current code
+
+```yaml
+task:
+  id: P105M1T03
+  tier: STANDARD
+  depends: [P105M1T01, P105M1T02]
+  owns:
+    - tests/perf/perf-report.json
+    - tests/perf/benchmark-harness.mjs
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: refresh the stale performance baseline (last update `4efe42d`, 139 commits behind current main) by re-running the existing harness on the final P105 code.
+Interface: harness entrypoint unchanged; report keeps its schema and gains a measurement timestamp plus candidate-SHA provenance.
+Current context: `tests/perf/benchmark-harness.mjs`, `tests/perf/perf-report.json` (32 runs = 2 samples/point).
+Changes:
+1. Raise sampling to 5 per point (route × viewport × state) while keeping route/role/viewport/dataset/build mode identical to the old baseline.
+2. Report median + p95 per metric; mean is never the verdict.
+3. Record measurement timestamp and candidate SHA in report provenance.
+Constraints: no new benchmark system; no environment changes versus the old baseline; no edits outside `owns`; perf artifacts only.
+DoD:
+- report regenerated with 5 samples/point, median/p95 present, provenance binds the current candidate SHA and measurement timestamp
+- dataComplete median < 1000 ms on LAN/loopback closes perf; otherwise at most 2 bounded fixes then re-measure (no new phase)
+- `npm run lint` (0 errors), `npm run typecheck`, `npm run build` still exit 0 on the final code
 
 ## Closed / historical record
 

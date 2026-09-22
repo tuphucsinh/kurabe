@@ -2,7 +2,7 @@
 
 ## Current control state
 
-- `PLAN_STATUS=P104_DONE`
+- `PLAN_STATUS=P105_REGISTERED` (P104 closed — see "P104 closure" below)
 - Canonical repository: `/home/pi5/projects/kurabe`
 - Branch: `main`
 - Historical P104 phase baseline: `ea7b64fb0eafac1406780b0c0632757638d1f8f3`
@@ -81,6 +81,32 @@ The post-closure audit confirmed F01–F08 as bounded MEDIUM findings. F09 was s
 - Fresh independent review: AGY `gemini-3.8-flash-high`, exact candidate/tree verified, verdict `PASS`, blocking findings `NONE`.
 - Remote GitHub Actions CI run `35193543798` passed on the exact integrated candidate; remote `main` matches it.
 - Evidence root: `/home/pi5/hermes-artifacts/kurabe-p104/`; no P104 runtime/worktree residue remains.
+
+## P105 — bounded cleanup (registered 2026-09-22)
+
+### Goal
+Close four verified findings from the P104-close review without changing runtime architecture: disposable CI credentials leaking clear-text into public job logs, no production-runtime smoke in CI, ~400 lines of unreachable legacy evaluation code, and a performance baseline 139 commits stale. Plan reviewed `PASS` by agy/gemini-3.1-pro-high before registration.
+
+### Task groups
+| Task | Scope | Dependency | Tier |
+|---|---|---|---|
+| `P105M1T01` | CI hygiene: `::add-mask::` in `exportEnv()` + 5-case production smoke after build | none | CONTROLLED |
+| `P105M1T02` | Delete unreachable legacy fallbacks in `src/actions/evaluation.ts` | none | STANDARD |
+| `P105M1T03` | Rerun existing perf harness, 5 samples/point, median/p95 | T01 + T02 | STANDARD |
+
+Control-plane (Mika, separate control commit): `.ai/KNOWN_BUGS.md` re-marked as a historical index so it can no longer be read as an active residual list.
+
+### Exit criteria
+1. Public CI logs contain no disposable credential values (mask verified by source-contract test + log grep).
+2. Production smoke runs fail-closed in CI after `npm run build`.
+3. No sequential/legacy fallback remains in the two evaluation actions; focused/source-contract tests and all root gates pass.
+4. Fresh perf report bound to the current candidate SHA with 5 samples/point; dataComplete median < 1000 ms on LAN/loopback.
+5. Production writes/migrations remain `0/0`; one fresh CONTROLLED review on the `P105M1T01` candidate.
+
+### Non-goals
+- Dashboard/Reports "Approved-only" semantics: owner decision, not in P105.
+- ESLint warning cleanup, Next build cache in CI, Excel/xlsx replacement: deferred/skipped.
+- No new framework, workflow engine, auth framework, secret manager, or benchmark system.
 
 ## Historical / owner-gated records
 
