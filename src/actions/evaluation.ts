@@ -17,14 +17,8 @@ import {
   resolveEvaluatorFromDb,
   EvaluationSubject,
 } from '@/lib/evaluator-resolver';
-import { Database } from '@/types/database';
-import { composeRoundNotes, SelectedLevelIndexes } from '@/lib/round-level-selection';
-import {
-  canReturnEvaluation,
-  resetRoundFields,
-  nextStatusAfterReturn,
-} from '@/lib/return-evaluation';
-import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
+import { SelectedLevelIndexes } from '@/lib/round-level-selection';
+import { parseRole } from '@/lib/parsers';
 import { loadAuthoritativeCriteriaForRole } from '@/lib/db/criteria-admin';
 import {
   validateEvaluationRoundPayload,
@@ -35,8 +29,6 @@ import {
   buildEvaluationRoundTransactionRpcArgs,
 } from '@/lib/evaluation-transaction-rpc';
 import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
-
-type UpdateRound = Database['public']['Tables']['evaluation_rounds']['Update'];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_EVALUATION_STATUSES = new Set<string>([
@@ -79,8 +71,6 @@ function deriveExpectedAggregateStatus(
   }
   return ACTIVE_STEP_STATUSES[round] ?? null;
 }
-type UpdateEvaluation = Database['public']['Tables']['evaluations']['Update'];
-type InsertRound = Database['public']['Tables']['evaluation_rounds']['Insert'];
 
 interface EvaluationSnapshot {
   employeeId: string;
@@ -460,10 +450,11 @@ export async function saveEvaluationRound(
     const transactionalRpcEnabled = process.env.KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC === 'true';
     if (!transactionalRpcEnabled) {
       return { success: false, error: 'Transactional evaluation RPC is required; legacy fallback is disabled.' };
-    }
+    } else {
 
-    // 2.5. Transactional RPC candidate branch
-    if (transactionalRpcEnabled) {
+      // 2.5. Transactional RPC candidate branch
+      // Fail-closed gate above makes this else unreachable-false; structured as
+      // if/else so TypeScript sees every code path returning (no `| undefined`).
       const rpcArgs = buildEvaluationRoundTransactionRpcArgs({
         evaluationId,
         round,
@@ -523,214 +514,6 @@ export async function saveEvaluationRound(
       }
       return { success: true };
     }
-
-    // 3. Legacy fallback is unreachable after the fail-closed gate above.
-    // Check current round record and enforce exact idempotent readbacks
-    const { data: checkRound, error: checkRoundError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .select('id, status, submitted_at, evaluator_id')
-      .eq('evaluation_id', evaluationId)
-      .eq('round', round)
-      .maybeSingle();
-
-    if (checkRoundError || !checkRound) {
-      return { success: false, error: 'Không tìm thấy vòng đánh giá hoặc bạn không có quyền.' };
-    }
-
-    if (checkRound.evaluator_id !== actorId) {
-      return { success: false, error: 'Bạn không có quyền đánh giá vòng này.' };
-    }
-
-    // Locked / submitted round handling:
-    // Retries are exact idempotent readbacks only; they must never downgrade progressed state.
-    if (checkRound.status === 'Submitted' || checkRound.submitted_at !== null) {
-      if (!isSubmit) {
-        return { success: false, error: 'Vòng đánh giá đã khóa.' };
-      }
-      // Exact idempotent submit readback: check if evaluation has already progressed
-      const { data: latestEval } = await supabaseAdmin
-        .from('evaluations')
-        .select('status, current_round')
-        .eq('id', evaluationId)
-        .maybeSingle();
-
-      if (
-        latestEval &&
-        ((latestEval.current_round !== null && latestEval.current_round > round) ||
-          (nextStep?.isFinal && latestEval.status === (nextStep?.status ?? 'Approved')))
-      ) {
-        return { success: true }; // Idempotent: already progressed
-      }
-
-      return {
-        success: false,
-        error: 'Vòng đánh giá đã nộp trước đó nhưng trạng thái chưa đồng bộ. Vui lòng tải lại trang.',
-      };
-    }
-
-    // Monotonic round invariant: must be editing current round
-    if (evalInfo.current_round !== round) {
-      return {
-        success: false,
-        error: `Đánh giá đang ở vòng ${evalInfo.current_round}, không thể thao tác trên vòng ${round}.`,
-      };
-    }
-
-    // Previous round submit check for round > 1
-    if (round > 1) {
-      const { data: prevRoundData } = await supabaseAdmin
-        .from('evaluation_rounds')
-        .select('status, submitted_at')
-        .eq('evaluation_id', evaluationId)
-        .eq('round', round - 1)
-        .maybeSingle();
-
-      if (!prevRoundData || prevRoundData.status !== 'Submitted' || !prevRoundData.submitted_at) {
-        return {
-          success: false,
-          error: `Vòng ${round} yêu cầu vòng ${round - 1} phải được hoàn tất và nộp trước.`,
-        };
-      }
-    }
-
-    const composedNotes = composeRoundNotes(canonical.notes, canonical.selectedLevelIndexes);
-    const updateData: UpdateRound = {
-      scores: canonical.scores,
-      notes: composedNotes,
-      comment: canonical.comment,
-      total_score: totalScore,
-      grade: grade,
-      status: canonical.isSubmit ? 'Submitted' : 'Draft',
-      criteria_config_version_id: criteriaVersionId,
-      grade_config_version_id: gradeVersionId,
-    };
-
-    if (canonical.isSubmit) {
-      updateData.submitted_at = now;
-    }
-
-    // Atomic update with affected-row check
-    const { data: updatedRounds, error: rError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .update(updateData)
-      .eq('evaluation_id', evaluationId)
-      .eq('round', round)
-      .eq('evaluator_id', actorId)
-      .eq('status', checkRound.status)
-      .select('id');
-
-    if (rError || !updatedRounds || updatedRounds.length !== 1) {
-      return {
-        success: false,
-        error: toClientError(rError, 'Lỗi cập nhật kết quả. Dữ liệu đã thay đổi, vui lòng thử lại.'),
-      };
-    }
-
-    // Update evaluation status for Draft
-    if (!isSubmit && evalInfo.status === 'NotStarted') {
-      await supabaseAdmin
-        .from('evaluations')
-        .update({ status: 'Draft', updated_at: now })
-        .eq('id', evaluationId)
-        .eq('status', 'NotStarted');
-    }
-
-    // Submit flow: advance round or complete evaluation
-    if (isSubmit && nextStep) {
-      let submitFlowError: string | null = null;
-
-      if (!nextStep.isFinal && nextEvaluator) {
-        const nextRoundData: InsertRound = {
-          evaluation_id: evaluationId,
-          round: nextStep.round,
-          evaluator_id: nextEvaluator.id,
-          evaluator_role: nextEvaluator.role,
-          scores: {},
-          notes: {},
-          total_score: 0,
-          grade: 'Pending',
-          status: 'NotStarted',
-          criteria_config_version_id: criteriaVersionId,
-          grade_config_version_id: gradeVersionId,
-          created_at: now,
-        };
-
-        const { data: existingNextRound } = await supabaseAdmin
-          .from('evaluation_rounds')
-          .select('id')
-          .eq('evaluation_id', evaluationId)
-          .eq('round', nextStep.round)
-          .maybeSingle();
-
-        if (!existingNextRound) {
-          const { error: nextRoundError } = await supabaseAdmin
-            .from('evaluation_rounds')
-            .insert(nextRoundData);
-
-          if (nextRoundError) {
-            submitFlowError = toClientError(nextRoundError, 'Lỗi tạo vòng đánh giá tiếp theo.');
-          }
-        }
-      }
-
-      if (!submitFlowError) {
-        const evalUpdate: UpdateEvaluation = {
-          status: nextStep.status,
-          current_round: nextStep.round,
-          return_note: null,
-          updated_at: now,
-        };
-
-        if (nextStep.isFinal) {
-          evalUpdate.final_grade = grade;
-          evalUpdate.final_score = totalScore;
-        }
-
-        const { data: updatedEval, error: eError } = await supabaseAdmin
-          .from('evaluations')
-          .update(evalUpdate)
-          .eq('id', evaluationId)
-          .eq('current_round', round)
-          .select('id');
-
-        if (eError || !updatedEval || updatedEval.length !== 1) {
-          submitFlowError = toClientError(eError, 'Lỗi cập nhật trạng thái đánh giá.');
-        }
-      }
-
-      if (submitFlowError) {
-        // Rollback current round on submit failure
-        if (!nextStep.isFinal) {
-          await supabaseAdmin
-            .from('evaluation_rounds')
-            .delete()
-            .eq('evaluation_id', evaluationId)
-            .eq('round', nextStep.round);
-        }
-        await supabaseAdmin
-          .from('evaluation_rounds')
-          .update({ submitted_at: null, status: 'Draft' })
-          .eq('evaluation_id', evaluationId)
-          .eq('round', round)
-          .eq('evaluator_id', actorId);
-
-        return { success: false, error: submitFlowError };
-      }
-    }
-
-    revalidatePath(`/evaluations/${evaluationId}`);
-    if (isSubmit) {
-      revalidateTag('dashboard-data', 'default');
-      revalidateTag('report-aggregation', 'default');
-      await logAudit(
-        auth.user,
-        nextStep?.isFinal ? 'APPROVE_EVALUATION' : 'SUBMIT_EVALUATION',
-        'evaluation',
-        evaluationId,
-        { round, grade, score: totalScore }
-      );
-    }
-    return { success: true };
   } catch (err: unknown) {
     return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
   }
@@ -974,10 +757,11 @@ export async function returnEvaluationRound(
     const transactionalRpcEnabled = process.env.KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC === 'true';
     if (!transactionalRpcEnabled) {
       return { success: false, error: 'Transactional evaluation RPC is required; legacy fallback is disabled.' };
-    }
+    } else {
 
-    // Transactional return RPC branch
-    if (transactionalRpcEnabled) {
+      // Transactional return RPC branch
+      // Structured as if/else (see saveEvaluationRound) so TypeScript sees all
+      // code paths returning; the gate above makes the else path unreachable-false.
       const { data: rpcData, error: rpcError } = await (supabaseAdmin.rpc as unknown as (
         fn: string,
         args: Record<string, unknown>
@@ -1019,201 +803,6 @@ export async function returnEvaluationRound(
       revalidateTag('report-aggregation', 'default');
       return { success: true };
     }
-
-    // Guarded sequential return branch (atomic affected-row checks, explicit backwards transitions)
-    const { data: roundsData, error: roundsError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .select('*')
-      .eq('evaluation_id', evaluationId);
-
-    if (roundsError || !roundsData) {
-      return { success: false, error: 'Lỗi tải thông tin các vòng đánh giá.' };
-    }
-
-    const currentRoundRecord = roundsData.find((r) => r.round === round);
-    const prevRound = parseRoundNumber(round - 1);
-    const prevRoundRecord = roundsData.find((r) => r.round === prevRound);
-
-    const flow = getEvaluationFlow(parseRole(evalInfo.employee_role));
-    const flowStep = flow.find((step) => step.round === round);
-    const flowEvaluator = flowStep?.evaluator ?? null;
-
-    const check = canReturnEvaluation({
-      round,
-      actorId,
-      employeeId: evalInfo.employee_id,
-      actorRole: auth.user.role,
-      evaluationStatus: parseEvalStatus(evalInfo.status),
-      currentRound: parseRoundNumber(evalInfo.current_round),
-      currentRoundEvaluatorId: currentRoundRecord?.evaluator_id ?? null,
-      currentRoundSubmitted: Boolean(currentRoundRecord?.submitted_at),
-      prevRoundExists: Boolean(prevRoundRecord),
-      prevRoundSubmitted: Boolean(prevRoundRecord?.submitted_at),
-      flowEvaluator,
-    });
-
-    if (!check.ok) {
-      return { success: false, error: check.error ?? 'Không thể trả lại đánh giá.' };
-    }
-
-    const now = new Date().toISOString();
-
-    // Case B: round === 1 (Manager tự đánh giá đã Approved)
-    if (round === 1) {
-      const { data: updatedEval, error: evalUpError } = await supabaseAdmin
-        .from('evaluations')
-        .update({
-          current_round: 1,
-          status: 'Draft',
-          final_grade: null,
-          final_score: null,
-          return_note: trimmedReason,
-          updated_at: now,
-        })
-        .eq('id', evaluationId)
-        .eq('status', 'Approved')
-        .eq('current_round', 1)
-        .select('id');
-
-      if (evalUpError || !updatedEval || updatedEval.length !== 1) {
-        return { success: false, error: 'Báo cáo không ở trạng thái Approved.' };
-      }
-
-      const { data: updatedRound, error: roundUpError } = await supabaseAdmin
-        .from('evaluation_rounds')
-        .update({
-          status: 'Draft',
-          submitted_at: null,
-        })
-        .eq('evaluation_id', evaluationId)
-        .eq('round', 1)
-        .not('submitted_at', 'is', null)
-        .select('id');
-
-      if (roundUpError || !updatedRound || updatedRound.length !== 1) {
-        // Rollback evaluations về Approved
-        await supabaseAdmin
-          .from('evaluations')
-          .update({
-            status: 'Approved',
-            return_note: null,
-            updated_at: now,
-          })
-          .eq('id', evaluationId);
-
-        return { success: false, error: 'Không thể mở khóa vòng 1.' };
-      }
-
-      await logAudit(auth.user, 'RETURN_EVALUATION', 'evaluation', evaluationId, {
-        round,
-        reason: trimmedReason,
-      });
-
-      revalidatePath(`/evaluations/${evaluationId}`);
-      revalidateTag('dashboard-data', 'default');
-      revalidateTag('report-aggregation', 'default');
-      return { success: true };
-    }
-
-    // Case A: round > 1
-    const currentRoundSnapshot: UpdateRound = {
-      scores: currentRoundRecord?.scores ?? {},
-      notes: currentRoundRecord?.notes ?? {},
-      comment: currentRoundRecord?.comment ?? null,
-      total_score: currentRoundRecord?.total_score ?? 0,
-      grade: currentRoundRecord?.grade ? parseGrade(currentRoundRecord.grade) : 'Pending',
-      status: currentRoundRecord?.status ?? 'NotStarted',
-      submitted_at: currentRoundRecord?.submitted_at ?? null,
-    };
-
-    // (2) RESET round hiện tại (affected-row check: exactly 1 row)
-    const resetData = resetRoundFields();
-    const { data: resetResult, error: resetError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .update(resetData)
-      .eq('evaluation_id', evaluationId)
-      .eq('round', round)
-      .eq('evaluator_id', actorId)
-      .is('submitted_at', null)
-      .select('id');
-
-    if (resetError || !resetResult || resetResult.length !== 1) {
-      return { success: false, error: 'Vòng đánh giá đã khóa hoặc không thể đặt lại.' };
-    }
-
-    // (3) Unlock round - 1 (affected-row check: exactly 1 row)
-    const { data: unlockResult, error: unlockError } = await supabaseAdmin
-      .from('evaluation_rounds')
-      .update({
-        status: 'Draft',
-        submitted_at: null,
-      })
-      .eq('evaluation_id', evaluationId)
-      .eq('round', prevRound)
-      .not('submitted_at', 'is', null)
-      .select('id');
-
-    if (unlockError || !unlockResult || unlockResult.length !== 1) {
-      // Rollback round hiện tại về snapshot
-      await supabaseAdmin
-        .from('evaluation_rounds')
-        .update(currentRoundSnapshot)
-        .eq('evaluation_id', evaluationId)
-        .eq('round', round)
-        .eq('evaluator_id', actorId);
-
-      return { success: false, error: 'Vòng trước không thể mở khóa.' };
-    }
-
-    // (4) Update evaluations (affected-row check: exactly 1 row)
-    const newStatus = nextStatusAfterReturn(round);
-    const { data: updateEvalResult, error: updateEvalError } = await supabaseAdmin
-      .from('evaluations')
-      .update({
-        current_round: prevRound,
-        status: newStatus,
-        final_grade: null,
-        final_score: null,
-        return_note: trimmedReason,
-        updated_at: now,
-      })
-      .eq('id', evaluationId)
-      .eq('current_round', round)
-      .select('id');
-
-    if (updateEvalError || !updateEvalResult || updateEvalResult.length !== 1) {
-      // Rollback round trước và round hiện tại
-      if (prevRoundRecord) {
-        await supabaseAdmin
-          .from('evaluation_rounds')
-          .update({
-            status: prevRoundRecord.status,
-            submitted_at: prevRoundRecord.submitted_at,
-          })
-          .eq('evaluation_id', evaluationId)
-          .eq('round', prevRound);
-      }
-      await supabaseAdmin
-        .from('evaluation_rounds')
-        .update(currentRoundSnapshot)
-        .eq('evaluation_id', evaluationId)
-        .eq('round', round)
-        .eq('evaluator_id', actorId);
-
-      return { success: false, error: 'Lỗi cập nhật trạng thái đánh giá.' };
-    }
-
-    // (5) Log audit + revalidate
-    await logAudit(auth.user, 'RETURN_EVALUATION', 'evaluation', evaluationId, {
-      round,
-      reason: trimmedReason,
-    });
-
-    revalidatePath(`/evaluations/${evaluationId}`);
-    revalidateTag('dashboard-data', 'default');
-    revalidateTag('report-aggregation', 'default');
-
-    return { success: true };
   } catch (err: unknown) {
     return { success: false, error: toClientError(err, 'Lỗi không xác định. Vui lòng thử lại.') };
   }

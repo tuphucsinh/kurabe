@@ -139,8 +139,8 @@ assert.ok(
 const guardPosInSave = saveRoundChunk.indexOf('assertEvaluationPeriodActiveForEvaluation');
 const updatePosInSave = saveRoundChunk.indexOf('.update(');
 assert.ok(
-  guardPosInSave !== -1 && guardPosInSave < updatePosInSave,
-  'saveEvaluationRound guard must precede any .update() calls'
+  guardPosInSave !== -1 && (updatePosInSave === -1 || guardPosInSave < updatePosInSave),
+  'saveEvaluationRound guard must precede any .update() calls (no direct .update remains after P105M1T02 dead-code removal; guard presence asserted above)'
 );
 
 // initializeEvaluationRoundDraft
@@ -172,8 +172,8 @@ assert.ok(
 const guardPosInReturn = returnRoundChunk.indexOf('assertEvaluationPeriodActiveForEvaluation');
 const updatePosInReturn = returnRoundChunk.indexOf('.update(');
 assert.ok(
-  guardPosInReturn !== -1 && guardPosInReturn < updatePosInReturn,
-  'returnEvaluationRound guard must precede any .update() calls'
+  guardPosInReturn !== -1 && (updatePosInReturn === -1 || guardPosInReturn < updatePosInReturn),
+  'returnEvaluationRound guard must precede any .update() calls (no direct .update remains after P105M1T02 dead-code removal; guard presence asserted above)'
 );
 
 // 3.2 src/actions/ai.ts
