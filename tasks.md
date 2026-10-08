@@ -537,11 +537,15 @@ task:
     - src/components/dashboard/PeriodSummary.tsx
     - src/components/dashboard/AnomalyAlertCard.tsx
     - src/components/charts/SkillGapRadar.tsx
+    - src/components/charts/LazySkillGapRadar.tsx
     - src/components/settings/PeriodsTab.tsx
     - tests/p107-official-results.test.mjs
+    - tests/targeted-lazy-load.test.mjs
     - tests/fixtures/p107/official-results/
   locks: [KURABE_SOURCE_CONTRACT]
 ```
+
+Owns amendment 1 (canonical control, 2026-10-09): adds `src/components/charts/LazySkillGapRadar.tsx` and `tests/targeted-lazy-load.test.mjs`. Reason: this task's goal requires the dashboard heavy DTO to stop carrying `rawEvaluations`/`rawCriteriaGroups`; the lazy radar wrapper forwards those two raw props to `SkillGapRadar`, and `tests/targeted-lazy-load.test.mjs` pins both the wrapper's raw prop contract and `DashboardHeavySection` passing `data.rawEvaluations`/`data.rawCriteriaGroups`. Leaving them unchanged would force the radar to render permanently empty (an in-scope functional regression) or leak the raw payload. Runner reported this exact conflict and wrote nothing. Task ID/tier/goal/DoD/DAG/locks unchanged; no implicit write permission beyond those two files.
 
 Goal: L1/L2/L4/N3/P4–P6 make reports/dashboard/export/AI agree on authoritative results without raw draft payloads or historical drift.
 Interface: NEW server result projector reuses versioned display/batched snapshot loaders: result (Approved persisted final fields), progress (full roster status), coverage (approved/total/invalid/legacy), snapshot basis and role/config breakdown. Dashboard heavy public DTO drops rawEvaluations/rawCriteriaGroups; wire all consumers including AI/chat in this SAME task, preserving authorized operational non-result features as separate minimized DTOs. Do not leave compatibility code leaking raw data.

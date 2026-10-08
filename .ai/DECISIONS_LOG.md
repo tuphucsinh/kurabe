@@ -1,5 +1,10 @@
 # Decisions Log
 
+## P107M1T06 owns amendment 1 — 2026-10-09
+
+- Runner (coder lane) reported `BLOCKED_SCOPE_CONFLICT` on P107M1T06 with zero writes: the goal requires the dashboard heavy public DTO to drop `rawEvaluations`/`rawCriteriaGroups`, but `src/components/charts/LazySkillGapRadar.tsx` forwards those raw props to `SkillGapRadar` and `tests/targeted-lazy-load.test.mjs` pins both the wrapper's raw prop contract (lines 84-88) and `DashboardHeavySection` rendering `<LazySkillGapRadar evaluations={data.rawEvaluations} criteriaGroups={data.rawCriteriaGroups} />` (lines 158-163). Mika independently verified both references by grep.
+- Canonical owns amendment 1: add `src/components/charts/LazySkillGapRadar.tsx` and `tests/targeted-lazy-load.test.mjs` to P107M1T06 owns. Without it the only options are a permanently empty radar (in-scope functional regression) or a raw-payload leak, both contradicting the task goal. Task ID/tier/goal/DoD/DAG/locks unchanged; this grants no production/deploy/scope permission and no write permission beyond those two files.
+
 ## P107M1T03 owns amendment 2 — 2026-10-08
 
 - Mika-confirmed material FAIL in the T03 independent gate: the landed delta widened `EvaluationRound`/`EvaluationDisplayRound` `totalScore`/`grade` to optional, breaking 6 non-owned consumers and leaving a compile error in owned `src/lib/db/evaluation-display-admin.ts`. Repair #1 restored strict, complete payload-bearing round types and represents unauthorized/redacted rounds by omission plus a separate status/assignment-only metadata DTO (`EvaluationDisplayDto.redactedRounds`); `npm run typecheck`, lint and focused tests pass with no fabricated score/grade.
