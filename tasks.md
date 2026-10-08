@@ -351,7 +351,9 @@ Execution binding: Runner `agy`, exact model `gemini-3.8-flash-high`; fresh gate
 - Keep default password = employee code, optional NULL-hash compatibility, existing scoring/grade/role-round count and freeze-unfinished close; no strict/backfill/Excluded, new framework, blanket grant revoke, historical rewrite or production rollout.
 - Stop affected stage on unresolved scope/consumer/catalog/fixture/rollback identity; preserve first failure. Ordinary in-scope failures follow project repair budget; liveness UNKNOWN keeps reservations. Tool/transport failure is not product PASS.
 
-### [ ] [#P107M1T01] Source/runtime preflight and exact consumer contract
+### [x] [#P107M1T01] Source/runtime preflight and exact consumer contract
+
+Closure evidence: `.ai/P107_SOURCE_PREFLIGHT.md`; metadata-only source `d6d58828df39bf474c468992dd7d14be188fa07d`, fresh reviewer/checker PASS session `20261008_175255_489ed9`, digest `6fe1b65999061081183103441d0e247ddf98a1c0e6688d8dd0af315df8a11709`. Live-release gates remain UNKNOWN; affected downstream owns amendments are separate pre-dispatch gates.
 
 ```yaml
 task:
