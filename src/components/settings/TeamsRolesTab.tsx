@@ -10,10 +10,21 @@ import { canHaveSubLeader } from '@/lib/role-policy';
 
 export default function TeamsRolesTab() {
   const { user } = useAuth();
-  const { data: users = [], isLoading: usersLoading } = useUsers(user);
-  const { data: teams = [], isLoading: teamsLoading } = useTeams(user);
+  const {
+    data: users = [],
+    isLoading: usersLoading,
+    isError: usersError,
+    refetch: refetchUsers,
+  } = useUsers(user);
+  const {
+    data: teams = [],
+    isLoading: teamsLoading,
+    isError: teamsError,
+    refetch: refetchTeams,
+  } = useTeams(user);
 
   const isLoading = usersLoading || teamsLoading || !user;
+  const isError = usersError || teamsError;
 
   const unassignedCount = useMemo(() => {
     return users.filter((u) => !u.teamId).length;
@@ -49,6 +60,30 @@ export default function TeamsRolesTab() {
         <CardSkeleton />
         <CardSkeleton />
         <CardSkeleton />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl p-4 flex items-center justify-between gap-3"
+      >
+        <span className="flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          Không tải được danh sách nhóm/nhân viên. Vui lòng thử lại.
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            void refetchUsers();
+            void refetchTeams();
+          }}
+          className="shrink-0 px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-100 text-rose-800 font-medium hover:bg-rose-200"
+        >
+          Thử lại
+        </button>
       </div>
     );
   }

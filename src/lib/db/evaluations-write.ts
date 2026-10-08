@@ -9,6 +9,12 @@ import { parseRole } from '@/lib/parsers';
 import { loadAuthoritativeCriteriaForRole } from './criteria-admin';
 import { ensureServerGradeBands } from '@/lib/grade-bands-server';
 import {
+  readActiveRosterGraphAdmin,
+  readActiveRosterManifestAdmin,
+  RosterReadError,
+} from './users-admin';
+import { readEvaluationsByPeriodManifestAdmin } from './evaluations-admin';
+import {
   assertEvaluationPeriodActive,
   CLOSED_PERIOD_WRITE_ERROR,
 } from './evaluation-period-write-guard';
@@ -55,25 +61,51 @@ export async function ensureEvaluationsForUsers(newUsers: User[]): Promise<{ cre
 
   const activePeriodId = guard.periodId;
 
-  // 2. Tải toàn bộ user active để resolve evaluator (batch) + map leader chỉ định + evaluation hiện có
-  const [allUsersRes, existingEvalsRes, teamLeaderIds] = await Promise.all([
-    supabaseAdmin.from('users').select('id, role, team_id, subleader_id').eq('is_active', true),
-    supabaseAdmin.from('evaluations').select('employee_id').eq('period_id', activePeriodId),
-    loadTeamLeaderIds(supabaseAdmin),
-  ]);
-  if (allUsersRes.error || existingEvalsRes.error) {
-    result.errors.push('Không thể tải dữ liệu để khởi tạo đánh giá.');
+  // 2. Đọc TOÀN BỘ roster active qua complete-reader phân trang ID ổn định kèm
+  //    manifest count/ID, xác minh chéo với một manifest ID độc lập, và bound
+  //    đọc evaluation hiện có bằng cùng cơ chế. Mọi sai lệch trang/đếm/ID phải
+  //    TỪ CHỐI (fail-closed) — tuyệt đối không biến lỗi/thiếu trang thành gán
+  //    một phần thầm lặng (silent partial assignment).
+  let rosterGraph: Awaited<ReturnType<typeof readActiveRosterGraphAdmin>>;
+  let rosterManifest: Awaited<ReturnType<typeof readActiveRosterManifestAdmin>>;
+  let existingEvaluations: Awaited<ReturnType<typeof readEvaluationsByPeriodManifestAdmin>>;
+  try {
+    [rosterGraph, rosterManifest, existingEvaluations] = await Promise.all([
+      readActiveRosterGraphAdmin(),
+      readActiveRosterManifestAdmin(),
+      readEvaluationsByPeriodManifestAdmin(activePeriodId),
+    ]);
+  } catch (readError: unknown) {
+    result.errors.push(
+      readError instanceof RosterReadError
+        ? `Không thể đọc đầy đủ danh sách nhân viên/đánh giá hiện có (${readError.code}). Không khởi tạo đánh giá.`
+        : 'Không thể tải dữ liệu để khởi tạo đánh giá.'
+    );
     result.skipped = newUsers.length;
     return result;
   }
 
-  const subjects: EvaluationSubject[] = (allUsersRes.data || []).map(u => ({
-    id: u.id,
-    role: parseRole(u.role),
-    teamId: u.team_id || null,
-    subleaderId: u.subleader_id || null,
+  // Hai complete-reader độc lập phải khớp chính xác count/ID và số bản ghi graph;
+  // nếu không, TỪ CHỐI thay vì tạo một phần.
+  if (
+    rosterGraph.manifest.totalCount !== rosterGraph.entries.length ||
+    rosterManifest.totalCount !== rosterGraph.manifest.totalCount ||
+    rosterManifest.ids.length !== rosterGraph.manifest.ids.length ||
+    rosterManifest.ids.some((id, index) => id !== rosterGraph.manifest.ids[index])
+  ) {
+    result.errors.push('Danh sách nhân viên không nhất quán (số lượng/ID lệch). Không khởi tạo đánh giá.');
+    result.skipped = newUsers.length;
+    return result;
+  }
+
+  const subjects: EvaluationSubject[] = rosterGraph.entries.map(entry => ({
+    id: entry.id,
+    role: entry.role,
+    teamId: entry.teamId,
+    subleaderId: entry.subleaderId,
   }));
-  const existingIds = new Set((existingEvalsRes.data || []).map(e => e.employee_id));
+  const existingIds = new Set(existingEvaluations.employeeIds);
+  const teamLeaderIds = await loadTeamLeaderIds(supabaseAdmin);
 
   const now = new Date().toISOString();
 

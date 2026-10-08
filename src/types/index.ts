@@ -59,6 +59,41 @@ export function buildViewerScopeKey(input: {
   });
 }
 
+/**
+ * One deterministic page of ids returned by a stable, count-verifying reader.
+ * `totalCount` is the exact server-reported row count for the whole query, never
+ * the page length. A missing/`null` count is a denial (never a silent empty success).
+ */
+export interface StableIdPage {
+  ids: string[];
+  totalCount: number | null;
+}
+
+/** Complete-reader manifest: the full stable ID set plus its exact expected count. */
+export interface IdManifest {
+  ids: string[];
+  totalCount: number;
+  pages: number;
+}
+
+/**
+ * Minimal personnel graph identity used to validate an evaluation-period roster
+ * against the live active users/teams graph under a deterministic lock.
+ */
+export interface RosterGraphEntry {
+  id: string;
+  role: Role;
+  teamId: string | null;
+  subleaderId: string | null;
+}
+
+/**
+ * Explicit unknown marker for bounded, immutable historical label capture.
+ * `known` requires a value; `unknown` records an absent historical field without
+ * fabricating one.
+ */
+export type HistoricalLabelState = 'known' | 'unknown';
+
 export interface Team {
   id: string;
   name: string;

@@ -13,6 +13,7 @@ import {
 } from '@/lib/evaluator-resolver';
 import { toClientError, ClientSafeError } from '@/lib/errors';
 import { parseRole } from '@/lib/parsers';
+import { readActiveRosterGraphAdmin, RosterReadError } from '@/lib/db/users-admin';
 
 export interface EvaluationPayloadItem {
   employee_id: string;
@@ -76,22 +77,39 @@ export async function createEvaluationPeriod(year: number) {
     const now = new Date().toISOString();
     const periodName = `Kỳ ${year}`;
 
-    // 1. Lấy danh sách TẤT CẢ nhân viên active
-    const { data: employees, error: eError } = await supabaseAdmin
-      .from('users')
-      .select('id, role, team_id, subleader_id')
-      .eq('is_active', true);
-
-    if (eError) {
-      return { success: false, error: toClientError(eError, 'Lỗi lấy danh sách nhân viên. Vui lòng thử lại.') };
+    // 1. Đọc TOÀN BỘ roster active qua complete-reader phân trang ID ổn định kèm
+    //    manifest count/ID. Bất kỳ sai lệch trang/đếm/ID nào phải TỪ CHỐI tạo kỳ —
+    //    tuyệt đối không được biến lỗi/thiếu trang thành "danh sách rỗng" thành công.
+    let roster;
+    try {
+      roster = await readActiveRosterGraphAdmin();
+    } catch (rosterError: unknown) {
+      if (rosterError instanceof RosterReadError) {
+        return {
+          success: false,
+          error: `Không thể đọc đầy đủ danh sách nhân viên (${rosterError.code}). Không có kỳ đánh giá nào được tạo.`,
+        };
+      }
+      return { success: false, error: toClientError(rosterError, 'Lỗi lấy danh sách nhân viên. Vui lòng thử lại.') };
     }
 
-    const periodEmployees: EvaluationSubject[] = (employees || []).map(emp => ({
+    const periodEmployees: EvaluationSubject[] = roster.entries.map(emp => ({
       id: emp.id,
-      role: parseRole(emp.role),
-      teamId: emp.team_id,
-      subleaderId: emp.subleader_id,
+      role: emp.role,
+      teamId: emp.teamId,
+      subleaderId: emp.subleaderId,
     }));
+
+    // Manifest count/ID phải khớp chính xác với số bản ghi graph đã đọc.
+    if (
+      roster.manifest.ids.length !== periodEmployees.length ||
+      roster.manifest.totalCount !== periodEmployees.length
+    ) {
+      return {
+        success: false,
+        error: 'Danh sách nhân viên không nhất quán (số lượng/ID lệch). Không có kỳ đánh giá nào được tạo.',
+      };
+    }
     // Map leader được chỉ định — đồng bộ ngữ cảnh resolve với resolveEvaluatorFromDb (A3)
     const teamLeaderIds = await loadTeamLeaderIds(supabaseAdmin);
     const initialEvaluators = new Map<string, EvaluatorResolution | null>();

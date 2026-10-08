@@ -1,10 +1,11 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from './supabase-admin';
-import { Role } from '@/types';
-import { Database } from '@/types/database';
-import { EvaluatorSelector } from './evaluation-workflow';
+import type { Role } from '@/types';
+import type { Database } from '@/types/database';
+import type { EvaluatorSelector } from './evaluation-workflow';
 import { parseRole } from '@/lib/parsers';
-import { selectValidLeader, Candidate } from './team-validation';
+import { selectValidLeader } from './team-validation';
+import type { Candidate } from './team-validation';
 
 /**
  * Build map teamId → teams.leader_id cho resolveEvaluatorFromList (batch flows).
@@ -13,7 +14,7 @@ import { selectValidLeader, Candidate } from './team-validation';
 export async function loadTeamLeaderIds(
   db: SupabaseClient<Database> = supabaseAdmin
 ): Promise<Record<string, string | null>> {
-  const { data } = await db.from('teams').select('id, leader_id').eq('is_active', true);
+  const { data } = await db.from('teams').select('id, leader_id').eq('is_active', true).order('id', { ascending: true });
   const map: Record<string, string | null> = {};
   for (const t of data || []) {
     map[t.id] = t.leader_id ?? null;
@@ -108,6 +109,7 @@ export async function resolveEvaluatorFromDb(
       .select('id, role')
       .eq('role', 'Manager')
       .eq('is_active', true)
+      .order('id', { ascending: true })
       .limit(1)
       .maybeSingle();
 
@@ -161,7 +163,10 @@ export function resolveEvaluatorFromList(
   }
 
   if (selector === 'Manager') {
-    const manager = allUsers.find(u => u.role === 'Manager');
+    // Deterministic selection: lowest id, independent of caller array order.
+    const manager = allUsers
+      .filter(u => u.role === 'Manager' && u.isActive !== false)
+      .sort((a, b) => a.id.localeCompare(b.id))[0];
     return manager ? { id: manager.id, role: manager.role } : null;
   }
 

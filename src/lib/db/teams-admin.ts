@@ -28,7 +28,9 @@ export async function getTeamsAdmin(requester?: User | null): Promise<Team[]> {
     query = query.in('id', scopedTeamIds);
   }
 
-  const { data, error } = await query.order('name');
+  const { data, error } = await query
+    .order('name', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     throw new DatabaseError('Error fetching teams (admin)', error);
@@ -84,7 +86,8 @@ export async function getLeaderTeamIds(requester: User): Promise<string[]> {
     .from('teams')
     .select('id')
     .eq('is_active', true)
-    .eq('leader_id', requester.id);
+    .eq('leader_id', requester.id)
+    .order('id', { ascending: true });
 
   if (error) {
     throw new DatabaseError('Error fetching Leader team scope (admin)', error);

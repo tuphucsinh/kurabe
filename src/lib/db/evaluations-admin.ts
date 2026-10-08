@@ -9,9 +9,29 @@ import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/
 import { isIndividualRole } from '@/lib/role-policy';
 import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
 import { getLeaderTeamIds } from '@/lib/db/teams-admin';
+import { collectStableManifest, RosterReadError, type StableItemPage } from '@/lib/db/users-admin';
 
 
 const PERIOD_SELECT = 'id, year, name, status, created_by, created_at, closed_at, target_rate, target_grade';
+
+/**
+ * Assignment-bounded round reader: only rounds the evaluator is assigned to WITHIN
+ * the requested period. Without a period the historical all-period scan is kept for
+ * callers that intentionally read across periods.
+ */
+function fetchAssignedRoundEvaluationIds(evaluatorId: string, periodId?: string) {
+  if (periodId) {
+    return supabaseAdmin
+      .from('evaluation_rounds')
+      .select('evaluation_id, evaluations!inner(period_id)')
+      .eq('evaluator_id', evaluatorId)
+      .eq('evaluations.period_id', periodId);
+  }
+  return supabaseAdmin
+    .from('evaluation_rounds')
+    .select('evaluation_id')
+    .eq('evaluator_id', evaluatorId);
+}
 
 export async function getPeriodsAdmin(requester?: User | null): Promise<EvaluationPeriod[]> {
   if (!requester) return [];
@@ -19,7 +39,8 @@ export async function getPeriodsAdmin(requester?: User | null): Promise<Evaluati
     .from('evaluation_periods')
     .select(PERIOD_SELECT)
     .order('year', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true });
   if (error) throw new DatabaseError('Error fetching periods (admin)', error);
   return (data || []).map(mapPeriodFromDb);
 }
@@ -106,12 +127,9 @@ export async function fetchEvaluationsForViewerAdmin(
   const leaderTeamIds = user.role === 'Leader' ? await getLeaderTeamIds(user) : [];
 
   if (user.role !== 'Manager') {
-    // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
+    // Evaluations mà viewer là người chấm (giới hạn trong kỳ đang xét) + Context SubLeader (chạy song song)
     const [roundsRes, subUsers] = await Promise.all([
-      supabaseAdmin
-        .from('evaluation_rounds')
-        .select('evaluation_id')
-        .eq('evaluator_id', user.id),
+      fetchAssignedRoundEvaluationIds(user.id, periodId),
       user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
     ]);
 
@@ -141,7 +159,9 @@ export async function fetchEvaluationsForViewerAdmin(
     query = query.or(orFilters.join(','));
   }
 
-  query = query.order('created_at', { ascending: false });
+  query = query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true });
 
   if (opts?.limit && opts.limit > 0) {
     query = query.limit(opts.limit);
@@ -329,12 +349,9 @@ export async function fetchEvaluationSummariesForViewerAdmin(
   const leaderTeamIds = user.role === 'Leader' ? await getLeaderTeamIds(user) : [];
 
   if (user.role !== 'Manager') {
-    // Evaluations mà viewer là người chấm (mọi vòng) + Context SubLeader (chạy song song)
+    // Evaluations mà viewer là người chấm (giới hạn trong kỳ đang xét) + Context SubLeader (chạy song song)
     const [roundsRes, subUsers] = await Promise.all([
-      supabaseAdmin
-        .from('evaluation_rounds')
-        .select('evaluation_id')
-        .eq('evaluator_id', user.id),
+      fetchAssignedRoundEvaluationIds(user.id, periodId),
       user.role === 'SubLeader' ? getSubLeaderViewContextAdmin(user) : Promise.resolve(undefined),
     ]);
 
@@ -364,7 +381,9 @@ export async function fetchEvaluationSummariesForViewerAdmin(
     query = query.or(orFilters.join(','));
   }
 
-  query = query.order('created_at', { ascending: false });
+  query = query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true });
 
   if (opts?.limit && opts.limit > 0) {
     query = query.limit(opts.limit);
@@ -573,7 +592,8 @@ export async function getEvaluationHistoryByEmployeeAdmin(
     .eq('employee_id', employeeId)
     .eq('status', 'Approved')
     .eq('evaluation_periods.status', 'closed')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: true });
 
   if (error) {
     throw new DatabaseError('Error fetching evaluation history by employee (admin)', error);
@@ -584,4 +604,49 @@ export async function getEvaluationHistoryByEmployeeAdmin(
     user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
   ]);
   return (data || []).map(mapEvaluationFromDb).map((ev) => sanitizeEvaluationForViewer(ev, user, allUsers, leaderTeamIds));
+}
+
+/**
+ * Complete-reader: every evaluation of a period in stable ID order with an
+ * exact count manifest. `ids` are the evaluation identifiers; `employeeIds`
+ * are the evaluated employees (evaluations are unique per period+employee),
+ * which lets a complete-roster consumer bound its "already has an evaluation"
+ * read. Any page/count/ID mismatch throws a RosterReadError denial — it never
+ * degrades into an empty success. The bounded viewport readers (`opts.limit`)
+ * above stay bounded and are unaffected.
+ */
+export async function readEvaluationsByPeriodManifestAdmin(periodId: string): Promise<{
+  ids: string[];
+  employeeIds: string[];
+  totalCount: number;
+  pages: number;
+}> {
+  if (!periodId || typeof periodId !== 'string' || !periodId.trim()) {
+    throw new RosterReadError('ROSTER_PERIOD_REQUIRED', 'a period id is required to read the evaluation manifest');
+  }
+  const result = await collectStableManifest<{ id: string; employee_id: string }>(
+    async (offset, limit): Promise<StableItemPage<{ id: string; employee_id: string }>> => {
+      const { data, error, count } = await supabaseAdmin
+        .from('evaluations')
+        .select('id, employee_id', { count: 'exact' })
+        .eq('period_id', periodId.trim())
+        .order('id', { ascending: true })
+        .range(offset, offset + limit - 1);
+
+      if (error) {
+        throw new DatabaseError('Error fetching evaluation id page (admin)', error);
+      }
+      return {
+        items: (data || []).map((row) => ({ id: row.id, employee_id: row.employee_id })),
+        totalCount: count ?? null,
+      };
+    },
+    (row) => row.id
+  );
+  return {
+    ids: result.ids,
+    employeeIds: result.items.map((row) => row.employee_id),
+    totalCount: result.totalCount,
+    pages: result.pages,
+  };
 }

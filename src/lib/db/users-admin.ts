@@ -1,11 +1,12 @@
 import 'server-only';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { User } from '@/types';
+import { User, IdManifest, RosterGraphEntry } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
 import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 import { isIndividualRole } from '@/lib/role-policy';
+import { parseRole } from '@/lib/parsers';
 import { normalizeBatchParams, computeBatchResult, sanitizeSearchTerm } from '@/lib/employee-batch-helpers';
 
 export interface UsersBatchOptions {
@@ -327,4 +328,184 @@ export async function getUsersByTeamAdmin(
   }
 
   return (data || []).map(mapUserFromDb);
+}
+
+/**
+ * Stable, count-verifying pagination for the complete roster / evaluation /
+ * assignment consumers.
+ *
+ * Contract (P107M1T05 L3/L6/P3):
+ *   - Pages are fetched with a bounded page size and a deterministic stable ID
+ *     order supplied by the caller's fetcher.
+ *   - Every page MUST report an exact `totalCount`. A missing count, a page
+ *     larger than requested, a duplicate id (unstable order), or a collected
+ *     count that disagrees with the reported count is a denial — never a silent
+ *     empty success.
+ *   - The reader only stops when the collected id set exactly matches the
+ *     reported total.
+ */
+export const ROSTER_PAGE_CAP = 500;
+
+export type StableItemPage<T> = { items: T[]; totalCount: number | null };
+
+export class RosterReadError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'RosterReadError';
+    this.code = code;
+  }
+}
+
+export async function collectStableManifest<T>(
+  fetchPage: (offset: number, limit: number) => Promise<StableItemPage<T>>,
+  getId: (item: T) => string,
+  options?: { pageSize?: number; expectedTotal?: number }
+): Promise<{ items: T[]; ids: string[]; totalCount: number; pages: number }> {
+  const requested = options?.pageSize ?? ROSTER_PAGE_CAP;
+  const pageSize = Math.max(1, Math.min(requested, ROSTER_PAGE_CAP));
+  const items: T[] = [];
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  let expected: number | null = options?.expectedTotal ?? null;
+  let offset = 0;
+  let pages = 0;
+
+  // Hard ceiling guards an unbounded/misbehaving server from looping forever.
+  const pageCeiling = 100000;
+
+  for (;;) {
+    if (pages >= pageCeiling) {
+      throw new RosterReadError('ROSTER_PAGE_CEILING', 'roster pagination exceeded the page ceiling');
+    }
+    const page = await fetchPage(offset, pageSize);
+    pages += 1;
+
+    if (!page || !Array.isArray(page.items)) {
+      throw new RosterReadError('ROSTER_PAGE_INVALID', 'roster page did not return an item list');
+    }
+    const totalCount = page.totalCount;
+    if (totalCount === null || totalCount === undefined || !Number.isInteger(totalCount) || totalCount < 0) {
+      throw new RosterReadError('ROSTER_COUNT_MISSING', 'roster page must report an exact total count');
+    }
+    if (expected === null) {
+      expected = totalCount;
+    } else if (expected !== totalCount) {
+      throw new RosterReadError('ROSTER_COUNT_UNSTABLE', 'roster total count changed between pages');
+    }
+    if (page.items.length > pageSize) {
+      throw new RosterReadError('ROSTER_PAGE_OVERSIZE', 'roster page exceeded the requested page size');
+    }
+
+    for (const item of page.items) {
+      const id = getId(item);
+      if (!id || typeof id !== 'string') {
+        throw new RosterReadError('ROSTER_ID_INVALID', 'roster page contained an invalid id');
+      }
+      if (seen.has(id)) {
+        throw new RosterReadError('ROSTER_ID_DUPLICATE', 'roster pagination returned a duplicate id');
+      }
+      seen.add(id);
+      ids.push(id);
+      items.push(item);
+    }
+
+    offset += page.items.length;
+
+    if (ids.length === expected) break;
+    if (ids.length > expected) {
+      throw new RosterReadError('ROSTER_COUNT_MISMATCH', 'roster collected more ids than the reported count');
+    }
+    if (page.items.length === 0) {
+      throw new RosterReadError('ROSTER_TRUNCATED', 'roster pagination ended before the reported count');
+    }
+  }
+
+  if (expected === null) {
+    throw new RosterReadError('ROSTER_COUNT_MISSING', 'roster reader did not observe an exact total count');
+  }
+  if (ids.length !== expected) {
+    throw new RosterReadError('ROSTER_COUNT_MISMATCH', 'roster id count does not match the reported total');
+  }
+  if (options?.expectedTotal !== undefined && expected !== options.expectedTotal) {
+    throw new RosterReadError('ROSTER_COUNT_MISMATCH', 'roster total count does not match the expected total');
+  }
+
+  return { items, ids, totalCount: expected, pages };
+}
+
+export async function collectStableIdManifest(
+  fetchPage: (offset: number, limit: number) => Promise<{ ids: string[]; totalCount: number | null }>,
+  options?: { pageSize?: number; expectedTotal?: number }
+): Promise<IdManifest> {
+  const result = await collectStableManifest<string>(
+    async (offset, limit) => {
+      const page = await fetchPage(offset, limit);
+      return { items: page.ids, totalCount: page.totalCount };
+    },
+    (id) => id,
+    options
+  );
+  return { ids: result.ids, totalCount: result.totalCount, pages: result.pages };
+}
+
+/** Stable-ID, count-verifying page of active roster personas (graph identity). */
+async function fetchActiveRosterGraphPage(
+  offset: number,
+  limit: number
+): Promise<StableItemPage<RosterGraphEntry>> {
+  const { data, error, count } = await supabaseAdmin
+    .from('users')
+    .select('id, role, team_id, subleader_id', { count: 'exact' })
+    .eq('is_active', true)
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    throw new DatabaseError('Error fetching active roster page (admin)', error);
+  }
+
+  const items: RosterGraphEntry[] = (data || []).map((row) => ({
+    id: row.id,
+    role: parseRole(row.role),
+    teamId: row.team_id ?? null,
+    subleaderId: row.subleader_id ?? null,
+  }));
+
+  return { items, totalCount: count ?? null };
+}
+
+/**
+ * Complete-reader: the exact active roster graph (id/role/team/subleader) in
+ * stable ID order, or a thrown denial when any page/count invariant fails.
+ */
+export async function readActiveRosterGraphAdmin(): Promise<{
+  entries: RosterGraphEntry[];
+  manifest: IdManifest;
+}> {
+  const result = await collectStableManifest<RosterGraphEntry>(
+    fetchActiveRosterGraphPage,
+    (entry) => entry.id
+  );
+  return {
+    entries: result.items,
+    manifest: { ids: result.ids, totalCount: result.totalCount, pages: result.pages },
+  };
+}
+
+/** Complete-reader: the exact active roster ID manifest in stable ID order. */
+export async function readActiveRosterManifestAdmin(): Promise<IdManifest> {
+  return collectStableIdManifest(async (offset, limit) => {
+    const { data, error, count } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact' })
+      .eq('is_active', true)
+      .order('id', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new DatabaseError('Error fetching active roster id page (admin)', error);
+    }
+    return { ids: (data || []).map((row) => row.id), totalCount: count ?? null };
+  });
 }
