@@ -395,7 +395,7 @@ DoD:
 - Lockfile diff limited to justified resolution; clean install in isolated candidate reproduces; no package scripts/secrets/runtime settings broadened.
 - If T01 proves no applicable update, retain `NO_CHANGE_REQUIRED` evidence and owner-reviewed canonical disposition; do not fabricate an update/test, empty product commit or unconditional audit=0.
 
-### [ ] [#P107M1T03] Server-side draft confidentiality and appointed-Leader authority
+### [x] [#P107M1T03] Server-side draft confidentiality and appointed-Leader authority
 
 ```yaml
 task:
