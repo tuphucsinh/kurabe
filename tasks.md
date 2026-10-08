@@ -426,8 +426,12 @@ task:
     - supabase/migrations/20261008000100_p107_read_authority.sql
     - tests/p107-read-authority.test.mjs
     - tests/fixtures/p107/read-authority/
+    - tests/leader-validation.test.mjs
+    - tests/h1h2-workflow-contract.test.ts
   locks: [KURABE_SOURCE_CONTRACT, KURABE_SCHEMA_CONTRACT]
 ```
+
+Owns amendment 2 (canonical control, 2026-10-08): adds `tests/leader-validation.test.mjs` and `tests/h1h2-workflow-contract.test.ts` — existing tests that assert the removed unique-primary Leader fallback and must be updated to the deny semantics required by this task's goal and owner policy. Task ID/tier/goal/DoD/DAG/locks unchanged; no implicit write permission beyond those two test files.
 
 Goal: close S5–S8/S11/N4/N7 with one server authority and selective candidate ACL changes, not UI-only masking.
 Consumer pre-dispatch disposition: `.ai/P107_T03_CONSUMER_PREFLIGHT.md`; Mika adds only the inspected draft DTO hydration caller `src/hooks/use-evaluation-page-state.ts` to owns. Task ID/goal/DoD/DAG unchanged; other inspected callers remain read-only with explicit unchanged-interface/privilege regression requirements. No implicit additional write permission.

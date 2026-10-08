@@ -1,5 +1,11 @@
 # Decisions Log
 
+## P107M1T03 owns amendment 2 — 2026-10-08
+
+- Mika-confirmed material FAIL in the T03 independent gate: the landed delta widened `EvaluationRound`/`EvaluationDisplayRound` `totalScore`/`grade` to optional, breaking 6 non-owned consumers and leaving a compile error in owned `src/lib/db/evaluation-display-admin.ts`. Repair #1 restored strict, complete payload-bearing round types and represents unauthorized/redacted rounds by omission plus a separate status/assignment-only metadata DTO (`EvaluationDisplayDto.redactedRounds`); `npm run typecheck`, lint and focused tests pass with no fabricated score/grade.
+- `npm test` then failed only in two PRE-EXISTING tests that assert the removed unique-primary Leader fallback: `tests/leader-validation.test.mjs` (selectValidLeader invalid/absent-pointer fallback cases) and `tests/h1h2-workflow-contract.test.ts` (Suite 2 unique-primary fallback cases + legacy non-strict fallback). Their assertions contradict this task's goal and the owner Leader policy (“only the current valid `teams.leader_id` pointer; missing/invalid/inactive pointer ⇒ deny; no unique-primary fallback”), so they are stale and must be updated as a required consequence of T03.
+- Canonical owns amendment 2: add `tests/leader-validation.test.mjs` and `tests/h1h2-workflow-contract.test.ts` to P107M1T03 owns. Task ID/tier/goal/DoD/DAG/locks unchanged; this grants no production/deploy/scope permission.
+
 ## P107 execution and transport approved — 2026-10-08
 
 - Owner: “set runner: agy (gemini-3.8-flash high); review gate: reviewer (opencode go, model deepseek v4.1 flash) / commit rồi gọi runner làm task đi, làm toàn bộ task đã băm”. Execute exact existing P107M1T01–P107M1T10 serial DAG through local canonical completion, with ordinary in-scope repairs. No new phase/replan/reset or automatic production rollout.
