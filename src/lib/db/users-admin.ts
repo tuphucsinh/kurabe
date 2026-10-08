@@ -6,7 +6,7 @@ import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
 import { getLeaderTeamIds } from '@/lib/db/teams-admin';
 import { isIndividualRole } from '@/lib/role-policy';
-import { normalizeBatchParams, computeBatchResult } from '@/lib/employee-batch-helpers';
+import { normalizeBatchParams, computeBatchResult, sanitizeSearchTerm } from '@/lib/employee-batch-helpers';
 
 export interface UsersBatchOptions {
   offset?: number;
@@ -216,9 +216,11 @@ export async function getUsersAdmin(
     }
   }
 
-  if (options?.search && options.search.trim()) {
-    const term = options.search.trim();
-    query = query.or(`name.ilike.%${term}%,employee_code.ilike.%${term}%`);
+  if (options?.search) {
+    const term = sanitizeSearchTerm(options.search);
+    if (term) {
+      query = query.or(`name.ilike.%${term}%,employee_code.ilike.%${term}%`);
+    }
   }
 
   let orderedQuery = query.order('name');

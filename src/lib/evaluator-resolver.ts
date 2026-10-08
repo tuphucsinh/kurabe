@@ -98,19 +98,7 @@ export async function resolveEvaluatorFromDb(
       return null;
     }
 
-    // Appointed pointer absent: unique primary fallback only
-    const targetTeam = subject.teamId;
-    const { data: primaryLeaders } = await supabaseAdmin
-      .from('users')
-      .select('id, role')
-      .eq('team_id', targetTeam)
-      .eq('role', 'Leader')
-      .eq('is_active', true);
-
-    if (primaryLeaders && primaryLeaders.length === 1) {
-      return { id: primaryLeaders[0].id, role: parseRole(primaryLeaders[0].role) };
-    }
-
+    // Appointed pointer absent -> reject, no primary fallback
     return null;
   }
 

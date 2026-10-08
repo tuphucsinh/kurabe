@@ -23,10 +23,10 @@ import {
   EvaluationComparePageData,
   getPeriodsAction,
   getActivePeriodAction,
+  getAllCriteriaGroupsAction,
 } from '@/actions/read';
 import { UsersBatchOptions } from '@/lib/db/users-admin';
 
-import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
 import { 
@@ -404,7 +404,7 @@ export const useCriteria = () => {
   const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
   return useQuery({
     queryKey: scopedKey('criteria', [], user, viewerScope, scopeEpoch),
-    queryFn: getAllCriteriaGroups,
+    queryFn: getAllCriteriaGroupsAction,
     staleTime: 5 * 60 * 1000,
     enabled: user != null && viewerScope != null,
   });

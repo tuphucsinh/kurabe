@@ -1,6 +1,6 @@
-import { Evaluation, EvaluationPeriod, EvaluationRound, User, PeriodStatus, EvaluationRoundStatus } from '@/types';
+import { Evaluation, EvaluationPeriod, EvaluationRound, User, PeriodStatus, EvaluationRoundStatus, EvaluationRoundMetadata } from '@/types';
 
-import { canViewEvaluation } from '@/data/workflow';
+import { canViewEvaluation, canViewRoundPayload } from '@/data/workflow';
 import { Tables } from '@/types/database';
 import { splitRoundNotes } from '@/lib/round-level-selection';
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
@@ -9,6 +9,38 @@ type DbPeriod = Tables<'evaluation_periods'>;
 type DbRound = Tables<'evaluation_rounds'>;
 type DbEvaluation = Tables<'evaluations'> & { evaluation_rounds?: DbRound[] };
 
+/**
+ * Sanitizes an evaluation for a specific viewer:
+ * - Omits unauthorized drafts from `rounds` completely to protect confidentiality.
+ * - Captures non-sensitive status/assignment metadata into `roundMetadata`.
+ * - Payload-bearing authorized rounds retain their existing complete type and required fields.
+ */
+export function sanitizeEvaluationForViewer(
+  evaluation: Evaluation,
+  viewer?: User | null,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): Evaluation {
+  const roundMetadata: EvaluationRoundMetadata[] = (evaluation.rounds || []).map((r) => ({
+    round: r.round,
+    evaluatorId: r.evaluatorId,
+    evaluatorRole: r.evaluatorRole,
+    status: r.status,
+    submittedAt: r.submittedAt,
+    isRedacted: !canViewRoundPayload(viewer, evaluation, r, allUsers, ledTeamIds),
+  }));
+
+  const authorizedRounds = (evaluation.rounds || []).filter((r) =>
+    canViewRoundPayload(viewer, evaluation, r, allUsers, ledTeamIds)
+  );
+
+  return {
+    ...evaluation,
+    rounds: authorizedRounds,
+    roundMetadata,
+  };
+}
+
 export function filterEvaluationsForViewer(
   evaluations: Evaluation[],
   viewer?: User | null,
@@ -16,7 +48,9 @@ export function filterEvaluationsForViewer(
   ledTeamIds?: readonly string[]
 ): Evaluation[] {
   if (!viewer || !Array.isArray(evaluations) || evaluations.length === 0) return [];
-  return evaluations.filter(ev => canViewEvaluation(viewer, ev, allUsers, ledTeamIds));
+  return evaluations
+    .filter((ev) => canViewEvaluation(viewer, ev, allUsers, ledTeamIds))
+    .map((ev) => sanitizeEvaluationForViewer(ev, viewer, allUsers, ledTeamIds));
 }
 
 const PERIOD_STATUS_MAP: Record<string, PeriodStatus> = {

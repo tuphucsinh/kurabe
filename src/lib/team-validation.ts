@@ -49,15 +49,9 @@ export function validateLeaderAssignment(
 
 /**
  * Selects a valid leader from candidate list:
- * 1. Appointed candidate (if appointedId provided and valid).
- * 2. When appointedId is absent:
- *    - In strict mode ({ strict: true }): requires unique active primary Leader.
- *      Returns null if 0 or >1 candidates match.
- *    - In standard mode: returns first active candidate matching target team.
- * 3. When appointedId is invalid or inactive:
- *    - In strict mode: returns null (rejects invalid/inactive pointer, no fallback).
- *    - In standard mode: falls back to active primary candidates.
- * 4. Otherwise null.
+ * Only current valid appointed teams.leader_id (active/current Leader) determines
+ * Leader authority; no unique-primary fallback.
+ * Invalid pointer / inactive pointer / missing pointer => null (unassigned/deny).
  */
 export function selectValidLeader<T extends Candidate>(
   appointedId: string | null | undefined,
@@ -65,44 +59,15 @@ export function selectValidLeader<T extends Candidate>(
   candidates: T[],
   options?: ValidateLeaderOptions | boolean
 ): T | null {
-  if (!targetTeamId) {
+  if (!targetTeamId || !appointedId) {
     return null;
   }
 
-  const isStrict =
-    typeof options === 'object' &&
-    options !== null &&
-    (options.strict === true ||
-      options.requireUniquePrimary === true ||
-      options.rejectInvalidPointer === true);
-
-  if (appointedId) {
-    const appointed = candidates.find((c) => c.id === appointedId);
-    if (appointed && validateLeaderAssignment(appointed, targetTeamId, options).ok) {
-      return appointed;
-    }
-    if (isStrict) {
-      // In strict mode, an invalid or inactive appointed pointer must be rejected without fallback
-      return null;
-    }
+  const appointed = candidates.find((c) => c.id === appointedId);
+  if (appointed && validateLeaderAssignment(appointed, targetTeamId, options).ok) {
+    return appointed;
   }
 
-  const isAllowUnassigned =
-    typeof options === 'boolean' ? options : Boolean(options?.allowUnassigned);
-  const primaryCandidates = candidates.filter((c) => {
-    if (!validateLeaderAssignment(c, targetTeamId, options).ok) return false;
-    if (c.teamId === targetTeamId) return true;
-    if (isAllowUnassigned && c.teamId === null) return true;
-    return false;
-  });
-
-  if (isStrict) {
-    // Unique primary fallback only when pointer absent; reject ambiguous
-    if (primaryCandidates.length === 1) {
-      return primaryCandidates[0];
-    }
-    return null;
-  }
-
-  return primaryCandidates[0] ?? null;
+  // Pointer absent, invalid, or inactive -> unassigned/deny, no fallback
+  return null;
 }

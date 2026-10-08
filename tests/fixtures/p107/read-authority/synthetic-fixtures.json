@@ -1,0 +1,201 @@
+{
+  "testSuite": "P107M1T03-read-authority",
+  "version": "1.0.0",
+  "roles": ["Manager", "Leader", "SubLeader", "Employee", "Worker"],
+  "teams": {
+    "teamAlpha": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Team Alpha",
+      "leaderId": "22222222-2222-4222-8222-222222222222",
+      "isActive": true
+    },
+    "teamBeta": {
+      "id": "11111111-1111-4111-8111-222222222222",
+      "name": "Team Beta",
+      "leaderId": "22222222-2222-4222-8222-333333333333",
+      "isActive": true
+    },
+    "teamUnappointed": {
+      "id": "11111111-1111-4111-8111-333333333333",
+      "name": "Team Unappointed",
+      "leaderId": null,
+      "isActive": true
+    }
+  },
+  "users": {
+    "manager": {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "employeeCode": "MGR001",
+      "name": "Active Manager",
+      "role": "Manager",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "isActive": true
+    },
+    "appointedLeaderAlpha": {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "employeeCode": "LDR001",
+      "name": "Leader Alpha (Appointed Alpha)",
+      "role": "Leader",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "isActive": true
+    },
+    "secondaryLeaderBeta": {
+      "id": "22222222-2222-4222-8222-333333333333",
+      "employeeCode": "LDR002",
+      "name": "Leader Beta (Primary Alpha, Appointed Beta)",
+      "role": "Leader",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "isActive": true
+    },
+    "primaryLeaderUnappointed": {
+      "id": "22222222-2222-4222-8222-444444444444",
+      "employeeCode": "LDR003",
+      "name": "Leader Unappointed (Primary in Unappointed Team, No Pointer)",
+      "role": "Leader",
+      "teamId": "11111111-1111-4111-8111-333333333333",
+      "isActive": true
+    },
+    "subLeaderAlpha": {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "employeeCode": "SLD001",
+      "name": "SubLeader Alpha",
+      "role": "SubLeader",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "isActive": true
+    },
+    "employeeAlpha": {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "employeeCode": "EMP001",
+      "name": "Employee Alpha",
+      "role": "Employee",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "subleaderId": "33333333-3333-4333-8333-333333333333",
+      "isActive": true
+    },
+    "workerAlpha": {
+      "id": "55555555-5555-4555-8555-555555555555",
+      "employeeCode": "WRK001",
+      "name": "Worker Alpha",
+      "role": "Worker",
+      "teamId": "11111111-1111-4111-8111-111111111111",
+      "subleaderId": "33333333-3333-4333-8333-333333333333",
+      "isActive": true
+    },
+    "otherTeamEmployee": {
+      "id": "66666666-6666-4666-8666-666666666666",
+      "employeeCode": "OTH001",
+      "name": "Other Team Employee",
+      "role": "Employee",
+      "teamId": "11111111-1111-4111-8111-222222222222",
+      "isActive": true
+    }
+  },
+  "cases": [
+    {
+      "id": "CASE-P107-01",
+      "description": "Active Manager draft read allowed in readonly mode",
+      "actor": "manager",
+      "targetRound": 1,
+      "expectedRead": true,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-02",
+      "description": "Active Manager draft write denied when not assigned to that round",
+      "actor": "manager",
+      "targetRound": 1,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-03",
+      "description": "Assigned SubLeader draft read and write allowed",
+      "actor": "subLeaderAlpha",
+      "targetRound": 1,
+      "expectedRead": true,
+      "expectedWrite": true
+    },
+    {
+      "id": "CASE-P107-04",
+      "description": "Next evaluator (Leader R2) draft read denied while round 1 is draft",
+      "actor": "appointedLeaderAlpha",
+      "targetRound": 1,
+      "expectedRead": false,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-05",
+      "description": "Employee subject draft read denied (Worker/Employee start at SubLeader, no SELF draft)",
+      "actor": "employeeAlpha",
+      "targetRound": 1,
+      "expectedRead": false,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-06",
+      "description": "Other team employee draft read denied",
+      "actor": "otherTeamEmployee",
+      "targetRound": 1,
+      "expectedRead": false,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-07",
+      "description": "Appointed secondary team Leader allowed on Team Beta regardless of primary team",
+      "actor": "secondaryLeaderBeta",
+      "targetTeam": "teamBeta",
+      "expectedAuthority": true
+    },
+    {
+      "id": "CASE-P107-08",
+      "description": "Primary Leader without pointer denied Leader authority (no unique-primary fallback)",
+      "actor": "primaryLeaderUnappointed",
+      "targetTeam": "teamUnappointed",
+      "expectedAuthority": false
+    },
+    {
+      "id": "CASE-P107-09",
+      "description": "Revoked actor in same session fails closed with unchanged DB graph",
+      "actor": "subLeaderAlpha",
+      "revoked": true,
+      "expectedWrite": false
+    },
+    {
+      "id": "CASE-P107-10",
+      "description": "Returned mutable round regains draft privacy",
+      "roundStatus": "Draft",
+      "previousStatus": "Submitted",
+      "expectedDraftPrivacy": true
+    },
+    {
+      "id": "CASE-P107-11",
+      "description": "Submitted historical positive controls allow authorized viewers",
+      "roundStatus": "Submitted",
+      "expectedRead": true
+    },
+    {
+      "id": "CASE-P107-12",
+      "description": "PostgREST search grammar injection stripped, password hash column protected",
+      "injections": [
+        "name.ilike.%test%,password_hash.ilike.%2b%",
+        "test),(id.eq.0",
+        "'; DROP TABLE users;--"
+      ],
+      "expectedSanitized": true
+    },
+    {
+      "id": "CASE-P107-13",
+      "description": "Direct browser anon/authenticated RPC to get_active_criteria_config / get_active_grade_config rejected",
+      "expectedBrowserRpc": "DENIED"
+    },
+    {
+      "id": "CASE-P107-14",
+      "description": "Server-side service_role config reads allowed",
+      "expectedServiceRoleRpc": "ALLOWED"
+    },
+    {
+      "id": "CASE-P107-15",
+      "description": "Legacy 16-argument RPC execution revoked",
+      "expectedAcl": "REVOKED"
+    }
+  ]
+}

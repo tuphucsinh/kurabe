@@ -239,6 +239,10 @@ function buildDisplayRounds(
   criteriaSnapshot: CriteriaSnapshot,
   gradeSnapshot: GradeSnapshot
 ): EvaluationDisplayRound[] {
+  // Only payload-bearing, authorized rounds live in `evaluation.rounds`. Rounds
+  // whose payload is withheld for the viewer are omitted entirely and surfaced
+  // separately via EvaluationDisplayDto.redactedRounds — no placeholder round
+  // (and therefore no fabricated totalScore/grade) is ever synthesized.
   return evaluation.rounds.map((round) => ({
     round: round.round,
     status: round.status,
@@ -275,5 +279,6 @@ export async function getEvaluationDisplayAdmin(
     evaluationId: evaluation.id,
     employeeRoleSnapshot: evaluation.employeeRole,
     rounds: buildDisplayRounds(evaluation, criteriaSnapshot, gradeSnapshot),
+    redactedRounds: (evaluation.roundMetadata ?? []).filter((meta) => meta.isRedacted === true),
   };
 }

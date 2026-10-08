@@ -182,10 +182,12 @@ export function useEvaluationPageState({
       if (accessState.mode === 'blocked') return;
 
       const targetRoundNum = accessState.editableRound || accessState.displayRound;
-      const targetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
+      const rawTargetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
+      const isTargetRoundVisible = rawTargetRound && accessState.visibleRounds.some(vr => vr.round === rawTargetRound.round) && !rawTargetRound.isRedacted;
+      const targetRound = isTargetRoundVisible ? rawTargetRound : null;
 
       const prevRounds = evaluation.rounds
-        .filter(r => accessState.visibleRounds.some((vr: EvaluationRound) => vr.round === r.round) && r.round < (targetRoundNum || 0))
+        .filter(r => !r.isRedacted && accessState.visibleRounds.some((vr: EvaluationRound) => vr.round === r.round) && r.round < (targetRoundNum || 0))
         .sort((a, b) => a.round - b.round);
 
       let initialScores: Record<string, number> = {};

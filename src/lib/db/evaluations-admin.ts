@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { Evaluation, EvaluationPeriod, EvaluationRound, EvaluationRoundStatus, User } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { canViewEvaluation } from '@/data/workflow';
-import { mapEvaluationFromDb, filterEvaluationsForViewer, mapPeriodFromDb } from '@/lib/db/evaluations';
+import { mapEvaluationFromDb, filterEvaluationsForViewer, mapPeriodFromDb, sanitizeEvaluationForViewer } from '@/lib/db/evaluations';
 import { parseRole, parseGrade, parseEvalStatus, parseRoundNumber } from '@/lib/parsers';
 import { isIndividualRole } from '@/lib/role-policy';
 import { validateAndDedupeUuids } from '@/lib/employee-batch-helpers';
@@ -509,7 +509,7 @@ export async function getEvaluationByIdAdmin(
     return null;
   }
 
-  return evaluation;
+  return sanitizeEvaluationForViewer(evaluation, user, allUsers, leaderTeamIds);
 }
 
 export async function getEvaluationByEmployeeAdmin(
@@ -543,7 +543,7 @@ export async function getEvaluationByEmployeeAdmin(
     return null;
   }
 
-  return evaluation;
+  return sanitizeEvaluationForViewer(evaluation, user, allUsers, leaderTeamIds);
 }
 
 export async function getEvaluationHistoryByEmployeeAdmin(
@@ -579,5 +579,9 @@ export async function getEvaluationHistoryByEmployeeAdmin(
     throw new DatabaseError('Error fetching evaluation history by employee (admin)', error);
   }
 
-  return (data || []).map(mapEvaluationFromDb);
+  const [allUsers, leaderTeamIds] = await Promise.all([
+    getSubLeaderViewContextAdmin(user),
+    user.role === 'Leader' ? getLeaderTeamIds(user) : Promise.resolve([] as string[]),
+  ]);
+  return (data || []).map(mapEvaluationFromDb).map((ev) => sanitizeEvaluationForViewer(ev, user, allUsers, leaderTeamIds));
 }

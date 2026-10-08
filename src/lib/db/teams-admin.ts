@@ -71,13 +71,13 @@ export async function getTeamByIdAdmin(
 }
 
 /**
- * Returns the active teams a Leader may administer. The primary team remains
- * in scope for backwards compatibility; appointed secondary teams are added
- * from teams.leader_id rather than inferred from users.team_id.
+ * Returns the active teams a Leader is appointed to lead.
+ * Only current valid appointed teams.leader_id determines Leader authority;
+ * no unique-primary fallback.
  */
 export async function getLeaderTeamIds(requester: User): Promise<string[]> {
   if (requester.role !== 'Leader') {
-    return requester.teamId ? [requester.teamId] : [];
+    return [];
   }
 
   const { data, error } = await supabaseAdmin
@@ -90,23 +90,5 @@ export async function getLeaderTeamIds(requester: User): Promise<string[]> {
     throw new DatabaseError('Error fetching Leader team scope (admin)', error);
   }
 
-  let activePrimaryTeamId: string | null = null;
-  if (requester.teamId) {
-    const { data: primaryTeam, error: primaryError } = await supabaseAdmin
-      .from('teams')
-      .select('id')
-      .eq('id', requester.teamId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (primaryError) {
-      throw new DatabaseError('Error fetching Leader primary team scope (admin)', primaryError);
-    }
-    activePrimaryTeamId = primaryTeam?.id ?? null;
-  }
-
-  return Array.from(new Set([
-    ...(activePrimaryTeamId ? [activePrimaryTeamId] : []),
-    ...(data || []).map((team: { id: string }) => team.id),
-  ]));
+  return (data || []).map((team: { id: string }) => team.id);
 }

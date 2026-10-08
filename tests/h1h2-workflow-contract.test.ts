@@ -7,7 +7,7 @@
  * 2. Employee and Worker must use SubLeader (R1) -> Leader (R2) -> Manager (R3) flow.
  * 3. Employee and Worker cannot SELF R1 (evaluator for R1 is SubLeader, not SELF).
  * 4. Appointed Leader for Team B is valid independent of primary Team A membership.
- * 5. Validate appointed pointer first; unique primary fallback only when pointer absent.
+ * 5. Validate appointed pointer only; absent/invalid/inactive pointer denies (null); no fallback.
  * 6. Reject invalid/inactive pointers and ambiguous candidates (multiple primary Leaders).
  * 7. Unrelated Leader C is rejected for Team B evaluations.
  * 8. Strict failure oracles for skipped, backward, replayed, and final-tampered submits.
@@ -240,10 +240,10 @@ function testWorkflowTruthTable() {
 }
 
 // ------------------------------------------------------------
-// Suite 2: Multi-Team Leader Validation & Fallback Contracts (H2)
+// Suite 2: Multi-Team Leader Validation & Deny Contracts (H2)
 // ------------------------------------------------------------
 function testMultiTeamLeaderValidation() {
-  console.log('Testing Suite 2: Multi-Team Leader Validation & Fallback (H2)...');
+  console.log('Testing Suite 2: Multi-Team Leader Validation & Deny (H2)...');
 
   const TEAM_A = 'team-a-id';
   const TEAM_B = 'team-b-id';
@@ -309,21 +309,21 @@ function testMultiTeamLeaderValidation() {
     'Strict mode must reject missing appointed pointer without falling back'
   );
 
-  // 7. selectValidLeader: Pointer absent (null/undefined) -> unique primary fallback
-  // Case 7a: Exactly 1 primary Leader in Team B -> selected
+  // 7. selectValidLeader: Pointer absent (null/undefined) -> denied (null), no fallback
+  // Case 7a: Absent appointed pointer -> deny (null), never fallback to a unique primary Leader
   const candidatesUniquePrimary = [leaderA, leaderB, leaderC];
-  const selectedFallbackNull = selectValidLeader(null, TEAM_B, candidatesUniquePrimary, { strict: true });
+  const selectedAbsentNull = selectValidLeader(null, TEAM_B, candidatesUniquePrimary, { strict: true });
   assert.equal(
-    selectedFallbackNull?.id,
-    leaderB.id,
-    'Strict mode with null appointedId must select the unique primary Leader of Team B'
+    selectedAbsentNull,
+    null,
+    'Null appointedId must deny (null): no unique-primary fallback'
   );
 
-  const selectedFallbackUndef = selectValidLeader(undefined, TEAM_B, candidatesUniquePrimary, { strict: true });
+  const selectedAbsentUndef = selectValidLeader(undefined, TEAM_B, candidatesUniquePrimary, { strict: true });
   assert.equal(
-    selectedFallbackUndef?.id,
-    leaderB.id,
-    'Strict mode with undefined appointedId must select the unique primary Leader of Team B'
+    selectedAbsentUndef,
+    null,
+    'Undefined appointedId must deny (null): no unique-primary fallback'
   );
 
   // Case 7b: Zero primary Leaders in target team -> returns null
@@ -353,12 +353,12 @@ function testMultiTeamLeaderValidation() {
     'Strict mode must never fallback to unrelated Leader C for Team B'
   );
 
-  // 8. Backward compatibility: without strict mode, legacy fallback behavior preserved
-  const selectedLegacyInactive = selectValidLeader(inactiveLeader.id, TEAM_B, [inactiveLeader, leaderB]);
+  // 8. No legacy fallback: non-strict mode also denies (null) for an invalid pointer
+  const selectedNonStrictInactive = selectValidLeader(inactiveLeader.id, TEAM_B, [inactiveLeader, leaderB]);
   assert.equal(
-    selectedLegacyInactive?.id,
-    leaderB.id,
-    'Non-strict mode preserves legacy fallback for existing callers'
+    selectedNonStrictInactive,
+    null,
+    'Non-strict mode must also deny (null) for an inactive appointed pointer: no legacy fallback'
   );
 
   console.log('Suite 2: PASS');

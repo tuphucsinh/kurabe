@@ -5,7 +5,7 @@ import { User, Evaluation, EvaluationPeriod } from '@/types';
 import { DatabaseError } from '@/lib/errors';
 import { USER_SELECT, mapUserFromDb } from '@/lib/db/users';
 import { getUsersAdmin } from '@/lib/db/users-admin';
-import { mapEvaluationFromDb, mapPeriodFromDb } from '@/lib/db/evaluations';
+import { mapEvaluationFromDb, mapPeriodFromDb, sanitizeEvaluationForViewer } from '@/lib/db/evaluations';
 import {
   canViewEvaluation,
   canReadEvaluationHistory,
@@ -158,7 +158,10 @@ export async function getEvaluationHistoryAdmin(
       continue;
     }
 
-    entries.push({ evaluation, period });
+    entries.push({
+      evaluation: sanitizeEvaluationForViewer(evaluation, viewer, allUsersContext, leaderTeamIds),
+      period,
+    });
   }
 
   // 6. Sắp xếp theo thứ tự: period.year DESC -> period.createdAt DESC -> evaluation.id ASC

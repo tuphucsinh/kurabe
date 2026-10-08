@@ -1,4 +1,6 @@
-import { supabase } from '../supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../supabase-admin';
+import { Database } from '@/types/database';
 import { CriteriaGroup, Criterion, Role } from '@/types';
 import { DatabaseError } from '../errors';
 import { isCriterionAudience, mapAudiencesToRoles, decodeLegacyAppliesToRoles, CriterionAudience } from '../criteria-applicability';
@@ -48,8 +50,10 @@ function parseConfig(value: unknown): CriteriaConfig {
   return raw as unknown as CriteriaConfig;
 }
 
-export async function getActiveCriteriaConfig(): Promise<CriteriaConfig> {
-  const { data, error } = await supabase.rpc('get_active_criteria_config');
+export async function getActiveCriteriaConfig(
+  db: SupabaseClient<Database> = supabaseAdmin
+): Promise<CriteriaConfig> {
+  const { data, error } = await db.rpc('get_active_criteria_config');
   if (error) throw new DatabaseError('Error fetching active criteria configuration', error);
   return parseConfig(data);
 }
@@ -92,19 +96,27 @@ function mapGroup(group: ConfigGroup, config: CriteriaConfig): CriteriaGroup {
   };
 }
 
-export async function getAllCriteriaGroups(): Promise<CriteriaGroup[]> {
-  const config = await getActiveCriteriaConfig();
+export async function getAllCriteriaGroups(
+  db: SupabaseClient<Database> = supabaseAdmin
+): Promise<CriteriaGroup[]> {
+  const config = await getActiveCriteriaConfig(db);
   return config.groups.map((group) => mapGroup(group, config));
 }
 
-export async function getCriteriaGroupById(id: string): Promise<CriteriaGroup | null> {
-  const config = await getActiveCriteriaConfig();
+export async function getCriteriaGroupById(
+  id: string,
+  db: SupabaseClient<Database> = supabaseAdmin
+): Promise<CriteriaGroup | null> {
+  const config = await getActiveCriteriaConfig(db);
   const group = config.groups.find((candidate) => candidate.id === id);
   return group ? mapGroup(group, config) : null;
 }
 
-export async function getCriteriaForRole(role: Role): Promise<CriteriaGroup[]> {
-  const groups = await getAllCriteriaGroups();
+export async function getCriteriaForRole(
+  role: Role,
+  db: SupabaseClient<Database> = supabaseAdmin
+): Promise<CriteriaGroup[]> {
+  const groups = await getAllCriteriaGroups(db);
   return groups
     .map((group) => ({ ...group, criteria: group.criteria.filter((criterion) => criterion.appliesTo.includes(role)) }))
     .filter((group) => group.criteria.length > 0);

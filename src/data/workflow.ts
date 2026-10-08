@@ -70,7 +70,7 @@ function matchesEvaluatorSelector(
 
   if (selector === 'Leader') {
     const leadsTargetTeam = Boolean(target.teamId && ledTeamIds?.includes(target.teamId));
-    return evaluator.role === 'Leader' && (evaluator.teamId === target.teamId || leadsTargetTeam);
+    return evaluator.role === 'Leader' && leadsTargetTeam;
   }
 
   return evaluator.role === 'Manager';
@@ -242,6 +242,79 @@ export function canReadEvaluationHistory(
 }
 
 /**
+ * Kiểm tra xem viewer có quyền xem payload của draft round (chưa submit hoặc returned về Draft) hay không.
+ *
+ * Rules:
+ * 1. Viewer phải đang active (isActive !== false).
+ * 2. Active Manager được đọc draft (read-only positive).
+ * 3. SELF subject được đọc draft của chính mình khi step tương ứng là 'SELF' (Manager/Leader/SubLeader R1).
+ *    Worker/Employee bắt đầu từ SubLeader nên không có SELF draft.
+ * 4. Current assigned authorized evaluator được đọc draft:
+ *    - viewer.id === round.evaluatorId
+ *    - Viewer thỏa mãn current role/scope/appointment của step tương ứng trong flow (không dựa trên stale assignment).
+ * 5. Các đối tượng khác (next evaluator, subject không có SELF draft, người ngoài team) đều bị DENY.
+ */
+export function canViewRoundDraft(
+  viewer: User | null | undefined,
+  evaluation: Evaluation,
+  round: EvaluationRound,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): boolean {
+  if (!viewer || (viewer as { isActive?: boolean; is_active?: boolean }).isActive === false || (viewer as { isActive?: boolean; is_active?: boolean }).is_active === false) {
+    return false;
+  }
+
+  // Active Manager được đọc draft
+  if (viewer.role === 'Manager') {
+    return true;
+  }
+
+  const flow = getEvaluationFlow(evaluation.employeeRole);
+  const step = flow.find((s) => s.round === round.round);
+  if (!step) return false;
+
+  // SELF subject được đọc draft của chính mình khi step là SELF
+  if (step.evaluator === 'SELF') {
+    return (
+      viewer.id === evaluation.employeeId &&
+      viewer.role === evaluation.employeeRole &&
+      round.evaluatorId === viewer.id
+    );
+  }
+
+  // Current assigned authorized evaluator
+  if (round.evaluatorId === viewer.id) {
+    return matchesEvaluatorSelector(step.evaluator, viewer, evaluation, allUsers, ledTeamIds);
+  }
+
+  return false;
+}
+
+/**
+ * Kiểm tra xem viewer có quyền đọc toàn bộ payload của round hay không.
+ * - Round đã submit: ai có quyền xem evaluation (canViewEvaluation) đều xem được round submitted.
+ * - Round draft (chưa submit, hoặc returned về draft): phải thỏa mãn canViewRoundDraft.
+ */
+export function canViewRoundPayload(
+  viewer: User | null | undefined,
+  evaluation: Evaluation,
+  round: EvaluationRound,
+  allUsers?: User[],
+  ledTeamIds?: readonly string[]
+): boolean {
+  if (!canViewEvaluation(viewer, evaluation, allUsers, ledTeamIds)) {
+    return false;
+  }
+
+  if (isRoundSubmitted(round)) {
+    return true;
+  }
+
+  return canViewRoundDraft(viewer, evaluation, round, allUsers, ledTeamIds);
+}
+
+/**
  * Tính toán trạng thái truy cập chi tiết cho viewer đối với một evaluation
  */
 export function getEvaluationAccessState(
@@ -261,7 +334,7 @@ export function getEvaluationAccessState(
   }
   const flow = getEvaluationFlow(evaluation.employeeRole);
   const visibleRounds = evaluation.rounds
-    .filter(hasRoundDraft)
+    .filter((r) => hasRoundDraft(r) && canViewRoundPayload(viewer, evaluation, r, allUsers, ledTeamIds))
     .sort((a, b) => a.round - b.round);
   const latestVisibleRound = getLatestVisibleRound(visibleRounds);
   const hasAnyDraft = visibleRounds.length > 0;

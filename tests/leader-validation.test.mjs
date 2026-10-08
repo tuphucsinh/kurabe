@@ -124,27 +124,27 @@ import {
 }
 
 // -------------------------------------------------------------
-// 5. selectValidLeader: appointed leader invalid -> fallbacks
+// 5. selectValidLeader: appointed leader invalid -> denied (null), no fallback
 // -------------------------------------------------------------
 
-// Case 5.1: Appointed leader is inactive -> fallback to first active leader
+// Case 5.1: Appointed leader is inactive -> denied (null), no fallback
 {
   const inactiveAppointed = { id: 'leader-1', role: 'Leader', isActive: false, teamId: 'team-1' };
-  const fallbackLeader = { id: 'leader-2', role: 'Leader', isActive: true, teamId: 'team-1' };
-  const candidates = [inactiveAppointed, fallbackLeader];
+  const activeLeader = { id: 'leader-2', role: 'Leader', isActive: true, teamId: 'team-1' };
+  const candidates = [inactiveAppointed, activeLeader];
 
   const selected = selectValidLeader('leader-1', 'team-1', candidates);
-  assert.strictEqual(selected, fallbackLeader);
+  assert.strictEqual(selected, null);
 }
 
-// Case 5.2: Appointed leader has wrong role (e.g. Worker) -> fallback to active leader
+// Case 5.2: Appointed leader has wrong role (e.g. Worker) -> denied (null), no fallback
 {
   const wrongRoleAppointed = { id: 'worker-1', role: 'Worker', isActive: true, teamId: 'team-1' };
-  const fallbackLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
-  const candidates = [wrongRoleAppointed, fallbackLeader];
+  const activeLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
+  const candidates = [wrongRoleAppointed, activeLeader];
 
   const selected = selectValidLeader('worker-1', 'team-1', candidates);
-  assert.strictEqual(selected, fallbackLeader);
+  assert.strictEqual(selected, null);
 }
 
 // Case 5.3: An appointed Leader from another primary team remains valid.
@@ -157,17 +157,17 @@ import {
   assert.strictEqual(selected, otherTeamAppointed);
 }
 
-// Case 5.4: Appointed leader not found in candidates -> fallback to first active leader
+// Case 5.4: Appointed leader not found in candidates -> denied (null), no fallback
 {
-  const fallbackLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
-  const candidates = [fallbackLeader];
+  const activeLeader = { id: 'leader-1', role: 'Leader', isActive: true, teamId: 'team-1' };
+  const candidates = [activeLeader];
 
   const selected = selectValidLeader('non-existent-id', 'team-1', candidates);
-  assert.strictEqual(selected, fallbackLeader);
+  assert.strictEqual(selected, null);
 }
 
 // -------------------------------------------------------------
-// 6. selectValidLeader: appointedId is null/undefined
+// 6. selectValidLeader: appointedId is null/undefined -> denied (null), no fallback
 // -------------------------------------------------------------
 {
   const worker = { id: 'worker-1', role: 'Worker', isActive: true, teamId: 'team-1' };
@@ -177,13 +177,13 @@ import {
 
   const candidates = [worker, leader1, leader2, otherTeamLeader];
 
-  // With null appointedId, returns the first active Leader in candidate order.
+  // With null appointedId there is no unique-primary fallback: deny with null.
   const selectedNull = selectValidLeader(null, 'team-1', candidates);
-  assert.strictEqual(selectedNull, leader1);
+  assert.strictEqual(selectedNull, null);
 
-  // With undefined appointedId, returns leader1
+  // With undefined appointedId: also deny with null.
   const selectedUndef = selectValidLeader(undefined, 'team-1', candidates);
-  assert.strictEqual(selectedUndef, leader1);
+  assert.strictEqual(selectedUndef, null);
 }
 
 // -------------------------------------------------------------

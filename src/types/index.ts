@@ -97,6 +97,17 @@ export interface EvaluationRound {
   gradeConfigVersionId?: string | null;
   criteriaConfigVersionId?: string | null;
   criteriaSnapshotState?: 'authoritative' | 'legacy_unknown';
+  isRedacted?: boolean;
+}
+
+/** Explicit status/assignment-only round metadata DTO */
+export interface EvaluationRoundMetadata {
+  round: RoundNumber;
+  evaluatorId: string;
+  evaluatorRole: Role;
+  status: EvaluationRoundStatus;
+  submittedAt?: string;
+  isRedacted?: boolean;
 }
 
 export interface Evaluation {
@@ -114,6 +125,7 @@ export interface Evaluation {
   returnNote?: string | null;
   createdAt: string;
   updatedAt: string;
+  roundMetadata?: EvaluationRoundMetadata[];
 }
 
 export interface CriteriaLevel {
@@ -174,6 +186,12 @@ export interface EvaluationDisplayDto {
   evaluationId: string;
   employeeRoleSnapshot: Role;
   rounds: EvaluationDisplayRound[];
+  /**
+   * Status/assignment-only metadata for rounds whose payload was withheld for
+   * this viewer (unauthorized drafts / redacted rounds). These rounds are
+   * omitted from `rounds` entirely, so the payload can never leak.
+   */
+  redactedRounds?: EvaluationRoundMetadata[];
 }
 
 export type XlsxExportApi = {

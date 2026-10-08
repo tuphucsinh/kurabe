@@ -733,3 +733,16 @@ export async function getCriteriaForRoleAction(role: Role): Promise<CriteriaGrou
 
   return getCriteriaForRole(role);
 }
+
+/**
+ * Đọc tất cả nhóm tiêu chí (getAllCriteriaGroups) qua server action (supabaseAdmin).
+ * Bắt buộc requireAuth().
+ */
+export async function getAllCriteriaGroupsAction(): Promise<CriteriaGroup[]> {
+  const auth = await requireAuth();
+  if (auth.error !== null) {
+    return [];
+  }
+
+  return getAllCriteriaGroups(supabaseAdmin);
+}

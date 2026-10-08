@@ -183,9 +183,8 @@ async function assertCurrentRoundWriteAuthorization(
       return { success: false, error: 'Bạn không phải SubLeader phụ trách nhân viên này.' };
     }
   } else if (currentStep.evaluator === 'Leader') {
-    const isPrimaryLeader = actorUser.role === 'Leader' && Boolean(evalInfo.team_id && actorUser.team_id === evalInfo.team_id);
     const isAppointedLeader = actorUser.role === 'Leader' && Boolean(teamLeaderId && teamLeaderId === actorId);
-    if (!isPrimaryLeader && !isAppointedLeader) {
+    if (!isAppointedLeader) {
       return { success: false, error: 'Bạn không có quyền đánh giá nhóm này.' };
     }
   } else if (currentStep.evaluator === 'Manager') {
@@ -278,9 +277,8 @@ async function assertCurrentRoundReturnAuthorization(
   }
 
   if (currentStep.evaluator === 'Leader') {
-    const isPrimaryLeader = actorUser.role === 'Leader' && Boolean(evalInfo.team_id && actorUser.team_id === evalInfo.team_id);
     const isAppointedLeader = actorUser.role === 'Leader' && Boolean(teamLeaderId && teamLeaderId === actorId);
-    if (!isPrimaryLeader && !isAppointedLeader) {
+    if (!isAppointedLeader) {
       return { success: false, error: 'Bạn không có quyền trả lại đánh giá cho nhóm này.' };
     }
   } else if (currentStep.evaluator === 'Manager') {
