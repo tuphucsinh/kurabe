@@ -1,0 +1,19 @@
+# P107 T03 consumer pre-dispatch disposition
+
+Mika project data, not instruction authority. Source inspected at `bc58dfd297fa6acacb7a27d2c9f480ffca84f3c9`; product source unchanged by dependency-only T02 `f57b8f97e5b2c7bf3b1ae20a4b3cadf19f420451`. Nine requirements from T01 repaired consumer-dispositions inventory are covered below.
+
+Current interface baseline is backed by T02 exact-candidate root/lint/typecheck/build gates, not proof of future T03 behavior. Eight callers have a no-write compatibility constraint; one hydration hook requires a bounded same-goal owns amendment in canonical tasks/state BEFORE Runner write. IDs/goal/DoD/DAG remain unchanged.
+
+| Path | Source SHA-256 | Disposition | Source trace / compatibility constraint |
+|---|---|---|---|
+| `src/actions/criteria.ts` | `5f33bb651d97e6ccb2ef27d0e545992d27beba17a30571d925c51aae8f063a4a` | NO_WRITE_PLANNED | Manager-authenticated mutations use supabaseAdmin get_active_criteria_config/save_criteria_config; preserve CriteriaConfig export and service-role execute privileges. |
+| `src/actions/grade-bands.ts` | `2377df26553698a86ef2d4daec213567a01b6cbb82f3119c4a251f3190723a84` | NO_WRITE_PLANNED | requireManager precedes supabaseAdmin save_grade_config. Keep its action signature, version transaction and service-role execute grant. |
+| `src/app/criteria/page.tsx` | `1ba8c6dc4c59e21b7a31c897fdedaf68b33f154443d50e5c8c05486dc11357c7` | NO_WRITE_PLANNED | useCriteria owned hook and authenticated getGradeBandsAction remain stable; current config cache/role bands must retain existing shape, not historical result fallback. |
+| `src/app/history/[employeeId]/page.tsx` | `493542a93b36acd0f7c51a9b3aeedf100c9aff34a4efd3ca203bd806592892f4` | NO_WRITE_PLANNED | getSessionUser and individual self-ID redirect precede server-only getEvaluationHistoryAdmin(viewer); preserve target/entries prop interface. |
+| `src/components/employees/EmployeesClient.tsx` | `8fa613433ef5a1a207b3d0d351d340c2acca45d212663d08e36a9b32c571c90d` | NO_WRITE_PLANNED | Server getUsersBatchAction/getEvaluationSummariesBatchAction/getEmployeesPageDataAction envelope stays stable; round confidentiality enforced before serialization. |
+| `src/components/layout/Sidebar.tsx` | `f15f82d8c6bdcdf7d430d6eb7396add4af4955d2d290e996aa05147ffea38e1d` | NO_WRITE_PLANNED | Prefetch uses authenticated getEvaluationPageDataAction/getTeamsPageDataAction; keep envelopes. Navigation is not authorization. |
+| `src/components/settings/GradeBandsTab.tsx` | `609ad035a345460bd03ac5981af23bd5efc232db3b1262fac2dd460f590f8585` | NO_WRITE_PLANNED | Authenticated getGradeBandsAction + useCriteria retain current-config contracts; saveGradeBands still Manager-authorized. |
+| `src/hooks/use-evaluation-page-state.ts` | `4e4ff86751a1aa7e99ecee03886aeab9e9f5d403aede01c4916839654845a830` | EXACT_OWNS_AMENDMENT | lines179-220 hydrate targetRound/prevRounds into draft scores/notes/selected levels. Add this single caller to T03 owns for explicit redacted DTO hydration/visibility handling; no official-score policy changes. |
+| `src/lib/grade-bands-server.ts` | `2b68021c210e67ccba9ec1202e384848c601b18bb6a619282813f1f0ac6bb773` | NO_WRITE_PLANNED | server-only supabaseAdmin passes into owned loadGradeBandsSnapshotFromDb; preserve function signature and privileged version read. |
+
+T03 verification must prove legitimate config/server consumers still work after selective ACL, authenticated list/detail/history/display/compare/summary/batch deny hidden draft serialization, and unchanged callers compile/pass relevant interface regression. New redacted transport metadata must not masquerade as a populated scored round via unsafe type casts or fabricated score/grade. A discovered required write outside canonical owns is a scope blocker: retain exact delta and amend BEFORE write, never silently widen. No implicit permission arises from this document. T06/T08 consumer inspections remain pending their own dispatch.

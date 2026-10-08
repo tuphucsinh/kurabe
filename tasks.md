@@ -374,7 +374,9 @@ DoD:
 - Local stack feasibility/path/version and Auth/PostgREST gap recorded; no runtime started or production data fetched under read-only task.
 - Mika verifies evidence hash/readback, dependency/owns DAG, protected-path hashes and Git/worktree/process identity. Metadata-only completion uses owner-approved canonical control evidence, not an empty product commit or automatic READY of descendants.
 
-### [ ] [#P107M1T02] Minimal applicable dependency remediation
+### [x] [#P107M1T02] Minimal applicable dependency remediation
+
+Closure evidence: exact product candidate `f57b8f97e5b2c7bf3b1ae20a4b3cadf19f420451`, fresh reviewer/checker PASS session `20261008_184444_8e230a`, digest `9387305ff21784eb144bff47c03d9b844a9024238bd5cccd283b8a5a032a2a63`; `/home/pi5/hermes-artifacts/kurabe-p107/P107M1T02/evidence.json`. Clean install + focused/root/lint/typecheck/build/secrets/runtime gates PASS; production audit 3→0, full audit 9→5 retained dev-only braces-chain findings. Authenticated/local ACL matrix remains T03/T04; no production rollout.
 
 ```yaml
 task:
@@ -418,6 +420,7 @@ task:
     - src/lib/grade-bands.ts
     - src/lib/evaluation-transaction-rpc.ts
     - src/hooks/use-db.ts
+    - src/hooks/use-evaluation-page-state.ts
     - src/types/index.ts
     - src/types/database.ts
     - supabase/migrations/20261008000100_p107_read_authority.sql
@@ -427,6 +430,7 @@ task:
 ```
 
 Goal: close S5–S8/S11/N4/N7 with one server authority and selective candidate ACL changes, not UI-only masking.
+Consumer pre-dispatch disposition: `.ai/P107_T03_CONSUMER_PREFLIGHT.md`; Mika adds only the inspected draft DTO hydration caller `src/hooks/use-evaluation-page-state.ts` to owns. Task ID/goal/DoD/DAG unchanged; other inspected callers remain read-only with explicit unchanged-interface/privilege regression requirements. No implicit additional write permission.
 Interface: keep authenticated action signatures where possible; explicit redacted round DTO carries allowed status/assignment metadata but no hidden scores/notes/comments/selected levels/derived total/grade/snapshot details. Require caller auth before version reads. Full list/detail/history/summary/batch/compare/display/export/AI must not bypass it.
 Current context: `evaluations.ts:12–19`, `workflow.ts:263–277`, `evaluator-resolver.ts:77–114,161–172`, SQL multiteam save unique-primary fallback vs current-authorization return appointment, direct browser criteria/grade RPC consumers identified by T01.
 Changes:
