@@ -508,7 +508,7 @@ DoD:
 - Historical-only deactivate allowed; active assignment orphan/self-delete/FK erase denied. Appointed multi-team and unassigned SubLeader contract preserved; UI empty/loading/error/retry verified where touched.
 - Exact new candidate SQL apply/rollback/reapply and full graph digests; shared gates + fresh review. No live migration/deactivate/cleanup.
 
-### [ ] [#P107M1T06] Approved-only official results and immutable historical summaries
+### [x] [#P107M1T06] Approved-only official results and immutable historical summaries
 
 ```yaml
 task:
