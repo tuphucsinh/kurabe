@@ -474,7 +474,7 @@ DoD:
 - Spoofed/malformed/trusted proxy and shared NAT controls; existing account limits/session finalization and failure accounting not weakened; absent trust config fail-closed for forwarded identity.
 - Personnel success + seed failure still warning, not retry-able failed personnel commit; secrets absent in logs/evidence. Shared gates and fresh review; no live seeding, reset, flag/settings change.
 
-### [ ] [#P107M1T05] Complete atomic roster and history-safe personnel lifecycle
+### [x] [#P107M1T05] Complete atomic roster and history-safe personnel lifecycle
 
 ```yaml
 task:
