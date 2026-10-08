@@ -448,7 +448,7 @@ DoD:
 - Authentic local Auth/PostgREST shows unauthorized direct browser-role denial and legitimate config/server consumer allow; PUBLIC/direct/inherited/extra-overload negative controls make verifier fail. Bare PG cannot certify this gate.
 - Candidate migration rollback restores captured selective ACL, not GRANT ALL; real catalog definitions and no partial mutation proved. Shared gates + exact fresh CONTROLLED review.
 
-### [ ] [#P107M1T04] Race-safe default seed and compatible login resilience
+### [x] [#P107M1T04] Race-safe default seed and compatible login resilience
 
 ```yaml
 task:
