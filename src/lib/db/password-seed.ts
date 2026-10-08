@@ -70,19 +70,39 @@ export async function seedDefaultPasswords(
         const currentRevision = typeof row.credential_revision === 'number' ? row.credential_revision : 0;
         const nextRevision = currentRevision + 1;
 
-        const { error: updateError } = await supabaseAdmin
+        let updateQuery = supabaseAdmin
           .from('users')
           .update({
             password_hash: hash,
             password_setup_required: false,
             credential_revision: nextRevision,
           })
-          .eq('id', row.id);
+          .eq('id', row.id)
+          .is('password_hash', null)
+          .eq('employee_code', row.employee_code);
+
+        if (row.credential_revision === null || row.credential_revision === undefined) {
+          updateQuery = updateQuery.is('credential_revision', null);
+        } else {
+          updateQuery = updateQuery.eq('credential_revision', row.credential_revision);
+        }
+
+        const { data: updatedData, error: updateError } = await updateQuery.select('id');
 
         if (updateError) {
           failed.push({ id: row.id, reason: updateError.message || 'Cập nhật mật khẩu thất bại' });
         } else {
-          seeded.push(row.id);
+          const affectedCount = Array.isArray(updatedData)
+            ? updatedData.length
+            : typeof updatedData === 'number'
+              ? updatedData
+              : updatedData ? 1 : 0;
+
+          if (affectedCount === 0) {
+            failed.push({ id: row.id, reason: 'conflict: credential changed concurrently' });
+          } else {
+            seeded.push(row.id);
+          }
         }
       } catch (rowError: unknown) {
         failed.push({

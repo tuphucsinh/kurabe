@@ -1,0 +1,128 @@
+{
+  "testSuite": "P107M1T04-auth-resilience",
+  "version": "1.0.0",
+  "users": {
+    "nullOptionalUser": {
+      "id": "11111111-0001-4000-8000-000000000001",
+      "employee_code": "EMP-OPT-01",
+      "name": "Legacy Null-Hash Employee",
+      "role": "Employee",
+      "team_id": "team-01",
+      "is_active": true,
+      "password_hash": null,
+      "password_setup_required": false,
+      "credential_revision": 0
+    },
+    "setupPendingUser": {
+      "id": "11111111-0002-4000-8000-000000000002",
+      "employee_code": "EMP-SETUP-02",
+      "name": "Setup Pending Employee",
+      "role": "Employee",
+      "team_id": "team-01",
+      "is_active": true,
+      "password_hash": null,
+      "password_setup_required": true,
+      "credential_revision": 0
+    },
+    "activePasswordUser": {
+      "id": "11111111-0003-4000-8000-000000000003",
+      "employee_code": "EMP-PWD-03",
+      "name": "Standard Active Password Employee",
+      "role": "Employee",
+      "team_id": "team-01",
+      "is_active": true,
+      "password_hash": "$2a$10$mockhash.U2VjcmV0UGFzc3dvcmQxMjM",
+      "password_setup_required": false,
+      "credential_revision": 3
+    },
+    "raceSeedTargetUser": {
+      "id": "11111111-0004-4000-8000-000000000004",
+      "employee_code": "EMP-RACE-04",
+      "name": "Race Seed Target Employee",
+      "role": "Employee",
+      "team_id": "team-01",
+      "is_active": true,
+      "password_hash": null,
+      "password_setup_required": true,
+      "credential_revision": 0
+    },
+    "raceCodeChangeUser": {
+      "id": "11111111-0005-4000-8000-000000000005",
+      "employee_code": "EMP-CODE-05",
+      "name": "Race Code Change Employee",
+      "role": "Employee",
+      "team_id": "team-01",
+      "is_active": true,
+      "password_hash": null,
+      "password_setup_required": true,
+      "credential_revision": 0
+    }
+  },
+  "proxyScenarios": {
+    "absentTrustConfig": {
+      "headers": {
+        "x-forwarded-for": "203.0.113.195",
+        "cf-connecting-ip": "198.51.100.1"
+      },
+      "config": {},
+      "expectedClientIp": "127.0.0.1",
+      "expectedIsTrustedProxy": false
+    },
+    "malformedHopsConfig": {
+      "headers": {
+        "x-forwarded-for": "203.0.113.195, 10.0.0.1"
+      },
+      "config": {
+        "immediatePeer": "10.0.0.1",
+        "trustedProxies": ["10.0.0.1"],
+        "trustedHops": -1
+      },
+      "expectedClientIp": "10.0.0.1",
+      "expectedIsTrustedProxy": false
+    },
+    "malformedProxyList": {
+      "headers": {
+        "x-forwarded-for": "203.0.113.195, 10.0.0.1"
+      },
+      "config": {
+        "immediatePeer": "10.0.0.1",
+        "trustedProxies": ["10.0.0.1", "invalid_proxy_ip_syntax"]
+      },
+      "expectedClientIp": "10.0.0.1",
+      "expectedIsTrustedProxy": false
+    },
+    "untrustedImmediatePeer": {
+      "headers": {
+        "x-forwarded-for": "203.0.113.195"
+      },
+      "config": {
+        "immediatePeer": "198.51.100.99",
+        "trustedProxies": ["10.0.0.1"]
+      },
+      "expectedClientIp": "198.51.100.99",
+      "expectedIsTrustedProxy": false
+    },
+    "trustedProxySingleHop": {
+      "headers": {
+        "x-forwarded-for": "198.51.100.5, 10.0.0.1"
+      },
+      "config": {
+        "immediatePeer": "10.0.0.1",
+        "trustedProxies": ["10.0.0.1"]
+      },
+      "expectedClientIp": "198.51.100.5",
+      "expectedIsTrustedProxy": true
+    },
+    "trustedProxyMultiHop": {
+      "headers": {
+        "x-forwarded-for": "198.51.100.50, 10.0.0.2, 10.0.0.1"
+      },
+      "config": {
+        "immediatePeer": "10.0.0.1",
+        "trustedProxies": ["10.0.0.1", "10.0.0.2"]
+      },
+      "expectedClientIp": "198.51.100.50",
+      "expectedIsTrustedProxy": true
+    }
+  }
+}

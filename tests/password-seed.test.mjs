@@ -11,6 +11,7 @@ globalThis.__test_state = {
   updateError: null,
   personnelError: null,
   auditLogs: [],
+  onBeforeHash: null,
 };
 
 // Register ESM loader hooks to resolve path aliases and mock external/database dependencies
@@ -25,7 +26,12 @@ export async function resolve(specifier, context, nextResolve) {
   if (specifier === "bcryptjs") {
     return {
       url: "data:text/javascript," + encodeURIComponent(\`
-        export const hash = async (code, rounds) => "\\$2a\\$" + rounds + "\\$mockhash." + Buffer.from(code).toString("base64url");
+        export const hash = async (code, rounds) => {
+          if (globalThis.__test_state?.onBeforeHash) {
+            globalThis.__test_state.onBeforeHash(code);
+          }
+          return "\\$2a\\$" + rounds + "\\$mockhash." + Buffer.from(code).toString("base64url");
+        };
         export const compare = async (candidate, hashed) => {
           if (!hashed || !hashed.startsWith("\\$2a\\$10\\$mockhash.")) return false;
           const expected = "\\$2a\\$10\\$mockhash." + Buffer.from(candidate).toString("base64url");
@@ -199,18 +205,25 @@ export async function resolve(specifier, context, nextResolve) {
                     if (globalThis.__test_state.updateError) {
                       return { data: null, error: globalThis.__test_state.updateError };
                     }
-                    let updatedCount = 0;
+                    let updatedRows = [];
                     for (const row of globalThis.__test_state.users) {
                       let match = true;
                       for (const f of eqFilters) {
                         if (row[f.col] !== f.val) { match = false; break; }
                       }
+                      for (const f of isFilters) {
+                        if (f.val === null) {
+                          if (row[f.col] !== null && row[f.col] !== undefined) { match = false; break; }
+                        } else {
+                          if (row[f.col] !== f.val) { match = false; break; }
+                        }
+                      }
                       if (match) {
                         Object.assign(row, updatePayload);
-                        updatedCount++;
+                        updatedRows.push({ id: row.id });
                       }
                     }
-                    return { data: updatedCount, error: null };
+                    return { data: updatedRows, error: null };
                   }
 
                   if (globalThis.__test_state.selectError) {
@@ -277,6 +290,7 @@ function resetTestState() {
   globalThis.__test_state.updateError = null;
   globalThis.__test_state.personnelError = null;
   globalThis.__test_state.auditLogs = [];
+  globalThis.__test_state.onBeforeHash = null;
 }
 
 describe('P106M1T01: Default Password Seeding Contract Suite', () => {
@@ -297,6 +311,11 @@ describe('P106M1T01: Default Password Seeding Contract Suite', () => {
       assert.match(content, /password_setup_required:\s*false/, 'Must set password_setup_required to false');
       assert.match(content, /credential_revision:\s*(nextRevision|nextRev)/, 'Must increment credential_revision');
       assert.match(content, /'empty employee_code'/, 'Must record failure reason empty employee_code');
+      assert.match(content, /\.is\(['"]password_hash['"],\s*null\)/, 'Must enforce NULL-hash CAS condition on update');
+      assert.match(content, /\.eq\(['"]employee_code['"],\s*row\.employee_code\)/, 'Must enforce employee_code CAS condition on update');
+      assert.match(content, /\.select\(['"]id['"]\)/, 'Must read back affected rows on update');
+      assert.match(content, /affectedCount\s*===\s*0/, 'Must detect CAS conflict when zero rows affected');
+      assert.match(content, /'conflict: credential changed concurrently'/, 'Must report conflict failure reason');
       assert.doesNotMatch(content, /console\.(log|info|debug|warn|error)/, 'Must not log any credentials');
     });
 
@@ -545,6 +564,91 @@ describe('P106M1T01: Default Password Seeding Contract Suite', () => {
 
       const resNull = await seedDefaultPasswords(null);
       assert.deepStrictEqual(resNull, { seeded: [], failed: [] });
+    });
+
+    it('8. CAS conflict: concurrent password change between select and update prevents seed overwrite, preserves user credential, and reports conflict failure', async () => {
+      const targetUser = {
+        id: 'user-race-pwd-1',
+        employee_code: 'EMP-RACE-01',
+        password_hash: null,
+        password_setup_required: true,
+        credential_revision: 0,
+      };
+      globalThis.__test_state.users = [targetUser];
+
+      // Simulate concurrent action 2: between select and update (during hash), user sets new password
+      const userNewHash = '$2a$10$userChosenNewPasswordHash123';
+      globalThis.__test_state.onBeforeHash = () => {
+        targetUser.password_hash = userNewHash;
+        targetUser.password_setup_required = false;
+        targetUser.credential_revision = 1;
+      };
+
+      const result = await seedDefaultPasswords(['user-race-pwd-1']);
+
+      // Seed must not overwrite and must not claim seeded
+      assert.deepStrictEqual(result.seeded, [], 'Must not report seeded on CAS conflict');
+      assert.strictEqual(result.failed.length, 1, 'Must record failure for conflicting row');
+      assert.strictEqual(result.failed[0].id, 'user-race-pwd-1');
+      assert.strictEqual(result.failed[0].reason, 'conflict: credential changed concurrently');
+
+      // User\'s concurrent password and revision must survive untouched
+      assert.strictEqual(targetUser.password_hash, userNewHash, 'User-chosen password must survive');
+      assert.strictEqual(targetUser.credential_revision, 1, 'Credential revision must remain monotonic (1)');
+      assert.strictEqual(targetUser.password_setup_required, false);
+    });
+
+    it('9. CAS conflict: concurrent employee_code change between select and update prevents seed overwrite', async () => {
+      const targetUser = {
+        id: 'user-race-code-1',
+        employee_code: 'EMP-OLD-CODE',
+        password_hash: null,
+        password_setup_required: true,
+        credential_revision: 0,
+      };
+      globalThis.__test_state.users = [targetUser];
+
+      // Simulate concurrent action 2 updating employee code and bumping revision
+      globalThis.__test_state.onBeforeHash = () => {
+        targetUser.employee_code = 'EMP-NEW-CODE';
+        targetUser.credential_revision = 1;
+      };
+
+      const result = await seedDefaultPasswords(['user-race-code-1']);
+
+      assert.deepStrictEqual(result.seeded, []);
+      assert.strictEqual(result.failed.length, 1);
+      assert.strictEqual(result.failed[0].id, 'user-race-code-1');
+      assert.strictEqual(result.failed[0].reason, 'conflict: credential changed concurrently');
+
+      // User password remains null and code remains new code
+      assert.strictEqual(targetUser.employee_code, 'EMP-NEW-CODE');
+      assert.strictEqual(targetUser.password_hash, null, 'Must not seed hash of old employee code');
+      assert.strictEqual(targetUser.credential_revision, 1);
+    });
+
+    it('10. CAS conflict: concurrent credential_revision bump prevents seed overwrite', async () => {
+      const targetUser = {
+        id: 'user-race-rev-1',
+        employee_code: 'EMP-REV-01',
+        password_hash: null,
+        password_setup_required: true,
+        credential_revision: 0,
+      };
+      globalThis.__test_state.users = [targetUser];
+
+      // Simulate concurrent action 2 bumping revision
+      globalThis.__test_state.onBeforeHash = () => {
+        targetUser.credential_revision = 2;
+      };
+
+      const result = await seedDefaultPasswords(['user-race-rev-1']);
+
+      assert.deepStrictEqual(result.seeded, []);
+      assert.strictEqual(result.failed.length, 1);
+      assert.strictEqual(result.failed[0].id, 'user-race-rev-1');
+      assert.strictEqual(result.failed[0].reason, 'conflict: credential changed concurrently');
+      assert.strictEqual(targetUser.credential_revision, 2);
     });
   });
 });

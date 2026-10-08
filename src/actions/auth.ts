@@ -66,6 +66,10 @@ export async function loginAction(
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   let admissionRequestId: string | null = null;
   const cleanCode = (employeeCode || '').trim();
+  // Normalize the candidate once, before any account lookup, so the
+  // non-existent-account branch can perform the same bcrypt work without a
+  // temporal-dead-zone reference to a later declaration.
+  const passwordCandidate = typeof password === 'string' ? password : '';
   let ip = '127.0.0.1';
   let networkMaxAttempts = MAX_NETWORK_ATTEMPTS;
   let issuedSessionHash: string | null = null;
@@ -117,6 +121,9 @@ export async function loginAction(
 
     if (!user) {
       // Ghi nhận lần thử thất bại
+      // Remove source-proven enumeration distinction: execute dummy compare
+      // so non-existent account also performs bcrypt work, without claiming unproven constant-time behavior.
+      await bcrypt.compare(passwordCandidate, DUMMY_BCRYPT_HASH).catch(() => false);
       admissionFinalizationAttempted = true;
       await accountFailedLogin(cleanCode, ip, {
         requestId: admissionRequestId,
@@ -136,7 +143,6 @@ export async function loginAction(
     const passwordHashMissingOrSetupPending = configuredCredentialHash === null
       || configuredCredentialHash === undefined
       || user.password_setup_required === true;
-    const passwordCandidate = typeof password === 'string' ? password : '';
     let credentialValid = true;
 
     if (requirePasswordLogin) {
@@ -154,6 +160,7 @@ export async function loginAction(
       }
     } else if (isSetupPending) {
       // Optional legacy mode remains available only for never-configured accounts.
+      await bcrypt.compare(passwordCandidate, DUMMY_BCRYPT_HASH).catch(() => false);
       admissionFinalizationAttempted = true;
       await accountFailedLogin(cleanCode, ip, {
         requestId: admissionRequestId,
