@@ -1,5 +1,13 @@
 # Decisions Log
 
+## P107 execution and transport approved — 2026-10-08
+
+- Owner: “set runner: agy (gemini-3.8-flash high); review gate: reviewer (opencode go, model deepseek v4.1 flash) / commit rồi gọi runner làm task đi, làm toàn bộ task đã băm”. Execute exact existing P107M1T01–P107M1T10 serial DAG through local canonical completion, with ordinary in-scope repairs. No new phase/replan/reset or automatic production rollout.
+- Verified catalog IDs: Runner `gemini-3.8-flash-high`, review profile `reviewer` using Hermes built-in `opencode-go` and API model `deepseek-v4.1-flash` (`/chat/completions`). Existing default Runner/model already matched; changed only review selector + review profile model/provider, read back. Live no-tool preflights returned exact markers, sessions `65b28fd4-5303-4bf2-84a6-9907c4f60d5e` and `20261008_163300_7d510b`. Not product PASS.
+- Preparation control commit `746be361c43e976c0a4d335e3114625678d5024a`; preserve exact reviewed preparation snapshot and old state evidence. T01 stays Mika-only inspection prerequisite per WBS; actual implementation uses selected AGY. Runtime READY registration atomic after canonical constraint commit/readback.
+- Authorization covers local candidate code/security/SQL and owned synthetic disposable verification specified by tasks, canonical task/control commits. It excludes push/remote CI/deploy/production/remote catalog/private HR reads/live credential changes/application paid AI calls. The model subscriptions explicitly selected for Runner/review are the approved engineering transport, not permission for application-provider spending.
+- Rollback: local product commits remain recoverable; preserve exact verified task snapshots/candidates. Synthetic DB apply→rollback→reapply is required before acceptance. Profile routing rollback restores review selector `agy`, reviewer model/provider `gpt-5.6-luna`/`openai-codex` only if owner requests; unrelated review reasoning/toolsets unchanged.
+
 ## P107 owner-approved product policies and preparation — 2026-10-08
 
 - Direct owner approval: “ok làm theo phương án tối ưu em đề nghị đi, rồi băm task 1 phase để chuẩn bị làm”. Scope of this turn is PLAN_TO_TASKS; no application/DB implementation, commit/push or deploy performed. Historical execution permissions below do not extend this current boundary.

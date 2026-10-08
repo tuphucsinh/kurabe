@@ -334,7 +334,9 @@ Goal: The 30s viewer-scope poll (interval + focus/pageshow/visibility handlers) 
 
 ## P107 — integrity-first remediation (one phase, M1)
 
-`WBS_STATUS=PREPARED_NOT_REGISTERED`; `PLAN_REVIEW_RECORD=/home/pi5/hermes-artifacts/kurabe-p107-plan/plan-verdict.json`; `EXECUTION=NOT_STARTED`; `COMMIT_PUSH_DEPLOY=NONE`. Require full-read PASS + exact current file hashes; absent/mismatch means UNKNOWN, not dispatch permission.
+`WBS_STATUS=CANONICAL_EXECUTION_AUTHORIZED`; preparation reviewed and committed at `746be361c43e976c0a4d335e3114625678d5024a`. Original preparation review record remains historical exact-byte evidence. Owner now authorizes local execution and canonical task/control commits for all P107M1T01–P107M1T10; no push/deploy/production/paid-AI rollout. Runtime task status and refreshed BASE_SHA live in `.state/agent-state.json`.
+
+Execution binding: Runner `agy`, exact model `gemini-3.8-flash-high`; fresh gate `reviewer`, provider `opencode-go`, exact model `deepseek-v4.1-flash`. Both provider-backed no-tool preflights succeeded. One Runner/verifier; task owns/DoD/IDs/DAG unchanged. Local candidate SQL/security and synthetic fixture operations required by named DoD are within the authorized local scope; production/private-data/remote grants/credentials remain separate approval gates. Preparation-only statements below describe the completed preparation turn, not a prohibition overriding this new owner instruction.
 
 ### Shared execution envelope — applies to every P107 task
 
