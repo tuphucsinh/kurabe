@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active remediation scope: **none — P105 CLOSED (T01–T03 all DONE); P104 is DONE**
+- Active preparation: **P107 — one phase, 10 PLANNED tasks, 0 started; READY registration deferred**. P104/P105 and completed P106 tasks remain historical; no re-open.
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -331,6 +331,340 @@ Goal: The 30s viewer-scope poll (interval + focus/pageshow/visibility handlers) 
   - `node --test tests/` exit 0 (existing 65 + new file)
   - `npm run build` exit 0
   - secret scan clean; edits remain inside `owns`
+
+## P107 — integrity-first remediation (one phase, M1)
+
+`WBS_STATUS=PREPARED_NOT_REGISTERED`; `PLAN_REVIEW_RECORD=/home/pi5/hermes-artifacts/kurabe-p107-plan/plan-verdict.json`; `EXECUTION=NOT_STARTED`; `COMMIT_PUSH_DEPLOY=NONE`. Require full-read PASS + exact current file hashes; absent/mismatch means UNKNOWN, not dispatch permission.
+
+### Shared execution envelope — applies to every P107 task
+
+- Planning source `BASE_SHA=5f0c95f37ffa5155b4f7ba26e9ea6f61991925ee`; this is NOT the future dispatch base. After owner-authorized planning commit/readback and fresh plan review, Mika atomically registers the batch. At dispatch, authoritative state BASE_SHA = current canonical HEAD with dependencies integrated; preserve this ID/owns/DoD on fallback.
+- `Status=PLANNED` for every checkbox below, not READY/RUNNING. No implementation, migration apply, runtime setup, paid provider call, credential operation, Git commit/push or deploy authorized by this preparation turn.
+- Task WT = `/home/pi5/projects/kurabe-task-wts/<ID>`; candidate WT = `/home/pi5/projects/kurabe-integration-wts/<ID>`; neither exists from this planning action. Branches assigned by Mika under lock at later dispatch; no duplicate runner.
+- Evidence path = `/home/pi5/hermes-artifacts/kurabe-p107/<ID>/evidence.json`; producer = Runner's redacted supplemental report + Mika's independently verified exact-candidate gate results. Required fields: task/base/candidate/tree identity, changed paths/file hashes, commands/exit/status/log hashes, case IDs/expected/actual/readback, lane/fixture IDs, limitations, production writes/migrations, cleanup residue. Runner report path = same directory `runner-report.md`; no raw credentials/HR data.
+- Every implementation task includes matching behavior tests + wiring, `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build`, `node scripts/scan-source-secrets.mjs`, scope/diff checks. Exact candidate checks run by Mika; CONTROLLED requires fresh selected canonical review PASS for that candidate. New test paths below are planned NEW files, not existing APIs.
+- DB work: new named candidate migration only, no edit of applied/historical SQL. Disposable fixture must apply exact artifact, catalog/provenance preflight, affected-row checks, concurrency and failure rollback; before any local DB/security mutation obtain applicable action approval. Prepare rollback tied to captured object/ACL fingerprints; qualify apply→rollback→reapply. Production apply is outside phase.
+- Auth/browser work: authentic local services with synthetic fixtures; Auth/PostgREST parity where grants/token are tested. No fake auth/API adapters, disabled triggers or manufactured PASS. Preserve fixtures through required matrix; clean exact run-owned IDs/resources only and read back residue. Paid AI/provider traffic/private-data egress needs separate approval.
+- Allowed writes = explicit owns only. Existing same paths may appear in dependent tasks: full serial DAG proves non-concurrent ownership. A discovered extra caller/migration/test producer requires Mika scope amendment BEFORE write. Runner forbidden paths: tasks.md, AGENTS.md, HANDOFF.md, `.ai/*`, `.state/*`, credentials/instructions, Git refs/history. Existing user-owned work is preserved.
+- Keep default password = employee code, optional NULL-hash compatibility, existing scoring/grade/role-round count and freeze-unfinished close; no strict/backfill/Excluded, new framework, blanket grant revoke, historical rewrite or production rollout.
+- Stop affected stage on unresolved scope/consumer/catalog/fixture/rollback identity; preserve first failure. Ordinary in-scope failures follow project repair budget; liveness UNKNOWN keeps reservations. Tool/transport failure is not product PASS.
+
+### [ ] [#P107M1T01] Source/runtime preflight and exact consumer contract
+
+```yaml
+task:
+  id: P107M1T01
+  tier: CONTROLLED
+  depends: []
+  owns: []
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: Mika-only read-only prerequisite; establish the exact source consumer/migration/test graph and separate local-candidate readiness from live-release UNKNOWN before any product writes.
+Current context: `.ai/MASTER_PLAN.md` findings S1–S13/L1–L8/P1–P9/T1–T6/N1–N10; `package.json`, lockfile, `.github/ci/confirmation-runtime.mjs`, `db/bootstrap/expected-catalog.json`, real migration/overload definitions and all sensitive readers/AI callers.
+Changes: no application edits. Retain redacted consumer manifest (entrypoint→auth→reader→DTO→browser/export/AI), exact overloaded function identity/effective privileges on the authorized target, and every producer/caller needed by later owns. Re-run full/prod npm audit with real JSON inventory and reachability triage. Inspect configured test stack/capabilities and historical state/workspace provenance. Do not use stale P105/P106 PASS or liveness as current evidence.
+DoD:
+- Evidence enumerates Approved-only, current-evaluator/Manager draft and appointment-only contracts plus current source defects; all later consumers map to an owned path or explicit amendment requirement.
+- Repo catalog snapshot is tied to source SHA; live catalog/flags/regions/signup/deployed SHA inspected ONLY with approved access; absent access = UNKNOWN live gate, not a fabricated result or blocker to well-specified offline candidate work.
+- Advisory disposition gives installed/affected versions, dependency path, applicability and minimal target; no unsupported counts or guessed upgrade.
+- Local stack feasibility/path/version and Auth/PostgREST gap recorded; no runtime started or production data fetched under read-only task.
+- Mika verifies evidence hash/readback, dependency/owns DAG, protected-path hashes and Git/worktree/process identity. Metadata-only completion uses owner-approved canonical control evidence, not an empty product commit or automatic READY of descendants.
+
+### [ ] [#P107M1T02] Minimal applicable dependency remediation
+
+```yaml
+task:
+  id: P107M1T02
+  tier: CONTROLLED
+  depends: [P107M1T01]
+  owns: [package.json, package-lock.json, tests/p107-dependencies.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: resolve applicable security advisories early, without bulk update or unrelated framework migration (N9).
+Current context: package manifest uses Next/eslint-config-next 16.3.4, repo-defined overrides and SheetJS CDN dependency; actual installed/lock/advisory inventory comes from T01, not this nominal version.
+Changes: only confirmed applicable packages/transitives; choose compatible patched versions using current advisory/release evidence; keep Next/config pair coherent and preserve integrity/overrides deliberately. Add focused dependency contract regression. No `npm audit fix --force`.
+DoD:
+- Before/after full+prod audit JSON retained, residual applicability explained; impacted login/build/runtime regression plus shared gates PASS.
+- Lockfile diff limited to justified resolution; clean install in isolated candidate reproduces; no package scripts/secrets/runtime settings broadened.
+- If T01 proves no applicable update, retain `NO_CHANGE_REQUIRED` evidence and owner-reviewed canonical disposition; do not fabricate an update/test, empty product commit or unconditional audit=0.
+
+### [ ] [#P107M1T03] Server-side draft confidentiality and appointed-Leader authority
+
+```yaml
+task:
+  id: P107M1T03
+  tier: CONTROLLED
+  depends: [P107M1T02]
+  owns:
+    - src/actions/read.ts
+    - src/actions/evaluation.ts
+    - src/data/workflow.ts
+    - src/lib/evaluator-resolver.ts
+    - src/lib/team-validation.ts
+    - src/lib/db/teams-admin.ts
+    - src/lib/db/users-admin.ts
+    - src/lib/db/evaluations.ts
+    - src/lib/db/evaluations-admin.ts
+    - src/lib/db/evaluation-display-admin.ts
+    - src/lib/db/evaluation-history-admin.ts
+    - src/lib/db/evaluations-write.ts
+    - src/lib/db/criteria.ts
+    - src/lib/db/criteria-admin.ts
+    - src/lib/grade-bands.ts
+    - src/lib/evaluation-transaction-rpc.ts
+    - src/hooks/use-db.ts
+    - src/types/index.ts
+    - src/types/database.ts
+    - supabase/migrations/20261008000100_p107_read_authority.sql
+    - tests/p107-read-authority.test.mjs
+    - tests/fixtures/p107/read-authority/
+  locks: [KURABE_SOURCE_CONTRACT, KURABE_SCHEMA_CONTRACT]
+```
+
+Goal: close S5–S8/S11/N4/N7 with one server authority and selective candidate ACL changes, not UI-only masking.
+Interface: keep authenticated action signatures where possible; explicit redacted round DTO carries allowed status/assignment metadata but no hidden scores/notes/comments/selected levels/derived total/grade/snapshot details. Require caller auth before version reads. Full list/detail/history/summary/batch/compare/display/export/AI must not bypass it.
+Current context: `evaluations.ts:12–19`, `workflow.ts:263–277`, `evaluator-resolver.ts:77–114,161–172`, SQL multiteam save unique-primary fallback vs current-authorization return appointment, direct browser criteria/grade RPC consumers identified by T01.
+Changes:
+1. Implement current assigned evaluator + active Manager draft read; Manager only edits own assigned round. Require current role/scope/appointment, not stale evaluator ID. SELF subject may read own draft. Submitted history rules remain separate; returned mutable rounds regain draft privacy.
+2. Remove unique-primary Leader fallback from resolve/init/save/submit/return/current draft access. No pointer/invalid/inactive pointer ⇒ unassigned/deny; valid multi-team appointment permits without primary-team equality. Preserve role-round mapping, revoked-actor deny and immutable historical authorization.
+3. Escape/bound PostgREST search grammar consistently with literal-safe negative cases, without exposing hash columns or relaxing team scope.
+4. Serverize inventoried sensitive direct readers before selective ACL/RLS/default-privilege/overload closure. New migration binds exact signatures and callers; revoke latent old overload only after dependencies confirmed. Do not blanket revoke public schema or remove innocuous anon client/CSP blindly.
+DoD:
+- Five-role actor/round read+write matrices; next evaluator/subject/other team deny draft payload; Manager readonly positive; appointed secondary team allow; sole primary Leader without pointer deny; revoked same-session save/submit/return deny with unchanged DB graph.
+- List/detail/history/display/compare/summary/batch and transitive export/AI serialization negative controls, including version metadata and returned-round draft. Existing submitted historical positive controls remain.
+- Authentic local Auth/PostgREST shows unauthorized direct browser-role denial and legitimate config/server consumer allow; PUBLIC/direct/inherited/extra-overload negative controls make verifier fail. Bare PG cannot certify this gate.
+- Candidate migration rollback restores captured selective ACL, not GRANT ALL; real catalog definitions and no partial mutation proved. Shared gates + exact fresh CONTROLLED review.
+
+### [ ] [#P107M1T04] Race-safe default seed and compatible login resilience
+
+```yaml
+task:
+  id: P107M1T04
+  tier: CONTROLLED
+  depends: [P107M1T03]
+  owns:
+    - src/actions/auth.ts
+    - src/actions/users.ts
+    - src/lib/login-rate-limit.ts
+    - src/lib/db/password-seed.ts
+    - tests/password-seed.test.mjs
+    - tests/p107-auth-resilience.test.mjs
+    - tests/fixtures/p107/auth-resilience/
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: N10 seed must never overwrite a concurrent password change; preserve owner policy and qualify S2–S4/S9/S10/P7/T5 without forced strict rollout.
+Current context: seed pre-selects NULL hash but update at `password-seed.ts:73–80` uses ID only; auth uses optional/non-NULL distinction and proxy trust/admission primitives.
+Changes: conditional NULL-hash + observed credential-revision + observed code CAS, exact affected-row readback; conflict is skipped/failed, never reported seeded or retried over new credentials. Seed only new-user IDs after committed personnel RPC; redact warning/error detail. Keep sequential seed unless measured scale warrants bounded concurrency. For limiter, keep atomic account admission and trusted peer checks; remove source-proven enumeration distinctions only with matching behavior tests, no invented network identity or unproven constant-time claim.
+DoD:
+- Two real DB connections/actions reproduce seed/reset/code-change race: user-changed credential survives, no false seeded success, revision monotonic. Wrong/missing non-NULL credential denied; NULL optional passes with flag absent/false; exact true remains separate strict compatibility test, not activation.
+- Spoofed/malformed/trusted proxy and shared NAT controls; existing account limits/session finalization and failure accounting not weakened; absent trust config fail-closed for forwarded identity.
+- Personnel success + seed failure still warning, not retry-able failed personnel commit; secrets absent in logs/evidence. Shared gates and fresh review; no live seeding, reset, flag/settings change.
+
+### [ ] [#P107M1T05] Complete atomic roster and history-safe personnel lifecycle
+
+```yaml
+task:
+  id: P107M1T05
+  tier: CONTROLLED
+  depends: [P107M1T04]
+  owns:
+    - src/actions/period.ts
+    - src/actions/users.ts
+    - src/actions/teams.ts
+    - src/lib/db/users-admin.ts
+    - src/lib/db/teams-admin.ts
+    - src/lib/db/evaluations-admin.ts
+    - src/lib/db/evaluations-write.ts
+    - src/lib/evaluator-resolver.ts
+    - src/types/index.ts
+    - src/types/database.ts
+    - src/components/settings/TeamsRolesTab.tsx
+    - supabase/migrations/20261008000200_p107_roster_personnel.sql
+    - tests/p107-roster-personnel.test.mjs
+    - tests/fixtures/p107/roster-personnel/
+  locks: [KURABE_SOURCE_CONTRACT, KURABE_SCHEMA_CONTRACT]
+```
+
+Goal: L3/L6/L7/P3 prevent truncated period creation/read and let staff with only historical references deactivate without losing history or orphaning active assignments.
+Interface: complete-reader has stable pagination + count/ID manifest; existing bounded viewport reader stays bounded. Period atomic RPC validates exact current roster/role/team/assignment graph under lock, not just a partial client payload. Reuse evaluation roster as identity baseline; capture missing future historical label fields only via bounded new immutable schema, old missing values explicit unknown.
+Changes: paginate full roster/period/evaluation/assignment/version consumers with stable ID order; bound assignment filters to period; failure/page/count mismatch denies complete-success. Preserve one atomic create transaction and TypeScript resolver. Validate re-read graph/count/IDs with deterministic graph/period locks to prevent pre-read churn. Allow soft-deactivation only when no live actionable dependency remains; keep FK/evaluator attribution and active viewer history. Use existing Manager appointment UI; make missing Leader/SubLeader explicit, no automatic replacement.
+DoD:
+- 0/1/cap boundary/1500 synthetic users exact expected IDs and role-round assignments; no truncated count/list/export or silent missing rows; mid-pagination failure gives error, not empty success.
+- create/create yields one Active; roster churn/create and assignment/deactivate races commit one valid graph or deny with zero partial write. Historic inactive/transferred users stay in old roster; inactive actor cannot login/write.
+- Historical-only deactivate allowed; active assignment orphan/self-delete/FK erase denied. Appointed multi-team and unassigned SubLeader contract preserved; UI empty/loading/error/retry verified where touched.
+- Exact new candidate SQL apply/rollback/reapply and full graph digests; shared gates + fresh review. No live migration/deactivate/cleanup.
+
+### [ ] [#P107M1T06] Approved-only official results and immutable historical summaries
+
+```yaml
+task:
+  id: P107M1T06
+  tier: CONTROLLED
+  depends: [P107M1T05]
+  owns:
+    - src/actions/reports.ts
+    - src/actions/dashboard.ts
+    - src/actions/read.ts
+    - src/actions/ai.ts
+    - src/actions/ai-summary.ts
+    - src/actions/chat.ts
+    - src/lib/db/evaluations-admin.ts
+    - src/lib/db/evaluation-display-admin.ts
+    - src/lib/db/evaluation-history-admin.ts
+    - src/lib/evaluation-result-projection.ts
+    - src/lib/export.ts
+    - src/lib/anomaly.ts
+    - src/lib/ai-context.ts
+    - src/types/index.ts
+    - src/components/reports/
+    - src/components/dashboard/DashboardDataLayer.tsx
+    - src/components/dashboard/DashboardHeavySection.tsx
+    - src/components/dashboard/DashboardLightSection.tsx
+    - src/components/dashboard/PeriodSummary.tsx
+    - src/components/dashboard/AnomalyAlertCard.tsx
+    - src/components/charts/SkillGapRadar.tsx
+    - src/components/settings/PeriodsTab.tsx
+    - tests/p107-official-results.test.mjs
+    - tests/fixtures/p107/official-results/
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: L1/L2/L4/N3/P4–P6 make reports/dashboard/export/AI agree on authoritative results without raw draft payloads or historical drift.
+Interface: NEW server result projector reuses versioned display/batched snapshot loaders: result (Approved persisted final fields), progress (full roster status), coverage (approved/total/invalid/legacy), snapshot basis and role/config breakdown. Dashboard heavy public DTO drops rawEvaluations/rawCriteriaGroups; wire all consumers including AI/chat in this SAME task, preserving authorized operational non-result features as separate minimized DTOs. Do not leave compatibility code leaking raw data.
+Changes: official average/grade distribution/high-grade rate/top exclude non-Approved; 0 valid, missing/inconsistent final error/unknown; no latest-round fallback. Use evaluation team/role and immutable roster/config snapshot, not active users/current criteria. Settings period counts use light aggregate, not full all-period notes. Request effective authorized filters server-side. Return no invented percentage for mixed incompatible scoring bases; keep role/config breakdown and sample count rather than new cross-role scoring/ranking policy. Freeze-incomplete records remain visible in progress, not result denominator. Keep layout/assets, adjust only truthful labels/coverage and affected interfaces.
+DoD:
+- Golden independently calculated values/IDs for five roles/all statuses/0/null/legacy/missing version/mixed config; Approved-only count/rate/average/top and pending coverage identical across report/dashboard/export/AI.
+- Rename/delete/max/grade config change, team/role transfer, deactivation do not reinterpret closed valid history; legacy labels/bases remain explicit unknown, no broad backfill.
+- Browser mobile+desktop sees approved/total and frozen unfinished; empty result distinct from genuine 0 or failed reader; retries/stale filters don't leak old data. Unauthorized snapshot metadata denied.
+- Network DTO has no raw round scores/notes only needed to draw charts; shell/light stay independent of heavy/error. T03 boundary remains intact; shared gates + fresh review.
+
+### [ ] [#P107M1T07] Return/resubmit snapshots and resident period coherence
+
+```yaml
+task:
+  id: P107M1T07
+  tier: CONTROLLED
+  depends: [P107M1T06]
+  owns:
+    - src/actions/evaluation.ts
+    - src/actions/period.ts
+    - src/actions/read.ts
+    - src/lib/evaluation-transaction-rpc.ts
+    - src/lib/db/evaluations-write.ts
+    - src/lib/db/evaluation-period-write-guard.ts
+    - src/contexts/AuthContext.tsx
+    - src/hooks/use-db.ts
+    - src/components/dashboard/PeriodActions.tsx
+    - src/components/modals/PeriodModal.tsx
+    - src/components/layout/PeriodSelector.tsx
+    - src/components/settings/PeriodsTab.tsx
+    - src/app/evaluations/[id]/EvaluationPageClient.tsx
+    - src/app/evaluations/[id]/compare/ComparePageClient.tsx
+    - supabase/migrations/20261008000300_p107_lifecycle_coherence.sql
+    - tests/auth-context-poll.test.mjs
+    - tests/p107-lifecycle-coherence.test.mjs
+    - tests/fixtures/p107/lifecycle-coherence/
+  locks: [KURABE_SOURCE_CONTRACT, KURABE_SCHEMA_CONTRACT]
+```
+
+Goal: N1/N2/N6/L5 eliminate stale provider period state and return/config/resubmit collision while preserving closed firewall and no-blink scope polling.
+Interface: authenticated period metadata refresh shared by create/close/delete-empty/select/login; reconcile selected cookie/provider/server props/scoped keys with late-response epoch protection. Active-only default detail/compare remains; explicit historical read separate.
+Changes: atomic reset/reconcile only mutable returned/next-round content/version references; preserve submitted/closed history and genuine conflicting concurrent edits. Clean transition context on every success; failure rollback unchanged. Refresh provider after period mutation, then scoped invalidate/router refresh; do not reintroduce background clearBeforeRender=true or global cache. Close unfinished allowed with explicit frozen label; no Excluded/reopen.
+DoD:
+- Real actions/browser complete create→save→submit→next→return→resubmit→approve→close→new-period across five role flows; V1 submit→return→V2 config→resubmit works without CONFLICTING_NEXT_ROUND and leaves immutable history intact.
+- close/save, return/submit, version-edit/resubmit, duplicate/response-loss retries yield valid committed graph or denial/rollback; no partial state or leftover transition context.
+- Same resident session and second tab see correct create/close/select/delete-empty period without F5; no Active/multiple Active/read-error explicit; stale form after close denied; cookie/provider/server props consistent.
+- Poll unchanged scope no blink; logout/revoke/late response cannot restore old payload; local loading/error/retry states and mobile+desktop console/network checked. Shared gates + fresh review; no production lifecycle mutation.
+
+### [ ] [#P107M1T08] Bounded authorized AI and visible audit failures
+
+```yaml
+task:
+  id: P107M1T08
+  tier: CONTROLLED
+  depends: [P107M1T07]
+  owns:
+    - src/actions/ai.ts
+    - src/actions/ai-summary.ts
+    - src/actions/chat.ts
+    - src/lib/ai-context.ts
+    - src/lib/ai-limit.ts
+    - src/lib/ai-governance.ts
+    - src/lib/ai-prompts.ts
+    - src/lib/audit.ts
+    - src/components/reports/BatchResultMessageModal.tsx
+    - tests/p107-ai-audit.test.mjs
+    - tests/fixtures/p107/ai-audit/
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: S12/S13/N5/N8 prevent unbounded chunk/cost and hidden returned audit errors; preserve T03/T06 authorized immutable projection.
+Changes: validate finite integer offset>=0 and limit 1..5 (current default 5); bound provider concurrency to 2 per chunk, cancel/timeout outcomes and input/prompt size before provider. Outside-scope/not-found same safe response; minimize/pseudonymize prompt and retain existing injection/governance checks. Keep current quota window/limits/unit compatible; every caller's reserve/consume/refund/duplicate semantics explicitly tested. Changing billing unit or quota policy is NOT implicit: record cost per chunk/item and gate any new unit separately. Check Supabase returned error plus thrown error, emit redacted structured diagnostics; audit failure after business commit must not return retry-able business failure or silently re-run mutation.
+DoD:
+- Negative/NaN/Infinity/fraction/huge offset+limit, duplicate target/request, canceled/timeout/provider failure, quota concurrency/idempotent terminal outcomes; at most bound active work. No paid provider calls for local PASS; deterministic provider-boundary tests explicitly supplemental to real DB/auth, not fabricated real-provider evidence.
+- AI/chat/report detail uses approved result snapshots/authorized operational DTOs, score 0 survives; unauthorized draft/history never reaches prompt; out-of-scope non-enumerating response.
+- Returned error/thrown error both observable; committed-business outcome and audit diagnostic separate, no double-write on retry; token/hash/code/private text redacted.
+- Shared gates + fresh review. No quota redesign/new migration/paid traffic without scoped amendment+approval.
+
+### [ ] [#P107M1T09] Same-fixture performance measurement and bounded attribution
+
+```yaml
+task:
+  id: P107M1T09
+  tier: STANDARD
+  depends: [P107M1T08]
+  owns: [tests/perf/benchmark-harness.mjs, tests/perf/perf-report.json, tests/p107-perf-provenance.test.mjs]
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: P1–P9 verify current identity and measure useful data/payload/query improvements after correctness; no speedup from stale/narrow checked-in reports.
+Changes: reuse existing actual-local authenticated production-build harness; candidate BASE/tree/source SHA distinct from generated report SHA; keep fixture/roles/routes/viewports/cold+warm/regions/network identical for before/after. Baseline retained before ANY later performance edit. Record shell/light/heavy/full, request counts/bytes, action/DB timing, 5 samples per point, median/p95. FCP/LCP missing entry UNKNOWN. Seed same large+historical correctness fixture in both lanes; bind ports/owned services, not live production.
+DoD:
+- Numerical rows/results/coverage/ACL/lifecycle parity before timing verdict; effective fixtures identical, exact provenance and run-count equation checked from runtime output.
+- LAN/loopback dataComplete median <1000ms for defined measured routes; submit p95 <800ms only in a specified low-RTT measured lane. Failure retained as residual, not a waiver or fabricated PASS.
+- This task owns harness/report ONLY. Material hot-path optimization requires amend owning task/scope and tier, baseline evidence, at most two bounded fixes, full affected correctness/review requalification. No hidden region/index/cache/service change; historical report isn't current candidate evidence.
+- Shared gates remain valid; machine ownership/headroom and cleanup read back. Network/console errors fatal except proven navigation cancel; production perf remains UNKNOWN.
+
+### [ ] [#P107M1T10] Integrated exact-candidate E2E and release readiness
+
+```yaml
+task:
+  id: P107M1T10
+  tier: CONTROLLED
+  depends: [P107M1T09]
+  owns:
+    - tests/integration/p107-qualification.mjs
+    - tests/browser/p107-qualification.mjs
+    - tests/fixtures/p107/qualification/
+    - tests/integration/confirmation-matrix.mjs
+    - tests/operations/ci-suite-manifest.mjs
+    - tests/operations/p103-required-cases.mjs
+    - tests/operations/production-smoke.mjs
+    - scripts/verify-release.mjs
+    - .github/ci/confirmation-runtime.mjs
+    - .github/workflows/ci.yml
+    - tests/p107-qualification-contract.test.mjs
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: one frozen integrated candidate proves all accepted functional/negative/concurrency/browser/rollback gates. No catch-all feature fixes; return product defect to owning task.
+Interface: NEW `p107-qualification` suite exported run(context), wired through existing verifier/manifest and CI producer fingerprint. Reuse source-supported actions/routes (`/evaluations/{employeeId}`), preserve old suites; no absolute host executable source dependency, fake session adapter or production env baked in.
+Changes: wire full master-plan matrix with real assertions/readback, stable disjoint fixture IDs, production-build smoke and CI-parity negative controls; exact ownership crash-safe teardown. Extend only existing harness/CI plumbing needed by this phase, not replace infrastructure.
+DoD:
+- Shared root gates and `node scripts/verify-release.mjs --suite p107-qualification --tier authenticated --evidence "$EVIDENCE/p107.json"` PASS with exact required cases, real local HTTP/Next/browser + actual Auth/PostgREST for ACL. Existing confirmation-matrix/production-smoke still PASS.
+- Integrated read+write policy, large roster, Approved-only/historical zero/null/mixed-basis states, five flows, all named races, two-tab provider freshness, AI/audit error paths and mobile/desktop DOM/network cases proved; no source-only case relabelled live.
+- All candidate SQL catalog/ACL/function/trigger fingerprints bound to artifact; rollback/reapply graph preservation; no production reads/writes/migrations without separate approval, production writes/migrations 0/0.
+- Final exact-candidate fresh independent CONTROLLED review PASS, no blocking findings; a changed candidate invalidates review. Preserve first failure; fixture survives until full matrix, then cleanup exact owned IDs/processes/containers/networks/volumes/ports and readback residue 0.
+- Canonical completion, tick [x], Git task commits and control state require subsequent authorized execution/publish path. Deliver local readiness evidence + residual/owner-gated live actions; no automatic push/remote CI/DB apply/deploy.
+
+### P107 finding disposition and non-goals
+
+- S1 historical public→private: containment already done; monitor history residual, no task visibility flip/automatic rotation.
+- S2/S3 default+optional policy preserved in T04; S4/S9/S10/T5 behavior-qualified, not speculative policy change. S5–S8/S11/N4/N7 T03; L3/L6/L7/P3 T05; L1/L2/L4/N3/P4–P6 T06; N1/N2/N6/L5 T07; S12/S13/N5/N8 T08; N10 T04; N9 T01→T02.
+- P1–P9 measurement/provenance T09; P7 concurrency conditional after seed CAS; P8 indexes/region optional owner-gated, not automatic. L8 dead tags remove only if T07 inventory proves unused and within owns. T1–T4 readiness T01 + exact qualification T10, existing authenticated CI/transactional flag preserved. T6 broad artifact cleanup deferred.
+- Stage order is deliberately serial on shared Pi5 and overlapping source interfaces. No parallel_safe field, no phase split or new dispatcher. Do not infer production acceptance from local completion.
 
 ## Closed / historical record
 

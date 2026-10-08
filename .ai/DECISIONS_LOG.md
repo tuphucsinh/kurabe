@@ -1,5 +1,15 @@
 # Decisions Log
 
+## P107 owner-approved product policies and preparation — 2026-10-08
+
+- Direct owner approval: “ok làm theo phương án tối ưu em đề nghị đi, rồi băm task 1 phase để chuẩn bị làm”. Scope of this turn is PLAN_TO_TASKS; no application/DB implementation, commit/push or deploy performed. Historical execution permissions below do not extend this current boundary.
+- Official results use only Approved persisted finalScore/finalGrade and the period's immutable scoring basis; score 0 valid, missing data unknown/error, no latest-round/draft fallback. Progress uses the full period roster and displays approved/total plus unfinished/frozen. Closing a period may freeze incomplete records; no Excluded or automatic reopen.
+- Unsubmitted round content is visible only to its currently authorized assigned evaluator and active Manager. Manager is read-only unless actually assigned; subject sees own SELF draft only. Other/next evaluators see scoped metadata, not private scores/notes/comments/derived values. Submitted reads remain authorized; returned mutable content reverts to draft privacy. Apply at server/API/export/AI, not UI alone.
+- Leader grading/submit/return authority requires current valid `teams.leader_id` appointment plus assignment/role/active checks. No unique-primary fallback or stale stored-evaluator privilege; missing/invalid/inactive pointer is unassigned/denied and Manager appoints through existing personnel path. Multi-team appointment is independent of primary membership. Submitted historical access does not grant current write/draft privilege.
+- Preserve default credential = employee_code, optional legacy NULL-hash compatibility, existing role-round mapping and grade/scoring policy. Cross-role normalized ranking/mean-of-percent is not implicitly approved; use truthful compatible basis/breakdown, no silent arithmetic policy change.
+- One phase P107 / milestone M1 / P107M1T01–P107M1T10 staged in tasks.md. Serial source/DB/interface tasks; one Runner and one heavy verifier on shared Pi5. No phase split, new dispatcher or infra rewrite.
+- Planning docs are uncommitted; runtime READY registration deferred until fresh review + owner-authorized canonical planning commit/readback/reconciliation. State JSON retains historical evidence; no current PASS inferred from stale fields. Production/catalog/private-data/credential/grants/migration/paid-provider/release actions keep explicit scoped approval/rollback/readback gates.
+
 ## Current execution boundary
 
 - Owner authorizes Mika to execute the remaining WBS directly without Runner. Dependency-coupled tasks stay serial; each candidate still requires independent verification, and each CONTROLLED task retains its fresh review gate.
