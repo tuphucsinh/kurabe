@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import PeriodActions from '@/components/dashboard/PeriodActions';
-import { useEvaluations } from '@/hooks/use-db';
+import { getPeriodsProgressSummaryAction, type PeriodProgressSummary } from '@/actions/read';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -12,20 +12,27 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function PeriodsTab() {
   const { allPeriods, currentPeriod, setCurrentPeriod, user } = useAuth();
   const { toast } = useToast();
-  const { data: evaluations = [], isLoading: evalsLoading } = useEvaluations(undefined, user);
+  const [periodStats, setPeriodStats] = useState<PeriodProgressSummary | null>(null);
 
-  // Tính toán tiến độ đánh giá cho từng kỳ
-  const periodStats = useMemo(() => {
-    const stats: Record<string, { total: number; approved: number; pct: number }> = {};
-    allPeriods.forEach((period) => {
-      const evals = evaluations.filter((e) => e.periodId === period.id);
-      const total = evals.length;
-      const approved = evals.filter((e) => e.status === 'Approved').length;
-      const pct = total > 0 ? Math.round((approved / total) * 100) : 0;
-      stats[period.id] = { total, approved, pct };
-    });
-    return stats;
-  }, [allPeriods, evaluations]);
+  // Light per-period aggregate (COUNT-only server query) — never loads the full
+  // all-period evaluations/notes payload on the client. Async-only state updates
+  // keep the effect free of synchronous setState cascades.
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    void getPeriodsProgressSummaryAction()
+      .then((res) => {
+        if (active) setPeriodStats(res || {});
+      })
+      .catch(() => {
+        if (active) setPeriodStats({});
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const statsLoading = Boolean(user) && periodStats === null;
 
   return (
     <div className="space-y-6">
@@ -54,7 +61,7 @@ export default function PeriodsTab() {
         ) : (
           <div className="divide-y divide-outline-soft/60 border border-outline-soft/60 rounded-xl overflow-hidden">
             {allPeriods.map((period) => {
-              const stat = periodStats[period.id] || { total: 0, approved: 0, pct: 0 };
+              const stat = (periodStats ?? {})[period.id] || { total: 0, approved: 0, pct: 0 };
               const isSelected = period.id === currentPeriod?.id;
 
               return (
@@ -99,7 +106,7 @@ export default function PeriodsTab() {
 
                   {/* Cột 3: Tiến độ */}
                   <div className="min-w-0 sm:min-w-[200px] text-sm">
-                    {evalsLoading ? (
+                    {statsLoading ? (
                       <Skeleton variant="text" width={120} height={16} />
                     ) : stat.total === 0 ? (
                       <span className="text-ink-muted">Chưa có dữ liệu</span>

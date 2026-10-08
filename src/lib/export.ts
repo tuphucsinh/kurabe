@@ -236,6 +236,7 @@ export async function exportEvaluationsToExcel(
 ): Promise<void> {
   try {
     const XLSX = options.XLSX ?? (await import('xlsx'));
+    const readActions = await import('@/actions/read');
 
     let evaluations = options.evaluations;
     let users = options.users;
@@ -243,7 +244,6 @@ export async function exportEvaluationsToExcel(
     let periodData = options.periodData;
 
     if (!evaluations || !users || !teams || periodData === undefined) {
-      const readActions = await import('@/actions/read');
       const [fetchedEvals, fetchedUsers, fetchedTeams, fetchedPeriod] = await Promise.all([
         evaluations ? Promise.resolve(evaluations) : readActions.getEvaluationsAction(periodId),
         users ? Promise.resolve(users) : readActions.getUsersAction(),
@@ -258,6 +258,32 @@ export async function exportEvaluationsToExcel(
 
     const periodName = periodData ? periodData.name : 'KyDanhGia';
 
+    // Official results only: the authoritative projector defines the Approved
+    // (valid) result set so export agrees with report/dashboard/AI. This path
+    // FAILS CLOSED: when the projection cannot be resolved (missing auth/period
+    // or a reader error) the export aborts with an error instead of reverting to
+    // the unfiltered evaluation set (which may include non-Approved drafts).
+    let officialIds: Set<string> | null = options.officialEvaluationIds
+      ? new Set(options.officialEvaluationIds)
+      : null;
+    if (!officialIds) {
+      if (!periodId) {
+        throw new Error('Không thể xuất kết quả chính thức: thiếu kỳ đánh giá.');
+      }
+      let projection;
+      try {
+        projection = await readActions.getEvaluationResultProjectionAction(periodId);
+      } catch (err) {
+        console.error('Error loading official result projection for export:', err);
+        throw new Error('Không thể tải kết quả chính thức để xuất. Vui lòng thử lại.');
+      }
+      if (!projection) {
+        throw new Error('Không thể xác định kết quả chính thức để xuất (không có quyền hoặc kỳ không hợp lệ).');
+      }
+      officialIds = new Set(projection.result.approved.map((entry) => entry.evaluationId));
+    }
+    const officialEvaluations = evaluations.filter((ev) => officialIds.has(ev.id));
+
     // Build or reuse displayDtoMap for pinned criteria snapshots
     const displayDtoMap = new Map<string, EvaluationDisplayDto>();
     if (options.displayDtos) {
@@ -271,9 +297,8 @@ export async function exportEvaluationsToExcel(
         }
       }
     } else if (options.includeRoundDetails) {
-      const readActions = await import('@/actions/read');
       const dtoList = await Promise.all(
-        evaluations.map(async (ev) => {
+        officialEvaluations.map(async (ev) => {
           try {
             const dto = await readActions.getEvaluationDisplayAction(ev.id);
             return [ev.id, dto] as const;
@@ -288,7 +313,7 @@ export async function exportEvaluationsToExcel(
       }
     }
 
-    const wb = buildExportWorkbook(evaluations, users, teams, {
+    const wb = buildExportWorkbook(officialEvaluations, users, teams, {
       includeRoundDetails: options.includeRoundDetails,
       displayDtos: displayDtoMap,
       XLSX,

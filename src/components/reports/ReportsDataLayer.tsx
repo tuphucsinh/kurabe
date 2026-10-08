@@ -159,13 +159,13 @@ export default function ReportsDataLayer({
                 <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <Target className="w-4 h-4 text-brand shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.avgScore.toFixed(1)}</span>
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.avgScore === null ? '—' : reportData.stats.avgScore.toFixed(1)}</span>
                   <span className="text-xs text-ink-muted font-medium">điểm TB</span>
                 </div>
                 <span className="text-outline-soft hidden sm:inline">•</span>
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.highGradeRate.toFixed(1)}%</span>
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.highGradeRate === null ? '—' : `${reportData.stats.highGradeRate.toFixed(1)}%`}</span>
                   <span className="text-xs text-ink-muted font-medium">≥ AB</span>
                 </div>
                 <span className="text-outline-soft hidden sm:inline">•</span>
@@ -229,7 +229,7 @@ export default function ReportsDataLayer({
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-ink">So sánh nhóm</h3>
                 <span className="text-xs font-medium text-ink-muted bg-surface-muted px-2 py-1 rounded-full uppercase tracking-wider">
-                  Average Score
+                  Điểm TB tương quan
                 </span>
               </div>
               <div className="space-y-4 pt-2">

@@ -54,13 +54,39 @@ export default function DashboardHeavySection({
             </button>
           )}
         </div>
-      ) : !data ? null : (
+      ) : !data ? (
+        <div
+          data-load-layer="heavy"
+          className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-6 text-center text-amber-800 space-y-3"
+        >
+          <p className="text-sm font-medium">Không thể tải dữ liệu phân tích chi tiết. Vui lòng thử lại.</p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              <RefreshCw size={14} /> Thử lại
+            </button>
+          )}
+        </div>
+      ) : (
         <>
+          {/* Coverage strip: approved/total from the authoritative projection */}
+          <div data-load-layer="heavy" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+            <span>
+              Đã chốt (Approved): <b className="text-ink">{data.coverage.approved}/{data.coverage.total}</b>
+            </span>
+            {data.coverage.pending > 0 && (
+              <span>Chưa chốt: <b className="text-amber-600">{data.coverage.pending}</b></span>
+            )}
+            <span>Đang dở (frozen): <b className="text-amber-600">{data.frozenIncomplete}</b></span>
+          </div>
+
           {/* Grid: PendingReviews | Anomaly */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <PendingReviews evaluations={data.rawEvaluations} userNameById={userNameById} />
+            <PendingReviews evaluations={data.pendingEvaluations} userNameById={userNameById} />
             <AnomalyAlertCard
-              evaluations={data.rawEvaluations}
+              anomalies={data.anomalies}
               userNameById={userNameById}
               isManager={viewer?.role === 'Manager'}
             />
@@ -69,10 +95,7 @@ export default function DashboardHeavySection({
           {/* Grid: Radar | Recent */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div>
-              <LazySkillGapRadar
-                evaluations={data.rawEvaluations}
-                criteriaGroups={data.rawCriteriaGroups}
-              />
+              <LazySkillGapRadar data={data.radar} />
             </div>
             <div className="bg-surface-raised p-4 sm:p-6 rounded-2xl shadow-sm border border-outline-soft flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-ink mb-4 sm:mb-6">Hoạt động gần đây</h3>

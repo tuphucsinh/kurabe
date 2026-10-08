@@ -42,6 +42,10 @@ import { getCriteriaForRole, getAllCriteriaGroups } from '@/lib/db/criteria';
 import { loadGradeBandsFromDb, getGradeBandsSync, GradeBands } from '@/lib/grade-bands';
 import { getEvaluationHistoryAdmin } from '@/lib/db/evaluation-history-admin';
 import { getEvaluationDisplayAdmin } from '@/lib/db/evaluation-display-admin';
+import {
+  getEvaluationResultProjection,
+  type EvaluationResultProjection,
+} from '@/lib/evaluation-result-projection';
 
 
 export type AuditRow = {
@@ -111,10 +115,66 @@ export async function getEvaluationDisplayAction(
   return getEvaluationDisplayAdmin(evaluationId, auth.user);
 }
 
+/**
+ * Read-only authoritative result projection for a period. Single server source
+ * of official (Approved-only) count/rate/average/top shared by report, dashboard,
+ * export and AI consumers. Returns null only for missing auth.
+ */
+export async function getEvaluationResultProjectionAction(
+  periodId: string
+): Promise<EvaluationResultProjection | null> {
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) return null;
+  return getEvaluationResultProjection(periodId, auth.user);
+}
+
 export async function getPeriodsAction(): Promise<EvaluationPeriod[]> {
   const auth = await requireAuth();
   if (auth.error !== null) return [];
   return getPeriodsAdmin(auth.user);
+}
+
+export type PeriodProgressSummary = Record<string, { total: number; approved: number; pct: number }>;
+
+/**
+ * Light per-period progress aggregate for Settings (Manager-only).
+ * Uses COUNT-only queries — never loads all-period evaluations/notes payloads.
+ */
+export async function getPeriodsProgressSummaryAction(): Promise<PeriodProgressSummary> {
+  const auth = await requireRole(['Manager']);
+  if (auth.error !== null) return {};
+
+  const periods = await getPeriodsAdmin(auth.user);
+  const summary: PeriodProgressSummary = {};
+  for (const period of periods) {
+    try {
+      const [totalRes, approvedRes] = await Promise.all([
+        supabaseAdmin
+          .from('evaluations')
+          .select('id', { count: 'exact', head: true })
+          .eq('period_id', period.id),
+        supabaseAdmin
+          .from('evaluations')
+          .select('id', { count: 'exact', head: true })
+          .eq('period_id', period.id)
+          .eq('status', 'Approved'),
+      ]);
+      if (totalRes.error || approvedRes.error) {
+        console.error('getPeriodsProgressSummaryAction count error');
+        continue;
+      }
+      const total = totalRes.count ?? 0;
+      const approved = approvedRes.count ?? 0;
+      summary[period.id] = {
+        total,
+        approved,
+        pct: total > 0 ? Math.round((approved / total) * 100) : 0,
+      };
+    } catch (err) {
+      console.error('getPeriodsProgressSummaryAction error:', err);
+    }
+  }
+  return summary;
 }
 
 export async function getActivePeriodAction(): Promise<EvaluationPeriod | null> {

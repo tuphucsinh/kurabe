@@ -10,7 +10,6 @@ import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsersAdmin } from '@/lib/db/users-admin';
 import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { getDashboardData } from '@/actions/dashboard';
-import { detectAnomalies } from '@/lib/anomaly';
 import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
@@ -393,7 +392,13 @@ export async function generatePeriodMinutesAction(input: {
     }
 
     const codeById = new Map(users.map((u) => [u.id, u.employeeCode || `NV-${u.id.slice(0, 6)}`]));
-    const anomalies = detectAnomalies(d.rawEvaluations || [], codeById);
+    // Anomalies are computed server-side (rule-based) and shipped as a minimized
+    // DTO — no raw round payload is read here. Re-map to employee codes for the
+    // anonymized minutes text (names never leave the server).
+    const anomalies = (d.anomalies || []).map((anomaly) => ({
+      ...anomaly,
+      name: codeById.get(anomaly.employeeId) || anomaly.employeeId,
+    }));
 
     // Ẩn danh hóa: Chỉ giữ mã NV, strip toàn bộ tên người
     const anomalyText = anomalies.length

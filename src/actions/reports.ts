@@ -2,17 +2,23 @@
 
 import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsersAdmin } from '@/lib/db/users-admin';
-import { getTeamsAdmin } from '@/lib/db/teams-admin';
-import { getAllCriteriaGroups } from '@/lib/db/criteria';
 import { requireRole } from '@/lib/auth';
-import { Grade, User } from '@/types';
+import { getEvaluationResultProjection } from '@/lib/evaluation-result-projection';
+import { Grade, Evaluation, User } from '@/types';
 
 export interface ReportAggregationData {
   stats: {
     totalEmployees: number;
-    avgScore: number;
-    highGradeRate: number;
+    /** Authoritative Approved-only average; null when incompatible scoring bases are mixed. */
+    avgScore: number | null;
+    /** Authoritative Approved-only high-grade (≥ AB) rate; null when bases are mixed. */
+    highGradeRate: number | null;
     pendingCount: number;
+    approvedCount: number;
+    invalidCount: number;
+    legacyCount: number;
+    sampleCount: number;
+    mixedBasis: boolean;
   };
   gradeDistribution: { grade: Grade; count: number; color: string }[];
   teamStats: { id: string; name: string; avgScore: number; progress: number }[];
@@ -20,205 +26,116 @@ export interface ReportAggregationData {
   topPerformers: { id: string; name: string; teamName: string; score: number; grade: string }[];
 }
 
+const GRADE_COLOR_MAP: Record<string, string> = {
+  S: 'bg-amber-500',
+  A: 'bg-blue-600',
+  AB: 'bg-blue-400',
+  B: 'bg-green-500',
+  C: 'bg-orange-500',
+  D: 'bg-red-500',
+};
+
+/**
+ * Raw display fallback score for a single evaluation row. Official metrics never
+ * use this fallback — they come from the authoritative result projector which
+ * honours persisted Approved final fields with nullish (not truthy) semantics so
+ * a valid score 0 is preserved. Used to render the top-performer score with the
+ * same nullish score-0 semantics (identical to the official score for every
+ * valid Approved row).
+ */
+function evaluationScore(e: Evaluation): number {
+  const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
+  return e.finalScore ?? lastRound?.totalScore ?? 0;
+}
+
 async function getReportAggregationInner(
   periodId: string,
   selectedTeam: string,
-  viewer: import('@/types').User | null
+  viewer: User | null
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
 
-  try {
-    const [evaluations, users, teams, allCriteriaData] = await Promise.all([
-      getEvaluationsByPeriodAdmin(periodId, viewer),
-      getUsersAdmin(viewer),
-      getTeamsAdmin(viewer),
-      getAllCriteriaGroups()
-    ]);
+  const [evaluations, users] = await Promise.all([
+    getEvaluationsByPeriodAdmin(periodId, viewer),
+    getUsersAdmin(viewer),
+  ]);
 
-    // Pre-build Maps for O(1) lookups
-    const userMap = new Map<string, User>();
-    const usersByTeam = new Map<string, User[]>();
+  const userMap = new Map<string, User>(users.map((u) => [u.id, u]));
 
-    users.forEach(u => {
-      userMap.set(u.id, u);
-      if (!usersByTeam.has(u.teamId)) {
-        usersByTeam.set(u.teamId, []);
-      }
-      usersByTeam.get(u.teamId)!.push(u);
-    });
+  // Team filter — KHÔNG loại Manager: Manager có evaluation riêng trong kỳ.
+  const usersByTeam = new Map<string, User[]>();
+  users.forEach((u) => {
+    if (!usersByTeam.has(u.teamId)) usersByTeam.set(u.teamId, []);
+    usersByTeam.get(u.teamId)!.push(u);
+  });
+  // Effective authorized team filter; null means "all authorized employees".
+  const teamFilterIds = selectedTeam === 'all'
+    ? null
+    : new Set((usersByTeam.get(selectedTeam) || []).map((u) => u.id));
 
-    const teamMap = new Map(teams.map(t => [t.id, t]));
+  // Single projector, scoped to the effective team filter, so every official
+  // aggregate below (roster, average, high-grade rate, coverage, grade
+  // distribution, criteria analysis, top slice) is filter-consistent server-side
+  // instead of org-wide.
+  const projection = await getEvaluationResultProjection(periodId, viewer, {
+    evaluations,
+    employeeIds: teamFilterIds,
+  });
+  if (!projection) return null;
 
-    // Filter by team — KHÔNG loại Manager: Manager có evaluation riêng trong kỳ (được đánh giá)
-    const filteredUsers = selectedTeam === 'all'
-      ? users
-      : (usersByTeam.get(selectedTeam) || []);
+  const teamStats = projection.teamBreakdown.map((team) => ({
+    id: team.teamId,
+    name: team.name,
+    avgScore: team.average,
+    progress: 0,
+  }));
+  const maxTeamAvg = teamStats.reduce((max, team) => Math.max(max, team.avgScore), 0);
+  teamStats.forEach((team) => {
+    team.progress = maxTeamAvg > 0 ? Math.min(100, (team.avgScore / maxTeamAvg) * 100) : 0;
+  });
 
-    const userIds = new Set(filteredUsers.map(u => u.id));
+  const criteriaAnalysis = projection.criteriaBreakdown.map((entry) => ({
+    group: entry.group,
+    avgScore: entry.avgScore,
+    percentage: entry.percentage,
+  }));
 
-    // Filter evaluations
-    const filteredEvals = evaluations.filter(e => userIds.has(e.employeeId));
-
-    // Single-pass Grade & Criteria Counting
-    let totalScore = 0;
-    let highGrades = 0;
-    const gradeCounts: Record<string, number> = {
-      'S': 0, 'A': 0, 'AB': 0, 'B': 0, 'C': 0, 'D': 0
-    };
-
-    const criteriaGroupIdMap = new Map<string, string>();
-    allCriteriaData.forEach(g => {
-      g.criteria.forEach(c => criteriaGroupIdMap.set(c.id, g.code));
-    });
-
-    // Tổng điểm tối đa THẬT từ DB (sum max points mỗi tiêu chí) — thay hardcode 150
-    let maxTotalScore = 0;
-    const groupCriteriaCount: Record<string, number> = {};
-    const groupMaxScore: Record<string, number> = {};
-    allCriteriaData.forEach(g => {
-      let gm = 0;
-      let count = 0;
-      g.criteria.forEach(c => {
-        const maxPoints = (c.levels || []).reduce((m, l) => Math.max(m, l.points || 0), 0);
-        gm += maxPoints;
-        maxTotalScore += maxPoints;
-        count += 1;
-      });
-      groupCriteriaCount[g.code] = count;
-      groupMaxScore[g.code] = gm;
-    });
-
-    const criteriaGroupScores: Record<string, { totalGroupScore: number, count: number }> = {
-      'A': { totalGroupScore: 0, count: 0 },
-      'B': { totalGroupScore: 0, count: 0 },
-      'C': { totalGroupScore: 0, count: 0 },
-      'D': { totalGroupScore: 0, count: 0 },
-      'E': { totalGroupScore: 0, count: 0 },
-      'F': { totalGroupScore: 0, count: 0 }
-    };
-
-    filteredEvals.forEach(e => {
-      const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
-      const score = e.finalScore ?? lastRound?.totalScore ?? 0;
-      const grade = (e.finalGrade ?? lastRound?.grade ?? null) as string | null;
-
-      totalScore += score;
-
-      if (grade) {
-        if (['S', 'A', 'AB'].includes(grade)) highGrades++;
-        if (gradeCounts[grade] !== undefined) gradeCounts[grade]++;
-      }
-
-      const latestScores = (lastRound?.scores || {}) as Record<string, number>;
-      Object.entries(latestScores).forEach(([cid, s]) => {
-        const groupId = criteriaGroupIdMap.get(cid);
-        if (groupId && criteriaGroupScores[groupId]) {
-          criteriaGroupScores[groupId].totalGroupScore += s ?? 0;
-          criteriaGroupScores[groupId].count++;
-        }
-      });
-    });
-
-    // Stats
-    const totalEmployees = filteredUsers.length;
-    const evaluatedCount = filteredEvals.length;
-    // "Chưa đánh giá" = đã có evaluation nhưng CHƯA Approved (kết quả chưa chốt)
-    const pendingCount = filteredEvals.filter((e) => e.status !== 'Approved').length;
-    const avgScore = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
-    const highGradeRate = evaluatedCount > 0 ? (highGrades / evaluatedCount) * 100 : 0;
-
-    // Grade Distribution
-    const gradeColorMap: Record<string, string> = {
-      'S': 'bg-amber-500',
-      'A': 'bg-blue-600',
-      'AB': 'bg-blue-400',
-      'B': 'bg-green-500',
-      'C': 'bg-orange-500',
-      'D': 'bg-red-500'
-    };
-
-    const grades: Grade[] = ['S', 'A', 'AB', 'B', 'C', 'D'];
-    const gradeDistribution = grades.map(g => ({
-      grade: g,
-      count: gradeCounts[g as string] || 0,
-      color: gradeColorMap[g as string] || 'bg-slate-400'
-    }));
-
-    // Team Comparison
-    const teamStatsMap = new Map<string, { id: string, name: string, totalScore: number, count: number }>();
-    teams.forEach(t => teamStatsMap.set(t.id, { id: t.id, name: t.name, totalScore: 0, count: 0 }));
-
-    evaluations.forEach(e => {
-      const user = userMap.get(e.employeeId);
-      if (user && teamStatsMap.has(user.teamId)) {
-        const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
-        const score = e.finalScore ?? lastRound?.totalScore ?? 0;
-        const teamStat = teamStatsMap.get(user.teamId)!;
-        teamStat.totalScore += score;
-        teamStat.count++;
-      }
-    });
-
-    const teamStats = Array.from(teamStatsMap.values()).map(ts => {
-      const teamAvg = ts.count > 0 ? ts.totalScore / ts.count : 0;
-      return {
-        id: ts.id,
-        name: ts.name,
-        avgScore: teamAvg,
-        progress: maxTotalScore > 0 ? (teamAvg / maxTotalScore) * 100 : 0 // max thật từ DB
-      };
-    });
-
-    // Criteria Group Analysis (A-F) — % theo max THẬT của từng nhóm (không giả định 5/tiêu chí)
-    const groupCodes = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const criteriaAnalysis = groupCodes.map(group => {
-      const stats = criteriaGroupScores[group] || { totalGroupScore: 0, count: 0 };
-      const count = groupCriteriaCount[group] || 0;
-      const maxScore = groupMaxScore[group] || 0;
-      const avgScore = stats.count > 0 ? stats.totalGroupScore / stats.count : 0;
-      const avgMax = count > 0 && maxScore > 0 ? maxScore / count : 0;
-      return {
-        group,
-        avgScore,
-        percentage: avgMax > 0 ? (avgScore / avgMax) * 100 : 0
-      };
-    });
-
-    // Top Performers
-    const topPerformers = filteredEvals
-      .map(e => {
-        const user = userMap.get(e.employeeId);
-        const team = teamMap.get(user?.teamId ?? '');
-        const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
-        const score = e.finalScore ?? lastRound?.totalScore ?? 0;
-        const grade = (e.finalGrade ?? lastRound?.grade ?? '-') as string;
-        return {
-          id: e.employeeId,
-          name: user?.name || 'Unknown',
-          teamName: team?.name || '—',
-          score,
-          grade
-        };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-
+  // Top performers come from the team-scoped top slice (the projector already
+  // selected them from the scoped valid set BEFORE the TOP_LIMIT cap), so no
+  // post-slice re-filtering can drop a selected team's performers.
+  const evaluationById = new Map(evaluations.map((e) => [e.id, e]));
+  const topPerformers = projection.result.top.map((entry) => {
+    const evaluation = evaluationById.get(entry.evaluationId);
     return {
-      stats: {
-        totalEmployees,
-        avgScore,
-        highGradeRate,
-        pendingCount
-      },
-      gradeDistribution,
-      teamStats,
-      criteriaAnalysis,
-      topPerformers
+      id: entry.employeeId,
+      name: userMap.get(entry.employeeId)?.name || 'Unknown',
+      teamName: entry.teamId ? (projection.teamBreakdown.find((t) => t.teamId === entry.teamId)?.name || '—') : '—',
+      score: evaluation ? evaluationScore(evaluation) : (entry.score ?? 0),
+      grade: entry.grade ?? '-',
     };
-  } catch (error) {
-    console.error('Error in getReportAggregation:', error);
-    throw error instanceof Error ? error : new Error('Không thể tổng hợp dữ liệu báo cáo');
-  }
+  });
+
+  return {
+    stats: {
+      totalEmployees: projection.roster.total,
+      avgScore: projection.result.average,
+      highGradeRate: projection.result.highGradeRate,
+      pendingCount: projection.coverage.pending,
+      approvedCount: projection.result.approvedCount,
+      invalidCount: projection.result.invalidCount,
+      legacyCount: projection.result.legacyCount,
+      sampleCount: projection.result.sampleCount,
+      mixedBasis: projection.result.mixedBasis,
+    },
+    gradeDistribution: projection.result.gradeDistribution.map((item) => ({
+      grade: item.grade,
+      count: item.count,
+      color: GRADE_COLOR_MAP[item.grade] || 'bg-slate-400',
+    })),
+    teamStats,
+    criteriaAnalysis,
+    topPerformers,
+  };
 }
 
 export async function getReportAggregation(

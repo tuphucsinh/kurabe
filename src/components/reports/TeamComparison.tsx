@@ -23,7 +23,7 @@ export default function TeamComparison({ teams = [] }: TeamComparisonProps) {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-ink">So sánh nhóm</h3>
         <span className="text-xs font-medium text-ink-muted bg-surface-muted px-2 py-1 rounded-full uppercase tracking-wider">
-          Average Score
+          Điểm TB tương quan
         </span>
       </div>
 
@@ -62,7 +62,8 @@ export default function TeamComparison({ teams = [] }: TeamComparisonProps) {
 
       <div className="mt-6 pt-4 border-t border-outline-soft border-dashed">
         <p className="text-xs text-ink-muted leading-relaxed italic">
-          * Điểm trung bình được tính dựa trên các tiêu chí QAQC trong kỳ đánh giá hiện tại.
+          * Điểm số hiển thị là điểm trung bình chính thức (đã chốt) của nhóm; thanh tiến độ thể hiện tương quan
+          với nhóm có điểm trung bình cao nhất trong phạm vi lọc hiện tại.
         </p>
       </div>
     </div>

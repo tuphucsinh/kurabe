@@ -198,6 +198,18 @@ export interface CriteriaGroup {
   configVersionId?: string;
 }
 
+/**
+ * Server-computed skill-gap radar datum (self vs manager average per pinned
+ * criteria group). Replaces the previous raw evaluations/criteriaGroups props so
+ * the dashboard heavy DTO never carries raw round scores.
+ */
+export interface SkillGapRadarDatum {
+  subject: string;
+  Self: number;
+  Manager: number;
+  fullMark: number;
+}
+
 export interface EvaluationConfigVersions {
   criteriaConfigVersionId?: string | null;
   gradeConfigVersionId?: string | null;
@@ -248,5 +260,7 @@ export interface ExportEvaluationsOptions {
   users?: User[];
   teams?: Team[];
   periodData?: EvaluationPeriod | null;
+  /** Explicit official (Approved) evaluation ids; otherwise resolved via the result projector. */
+  officialEvaluationIds?: string[];
   XLSX?: XlsxExportApi;
 }

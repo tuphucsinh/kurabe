@@ -1,0 +1,42 @@
+{
+  "note": "Synthetic, independently-derived golden fixture for P107M1T06 official result projection. No real data.",
+  "roster": [
+    { "employeeId": "e-mgr", "role": "Manager", "teamId": "t1" },
+    { "employeeId": "e-ldr", "role": "Leader", "teamId": "t1" },
+    { "employeeId": "e-sub", "role": "SubLeader", "teamId": "t2" },
+    { "employeeId": "e-emp", "role": "Employee", "teamId": "t2" },
+    { "employeeId": "e-wrk", "role": "Worker", "teamId": "t3" }
+  ],
+  "scenarios": {
+    "statuses": {
+      "evaluations": [
+        { "id": "ev-notstarted", "employeeId": "e-mgr", "employeeRole": "Manager", "teamId": "t1", "status": "NotStarted", "rounds": [] },
+        { "id": "ev-draft", "employeeId": "e-ldr", "employeeRole": "Leader", "teamId": "t1", "status": "Draft", "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Draft", "totalScore": 0, "grade": "Pending", "scores": {} } ] },
+        { "id": "ev-submitted", "employeeId": "e-sub", "employeeRole": "SubLeader", "teamId": "t2", "status": "Submitted", "finalGrade": "B", "finalScore": 70, "rounds": [ { "round": 1, "evaluatorId": "e-sub", "evaluatorRole": "SubLeader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 70, "grade": "B", "scores": {} } ] },
+        { "id": "ev-reviewed", "employeeId": "e-emp", "employeeRole": "Employee", "teamId": "t2", "status": "Reviewed", "finalGrade": "C", "finalScore": 55, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-02T00:00:00Z", "totalScore": 55, "grade": "C", "scores": {} } ] },
+        { "id": "ev-approved", "employeeId": "e-wrk", "employeeRole": "Worker", "teamId": "t3", "status": "Approved", "finalGrade": "A", "finalScore": 88, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-03T00:00:00Z", "totalScore": 88, "grade": "A", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": { "c1": 10 } } ] }
+      ]
+    },
+    "clean": {
+      "evaluations": [
+        { "id": "ev-c-mgr", "employeeId": "e-mgr", "employeeRole": "Manager", "teamId": "t1", "status": "Approved", "finalGrade": "A", "finalScore": 90, "rounds": [ { "round": 1, "evaluatorId": "e-mgr", "evaluatorRole": "Manager", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 90, "grade": "A", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": { "c1": 18 } } ] },
+        { "id": "ev-c-ldr", "employeeId": "e-ldr", "employeeRole": "Leader", "teamId": "t1", "status": "Approved", "finalGrade": "AB", "finalScore": 80, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 80, "grade": "AB", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": { "c1": 16 } } ] },
+        { "id": "ev-c-sub", "employeeId": "e-sub", "employeeRole": "SubLeader", "teamId": "t2", "status": "Approved", "finalGrade": "B", "finalScore": 0, "rounds": [ { "round": 1, "evaluatorId": "e-sub", "evaluatorRole": "SubLeader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 0, "grade": "B", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": { "c1": 0 } } ] },
+        { "id": "ev-c-emp", "employeeId": "e-emp", "employeeRole": "Employee", "teamId": "t2", "status": "Approved", "finalGrade": "C", "finalScore": 50, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 50, "grade": "C", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": { "c1": 10 } } ] },
+        { "id": "ev-c-wrk", "employeeId": "e-wrk", "employeeRole": "Worker", "teamId": "t3", "status": "NotStarted", "rounds": [] }
+      ]
+    },
+    "mixed": {
+      "evaluations": [
+        { "id": "ev-m-mgr", "employeeId": "e-mgr", "employeeRole": "Manager", "teamId": "t1", "status": "Approved", "finalGrade": "A", "finalScore": 90, "rounds": [ { "round": 1, "evaluatorId": "e-mgr", "evaluatorRole": "Manager", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 90, "grade": "A", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": {} } ] },
+        { "id": "ev-m-ldr", "employeeId": "e-ldr", "employeeRole": "Leader", "teamId": "t1", "status": "Approved", "finalGrade": "B", "finalScore": 60, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 60, "grade": "B", "criteriaConfigVersionId": null, "gradeConfigVersionId": null, "scores": {} } ] },
+        { "id": "ev-m-sub", "employeeId": "e-sub", "employeeRole": "SubLeader", "teamId": "t2", "status": "Approved", "finalGrade": "AB", "finalScore": 80, "rounds": [ { "round": 1, "evaluatorId": "e-sub", "evaluatorRole": "SubLeader", "status": "Submitted", "submittedAt": "2026-03-01T00:00:00Z", "totalScore": 80, "grade": "AB", "criteriaConfigVersionId": "cfg-2", "gradeConfigVersionId": "grd-2", "scores": {} } ] },
+        { "id": "ev-m-emp", "employeeId": "e-emp", "employeeRole": "Employee", "teamId": "t2", "status": "Submitted", "finalGrade": "C", "finalScore": 55, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-04T00:00:00Z", "totalScore": 55, "grade": "C", "scores": {} } ] },
+        { "id": "ev-m-wrk", "employeeId": "e-wrk", "employeeRole": "Worker", "teamId": "t3", "status": "Approved", "finalGrade": null, "finalScore": 30, "rounds": [ { "round": 1, "evaluatorId": "e-ldr", "evaluatorRole": "Leader", "status": "Submitted", "submittedAt": "2026-03-05T00:00:00Z", "totalScore": 30, "grade": "D", "criteriaConfigVersionId": "cfg-1", "gradeConfigVersionId": "grd-1", "scores": {} } ] }
+      ]
+    },
+    "empty": {
+      "evaluations": []
+    }
+  }
+}

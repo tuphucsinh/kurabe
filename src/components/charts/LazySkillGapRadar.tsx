@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { Evaluation, CriteriaGroup } from '@/types';
+import type { SkillGapRadarDatum } from '@/types';
 
 const Radar = dynamic(
   () => import('@/components/charts/SkillGapRadar').then((mod) => mod.SkillGapRadar),
@@ -16,15 +16,13 @@ const Radar = dynamic(
 );
 
 export default function LazySkillGapRadar({
-  evaluations = [],
-  criteriaGroups = [],
+  data = [],
 }: {
-  evaluations?: Evaluation[];
-  criteriaGroups?: CriteriaGroup[];
+  data?: SkillGapRadarDatum[];
 }) {
   return (
     <div data-load-layer="heavy">
-      <Radar evaluations={evaluations} criteriaGroups={criteriaGroups} />
+      <Radar data={data} />
     </div>
   );
 }

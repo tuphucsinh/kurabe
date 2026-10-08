@@ -81,10 +81,14 @@ function normalizeWhitespace(code) {
     'LazySkillGapRadar must render data-load-layer="heavy" on its container'
   );
 
-  // 1.9 Prop forwarding: evaluations and criteriaGroups
+  // 1.9 Prop forwarding: minimized server-computed radar data (no raw props)
   assert.ok(
-    normLazyRadar.includes('evaluations') && normLazyRadar.includes('criteriaGroups'),
-    'LazySkillGapRadar must accept and forward evaluations and criteriaGroups props'
+    normLazyRadar.includes('data?: SkillGapRadarDatum[]') && normLazyRadar.includes('<Radar data={data}'),
+    'LazySkillGapRadar must accept and forward the minimized radar data prop'
+  );
+  assert.ok(
+    !normLazyRadar.includes('criteriaGroups') && !normLazyRadar.includes('rawEvaluations'),
+    'LazySkillGapRadar must NOT accept raw evaluations/criteriaGroups props'
   );
 }
 
@@ -156,10 +160,13 @@ function normalizeWhitespace(code) {
   );
 
   assert.ok(
-    normHeavy.includes('<LazySkillGapRadar') &&
-      normHeavy.includes('evaluations={data.rawEvaluations}') &&
-      normHeavy.includes('criteriaGroups={data.rawCriteriaGroups}'),
-    'DashboardHeavySection must render LazySkillGapRadar with data.rawEvaluations and data.rawCriteriaGroups'
+    normHeavy.includes('<LazySkillGapRadar') && normHeavy.includes('data={data.radar}'),
+    'DashboardHeavySection must render LazySkillGapRadar with the server-computed radar aggregate (data={data.radar})'
+  );
+
+  assert.ok(
+    !normHeavy.includes('rawEvaluations') && !normHeavy.includes('rawCriteriaGroups'),
+    'DashboardHeavySection must NOT reference rawEvaluations/rawCriteriaGroups (heavy DTO dropped them)'
   );
 
   assert.ok(

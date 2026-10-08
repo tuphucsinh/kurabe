@@ -163,8 +163,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
         delta = curr - prev;
       }
 
-      const lastRound = scoredRounds[scoredRounds.length - 1];
-      const grade = ev.finalGrade || lastRound?.grade || '';
+      const grade = ev.status === 'Approved' ? ev.finalGrade : undefined;
       if (grade) {
         gradeCounts[grade] = (gradeCounts[grade] || 0) + 1;
       }
@@ -176,7 +175,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
         roundsStr,
         lastScore,
         delta,
-        grade,
+        grade: grade ?? '',
       });
     }
 

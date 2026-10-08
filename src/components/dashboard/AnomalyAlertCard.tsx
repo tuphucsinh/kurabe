@@ -1,29 +1,23 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
-import { Evaluation } from '@/types';
-import { detectAnomalies } from '@/lib/anomaly';
+import { Anomaly } from '@/lib/anomaly';
 import { explainAnomalyAction } from '@/actions/ai';
 
-/** Dashboard: cảnh báo đánh giá bất thường (rule-based) + giải thích AI (Manager).
- * userNameById + isManager truyền từ server page hoặc data layer — không tự fetch useUsers (fix flash UUID + pop-in sau hydrate). */
+/** Dashboard: cảnh báo đánh giá bất thường (rule-based, tính sẵn trên server) + giải thích AI (Manager).
+ * Nhận DTO anomaly tối giản — KHÔNG nhận raw evaluations/scores.
+ * userNameById + isManager truyền từ server page hoặc data layer. */
 export default function AnomalyAlertCard({
-  evaluations = [],
-  userNameById = {},
+  anomalies = [],
   isManager,
 }: {
-  evaluations?: Evaluation[];
+  anomalies?: Anomaly[];
   userNameById?: Record<string, string>;
   isManager: boolean;
 }) {
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [explanations, setExplanations] = useState<Record<string, string>>({});
-
-  const anomalies = useMemo(() => {
-    const nameById = new Map(Object.entries(userNameById || {}));
-    return detectAnomalies(evaluations, nameById);
-  }, [evaluations, userNameById]);
 
   const handleExplain = async (anomalyId: string, evaluationId: string, name: string, round: number, prevScore: number, score: number) => {
     if (explanations[anomalyId]) return;
