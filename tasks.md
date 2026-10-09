@@ -700,6 +700,25 @@ DoD:
 - `node scripts/verify-release.mjs --suite p107-qualification --tier authenticated` PASS on the frozen candidate locally, and the CI run for the published commit is green.
 - No product/policy change; no waiver; production writes/migrations 0/0.
 
+### [ ] [#P107M1T11b] CI qualification lane: non-/tmp runtime root for the browser producer
+
+```yaml
+task:
+  id: P107M1T11b
+  tier: CONTROLLED
+  depends: [P107M1T11]
+  owns:
+    - tests/browser/p107-qualification.mjs
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: root cause of CI run 37966194351 — the delegated producer's `resolveRuntimeRoot` refuses a runtime root under `/tmp`
+(`REFUSE_TMP_RUNTIME_ROOT`), and the CI runner's `os.tmpdir()` resolves under `/tmp`, so the producer blocked at its
+first case (`src:frozen-head-expected-sha`) with a CLEAN worktree. The module never passed `--runtime-root`.
+Change: pin a task-owned runtime root beside the evidence path (`${EVIDENCE}.runtime`), which is outside `/tmp`.
+DoD: p107-qualification PASS locally on the frozen candidate and the CI run for the published commit is green; no
+product/policy change; production writes/migrations 0/0.
+
 ### P107 finding disposition and non-goals
 
 - S1 historical public→private: containment already done; monitor history residual, no task visibility flip/automatic rotation.
