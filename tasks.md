@@ -682,6 +682,24 @@ DoD:
 - Final exact-candidate fresh independent CONTROLLED review PASS, no blocking findings; a changed candidate invalidates review. Preserve first failure; fixture survives until full matrix, then cleanup exact owned IDs/processes/containers/networks/volumes/ports and readback residue 0.
 - Canonical completion, tick [x], Git task commits and control state require subsequent authorized execution/publish path. Deliver local readiness evidence + residual/owner-gated live actions; no automatic push/remote CI/DB apply/deploy.
 
+### [ ] [#P107M1T11] CI qualification lane: browser drift diagnostics + robust frozen-candidate restore
+
+```yaml
+task:
+  id: P107M1T11
+  tier: CONTROLLED
+  depends: [P107M1T10]
+  owns:
+    - tests/browser/p107-qualification.mjs
+    - .github/workflows/ci.yml
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: make the CI `p107-qualification` lane deterministic. CI run 37962217323 failed there although the same commit passes 115/115 in a fresh local clone. Changes: surface the browser module's real failure reason on stdout/stderr (it is currently only written into evidence, so CI logs show nothing); restore toolchain drift robustly for a FROZEN candidate (HEAD is the reviewed commit, so restore tracked files to HEAD and drop untracked non-ignored drift) instead of asserting a clean tree after touching only AGENTS.md/CLAUDE.md; add a CI pre-step that reports `git status` before the qualification suite.
+DoD:
+- `node scripts/verify-release.mjs --suite p107-qualification --tier authenticated` PASS on the frozen candidate locally, and the CI run for the published commit is green.
+- No product/policy change; no waiver; production writes/migrations 0/0.
+
 ### P107 finding disposition and non-goals
 
 - S1 historical public→private: containment already done; monitor history residual, no task visibility flip/automatic rotation.
