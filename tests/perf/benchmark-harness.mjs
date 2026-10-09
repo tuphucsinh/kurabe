@@ -843,10 +843,177 @@ async function runLocalFixtureBenchmark() {
 }
 
 const ACTUAL_LOCAL_SAMPLES_PER_POINT = 5;
+const PERF_SCHEMA = 'kurabe-performance-baseline/v2';
+const PERF_LANES = (process.env.KURABE_PERF_LANES || 'baseline,candidate').split(',').map((value) => value.trim()).filter(Boolean);
+const PERF_PHASES = ['shell', 'light', 'heavy', 'full'];
+const PERF_GATES = { dataCompleteMedianMs: 1000, submitP95Ms: 800 };
+
+function perfSha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+// The report SHA is the content hash of the report body with the SHA field
+// itself removed; it must never equal the candidate identity (see provenance
+// rules proved by tests/p107-perf-provenance.test.mjs).
+function reportContentSha(report) {
+  const clone = JSON.parse(JSON.stringify(report));
+  if (clone.provenance) delete clone.provenance.reportSha;
+  return perfSha256(JSON.stringify(clone));
+}
+
+function summarizePhases(runs) {
+  const grouped = {};
+  for (const run of runs) {
+    const key = `${run.route}|${run.viewport}|${run.role}|${run.access}|${run.state}`;
+    if (!grouped[key]) grouped[key] = { route: run.route, viewport: run.viewport, role: run.role, access: run.access, state: run.state, sampleCount: 0, metrics: {} };
+    const item = grouped[key];
+    item.sampleCount += 1;
+    for (const phase of PERF_PHASES) item.metrics[phase] = [...(item.metrics[phase] || []), run.phases ? run.phases[phase] : null];
+  }
+  for (const item of Object.values(grouped)) for (const [phase, values] of Object.entries(item.metrics)) item.metrics[phase] = summarizeValues(values);
+  return Object.values(grouped);
+}
+
+// Bounded action/DB timing lane. Real authenticated PostgREST reads that the
+// measured routes perform, plus a real low-RTT submit round-trip (the
+// authenticated login form submit: server action + session write) driven
+// through the isolated production build in the real browser.
+async function measureActionDb(fixture, next) {
+  const round = (value) => Math.round(value * 10) / 10;
+  const readTargets = [
+    'evaluation_periods?select=id,year,name,status&order=year.desc',
+    'users?select=id,employee_code,name,role&limit=200',
+    'evaluations?select=id,period_id,employee_id,status&limit=200',
+  ];
+  const dbReadSamples = [];
+  for (let sample = 1; sample <= ACTUAL_LOCAL_SAMPLES_PER_POINT; sample += 1) {
+    const started = performance.now();
+    let ok = true;
+    for (const target of readTargets) {
+      try {
+        const res = await fetch(`${fixture.restUrl}/rest/v1/${target}`, { headers: fixture.getAuthHeaders('service_role') });
+        if (!res.ok) ok = false;
+        await res.text();
+      } catch { ok = false; }
+    }
+    dbReadSamples.push({ sample, ok, ms: ok ? round(performance.now() - started) : null });
+  }
+  const dbRead = { samples: dbReadSamples, stats: summarizeValues(dbReadSamples.filter((s) => s.ok).map((s) => s.ms)), target: 'authenticated PostgREST reads used by the measured routes' };
+
+  const submitSamples = [];
+  const submitProfileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurabe-actual-submit-'));
+  const submitChrome = spawn('/usr/bin/google-chrome-stable', [
+    '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${submitProfileDir}`,
+    '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
+    '--disable-dev-shm-usage', '--disable-extensions', '--disable-gpu', '--disable-popup-blocking',
+    '--disable-sync', '--metrics-recording-only', '--no-sandbox', '--password-store=basic',
+    '--use-mock-keychain', '--window-size=1440,900', 'about:blank',
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  submitChrome.stderr.on('data', () => {});
+  let submitCdp = null;
+  try {
+    const submitPort = await waitForDevToolsPort(path.join(submitProfileDir, 'DevToolsActivePort'));
+    const submitTargets = await (await fetch(`http://127.0.0.1:${submitPort}/json/list`)).json();
+    const submitTarget = submitTargets.find((target) => target.type === 'page');
+    if (!submitTarget) throw new Error('submit-lane Chrome page target missing.');
+    submitCdp = new CDPClient(submitTarget.webSocketDebuggerUrl);
+    await submitCdp.connect();
+    await submitCdp.send('Page.enable');
+    await submitCdp.send('Network.enable');
+    await submitCdp.send('Runtime.enable');
+    for (let sample = 1; sample <= ACTUAL_LOCAL_SAMPLES_PER_POINT; sample += 1) {
+      await submitCdp.send('Network.clearBrowserCookies');
+      await submitCdp.send('Page.navigate', { url: `${next.url}/login` });
+      let ready = false;
+      for (let i = 0; i < 100; i += 1) {
+        const check = await submitCdp.send('Runtime.evaluate', { expression: `!!document.getElementById('employeeCode')`, returnByValue: true });
+        if (check?.result?.value === true) { ready = true; break; }
+        await sleep(100);
+      }
+      if (!ready) { submitSamples.push({ sample, ok: false, ms: null }); continue; }
+      await submitCdp.send('Runtime.evaluate', { expression: `document.getElementById('employeeCode').focus()` });
+      for (const char of fixture.manager.employeeCode.trim()) {
+        await submitCdp.send('Input.dispatchKeyEvent', { type: 'keyDown', text: char, unmodifiedText: char });
+        await submitCdp.send('Input.dispatchKeyEvent', { type: 'keyUp' });
+      }
+      const started = performance.now();
+      await submitCdp.send('Runtime.evaluate', { expression: `document.querySelector('button[type="submit"]').click()` });
+      let cookie = null;
+      for (let i = 0; i < 60; i += 1) {
+        const cookies = await submitCdp.send('Network.getCookies', { urls: [next.url] });
+        cookie = cookies.cookies.find((c) => c.name === 'auth_session' && /^[0-9a-f]{64}$/i.test(c.value));
+        if (cookie) break;
+        await sleep(100);
+      }
+      const ms = round(performance.now() - started);
+      submitSamples.push({ sample, ok: Boolean(cookie), ms: cookie ? ms : null });
+      if (cookie) {
+        const tokenHash = perfSha256(cookie.value);
+        try {
+          await fetch(`${fixture.restUrl}/rest/v1/sessions?token_hash=eq.${tokenHash}`, { method: 'DELETE', headers: fixture.getAuthHeaders('service_role') });
+        } catch { /* fixture.stop() removes remaining run-owned rows */ }
+      }
+    }
+  } finally {
+    if (submitCdp) submitCdp.close();
+    try { submitChrome.kill('SIGTERM'); } catch {}
+    try { fs.rmSync(submitProfileDir, { recursive: true, force: true }); } catch {}
+  }
+  const submitValues = submitSamples.filter((s) => s.ok && typeof s.ms === 'number').map((s) => s.ms);
+  return {
+    lane: 'loopback-low-rtt',
+    dbRead,
+    submit: {
+      action: 'authenticated login form submit (server action + session write)',
+      samples: submitSamples,
+      stats: summarizeValues(submitValues),
+      okSamples: submitValues.length,
+    },
+  };
+}
+
+const LARGE_ROSTER_COUNT = 150;
+const ROSTER_TEAM_ID = '11111111-1111-4111-8111-111111111111';
+
+function rosterUuid(index) {
+  return `f0000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
+}
+
+// Shared correctness fixture for BOTH before/after lanes: the existing app-auth
+// fixture plus a bounded large roster, seeded once before either lane runs so
+// the effective fixture is identical by construction. Historical correctness
+// data bound in the same stack (closed periods / Approved evaluations) is read
+// back so the historical fixture identity is grounded in runtime output.
+async function seedSharedFixture(fixture) {
+  const rosterIds = [];
+  const rows = [];
+  for (let index = 1; index <= LARGE_ROSTER_COUNT; index += 1) {
+    const id = rosterUuid(index);
+    rosterIds.push(id);
+    rows.push(`('${id}', 'P107T09-EMP-${String(index).padStart(3, '0')}', 'P107T09 Fixture Employee ${String(index).padStart(3, '0')}', 'Employee', '${ROSTER_TEAM_ID}', '2026-01-03', true, NULL, 'Nữ')`);
+  }
+  fixture.query(`INSERT INTO public.users (id, employee_code, name, role, team_id, join_date, is_active, password_hash, gender) VALUES\n${rows.join(',\n')};`);
+  const seeded = Number(fixture.query(`SELECT count(*) FROM public.users WHERE id IN (${rosterIds.map((id) => `'${id}'`).join(',')});`));
+  if (seeded !== LARGE_ROSTER_COUNT) throw new Error(`shared large roster seed incomplete: ${seeded}/${LARGE_ROSTER_COUNT}`);
+  const historical = {
+    closedPeriods: Number(fixture.query(`SELECT count(*) FROM public.evaluation_periods WHERE status='closed';`)),
+    approvedEvaluations: Number(fixture.query(`SELECT count(*) FROM public.evaluations WHERE status='Approved';`)),
+  };
+  return { largeRosterCount: seeded, rosterIds, historical };
+}
+
+function cleanupSharedFixture(fixture, rosterIds) {
+  const list = rosterIds.map((id) => `'${id}'`).join(',');
+  fixture.query(`DELETE FROM public.users WHERE id IN (${list});`);
+  const residue = Number(fixture.query(`SELECT count(*) FROM public.users WHERE id IN (${list});`));
+  if (residue !== 0) throw new Error(`shared roster cleanup left residue: ${residue}`);
+  return { rosterResidue: residue };
+}
 
 async function runActualLocalBenchmark() {
   const { createAppAuthFixture, createBrowserSession, startNextApplication } = await import('../browser/app-auth-harness.mjs');
   const fixture = await createAppAuthFixture();
+  const sharedFixture = await seedSharedFixture(fixture);
   let next = null;
   const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kurabe-actual-perf-chrome-'));
   const chrome = spawn('/usr/bin/google-chrome-stable', [
@@ -860,7 +1027,6 @@ async function runActualLocalBenchmark() {
   const portFile = path.join(profileDir, 'DevToolsActivePort');
   let cdp = null;
   const browserErrors = [];
-  const runs = [];
   const viewports = [
     { name: 'mobile', width: 390, height: 844 },
     { name: 'desktop', width: 1440, height: 900 },
@@ -889,98 +1055,184 @@ async function runActualLocalBenchmark() {
     await cdp.send('Log.enable');
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `
       window.__perf_entries = { fcp: null, lcp: null };
+      window.__phaseMarks = { shell: null, light: null, heavy: null, full: null };
       try { new PerformanceObserver((list) => { for (const entry of list.getEntries()) if (entry.name === 'first-contentful-paint') window.__perf_entries.fcp = entry.startTime; }).observe({ type: 'paint', buffered: true }); } catch {}
       try { new PerformanceObserver((list) => { const entries = list.getEntries(); if (entries.length) window.__perf_entries.lcp = entries[entries.length - 1].startTime; }).observe({ type: 'largest-contentful-paint', buffered: true }); } catch {}
+      try {
+        const recordPhases = () => {
+          const t = performance.now();
+          for (const layer of ['shell', 'light', 'heavy']) {
+            if (window.__phaseMarks[layer] === null && document.querySelector('[data-load-layer="' + layer + '"]')) window.__phaseMarks[layer] = t;
+          }
+        };
+        const observer = new MutationObserver(recordPhases);
+        observer.observe(document.documentElement || document, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-load-layer'] });
+        document.addEventListener('DOMContentLoaded', recordPhases);
+      } catch {}
     ` });
     cdp.on('Log.entryAdded', (payload) => { if (payload.entry?.level === 'error') browserErrors.push({ type: 'log', text: String(payload.entry.text || '').slice(0, 240) }); });
     cdp.on('Runtime.consoleAPICalled', (payload) => { if (payload.type === 'error') browserErrors.push({ type: 'console', text: payload.args?.map((arg) => arg.value || arg.description || '').join(' ').slice(0, 240) }); });
     cdp.on('Network.loadingFailed', (payload) => { if (payload.canceled !== true && payload.errorText !== 'net::ERR_ABORTED') browserErrors.push({ type: 'network', text: String(payload.errorText || 'loading failed').slice(0, 240) }); });
 
-    for (const viewport of viewports) {
-      await cdp.send('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.name === 'mobile' });
-      for (const entry of matrix) {
-        const session = sessions[entry.role];
-        const cookie = await cdp.send('Network.setCookie', { name: 'auth_session', value: session.token, url: next.url, path: '/', httpOnly: true, sameSite: 'Lax' });
-        if (cookie.success !== true) throw new Error(`could not install ${entry.role} local auth cookie`);
-        for (const route of entry.routes) {
-          for (const state of states) {
-            for (let sample = 1; sample <= ACTUAL_LOCAL_SAMPLES_PER_POINT; sample += 1) {
-              const errorStart = browserErrors.length;
-              if (state === 'cold') await cdp.send('Network.clearBrowserCache');
-              let documentStatus = null;
-              const documentHandler = (payload) => {
-                if (payload.type === 'Document' && payload.response?.url?.startsWith(next.url)) documentStatus = payload.response.status;
-              };
-              cdp.on('Network.responseReceived', documentHandler);
-              await cdp.send('Page.navigate', { url: `${next.url}${route}` });
-              let complete = false;
-              let finalState = null;
-              for (let attempt = 0; attempt < 150; attempt += 1) {
-                try {
-                  const stateResult = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
-                    const text = document.body?.innerText || '';
-                    const path = location.pathname;
-                    const loading = document.querySelectorAll('.animate-spin, .animate-pulse').length > 0;
-                    const targetRoute = ${JSON.stringify(route)};
-                    const denied = ${JSON.stringify(entry.denied)};
-                    let ready = false;
-                    if (denied) ready = targetRoute === '/reports' && path.startsWith('/evaluations/') && document.readyState === 'complete';
-                    else if (targetRoute === '/dashboard') ready = text.includes('Kỳ 2099') && text.includes('Tổng quan hệ thống');
-                    else if (targetRoute === '/employees') ready = text.includes('P102M3T13 Seed Employee');
-                    else if (targetRoute === '/reports') ready = text.includes('Báo cáo QAQC');
-                    return { ready, path, text: text.slice(0, 300) };
-                  })()` });
-                  finalState = stateResult.result?.value || null;
-                  if (finalState?.ready) { complete = true; break; }
-                } catch { /* navigation context transition; retry */ }
-                await sleep(100);
+    const matrixDeniedRouteCount = matrix.filter((entry) => entry.denied).reduce((sum, entry) => sum + entry.routes.length, 0);
+    const perLaneExpected = (TARGET_ROUTES.length + matrixDeniedRouteCount) * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT;
+    const runCountFormula = '(routes + deniedRoutes) * viewports * states * samplesPerPoint';
+    const deniedRouteSamples = matrixDeniedRouteCount * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT;
+    const laneResults = {};
+    const laneSummaries = {};
+    const lanePhases = {};
+    const laneRunCounts = {};
+
+    for (const lane of PERF_LANES) {
+      const runs = [];
+      for (const viewport of viewports) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.name === 'mobile' });
+        for (const entry of matrix) {
+          const session = sessions[entry.role];
+          const cookie = await cdp.send('Network.setCookie', { name: 'auth_session', value: session.token, url: next.url, path: '/', httpOnly: true, sameSite: 'Lax' });
+          if (cookie.success !== true) throw new Error(`could not install ${entry.role} local auth cookie`);
+          for (const route of entry.routes) {
+            for (const state of states) {
+              for (let sample = 1; sample <= ACTUAL_LOCAL_SAMPLES_PER_POINT; sample += 1) {
+                const errorStart = browserErrors.length;
+                if (state === 'cold') await cdp.send('Network.clearBrowserCache');
+                let documentStatus = null;
+                const documentHandler = (payload) => {
+                  if (payload.type === 'Document' && payload.response?.url?.startsWith(next.url)) documentStatus = payload.response.status;
+                };
+                cdp.on('Network.responseReceived', documentHandler);
+                await cdp.send('Page.navigate', { url: `${next.url}${route}` });
+                let complete = false;
+                let finalState = null;
+                for (let attempt = 0; attempt < 150; attempt += 1) {
+                  try {
+                    const stateResult = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+                      const text = document.body?.innerText || '';
+                      const path = location.pathname;
+                      const loading = document.querySelectorAll('.animate-spin, .animate-pulse').length > 0;
+                      const targetRoute = ${JSON.stringify(route)};
+                      const denied = ${JSON.stringify(entry.denied)};
+                      let ready = false;
+                      if (denied) ready = targetRoute === '/reports' && path.startsWith('/evaluations/') && document.readyState === 'complete';
+                      else if (targetRoute === '/dashboard') ready = text.includes('Kỳ 2099') && text.includes('Tổng quan hệ thống');
+                      else if (targetRoute === '/employees') ready = text.includes('P102M3T13 Seed Employee');
+                      else if (targetRoute === '/reports') ready = text.includes('Báo cáo QAQC');
+                      return { ready, path, text: text.slice(0, 300) };
+                    })()` });
+                    finalState = stateResult.result?.value || null;
+                    if (finalState?.ready) { complete = true; break; }
+                  } catch { /* navigation context transition; retry */ }
+                  await sleep(100);
+                }
+                if (complete) {
+                  try { await cdp.send('Runtime.evaluate', { expression: `window.__phaseMarks && (window.__phaseMarks.full = performance.now())` }); } catch { /* context transition */ }
+                }
+                const measurement = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+                  const nav = performance.getEntriesByType('navigation')[0];
+                  const paints = performance.getEntriesByType('paint');
+                  const fcp = window.__perf_entries?.fcp ?? paints.find((entry) => entry.name === 'first-contentful-paint')?.startTime ?? null;
+                  const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+                  const lcp = window.__perf_entries?.lcp ?? (lcpEntries.length ? lcpEntries[lcpEntries.length - 1].startTime : null);
+                  const resources = performance.getEntriesByType('resource');
+                  const marks = window.__phaseMarks || {};
+                  return { ttfb: nav ? nav.responseStart - nav.startTime : null, fcp, lcp, domContentLoaded: nav ? nav.domContentLoadedEventEnd - nav.startTime : null, load: nav ? nav.loadEventEnd - nav.startTime : null, dataComplete: performance.now(), resourceBytes: resources.reduce((sum, entry) => sum + (entry.transferSize || entry.encodedBodySize || 0), 0), resourceCount: resources.length, requestCount: resources.length, phases: { shell: marks.shell ?? null, light: marks.light ?? null, heavy: marks.heavy ?? null, full: marks.full ?? null } };
+                })()` });
+                cdp.off('Network.responseReceived', documentHandler);
+                if (!complete || !finalState?.path || documentStatus == null) throw new Error(`actual route incomplete lane=${lane} role=${entry.role} route=${route} viewport=${viewport.name} state=${state} status=${documentStatus} path=${finalState?.path || 'unknown'}`);
+                const measured = measurement.result.value;
+                runs.push({ lane, route, role: entry.role, access: entry.denied ? 'denied' : 'allowed', viewport: viewport.name, state, sample, status: documentStatus, effectivePath: finalState.path, ...measured, browserErrors: browserErrors.slice(errorStart) });
               }
-              const measurement = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: `(() => {
-                const nav = performance.getEntriesByType('navigation')[0];
-                const paints = performance.getEntriesByType('paint');
-                const fcp = window.__perf_entries?.fcp ?? paints.find((entry) => entry.name === 'first-contentful-paint')?.startTime ?? null;
-                const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
-                const lcp = window.__perf_entries?.lcp ?? (lcpEntries.length ? lcpEntries[lcpEntries.length - 1].startTime : null);
-                const resources = performance.getEntriesByType('resource');
-                return { ttfb: nav ? nav.responseStart - nav.startTime : null, fcp, lcp, domContentLoaded: nav ? nav.domContentLoadedEventEnd - nav.startTime : null, load: nav ? nav.loadEventEnd - nav.startTime : null, dataComplete: performance.now(), resourceBytes: resources.reduce((sum, entry) => sum + (entry.transferSize || entry.encodedBodySize || 0), 0), resourceCount: resources.length };
-              })()` });
-              cdp.off('Network.responseReceived', documentHandler);
-              if (!complete || !finalState?.path || documentStatus == null) throw new Error(`actual route incomplete role=${entry.role} route=${route} viewport=${viewport.name} state=${state} status=${documentStatus} path=${finalState?.path || 'unknown'}`);
-              runs.push({ route, role: entry.role, access: entry.denied ? 'denied' : 'allowed', viewport: viewport.name, state, sample, status: documentStatus, effectivePath: finalState.path, ...measurement.result.value, browserErrors: browserErrors.slice(errorStart) });
             }
           }
         }
       }
+      if (runs.length !== perLaneExpected) throw new Error(`Expected ${perLaneExpected} ${lane} samples, got ${runs.length}`);
+      if (runs.some((run) => run.browserErrors.length > 0)) throw new Error(`Actual local performance (${lane}) recorded browser/runtime errors: ${JSON.stringify(browserErrors.slice(0, 5))}`);
+      const summary = {};
+      for (const run of runs) {
+        const key = `${run.route}|${run.viewport}|${run.role}|${run.access}|${run.state}`;
+        if (!summary[key]) summary[key] = { route: run.route, viewport: run.viewport, role: run.role, access: run.access, state: run.state, sampleCount: 0, metrics: {} };
+        const item = summary[key]; item.sampleCount += 1;
+        for (const metric of ['ttfb', 'fcp', 'lcp', 'domContentLoaded', 'load', 'dataComplete', 'resourceBytes', 'resourceCount', 'requestCount']) item.metrics[metric] = [...(item.metrics[metric] || []), run[metric]];
+      }
+      for (const item of Object.values(summary)) for (const [metric, values] of Object.entries(item.metrics)) item.metrics[metric] = summarizeValues(values);
+      laneResults[lane] = runs;
+      laneSummaries[lane] = Object.values(summary);
+      lanePhases[lane] = summarizePhases(runs);
+      laneRunCounts[lane] = { formula: runCountFormula, expected: perLaneExpected, observed: runs.length, ok: runs.length === perLaneExpected, routes: TARGET_ROUTES.length, deniedRoutes: matrixDeniedRouteCount, viewports: viewports.length, states: states.length, samplesPerPoint: ACTUAL_LOCAL_SAMPLES_PER_POINT };
     }
-    const deniedRouteCount = matrix.filter((entry) => entry.denied).reduce((sum, entry) => sum + entry.routes.length, 0);
-    const deniedRouteSamples = deniedRouteCount * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT;
-    const expectedRuns = (TARGET_ROUTES.length * viewports.length * states.length * ACTUAL_LOCAL_SAMPLES_PER_POINT) + deniedRouteSamples;
-    if (runs.length !== expectedRuns) throw new Error(`Expected ${expectedRuns} actual local samples, got ${runs.length}`);
-    if (runs.some((run) => run.browserErrors.length > 0)) throw new Error(`Actual local performance recorded browser/runtime errors: ${JSON.stringify(browserErrors.slice(0, 5))}`);
-    const summary = {};
-    for (const run of runs) {
-      const key = `${run.route}|${run.viewport}|${run.role}|${run.access}|${run.state}`;
-      if (!summary[key]) summary[key] = { route: run.route, viewport: run.viewport, role: run.role, access: run.access, state: run.state, sampleCount: 0, metrics: {} };
-      const item = summary[key]; item.sampleCount += 1;
-      for (const metric of ['ttfb', 'fcp', 'lcp', 'domContentLoaded', 'load', 'dataComplete', 'resourceBytes', 'resourceCount']) item.metrics[metric] = [...(item.metrics[metric] || []), run[metric]];
-    }
-    for (const item of Object.values(summary)) for (const [metric, values] of Object.entries(item.metrics)) item.metrics[metric] = summarizeValues(values);
-    const candidateSha = process.env.KURABE_PERF_CANDIDATE_SHA || 'WORKTREE_BASE';
-    const metricAvailability = Object.fromEntries(['fcp', 'lcp'].map((metric) => [metric, { availableRuns: runs.filter((run) => typeof run[metric] === 'number').length, totalRuns: runs.length }]));
-    const report = {
-      schema: 'kurabe-performance-baseline/v1',
-      provenance: {
-        mode: 'actual-local', target: 'loopback-owned-supabase-plus-private-next-production', candidateSha, browser: browserVersion,
-        liveBrowser: true, authenticated: true, stack: fixture.stackHandle.stackName, network: fixture.stackHandle.networkId,
-        api: fixture.restUrl, db: fixture.stackHandle.dbTarget, next: { appRoot: next.sourceIdentity.appRoot, nextConfig: next.sourceIdentity.nextConfig, buildMode: next.sourceIdentity.buildMode, candidateSha }, routes: TARGET_ROUTES,
-        viewports, roles: ['manager', 'employee'], samplesPerPoint: ACTUAL_LOCAL_SAMPLES_PER_POINT, deniedRouteSamples, metricAvailability,
-        measuredAtUtc: new Date().toISOString(),
-      },
-      limitations: ['Employee role is measured on the explicit denied /reports route; manager is measured on all required data routes.', 'FCP/LCP are reported as UNKNOWN where Chrome exposes no paint entry; no fallback value is invented.'],
-      runs, summary: Object.values(summary), runtimeReadback: { seed: fixture.seedHandle.seedIdentity, postCleanup: 'verified-by-fixture-stop' },
+
+    const candidateLane = PERF_LANES[PERF_LANES.length - 1];
+    const candidateRuns = laneResults[candidateLane] || [];
+    const candidateSummary = laneSummaries[candidateLane] || [];
+    const actionDb = await measureActionDb(fixture, next);
+    const sharedFixtureCleanup = cleanupSharedFixture(fixture, sharedFixture.rosterIds);
+    const fixtureIdentity = {
+      id: fixture.kind,
+      roles: ['manager', 'employee'],
+      routes: TARGET_ROUTES,
+      viewports,
+      states,
+      regions: ['loopback'],
+      network: fixture.stackHandle.networkId,
+      samplesPerPoint: ACTUAL_LOCAL_SAMPLES_PER_POINT,
+      largeRosterCount: sharedFixture.largeRosterCount,
+      historical: sharedFixture.historical,
+      seedIdentity: fixture.seedHandle.seedIdentity,
+      seedCounts: fixture.seedHandle.exactRows,
     };
+    const candidateSha = process.env.KURABE_PERF_CANDIDATE_SHA || spawnSync('git', ['rev-parse', 'HEAD'], { cwd: process.cwd(), encoding: 'utf8' }).stdout.trim();
+    const treeSha = spawnSync('git', ['rev-parse', 'HEAD^{tree}'], { cwd: process.cwd(), encoding: 'utf8' }).stdout.trim();
+    const sourceSha = perfSha256([candidateSha, treeSha, next.sourceIdentity.appRoot, next.sourceIdentity.nextConfig, next.sourceIdentity.buildMode].join('|'));
+    const metricAvailability = Object.fromEntries(['fcp', 'lcp'].map((metric) => [metric, { availableRuns: candidateRuns.filter((run) => typeof run[metric] === 'number').length, totalRuns: candidateRuns.length }]));
+    const allowedSummary = candidateSummary.filter((item) => item.access === 'allowed');
+    const dataCompleteMedians = allowedSummary.map((item) => item.metrics.dataComplete.median).filter((value) => typeof value === 'number');
+    const dataCompleteMedianMs = dataCompleteMedians.length ? Math.max(...dataCompleteMedians) : null;
+    const submitStats = actionDb.submit.stats;
+    const report = {
+      schema: PERF_SCHEMA,
+      provenance: {
+        mode: 'actual-local', target: 'loopback-owned-supabase-plus-private-next-production',
+        lanes: PERF_LANES, lane: PERF_LANES.join('+'),
+        candidate: { baseSha: candidateSha, treeSha, sourceSha },
+        candidateSha,
+        browser: browserVersion, liveBrowser: true, authenticated: true,
+        stack: fixture.stackHandle.stackName, network: fixture.stackHandle.networkId,
+        api: fixture.restUrl, db: fixture.stackHandle.dbTarget,
+        next: { appRoot: next.sourceIdentity.appRoot, nextConfig: next.sourceIdentity.nextConfig, buildMode: next.sourceIdentity.buildMode, candidateSha },
+        routes: TARGET_ROUTES, viewports, roles: ['manager', 'employee'], states,
+        samplesPerPoint: ACTUAL_LOCAL_SAMPLES_PER_POINT, deniedRouteSamples,
+        fixture: fixtureIdentity,
+        runCountEquation: laneRunCounts,
+        gates: {
+          dataCompleteMedianLimitMs: PERF_GATES.dataCompleteMedianMs,
+          dataCompleteMedianMs,
+          dataCompleteMedianPass: typeof dataCompleteMedianMs === 'number' && dataCompleteMedianMs < PERF_GATES.dataCompleteMedianMs,
+          submitP95LimitMs: PERF_GATES.submitP95Ms,
+          submitP95Ms: submitStats.p95,
+          submitLane: actionDb.lane,
+          submitP95Pass: typeof submitStats.p95 === 'number' && submitStats.p95 < PERF_GATES.submitP95Ms,
+        },
+        metricAvailability, measuredAtUtc: new Date().toISOString(),
+      },
+      limitations: [
+        'Employee role is measured on the explicit denied /reports route; manager is measured on all required data routes.',
+        'FCP/LCP are reported as UNKNOWN (null) where Chrome exposes no paint entry; no fallback value is invented.',
+        'Before/after lanes execute the identical owned source against the identical seeded fixture; this task owns no hot-path edit, so lanes measure stability and retain the baseline reference.',
+        'The low-RTT submit lane is the loopback authenticated login submit (server action + session write); production performance remains UNKNOWN.',
+      ],
+      lanes: Object.fromEntries(PERF_LANES.map((lane) => [lane, { runs: laneResults[lane], summary: laneSummaries[lane], phases: lanePhases[lane], runCountEquation: laneRunCounts[lane] }])),
+      runs: candidateRuns,
+      summary: candidateSummary,
+      actionDb,
+      runtimeReadback: { seed: fixture.seedHandle.seedIdentity, largeRoster: { seeded: sharedFixture.largeRosterCount, cleanup: sharedFixtureCleanup }, postCleanup: 'verified-by-fixture-stop' },
+    };
+    report.provenance.reportSha = reportContentSha(report);
+    if (report.provenance.reportSha === report.provenance.candidate.baseSha || report.provenance.reportSha === report.provenance.candidate.sourceSha) {
+      throw new Error('provenance violation: generated report SHA equals candidate identity');
+    }
     fs.writeFileSync(REPORT_FILE, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    console.log(`ACTUAL_LOCAL_PERF_PASS runs=${runs.length} routes=3 viewports=2 manager=3-routes employee=denied-reports samples=${ACTUAL_LOCAL_SAMPLES_PER_POINT}`);
+    console.log(`ACTUAL_LOCAL_PERF_PASS lanes=${PERF_LANES.join('+')} runs=${candidateRuns.length} routes=${TARGET_ROUTES.length} viewports=${viewports.length} samples=${ACTUAL_LOCAL_SAMPLES_PER_POINT} reportSha=${report.provenance.reportSha.slice(0, 12)} candidate=${candidateSha.slice(0, 12)}`);
     console.log(`ACTUAL_LOCAL_PERF_REPORT ${REPORT_FILE}`);
   } finally {
     if (cdp) cdp.close();
