@@ -1521,10 +1521,15 @@ export async function run(options, ctx) {
       // can no longer satisfy these assertions. Deliberately NOT the reader-error
       // matrix (proven separately by fault:reader-transport-retry-recovery).
       const unknown = await pageA.goto(`${ctx.origin}/evaluations/00000000-0000-4000-8000-00000000dead`, "document.readyState === 'complete'");
-      const routeBody = await pageA.evaluate("(() => { const m = document.querySelector('main'); return m ? m.innerText : ''; })()");
+      // The route body is client-rendered: poll <main> (bounded) until the bounded
+      // access/empty/error surface appears, so a slow render is never misread as a
+      // blank crash. <main> excludes the global sidebar/chrome (a sibling of <main>).
+      const routeBody = await waitFor(async () => {
+        const text = await pageA.evaluate("(() => { const m = document.querySelector('main'); return m ? m.innerText : ''; })()");
+        return /Quyền truy cập|Chưa có dữ liệu|Không thể|Không tìm thấy|Đã xảy ra lỗi|Không có|không được phép/i.test(text) ? text : false;
+      }, { timeout: 30_000, interval: 250, label: 'unknown route bounded surface' });
       assert.ok(routeBody.trim().length > 0, 'unknown evaluation route rendered an empty <main> body');
       assert.ok(!/KỲ ĐÁNH GIÁ/.test(routeBody), 'unknown route <main> must not fall back to the global chrome');
-      assert.match(routeBody, /Quyền truy cập|Chưa có dữ liệu|Không thể|Không tìm thấy|Đã xảy ra lỗi|Không có|không được phép/i, 'unknown route must render a bounded access/empty/error surface');
       return { actual: { loadingShellObserved: loadingMarkers.shell === true || loadingMarkers.ready === true, emptySurface: true }, readback: { routeBody: routeBody.slice(0, 160), readerErrorCoveredElsewhere: true } };
     }, 'loading/empty/access surfaces');
 

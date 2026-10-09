@@ -32,6 +32,14 @@ export const CI_SUITE_MANIFEST = Object.freeze([
     localQualification: 'workflow-baseline',
   },
   {
+    id: 'p107-qualification',
+    command: 'node scripts/verify-release.mjs --suite p107-qualification --tier authenticated --evidence "$EVIDENCE/p107.json"',
+    modules: ['tests/integration/p107-qualification.mjs', 'tests/browser/p107-qualification.mjs'],
+    tiers: ['authenticated'],
+    roles: ['Manager', 'Leader', 'SubLeader', 'Employee', 'Worker'],
+    localQualification: 'required-before-CI-enforcement',
+  },
+  {
     id: 'release-matrix',
     command: 'node scripts/verify-release.mjs --suite release-matrix',
     modules: ['tests/integration/release-matrix.mjs', 'tests/browser/release-matrix.mjs'],

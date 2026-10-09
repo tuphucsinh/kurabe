@@ -236,7 +236,7 @@ export const REQUIRED_CASES = [
   'h1h2:employee-worker-self-r1-denial',
   'h1h2:appointed-leader-independent-team-save',
   'h1h2:unrelated-leader-c-denial',
-  'h1h2:pointer-absent-unique-primary-fallback',
+  'h1h2:pointer-absent-unique-primary-denial',
   'h1h2:pointer-invalid-inactive-denial',
   'h1h2:pointer-absent-ambiguous-primary-denial',
   'h1h2:skipped-round-denial',
@@ -640,15 +640,21 @@ export async function runBehavioralConfirmationSuite(runtime) {
     cases.push('h1h2:unrelated-leader-c-denial');
     discardEvaluation(runtime, unrelated);
 
-    const uniqueFallback = newId(10);
+    // OWNER_APPROVED policy (MASTER_PLAN:141, HANDOFF "Leader appointment-only";
+    // migration 20261008000100_p107_read_authority.sql): a current teams.leader_id
+    // appointment is the ONLY source of Leader write authority. An absent pointer must
+    // DENY; it must NEVER fall back to a unique primary Leader. This case therefore
+    // asserts the denial and proves the next round is never created.
+    const absentPointer = newId(10);
     runtime.psql(`UPDATE public.teams SET leader_id = NULL WHERE id = ${quoteUuid(TEAMS.C)};`);
-    addSeed(uniqueFallback, PERIODS.active, ACTORS.employeeC.id, 'Employee', TEAMS.C, ACTORS.subC.id, 'SubLeader');
-    await saveRound(runtime, 'subC', uniqueFallback, 1, 'Employee', false, 'unique-fallback-draft');
-    await saveRound(runtime, 'subC', uniqueFallback, 1, 'Employee', true, 'unique-fallback-submit');
-    assert.equal(roundRow(runtime, uniqueFallback, 2).evaluator_id, ACTORS.leaderC.id);
-    cases.push('h1h2:pointer-absent-unique-primary-fallback');
+    addSeed(absentPointer, PERIODS.active, ACTORS.employeeC.id, 'Employee', TEAMS.C, ACTORS.subC.id, 'SubLeader');
+    await saveRound(runtime, 'subC', absentPointer, 1, 'Employee', false, 'absent-pointer-draft');
+    assert.equal(roundRow(runtime, absentPointer, 1).status, 'Draft', 'absent-pointer round-1 draft must persist');
+    cases.push(await assertDenied(runtime, 'subC', absentPointer, 'Employee', 1, 'absent-pointer-submit', { isSubmit: true }));
+    assert.equal(roundRow(runtime, absentPointer, 2), null, 'absent pointer must NOT create a Leader next round (no fallback)');
+    cases.push('h1h2:pointer-absent-unique-primary-denial');
     runtime.psql(`UPDATE public.teams SET leader_id = ${quoteUuid(ACTORS.leaderC.id)} WHERE id = ${quoteUuid(TEAMS.C)};`);
-    discardEvaluation(runtime, uniqueFallback);
+    discardEvaluation(runtime, absentPointer);
 
     // The personnel graph's unique active-primary-Leader index makes these two
     // defensive branches unreachable in a business-valid runtime. They remain

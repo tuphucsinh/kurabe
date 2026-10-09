@@ -91,6 +91,18 @@ function startProxy(state) {
   state.proxyPid = proxy.pid;
 }
 
+/**
+ * Next 16 `next dev` auto-writes a managed agent-rules block into AGENTS.md/CLAUDE.md in
+ * the repo tree. That toolchain drift must never leak into a frozen-candidate
+ * qualification run (the browser lane requires a clean worktree), so restore those
+ * generated files to HEAD whenever the disposable runtime has touched them.
+ */
+function restoreToolchainDrift() {
+  const status = run('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: projectRoot });
+  const drifted = status.split('\n').map((line) => line.slice(3)).filter((p) => p === 'AGENTS.md' || p === 'CLAUDE.md');
+  if (drifted.length > 0) run('git', ['checkout', '--', ...drifted], { cwd: projectRoot });
+}
+
 async function start() {
   if (fs.existsSync(statePath)) throw new Error(`RUNTIME_STATE_EXISTS path=${statePath}`);
   fs.mkdirSync(runtimeRoot, { recursive: true, mode: 0o700 });
@@ -127,6 +139,7 @@ async function start() {
     ]);
     waitFor('pg_isready', ['-h', '127.0.0.1', '-p', String(state.dbPort), '-U', 'postgres', '-d', state.db], 'POSTGRES_NOT_READY');
     startNext(state);
+    restoreToolchainDrift();
     writeState(state);
   } catch (error) {
     try { cleanup(); } catch { /* preserve the original bootstrap failure */ }
@@ -302,6 +315,7 @@ async function bootstrap() {
     seededActors: seeded.actorCount,
     seededCounts: seeded.counts,
   }, null, 2)}\n`, { mode: 0o600 });
+  restoreToolchainDrift();
   state.restContainer = `${state.name}-rest`;
   state.bootstrapResult = bootstrapResult;
   writeState(state);

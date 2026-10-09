@@ -84,6 +84,15 @@ jobs:
           node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated \
             --evidence "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
 
+      - name: Run integrated P107 qualification suite
+        shell: bash
+        env:
+          KURABE_CI_RUNTIME_ROOT: ${{ runner.temp }}/kurabe-confirmation-runtime
+        run: |
+          set -euo pipefail
+          node scripts/verify-release.mjs --suite p107-qualification --tier authenticated \
+            --evidence "$RUNNER_TEMP/p107-qualification.json"
+
       - name: Verify disposable loopback DB and real browser
         shell: bash
         env:

@@ -29,7 +29,7 @@ export const INTEGRATION_REQUIRED_CASES = Object.freeze([
   'h1h2:employee-worker-self-r1-denial',
   'h1h2:appointed-leader-independent-team-save',
   'h1h2:unrelated-leader-c-denial',
-  'h1h2:pointer-absent-unique-primary-fallback',
+  'h1h2:pointer-absent-unique-primary-denial',
   'h1h2:skipped-round-denial',
   'h1h2:backward-round-denial',
   'h1h2:conflicting-replay-denial',
