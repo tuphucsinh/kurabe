@@ -88,7 +88,10 @@ function runLifecycleBrowser(sha, evidencePath) {
   const scriptPath = path.join(projectRoot, LIFECYCLE_BROWSER_PRODUCER);
   assert.ok(fs.existsSync(scriptPath), `lifecycle browser producer missing: ${LIFECYCLE_BROWSER_PRODUCER}`);
   fs.rmSync(evidencePath, { force: true });
-  const args = [scriptPath, '--evidence', evidencePath, '--expected-sha', sha];
+  // The producer refuses a runtime root under /tmp (REFUSE_TMP_RUNTIME_ROOT); CI's
+  // os.tmpdir() resolves under /tmp, so pin a task-owned runtime root beside the evidence.
+  const runtimeRoot = `${evidencePath}.runtime`;
+  const args = [scriptPath, '--evidence', evidencePath, '--expected-sha', sha, '--runtime-root', runtimeRoot];
   if (process.env.KURABE_P107_CHROME) args.push('--chrome', process.env.KURABE_P107_CHROME);
   const result = spawnSync(process.execPath, args, {
     cwd: projectRoot,
