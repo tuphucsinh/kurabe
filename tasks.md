@@ -601,7 +601,7 @@ DoD:
 - Same resident session and second tab see correct create/close/select/delete-empty period without F5; no Active/multiple Active/read-error explicit; stale form after close denied; cookie/provider/server props consistent.
 - Poll unchanged scope no blink; logout/revoke/late response cannot restore old payload; local loading/error/retry states and mobile+desktop console/network checked. Shared gates + fresh review; no production lifecycle mutation.
 
-### [ ] [#P107M1T08] Bounded authorized AI and visible audit failures
+### [x] [#P107M1T08] Bounded authorized AI and visible audit failures
 
 ```yaml
 task:
