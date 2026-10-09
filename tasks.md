@@ -682,7 +682,7 @@ DoD:
 - Final exact-candidate fresh independent CONTROLLED review PASS, no blocking findings; a changed candidate invalidates review. Preserve first failure; fixture survives until full matrix, then cleanup exact owned IDs/processes/containers/networks/volumes/ports and readback residue 0.
 - Canonical completion, tick [x], Git task commits and control state require subsequent authorized execution/publish path. Deliver local readiness evidence + residual/owner-gated live actions; no automatic push/remote CI/DB apply/deploy.
 
-### [ ] [#P107M1T11] CI qualification lane: browser drift diagnostics + robust frozen-candidate restore
+### [x] [#P107M1T11] CI qualification lane: browser drift diagnostics + robust frozen-candidate restore
 
 ```yaml
 task:
