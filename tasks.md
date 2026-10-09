@@ -556,7 +556,7 @@ DoD:
 - Browser mobile+desktop sees approved/total and frozen unfinished; empty result distinct from genuine 0 or failed reader; retries/stale filters don't leak old data. Unauthorized snapshot metadata denied.
 - Network DTO has no raw round scores/notes only needed to draw charts; shell/light stay independent of heavy/error. T03 boundary remains intact; shared gates + fresh review.
 
-### [ ] [#P107M1T07] Return/resubmit snapshots and resident period coherence
+### [x] [#P107M1T07] Return/resubmit snapshots and resident period coherence
 
 ```yaml
 task:
