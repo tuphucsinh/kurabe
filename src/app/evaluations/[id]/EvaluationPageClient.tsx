@@ -63,7 +63,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   const periodId = scope.kind === 'ACTIVE' ? scope.activePeriodId : undefined;
 
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, viewerScope } = useAuth();
   const userRef = useRef(user);
   useEffect(() => {
     userRef.current = user;
@@ -108,10 +108,14 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   const autosaveAttemptedKeys = useRef<Set<string>>(new Set());
   const autosavePendingKeys = useRef<Set<string>>(new Set());
 
-  // Access control — dùng context employee đã được server authorize
+  // Access control — dùng context employee đã được server authorize.
+  // The Leader reviewer rule needs the viewer's led-team ids (getViewerScopeAction),
+  // exactly as the server-side DTO sanitizer computed them; without it a Leader
+  // reviewing a team member's round is wrongly denied. T03 read authority is
+  // unchanged — this only mirrors the same ledTeamIds the server already used.
   const accessState = useMemo(() =>
-    evaluation ? getEvaluationAccessState(user, evaluation, employee ? [employee] : undefined) : null,
-  [evaluation, user, employee]);
+    evaluation ? getEvaluationAccessState(user, evaluation, employee ? [employee] : undefined, viewerScope?.leaderTeamIds) : null,
+  [evaluation, user, employee, viewerScope]);
   const targetRoundNumber = accessState?.editableRound || accessState?.displayRound;
   const targetRound = evaluation && targetRoundNumber
     ? evaluation.rounds.find((round) => round.round === targetRoundNumber) ?? null

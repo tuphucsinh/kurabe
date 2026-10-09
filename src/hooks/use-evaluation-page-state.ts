@@ -183,8 +183,16 @@ export function useEvaluationPageState({
 
       const targetRoundNum = accessState.editableRound || accessState.displayRound;
       const rawTargetRound = evaluation.rounds.find(r => r.round === targetRoundNum) || null;
-      const isTargetRoundVisible = rawTargetRound && accessState.visibleRounds.some(vr => vr.round === rawTargetRound.round) && !rawTargetRound.isRedacted;
-      const targetRound = isTargetRoundVisible ? rawTargetRound : null;
+      // The DTO already omits every round whose payload this viewer may not read
+      // (sanitizeEvaluationForViewer -> canViewRoundPayload), so any round present
+      // in `evaluation.rounds` is authorized for the viewer. `accessState.visibleRounds`
+      // additionally requires an *existing* draft payload (hasRoundDraft), which
+      // wrongly hid the viewer's own editable round while it is still a fresh
+      // NotStarted round with no draft: `targetRound` stayed null, `currentRoundData`
+      // never hydrated and EvaluationPageClient latched on EvaluationStaticFrame
+      // forever (P107M1T07 browser matrix, first flow case). The target round only
+      // needs the redaction/authorization guard, not draft-existence.
+      const targetRound = rawTargetRound && !rawTargetRound.isRedacted ? rawTargetRound : null;
 
       const prevRounds = evaluation.rounds
         .filter(r => !r.isRedacted && accessState.visibleRounds.some((vr: EvaluationRound) => vr.round === r.round) && r.round < (targetRoundNum || 0))

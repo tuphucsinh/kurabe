@@ -15,7 +15,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { closeEvaluationPeriod, deleteEvaluationPeriod } from '@/actions/period';
 
 export default function PeriodActions() {
-  const { currentPeriod, isManager, allPeriods } = useAuth();
+  const { currentPeriod, isManager, allPeriods, refreshPeriodMetadata } = useAuth();
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -42,8 +42,17 @@ export default function PeriodActions() {
     try {
       const result = await closeEvaluationPeriod(currentPeriod.id);
       if (result.success) {
-        toast('Đã đóng kỳ thành công.', 'success');
-        router.refresh(); // Refresh to update context
+        // Explicit frozen label when the period still had unfinished rounds; a
+        // degraded (unknown-count) close is surfaced instead of implying clean.
+        if (result.countUnavailable) {
+          toast('Đã đóng kỳ, nhưng không xác định được số phiếu chưa hoàn tất. Trạng thái đóng băng chưa được xác minh.', 'success');
+        } else if (result.frozenIncomplete) {
+          toast(`Đã đóng kỳ. ${result.unfinishedCount ?? 0} phiếu chưa hoàn tất đã bị đóng băng (frozen).`, 'success');
+        } else {
+          toast('Đã đóng kỳ thành công.', 'success');
+        }
+        await refreshPeriodMetadata();
+        router.refresh();
       } else {
         toast(result.error || 'Lỗi đóng kỳ', 'error');
       }
@@ -52,7 +61,9 @@ export default function PeriodActions() {
     }
   };
 
-  const handlePeriodSuccess = () => {
+  const handlePeriodSuccess = async (periodId: string) => {
+    // Land the newly created Active period and sync cookie/provider/server props.
+    await refreshPeriodMetadata(periodId);
     router.refresh();
   };
 
@@ -73,6 +84,7 @@ export default function PeriodActions() {
       const result = await deleteEvaluationPeriod(currentPeriod.id);
       if (result.success) {
         toast(`Đã xóa Kỳ ${currentPeriod.year} thành công.`, 'success');
+        await refreshPeriodMetadata();
         router.refresh();
       } else {
         toast(result.error || 'Không thể xóa kỳ.', 'error');

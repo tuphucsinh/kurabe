@@ -1,0 +1,41 @@
+{
+  "task": "P107M1T07",
+  "title": "Return/resubmit snapshots and resident period coherence (N1/N2/N6/L5)",
+  "migration": "supabase/migrations/20261008000300_p107_lifecycle_coherence.sql",
+  "periodRefreshAction": "getPeriodMetadataAction",
+  "scenarios": {
+    "v1ReturnV2Resubmit": {
+      "flow": "Employee",
+      "rounds": { "1": "SubLeader", "2": "Leader", "3": "Manager" },
+      "steps": [
+        { "action": "submit", "round": 1, "criteria": "C1", "grade": "G1", "createsNextRound": 2, "nextRoundPin": "C1" },
+        { "action": "return", "round": 2, "resetsReturnedRound": true, "clearsReturnedVersionPins": true },
+        { "action": "activateConfig", "criteria": "C2", "grade": "G2" },
+        { "action": "resubmit", "round": 1, "criteria": "C2", "grade": "G2", "expectation": "RECONCILED" }
+      ],
+      "expected": {
+        "conflictRaised": false,
+        "errorMarker": "CONFLICTING_NEXT_ROUND",
+        "nextRoundStatus": "NotStarted",
+        "nextRoundPin": "C2",
+        "historyImmutable": true
+      }
+    },
+    "genuineConcurrentEdit": {
+      "nextRoundStatus": "Draft",
+      "expected": { "conflictRaised": true, "errorMarker": "CONFLICTING_NEXT_ROUND" }
+    },
+    "closeWithUnfinished": {
+      "unfinishedCount": 2,
+      "expected": {
+        "closeAllowed": true,
+        "frozenIncomplete": true,
+        "frozenLabel": "data-period-frozen",
+        "excludedState": false,
+        "reopen": false
+      }
+    }
+  },
+  "transitionContextCleanup": { "everySuccessPath": true },
+  "epochProtection": { "olderResponseMustNeverOverwriteNewerEpoch": true }
+}

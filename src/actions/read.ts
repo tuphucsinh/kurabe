@@ -1,5 +1,6 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
@@ -132,6 +133,43 @@ export async function getPeriodsAction(): Promise<EvaluationPeriod[]> {
   const auth = await requireAuth();
   if (auth.error !== null) return [];
   return getPeriodsAdmin(auth.user);
+}
+
+export type PeriodMetadata = {
+  periods: EvaluationPeriod[];
+  activePeriod: EvaluationPeriod | null;
+  selectedPeriodId: string | null;
+  generatedAt: string;
+};
+
+/**
+ * One authenticated period-metadata refresh shared by create/close/delete-empty/
+ * select/login. Resolves the viewer's periods, the current Active period, and the
+ * period selected by the `selected_period_id` cookie in a single server call so
+ * the client can reconcile cookie + provider state + server props + scoped cache
+ * from the same server-truth snapshot (never an F5). Authorization is the same
+ * requireAuth used by every other reader; anonymous callers receive an empty,
+ * fail-closed snapshot.
+ */
+export async function getPeriodMetadataAction(): Promise<PeriodMetadata> {
+  const generatedAt = new Date().toISOString();
+  const auth = await requireAuth();
+  if (auth.error !== null || !auth.user) {
+    return { periods: [], activePeriod: null, selectedPeriodId: null, generatedAt };
+  }
+
+  const periods = await getPeriodsAdmin(auth.user);
+  const activePeriod = periods.find((period) => period.status === 'Active') ?? null;
+
+  let selectedPeriodId: string | null = null;
+  try {
+    const store = await cookies();
+    selectedPeriodId = store.get('selected_period_id')?.value ?? null;
+  } catch {
+    selectedPeriodId = null;
+  }
+
+  return { periods, activePeriod, selectedPeriodId, generatedAt };
 }
 
 export type PeriodProgressSummary = Record<string, { total: number; approved: number; pct: number }>;

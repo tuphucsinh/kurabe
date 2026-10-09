@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ChevronDown, Calendar, Check } from 'lucide-react';
 
 export default function PeriodSelector() {
-  const { currentPeriod, allPeriods, setCurrentPeriod } = useAuth();
+  const { currentPeriod, allPeriods, setCurrentPeriod, refreshPeriodMetadata } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -131,9 +131,10 @@ export default function PeriodSelector() {
                   type="button"
                   role="option"
                   aria-selected={isActive}
-                  onClick={() => {
+                  onClick={async () => {
                     setCurrentPeriod(period);
                     setIsOpen(false);
+                    await refreshPeriodMetadata(period.id);
                     router.refresh();
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all border-b border-white/5 last:border-0 ${

@@ -216,8 +216,19 @@ export async function createEvaluationPeriod(year: number) {
 
 /**
  * Đóng một kỳ đánh giá.
+ *
+ * L5 freeze policy: closing an Active period that still has unfinished rounds is
+ * allowed. The unfinished evaluations are frozen in place (no Excluded state and
+ * no reopen); `frozenIncomplete`/`unfinishedCount` let the UI show an explicit
+ * frozen label instead of implying every round was completed.
  */
-export async function closeEvaluationPeriod(periodId: string) {
+export async function closeEvaluationPeriod(periodId: string): Promise<{
+  success: boolean;
+  error?: string;
+  frozenIncomplete?: boolean;
+  unfinishedCount?: number;
+  countUnavailable?: boolean;
+}> {
   const auth = await requireManager();
   if (auth.error !== null) return { success: false, error: auth.error };
 
@@ -242,9 +253,31 @@ export async function closeEvaluationPeriod(periodId: string) {
       return { success: false, error: 'Kỳ đánh giá không tồn tại hoặc đã được đóng.' };
     }
 
+    // Count unfinished (non-Approved) evaluations AFTER the atomic close so the
+    // frozen label reflects exactly what was frozen. Count-only read; never loads
+    // round payloads. On a count error we must NOT coerce to 0: that would
+    // under-report a frozen close as a clean one, so surface an unknown state.
+    const { count: unfinishedCountResult, error: unfinishedCountError } = await supabaseAdmin
+      .from('evaluations')
+      .select('id', { count: 'exact', head: true })
+      .eq('period_id', periodId)
+      .neq('status', 'Approved');
+
+    const countUnavailable = unfinishedCountError !== null;
+    const unfinishedCount = countUnavailable ? undefined : (unfinishedCountResult ?? 0);
+
     revalidatePeriodPaths();
-    await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId);
-    return { success: true };
+    await logAudit(auth.user, 'CLOSE_PERIOD', 'period', periodId, {
+      unfinishedCount: unfinishedCount ?? null,
+      countUnavailable,
+    });
+    return {
+      success: true,
+      countUnavailable,
+      // Unknown count => unknown frozen state (never a false "clean" close).
+      frozenIncomplete: countUnavailable ? undefined : unfinishedCount! > 0,
+      unfinishedCount,
+    };
   } catch (err: unknown) {
     return { success: false, error: toClientError(err, 'Lỗi không xác định khi đóng kỳ đánh giá.') };
   }

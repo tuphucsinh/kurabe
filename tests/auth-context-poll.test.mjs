@@ -57,3 +57,48 @@ test('SCOPED_QUERY_FAMILIES still covers the pages that must clear on identity c
     assert.ok(families.includes(family), `family missing from set: ${family}`);
   }
 });
+
+test('background period-metadata convergence is storage/focus driven and epoch guarded', () => {
+  // A second tab converges on the shared period cookie via the `storage` event.
+  assert.match(source, /window\.addEventListener\('storage', onStorage\)/);
+  assert.match(source, /event\.key !== null && event\.key !== 'selected_period_id'/);
+  assert.match(source, /maybeRefreshPeriodMetadata\(true\)/);
+  // The background path never clears caches before the answer arrives (no blink).
+  const maybe = source.match(/const maybeRefreshPeriodMetadata[\s\S]*?\}, \[refreshPeriodMetadata\]\);/);
+  assert.ok(maybe, 'maybeRefreshPeriodMetadata callback not found');
+  assert.doesNotMatch(maybe[0], /clearBeforeRender/);
+  // Same monotonic epoch guard as the mutation path.
+  assert.match(source, /const requestEpoch = periodEpochRef\.current \+ 1;/);
+  assert.match(source, /if \(requestEpoch !== periodEpochRef\.current\) return;/);
+});
+
+test('cross-tab/focus convergence revalidates RSC server props, never on ordinary poll ticks', () => {
+  // The convergence path revalidates the app-router server-prop snapshot so a
+  // second tab's RSC props do not stay stale until a manual navigation.
+  assert.match(source, /import \{ useRouter \} from 'next\/navigation';/);
+  assert.match(source, /const router = useRouter\(\);/);
+
+  // Only the cross-tab/focus convergence callback opts into server-prop revalidation.
+  const maybe = source.match(/const maybeRefreshPeriodMetadata[\s\S]*?\}, \[refreshPeriodMetadata\]\);/);
+  assert.ok(maybe, 'maybeRefreshPeriodMetadata callback not found');
+  assert.match(maybe[0], /void refreshPeriodMetadata\(undefined, \{ revalidateServerProps: true \}\);/);
+  assert.equal(
+    (source.match(/revalidateServerProps: true/g) || []).length,
+    1,
+    'server-prop revalidation must be requested by exactly the convergence path',
+  );
+
+  // router.refresh() is guarded by the convergence flag and the monotonic epoch.
+  assert.match(source, /if \(revalidateServerProps\) router\.refresh\(\);/);
+  const guardAt = source.indexOf('if (requestEpoch !== periodEpochRef.current) return;');
+  const refreshAt = source.indexOf('if (revalidateServerProps) router.refresh();');
+  assert.ok(guardAt >= 0 && refreshAt > guardAt, 'server-prop revalidation must sit behind the epoch guard');
+
+  // The ordinary 30s poll tick must not invoke the period convergence or router.refresh.
+  const tick = source.match(/window\.setInterval\([^;]*\);/);
+  assert.ok(tick, 'poll interval not found');
+  assert.doesNotMatch(tick[0], /maybeRefreshPeriodMetadata|refreshPeriodMetadata|router\.refresh/);
+
+  // Plain callers (login here, plus the mutation/selection paths) do not request it.
+  assert.match(source, /await refreshPeriodMetadata\(savedPeriodId \?\? undefined\);/);
+});

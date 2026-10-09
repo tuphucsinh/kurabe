@@ -29,6 +29,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
     try {
       const result = await createEvaluationPeriod(year);
       if (result.success && result.periodId) {
+        // The parent (handlePeriodSuccess) performs the shared period refresh.
         onSuccess(result.periodId);
         onClose();
       } else {

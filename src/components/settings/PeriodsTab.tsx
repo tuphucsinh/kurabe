@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CalendarDays, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import PeriodActions from '@/components/dashboard/PeriodActions';
@@ -10,13 +11,18 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function PeriodsTab() {
-  const { allPeriods, currentPeriod, setCurrentPeriod, user } = useAuth();
+  const { allPeriods, currentPeriod, refreshPeriodMetadata, user } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [periodStats, setPeriodStats] = useState<PeriodProgressSummary | null>(null);
 
   // Light per-period aggregate (COUNT-only server query) — never loads the full
   // all-period evaluations/notes payload on the client. Async-only state updates
   // keep the effect free of synchronous setState cascades.
+  // Re-fetch the aggregate whenever the period set or any period status changes,
+  // so a resident close (refreshPeriodMetadata + router.refresh) surfaces the
+  // frozen label without a navigation/re-mount.
+  const periodsSignature = allPeriods.map((p) => `${p.id}:${p.status}`).join(',');
   useEffect(() => {
     if (!user) return;
     let active = true;
@@ -30,7 +36,7 @@ export default function PeriodsTab() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, periodsSignature]);
 
   const statsLoading = Boolean(user) && periodStats === null;
 
@@ -63,6 +69,10 @@ export default function PeriodsTab() {
             {allPeriods.map((period) => {
               const stat = (periodStats ?? {})[period.id] || { total: 0, approved: 0, pct: 0 };
               const isSelected = period.id === currentPeriod?.id;
+              // L5 freeze policy: a closed period may still hold unfinished rounds;
+              // surface an explicit frozen label instead of implying completion.
+              const unfinished = Math.max(0, stat.total - stat.approved);
+              const isFrozenClosed = period.status !== 'Active' && unfinished > 0;
 
               return (
                 <div
@@ -82,7 +92,7 @@ export default function PeriodsTab() {
                   </div>
 
                   {/* Cột 2: Badge status */}
-                  <div className="min-w-0 sm:min-w-[100px]">
+                  <div className="min-w-0 sm:min-w-[100px] flex items-center gap-2 flex-wrap">
                     <span
                       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                         period.status === 'Active'
@@ -102,6 +112,15 @@ export default function PeriodsTab() {
                         </>
                       )}
                     </span>
+                    {isFrozenClosed && (
+                      <span
+                        data-period-frozen="true"
+                        title={`${unfinished} phiếu chưa hoàn tất đã bị đóng băng`}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700"
+                      >
+                        Frozen ({unfinished})
+                      </span>
+                    )}
                   </div>
 
                   {/* Cột 3: Tiến độ */}
@@ -126,8 +145,11 @@ export default function PeriodsTab() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => {
-                          setCurrentPeriod(period);
+                        onClick={async () => {
+                          // Cookie reconciles inside the shared refresh, so only
+                          // refresh the server props after it resolves.
+                          await refreshPeriodMetadata(period.id);
+                          router.refresh();
                           toast('Đã chọn kỳ ' + period.year, 'success');
                         }}
                         className="px-4 py-2 text-sm font-semibold text-brand bg-brand-soft rounded-lg hover:bg-brand/10 transition"

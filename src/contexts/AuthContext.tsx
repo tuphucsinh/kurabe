@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, EvaluationPeriod, ViewerScope } from '@/types';
 import { loginAction, logoutAction } from '@/actions/auth';
-import { getCurrentUserAction, getPeriodsAction, getViewerScopeAction } from '@/actions/read';
+import { getCurrentUserAction, getPeriodsAction, getPeriodMetadataAction, getViewerScopeAction } from '@/actions/read';
 
 interface AuthContextType {
   user: User | null;
@@ -21,6 +22,14 @@ interface AuthContextType {
   allPeriods: EvaluationPeriod[];
   setCurrentPeriod: (period: EvaluationPeriod) => void;
   refreshViewerScope: (options?: { clearBeforeRender?: boolean }) => Promise<ViewerScope | null>;
+  /**
+   * One authenticated period-metadata refresh shared by create/close/delete-empty/
+   * select/login. Reconciles the selected cookie, the provider state and the
+   * server props and invalidates the period-scoped cache, all guarded by an
+   * epoch so a late response can never overwrite newer period state.
+   */
+  refreshPeriodMetadata: (preferredPeriodId?: string) => Promise<void>;
+  periodEpoch: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,11 +68,49 @@ const scopeFingerprint = (user: User | null, viewerScope: ViewerScope | null): s
   ]);
 };
 
+// Cache families that depend on the selected period. A period mutation refreshes
+// provider metadata and invalidates exactly these scoped keys (never a global
+// cache), then lets the server props re-render via router.refresh().
+const PERIOD_SCOPED_QUERY_FAMILIES = new Set([
+  'periods',
+  'active-period',
+  'evaluations',
+  'evaluation-display',
+  'evaluation-page-data',
+  'evaluation-compare-page-data',
+  'employees-page-data',
+  'teams-page-data',
+]);
+
+const isPeriodScopedQuery = ({ queryKey }: { queryKey: readonly unknown[] }) => (
+  typeof queryKey[0] === 'string' && PERIOD_SCOPED_QUERY_FAMILIES.has(queryKey[0])
+);
+
+/**
+ * Resolve the selected period from a fresh server snapshot: an explicit
+ * preference wins, then the cookie value, then the Active period, then the newest
+ * period. Returns null only when the viewer has no periods at all.
+ */
+const resolveSelectedPeriod = (
+  periods: EvaluationPeriod[],
+  preferredPeriodId?: string | null,
+): EvaluationPeriod | null => {
+  if (preferredPeriodId) {
+    const preferred = periods.find((period) => period.id === preferredPeriodId);
+    if (preferred) return preferred;
+  }
+  return periods.find((period) => period.status === 'Active') ?? periods[0] ?? null;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  // App-router refresh: the convergence path re-runs the RSC tree so a second
+  // tab's server-prop snapshot catches up with the reconciled period cookie.
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [viewerScope, setViewerScope] = useState<ViewerScope | null>(null);
   const [scopeEpoch, setScopeEpoch] = useState(0);
+  const [periodEpoch, setPeriodEpoch] = useState(0);
   const [currentPeriod, setCurrentPeriodState] = useState<EvaluationPeriod | null>(null);
   const [allPeriods, setAllPeriods] = useState<EvaluationPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,6 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const scopeRequestRef = useRef<Promise<ViewerScope | null> | null>(null);
   const authGenerationRef = useRef(0);
   const lastScopeRefreshAtRef = useRef(0);
+  const lastPeriodRefreshAtRef = useRef(0);
+  // Monotonic epoch for period-metadata refreshes. Every refresh issues the next
+  // epoch and only applies its response while it is still the newest one, so a
+  // slow/older response can never overwrite newer period state.
+  const periodEpochRef = useRef(0);
 
   const clearScopedQueries = useCallback(async () => {
     await queryClient.cancelQueries({ predicate: isScopedQuery });
@@ -144,24 +196,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshViewerScope();
   }, [refreshViewerScope]);
 
+  // Period metadata is a different identity axis from the viewer scope: a period
+  // mutation (create/close/delete-empty) or a period selection changes the cookie,
+  // the provider period objects and the server props, but never the viewer scope
+  // fingerprint. This single shared refresh reconciles all of them from one
+  // authenticated server snapshot.
+  const refreshPeriodMetadata = useCallback(async (
+    preferredPeriodId?: string,
+    // Only the background cross-tab/focus convergence path opts into the RSC
+    // server-prop revalidation; mutation/selection/login callers reconcile the
+    // client state and let their own navigation/refresh follow.
+    { revalidateServerProps = false }: { revalidateServerProps?: boolean } = {},
+  ): Promise<void> => {
+    const activeUserId = userRef.current?.id;
+    if (!activeUserId) return;
+
+    lastPeriodRefreshAtRef.current = Date.now();
+    const requestEpoch = periodEpochRef.current + 1;
+    periodEpochRef.current = requestEpoch;
+
+    try {
+      const metadata = await getPeriodMetadataAction();
+
+      // Late-response guard: a newer refresh (or an identity change) wins; an
+      // older response is discarded rather than overwriting newer period state.
+      if (requestEpoch !== periodEpochRef.current) return;
+      if (userRef.current?.id !== activeUserId) return;
+
+      const periods = metadata.periods ?? [];
+      const target = resolveSelectedPeriod(periods, preferredPeriodId ?? metadata.selectedPeriodId);
+
+      setAllPeriods(periods);
+      setCurrentPeriodState(target);
+
+      // Reconcile the selected cookie with the resolved provider state so the
+      // server props (which read the same cookie) agree with the client.
+      if (target) {
+        localStorage.setItem('selected_period_id', target.id);
+        document.cookie = `selected_period_id=${target.id}; path=/; max-age=31536000`;
+      } else {
+        localStorage.removeItem('selected_period_id');
+        document.cookie = 'selected_period_id=; path=/; max-age=0';
+      }
+
+      setPeriodEpoch((epoch) => epoch + 1);
+      queryClient.invalidateQueries({ predicate: isPeriodScopedQuery });
+
+      // Convergence-only server-prop revalidation: once the cookie/provider state
+      // are reconciled above, re-run the RSC tree so a second tab's stale
+      // server-prop snapshot catches up without a manual navigation. It sits
+      // behind the SAME epoch guard, so a late/older response can never refresh
+      // over newer state, and it is requested only by the cross-tab/focus path —
+      // never by the ordinary poll tick or the mutation/login callers.
+      if (revalidateServerProps) router.refresh();
+    } catch (error) {
+      console.error('Error refreshing period metadata:', error);
+    }
+  }, [queryClient, router]);
+
+  // Background/focus convergence for period metadata (same identity axis, same
+  // 30s throttle style as the viewer-scope poll). `force` is used for a discrete
+  // cross-tab signal (the `storage` event) so a hidden second tab still converges;
+  // it never clears caches before the answer arrives (no blanking, no global cache).
+  const maybeRefreshPeriodMetadata = useCallback((force = false) => {
+    if (typeof document === 'undefined' || !userRef.current) return;
+    if (!force) {
+      if (document.visibilityState !== 'visible') return;
+      // Skip the very first focus/visibility signal after mount: the page was just
+      // server-rendered with current props, and an immediate router.refresh() aborts
+      // the in-flight RSC stream ("destination stream closed early"), leaving the
+      // route stuck on its static frame. Only a genuine return to the tab, after at
+      // least one completed refresh, asks for the server props again.
+      if (lastPeriodRefreshAtRef.current === 0) return;
+      if (Date.now() - lastPeriodRefreshAtRef.current < 30_000) return;
+    }
+    // Focus/pageshow/visibilitychange/storage convergence asks the shared refresh
+    // to also revalidate the RSC server props; the 30s throttle and the epoch
+    // guard keep this off ordinary poll ticks.
+    void refreshPeriodMetadata(undefined, { revalidateServerProps: true });
+  }, [refreshPeriodMetadata]);
+
   useEffect(() => {
     if (!isInitialized) return undefined;
-    const onFocus = () => maybeRefreshViewerScope();
-    const onPageShow = () => maybeRefreshViewerScope();
+    const onFocus = () => {
+      maybeRefreshViewerScope();
+      maybeRefreshPeriodMetadata();
+    };
+    const onPageShow = () => {
+      maybeRefreshViewerScope();
+      maybeRefreshPeriodMetadata();
+    };
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') maybeRefreshViewerScope();
+      if (document.visibilityState === 'visible') {
+        maybeRefreshViewerScope();
+        maybeRefreshPeriodMetadata();
+      }
+    };
+    // Cross-tab convergence: a period mutation/selection in another tab writes the
+    // shared `selected_period_id` cookie/localStorage, which fires `storage` here.
+    // Without this, a second tab's allPeriods/currentPeriod stay stale until a
+    // manual reload. The same monotonic epoch guard rejects any late response.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== 'selected_period_id') return;
+      maybeRefreshPeriodMetadata(true);
     };
     window.addEventListener('focus', onFocus);
     window.addEventListener('pageshow', onPageShow);
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('storage', onStorage);
     const interval = window.setInterval(maybeRefreshViewerScope, 30_000);
     return () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('storage', onStorage);
       window.clearInterval(interval);
     };
-  }, [isInitialized, maybeRefreshViewerScope]);
+  }, [isInitialized, maybeRefreshViewerScope, maybeRefreshPeriodMetadata]);
 
   useEffect(() => {
     async function loadAuth() {
@@ -238,13 +389,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('auth_user_id', res.user.id);
 
     const resolvedScope = await refreshViewerScope();
-    const periods = resolvedScope ? await getPeriodsAction() : [];
-    const savedPeriodId = localStorage.getItem('selected_period_id');
-    const targetPeriod = periods.find((period) => period.id === savedPeriodId)
-      || periods.find((period) => period.status === 'Active')
-      || periods[0];
-    setAllPeriods(periods);
-    setCurrentPeriodState(targetPeriod || null);
+    if (resolvedScope) {
+      // Shared authenticated period refresh: resolves periods/Active/selected and
+      // reconciles cookie + provider state + scoped cache for the new identity.
+      const savedPeriodId = localStorage.getItem('selected_period_id');
+      await refreshPeriodMetadata(savedPeriodId ?? undefined);
+    } else {
+      setAllPeriods([]);
+      setCurrentPeriodState(null);
+    }
     return res.user;
   };
 
@@ -288,6 +441,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       allPeriods,
       setCurrentPeriod,
       refreshViewerScope,
+      refreshPeriodMetadata,
+      periodEpoch,
     }}>
       {children}
     </AuthContext.Provider>
