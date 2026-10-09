@@ -700,7 +700,7 @@ DoD:
 - `node scripts/verify-release.mjs --suite p107-qualification --tier authenticated` PASS on the frozen candidate locally, and the CI run for the published commit is green.
 - No product/policy change; no waiver; production writes/migrations 0/0.
 
-### [ ] [#P107M1T11b] CI qualification lane: non-/tmp runtime root for the browser producer
+### [x] [#P107M1T11b] CI qualification lane: non-/tmp runtime root for the browser producer
 
 ```yaml
 task:
