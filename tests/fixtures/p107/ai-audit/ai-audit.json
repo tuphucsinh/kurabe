@@ -1,0 +1,73 @@
+{
+  "period": { "id": "period-p107-t08", "name": "Kỳ P107-T08", "year": 2026 },
+  "users": [
+    { "id": "u-approved-1", "employeeCode": "NV-A1", "name": "Trần Văn An", "role": "Employee", "teamId": "t1" },
+    { "id": "u-approved-2", "employeeCode": "NV-A2", "name": "Lê Thị Bình", "role": "Employee", "teamId": "t1" },
+    { "id": "u-approved-3", "employeeCode": "NV-A3", "name": "Phạm Văn Cường", "role": "Worker", "teamId": "t1" },
+    { "id": "u-draft", "employeeCode": "NV-D1", "name": "Đỗ Thị Dung", "role": "Employee", "teamId": "t1" },
+    { "id": "u-submitted", "employeeCode": "NV-S1", "name": "Hoàng Văn Sơn", "role": "Worker", "teamId": "t1" },
+    { "id": "u-noevaluation", "employeeCode": "NV-NOEVAL", "name": "Bùi Văn Không", "role": "Employee", "teamId": "t1" }
+  ],
+  "criteriaGroups": [
+    {
+      "id": "grp-A",
+      "criteria": [
+        { "id": "c1", "code": "A1", "name": "Kỷ luật", "levels": [{ "points": 20, "label": "Tối đa" }] },
+        { "id": "c2", "code": "B1", "name": "Hợp tác", "levels": [{ "points": 20, "label": "Tối đa" }] }
+      ]
+    }
+  ],
+  "evaluations": [
+    {
+      "id": "ev-a1",
+      "employeeId": "u-approved-1",
+      "employeeRole": "Employee",
+      "status": "Approved",
+      "finalScore": 90,
+      "finalGrade": "A",
+      "rounds": [
+        { "round": 1, "status": "Submitted", "totalScore": 80, "grade": "A", "comment": "Vòng 1 ổn định", "scores": { "c1": 20, "c2": 20 }, "selectedLevelIndexes": { "c1": 0, "c2": 0 } }
+      ]
+    },
+    {
+      "id": "ev-a2",
+      "employeeId": "u-approved-2",
+      "employeeRole": "Employee",
+      "status": "Approved",
+      "finalScore": 0,
+      "finalGrade": "D",
+      "rounds": [
+        { "round": 1, "status": "Submitted", "totalScore": 0, "grade": "D", "comment": "", "scores": { "c1": 0, "c2": 0 }, "selectedLevelIndexes": { "c1": 0, "c2": 0 } }
+      ]
+    },
+    {
+      "id": "ev-a3",
+      "employeeId": "u-approved-3",
+      "employeeRole": "Worker",
+      "status": "Approved",
+      "finalScore": 50,
+      "finalGrade": "B",
+      "rounds": [
+        { "round": 1, "status": "Submitted", "totalScore": 50, "grade": "B", "comment": "Cần cải thiện", "scores": { "c1": 10, "c2": 10 }, "selectedLevelIndexes": { "c1": 0, "c2": 0 } }
+      ]
+    },
+    {
+      "id": "ev-d1",
+      "employeeId": "u-draft",
+      "employeeRole": "Employee",
+      "status": "Draft",
+      "rounds": [
+        { "round": 1, "status": "Draft", "totalScore": 95, "grade": "S", "comment": "DRAFT-SECRET-COMMENT-MUST-NOT-REACH-PROMPT", "scores": { "c1": 20, "c2": 20 }, "selectedLevelIndexes": { "c1": 0, "c2": 0 } }
+      ]
+    },
+    {
+      "id": "ev-s1",
+      "employeeId": "u-submitted",
+      "employeeRole": "Worker",
+      "status": "Submitted",
+      "rounds": [
+        { "round": 1, "status": "Submitted", "totalScore": 85, "grade": "A", "comment": "SUBMITTED-COMMENT-MUST-NOT-REACH-PROMPT", "scores": { "c1": 15, "c2": 15 }, "selectedLevelIndexes": { "c1": 0, "c2": 0 } }
+      ]
+    }
+  ]
+}

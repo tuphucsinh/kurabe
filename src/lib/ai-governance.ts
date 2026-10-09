@@ -50,6 +50,114 @@ export const MAX_AI_QUESTION_CHARS = 1000;
 /** Sanity ceiling for a QAQC evaluation total score (real bands are far lower). */
 export const MAX_AI_RESULT_SCORE = 1000;
 
+/**
+ * P107M1T08 — bounded AI chunk governance (cost bound, NOT a quota policy).
+ * A batch AI request may never process more than MAX_AI_CHUNK_LIMIT items, may
+ * never address an offset beyond MAX_AI_CHUNK_OFFSET, and may never run more
+ * than MAX_AI_CHUNK_CONCURRENCY provider calls at the same time. The existing
+ * quota window/limits/unit are intentionally unchanged.
+ */
+export const MAX_AI_CHUNK_LIMIT = 5;
+export const MAX_AI_CHUNK_OFFSET = 100_000;
+export const MAX_AI_CHUNK_CONCURRENCY = 2;
+
+/**
+ * P107M1T08 — bounded wall-clock budget for a single chunk provider call.
+ * A provider call that outlives this budget is a DISTINCT terminal outcome
+ * ('timeout'), never folded into a generic provider failure. A caller may only
+ * SHORTEN its own budget (see parseAiProviderTimeout); the ceiling is fixed.
+ */
+export const MAX_AI_CHUNK_PROVIDER_TIMEOUT_MS = 30_000;
+export const MIN_AI_CHUNK_PROVIDER_TIMEOUT_MS = 1;
+
+export type AIProviderCallResult<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'timeout' }
+  | { status: 'canceled' };
+
+/**
+ * Clamp an optional caller-supplied provider timeout into the bounded range
+ * [MIN_AI_CHUNK_PROVIDER_TIMEOUT_MS, MAX_AI_CHUNK_PROVIDER_TIMEOUT_MS].
+ * Malformed/absent values fall back to the maximum, so the bound can never be
+ * widened by a caller — only shortened.
+ */
+export function parseAiProviderTimeout(value: unknown): number {
+  if (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= MIN_AI_CHUNK_PROVIDER_TIMEOUT_MS &&
+    value <= MAX_AI_CHUNK_PROVIDER_TIMEOUT_MS
+  ) {
+    return value;
+  }
+  return MAX_AI_CHUNK_PROVIDER_TIMEOUT_MS;
+}
+
+/**
+ * Run one provider call under a bounded wall-clock timeout and an optional
+ * cancellation signal, returning a DISTINCT terminal outcome:
+ * - 'timeout'  — the wall-clock budget elapsed before usable output;
+ * - 'canceled' — the caller signal aborted (or the provider raised an
+ *   AbortError) before usable output;
+ * - 'ok'       — the provider settled within budget.
+ * Non-abort provider rejections propagate, so the caller keeps classifying a
+ * genuine failure itself. This wraps exactly one provider call inside an
+ * existing concurrency slot, so the active-work bound is unchanged.
+ */
+export async function runProviderCallBounded<T>(
+  factory: (signal: AbortSignal) => Promise<T>,
+  opts: { timeoutMs: number; signal?: AbortSignal }
+): Promise<AIProviderCallResult<T>> {
+  const external = opts.signal;
+  if (external?.aborted) {
+    return { status: 'canceled' };
+  }
+
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+  if (external) {
+    external.addEventListener('abort', onExternalAbort, { once: true });
+  }
+
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, opts.timeoutMs);
+
+  // Sync throws from the factory become rejections; callSettled observes both
+  // settlements so nothing can surface as an unhandled rejection later.
+  const call = Promise.resolve().then(() => factory(controller.signal));
+  const callSettled = call.then(
+    (value) => ({ ok: true as const, value }),
+    (error) => ({ ok: false as const, error })
+  );
+
+  const ABORTED = Symbol('aborted');
+  const aborted = new Promise<typeof ABORTED>((resolve) => {
+    controller.signal.addEventListener('abort', () => resolve(ABORTED), { once: true });
+  });
+
+  try {
+    const outcome = await Promise.race([callSettled, aborted]);
+    if (outcome === ABORTED) {
+      return timedOut ? { status: 'timeout' } : { status: 'canceled' };
+    }
+    if (outcome.ok) {
+      return { status: 'ok', value: outcome.value };
+    }
+    const error = outcome.error as { name?: unknown } | null;
+    if (error && error.name === 'AbortError') {
+      return { status: 'canceled' };
+    }
+    throw outcome.error;
+  } finally {
+    clearTimeout(timer);
+    if (external) external.removeEventListener('abort', onExternalAbort);
+  }
+}
+
 export interface AIHistoryMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -359,6 +467,60 @@ export function toAIPseudonym(id: string, employeeCode?: string | null): string 
     return `NV-${id.slice(0, 8)}`;
   }
   return 'NV-unknown';
+}
+
+/**
+ * Validates batch chunk bounds without enumerating any target.
+ * offset MUST be a finite integer in [0, MAX_AI_CHUNK_OFFSET]; limit MUST be a
+ * finite integer in [1, MAX_AI_CHUNK_LIMIT] (default MAX_AI_CHUNK_LIMIT).
+ * Rejects NaN, ±Infinity, fractions, negatives, over-cap and non-numbers so a
+ * malformed request can never widen the cost of a batch.
+ */
+export type AIChunkBounds =
+  | { ok: true; offset: number; limit: number }
+  | { ok: false; reason: 'invalid_offset' | 'invalid_limit' };
+
+function isFiniteInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value);
+}
+
+export function parseAiChunkBounds(input: { offset?: unknown; limit?: unknown }): AIChunkBounds {
+  const rawLimit = input.limit === undefined || input.limit === null ? MAX_AI_CHUNK_LIMIT : input.limit;
+  if (!isFiniteInteger(rawLimit) || rawLimit < 1 || rawLimit > MAX_AI_CHUNK_LIMIT) {
+    return { ok: false, reason: 'invalid_limit' };
+  }
+  if (!isFiniteInteger(input.offset) || input.offset < 0 || input.offset > MAX_AI_CHUNK_OFFSET) {
+    return { ok: false, reason: 'invalid_offset' };
+  }
+  return { ok: true, offset: input.offset, limit: rawLimit };
+}
+
+/**
+ * Runs `worker` over `items` keeping at most `bound` calls active at any moment.
+ * Results preserve input order. A non-positive/non-integer bound is clamped to 1
+ * so the active-work ceiling is never removed by a bad caller value.
+ */
+export async function runBoundedConcurrency<T, R>(
+  items: readonly T[],
+  bound: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  const limit = isFiniteInteger(bound) && bound >= 1 ? bound : 1;
+  let cursor = 0;
+  const run = async (): Promise<void> => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await worker(items[index], index);
+    }
+  };
+  const runners: Promise<void>[] = [];
+  for (let i = 0; i < Math.min(limit, items.length); i += 1) {
+    runners.push(run());
+  }
+  await Promise.all(runners);
+  return results;
 }
 
 /**

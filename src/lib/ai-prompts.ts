@@ -1,6 +1,19 @@
 // Helper thuần (KHÔNG phải server action) — prompt soạn thông báo kết quả cá nhân hóa.
 // Tách khỏi actions/ai.ts vì file 'use server' không được export hàm non-async (Turbopack).
 import type { AIPayloadCoverage } from '@/lib/ai-governance';
+import {
+  boundAIText,
+  MAX_AI_COMMENT_CHARS,
+  MAX_AI_CRITERIA_FIELD_CHARS,
+  MAX_AI_CRITERIA_ITEMS,
+  MAX_AI_EMPLOYEE_CODE_CHARS,
+  MAX_AI_GRADE_CHARS,
+  MAX_AI_NAME_CHARS,
+  MAX_AI_NOTE_CHARS,
+  MAX_AI_PERIOD_NAME_CHARS,
+  MAX_AI_PREVIOUS_COMMENTS_ITEMS,
+  MAX_AI_ROLE_CHARS,
+} from '@/lib/ai-governance';
 
 export interface ResultPromptInput {
   employeeCode: string;
@@ -20,30 +33,48 @@ export interface ResultPromptInput {
  * Xây dựng prompt soạn thông báo kết quả cá nhân hóa (dùng chung cho đơn lẻ & hàng loạt).
  */
 export function buildResultPrompt(input: ResultPromptInput): string {
+  // P107M1T08: minimize/pseudonymize prompt content — bound every free-text and
+  // identity field deterministically before it reaches the provider payload.
+  const employeeCode = boundAIText(input.employeeCode, MAX_AI_EMPLOYEE_CODE_CHARS);
+  const role = boundAIText(input.role, MAX_AI_ROLE_CHARS);
+  const periodName = boundAIText(input.periodName, MAX_AI_PERIOD_NAME_CHARS);
+  const grade = boundAIText(input.grade, MAX_AI_GRADE_CHARS);
+  const notesSummary = boundAIText(input.notesSummary, MAX_AI_NOTE_CHARS);
+  const summaryNotes = boundAIText(input.summaryNotes, MAX_AI_NOTE_CHARS);
+
   const detailText = input.criteriaDetail.length
     ? input.criteriaDetail
+        .slice(0, MAX_AI_CRITERIA_ITEMS)
         .filter((c) => c.points !== 0)
-        .map((c) => `- ${c.code} ${c.name}: ${c.points} điểm (${c.levelLabel || ''})`)
+        .map((c) => {
+          const code = boundAIText(c.code, MAX_AI_CRITERIA_FIELD_CHARS);
+          const name = boundAIText(c.name, MAX_AI_CRITERIA_FIELD_CHARS);
+          const levelLabel = boundAIText(c.levelLabel, MAX_AI_CRITERIA_FIELD_CHARS);
+          return `- ${code} ${name}: ${c.points} điểm (${levelLabel || ''})`;
+        })
         .join('\n')
     : 'không có chi tiết';
   const prevText = input.previousComments.length
-    ? input.previousComments.map((c, i) => `- Vòng ${i + 1}: ${c}`).join('\n')
+    ? input.previousComments
+        .slice(0, MAX_AI_PREVIOUS_COMMENTS_ITEMS)
+        .map((c, i) => `- Vòng ${i + 1}: ${boundAIText(c, MAX_AI_COMMENT_CHARS)}`)
+        .join('\n')
     : 'không có';
   // Tên cá nhân hóa: lấy TÊN CUỐI (vd "Hoàng Thị Trang" → "Trang"); fallback "Nhân viên"
-  const firstName = input.name ? input.name.trim().split(/\s+/).pop() || '' : '';
+  const firstName = input.name ? boundAIText(input.name, MAX_AI_NAME_CHARS).trim().split(/\s+/).pop() || '' : '';
 
   const coverageNotice = input.payloadCoverage?.truncated
     ? `\n- PHẠM VI DỮ LIỆU: ${input.payloadCoverage.coverageLabel}. Không được khẳng định đã xem toàn bộ dữ liệu.\n`
     : '';
 
-  return `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${input.employeeCode}, vai trò ${input.role}, kỳ ${input.periodName}):${coverageNotice}
-- Tổng điểm: ${input.totalScore}, xếp loại: ${input.grade}
+  return `Dữ liệu kết quả đánh giá QAQC (ẩn danh hóa — mã NV ${employeeCode}, vai trò ${role}, kỳ ${periodName}):${coverageNotice}
+- Tổng điểm: ${input.totalScore}, xếp loại: ${grade}
 - CHI TIẾT TIÊU CHUẨN VÒNG CUỐI (mã A* = Kỷ luật, E* = Năng lực, F* = Thành tích/quản lý):
 ${detailText}
-${input.notesSummary ? `- GHI CHÚ QUAN TRỌNG: ${input.notesSummary}` : ''}
+${notesSummary ? `- GHI CHÚ QUAN TRỌNG: ${notesSummary}` : ''}
 - NHẬN XÉT CÁC VÒNG TRƯỚC (tham khảo nếu có — các vòng do NHỮNG NGƯỜI ĐÁNH GIÁ KHÁC NHAU chấm, KHÔNG so sánh tiến bộ/lùi):
 ${prevText}
-- Nhận xét tổng hợp: ${input.summaryNotes || 'không có'}
+- Nhận xét tổng hợp: ${summaryNotes || 'không có'}
 
 MẪU PHONG CÁCH (chỉ THAM KHẢO CÁCH VIẾT — không sao chép nội dung):
 "Kỳ này ${firstName || 'anh/chị'} hoàn thành tốt vai trò dẫn dắt: việc bố trí nhân sự và đào tạo người mới đi vào nề nếp, kíp ít khi bị động khi có người nghỉ. Cần lưu ý thêm khâu kiểm tra sau khi giao việc để tránh sót chi tiết. Tiếp tục phát huy năng lực quản lý và chú trọng kiểm tra sau khi giao việc."

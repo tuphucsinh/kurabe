@@ -127,9 +127,14 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
     let offset = 0;
     const limit = 5;
     const allGeneratedMap = new Map<string, { message?: string; ok: boolean; error?: string; coverageLabel?: string }>();
+    // P107M1T08: hard bound on the client batch loop so a stalled/odd server
+    // response can never drive an unbounded run of chunk (and thus provider) work.
+    const MAX_BATCH_ITERATIONS = 1000;
+    let iterations = 0;
 
     try {
-      while (true) {
+      while (iterations < MAX_BATCH_ITERATIONS) {
+        iterations += 1;
         const res = await generateResultMessagesChunkAction({
           periodId,
           offset,
@@ -180,7 +185,7 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
           );
         }
 
-        if (res.done || !res.nextOffset || (res.total && res.nextOffset >= res.total)) {
+        if (res.done || !res.nextOffset || res.nextOffset <= offset || (res.total && res.nextOffset >= res.total)) {
           break;
         }
 

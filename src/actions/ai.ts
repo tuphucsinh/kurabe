@@ -14,9 +14,18 @@ import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
-import { detectPromptInjection, boundAIText, boundAITextWithMeta, MAX_AI_PROMPT_CHARS, type AIPayloadCoverage } from '@/lib/ai-governance';
+import { detectPromptInjection, boundAIText, boundAITextWithMeta, parseAiChunkBounds, parseAiProviderTimeout, runBoundedConcurrency, runProviderCallBounded, MAX_AI_PROMPT_CHARS, MAX_AI_CHUNK_CONCURRENCY, type AIPayloadCoverage } from '@/lib/ai-governance';
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
+
+/** P107M1T08: single non-enumerating response for an invalid batch request. */
+const AI_CHUNK_INVALID_REQUEST = 'Yêu cầu không hợp lệ.';
+
+/**
+ * P107M1T08: single response for both out-of-scope and not-found targets so a
+ * caller cannot use response differences to enumerate what exists.
+ */
+const AI_TARGET_NOT_FOUND = 'Không tìm thấy dữ liệu đánh giá hợp lệ.';
 
 function aiError(): { error: string } {
   return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
@@ -88,21 +97,26 @@ export async function draftResultMessageAction(input: {
     .select('id, name, year')
     .order('year', { ascending: false });
   const period = (visiblePeriods || []).find((candidate) => `${candidate.name} (${candidate.year})` === input.periodName);
-  if (!period) return { error: 'Không tìm thấy kỳ đánh giá hợp lệ.' };
+  if (!period) return { error: AI_TARGET_NOT_FOUND };
   const [evaluations, users, criteriaGroups] = await Promise.all([
     getEvaluationsByPeriodAdmin(period.id, auth.user),
     getUsersAdmin(auth.user),
     getAllCriteriaGroups(),
   ]);
   const employee = users.find((candidate) => candidate.employeeCode === input.employeeCode);
-  const evaluation = employee ? evaluations.find((candidate) => candidate.employeeId === employee.id) : undefined;
-  if (!employee || !evaluation) return { error: 'Không tìm thấy dữ liệu đánh giá hợp lệ.' };
+  // P107M1T08: same Approved-only server-side projection as the batch path — a
+  // Draft/Submitted evaluation's comment/notes must NEVER reach the provider
+  // prompt. Out-of-scope / not-found / not-Approved share one safe response.
+  const evaluation = employee
+    ? evaluations.find((candidate) => candidate.employeeId === employee.id && candidate.status === 'Approved')
+    : undefined;
+  if (!employee || !evaluation) return { error: AI_TARGET_NOT_FOUND };
 
   const rounds = evaluation.rounds || [];
   const lastRound =
     [...rounds].sort((a, b) => b.round - a.round).find((round) => (round.totalScore || 0) > 0) ||
     rounds[rounds.length - 1];
-  if (!lastRound) return { error: 'Phiếu đánh giá chưa có dữ liệu để soạn thông báo.' };
+  if (!lastRound) return { error: AI_TARGET_NOT_FOUND };
 
   const allCriteria = criteriaGroups.flatMap((group) => group.criteria);
   const criteriaDetail = allCriteria
@@ -158,7 +172,7 @@ export async function draftResultMessageAction(input: {
 export async function saveResultMessageAction(input: {
   evaluationId: string;
   message: string;
-}): Promise<{ ok?: boolean; error?: string }> {
+}): Promise<{ ok?: boolean; auditRecorded?: boolean; error?: string }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
 
@@ -181,7 +195,11 @@ export async function saveResultMessageAction(input: {
     revalidatePath(`/evaluations/${input.evaluationId}`);
     revalidatePath('/dashboard');
 
-    await logAudit(
+    // P107M1T08: the business mutation above already committed. The audit write
+    // is reported separately (auditRecorded) and MUST NOT turn this into a
+    // retry-able business failure, and MUST NOT trigger a silent re-run of the
+    // update. logAudit never throws and emits its own redacted diagnostics.
+    const audit = await logAudit(
       auth.user,
       'SAVE_RESULT_MESSAGE',
       'evaluation',
@@ -189,41 +207,84 @@ export async function saveResultMessageAction(input: {
       { messageLength: input.message?.length || 0 }
     );
 
-    return { ok: true };
+    return { ok: true, auditRecorded: audit.ok };
   } catch (err: unknown) {
     return { error: toClientError(err, 'Lỗi không xác định khi lưu thông báo kết quả.') };
   }
 }
+
+export type AIChunkItemOutcome =
+  | 'ok'
+  | 'provider-failure'
+  | 'governance-reject'
+  /** P107M1T08: the provider call outlived the bounded wall-clock budget. */
+  | 'timeout'
+  /** P107M1T08: the caller canceled the request before usable output. */
+  | 'canceled'
+  | 'error';
 
 export interface GenerateResultChunkItem {
   evaluationId: string;
   message?: string;
   ok: boolean;
   error?: string;
+  /** P107M1T08: machine-readable terminal outcome for this row. */
+  outcome: AIChunkItemOutcome;
   /** Coverage metadata for this row's payload — present when ok=true. */
   payloadCoverage?: AIPayloadCoverage;
 }
 
 /**
+ * P107M1T08: per-chunk cost record. The quota unit stays 1 reserved chunk
+ * request (unchanged billing unit); provider calls are recorded separately so a
+ * future per-item unit change can be gated explicitly (amendment + approval).
+ */
+export interface GenerateResultChunkCost {
+  chunkRequests: number;
+  providerCalls: number;
+  usableOutputs: number;
+}
+
+/**
  * Sinh thông báo kết quả hàng loạt theo từng chunk (Manager-only).
+ * P107M1T08: validates offset/limit BEFORE any work, caps provider concurrency
+ * to MAX_AI_CHUNK_CONCURRENCY, and returns the same non-enumerating response for
+ * an invalid request. Only Approved evaluations ever enter the prompt.
  */
 export async function generateResultMessagesChunkAction(input: {
   periodId: string;
   offset: number;
   limit?: number;
+  /**
+   * P107M1T08: optional provider wall-clock budget in ms. Clamped server-side to
+   * [1, MAX_AI_CHUNK_PROVIDER_TIMEOUT_MS] — a caller may only SHORTEN its own
+   * budget, never widen the bound. Used by programmatic callers deterministically;
+   * the browser client never sends it.
+   */
+  timeoutMs?: number;
+  /**
+   * P107M1T08: optional cancellation signal for programmatic/server-side callers.
+   * When it aborts, in-flight and pending provider calls yield the distinct
+   * 'canceled' terminal outcome. Never sent by the browser client.
+   */
+  signal?: AbortSignal;
 }): Promise<{
   items?: GenerateResultChunkItem[];
   nextOffset?: number;
   done?: boolean;
   total?: number;
+  cost?: GenerateResultChunkCost;
   error?: string;
 }> {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
   if (!isAIConfigured()) return { error: AI_NOT_CONFIGURED };
 
-  const limit = input.limit ?? 5;
-  const offset = Math.max(0, input.offset || 0);
+  // Reject NaN / ±Infinity / fraction / negative / over-cap / non-integer
+  // offset+limit BEFORE any DB read, quota reservation, or provider call.
+  const bounds = parseAiChunkBounds({ offset: input.offset, limit: input.limit });
+  if (!bounds.ok) return { error: AI_CHUNK_INVALID_REQUEST };
+  const { offset, limit } = bounds;
 
   try {
     const [evaluations, users, criteriaGroups] = await Promise.all([
@@ -245,7 +306,13 @@ export async function generateResultMessagesChunkAction(input: {
     const totalApproved = approvedEvals.length;
     const chunk = approvedEvals.slice(offset, offset + limit);
     if (chunk.length === 0) {
-      return { items: [], nextOffset: offset, done: true, total: totalApproved };
+      return {
+        items: [],
+        nextOffset: offset,
+        done: true,
+        total: totalApproved,
+        cost: { chunkRequests: 0, providerCalls: 0, usableOutputs: 0 },
+      };
     }
 
     const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generateResultMessagesChunk');
@@ -255,8 +322,19 @@ export async function generateResultMessagesChunkAction(input: {
     const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
     const criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
 
-    const items: GenerateResultChunkItem[] = await Promise.all(
-      chunk.map(async (ev) => {
+    // P107M1T08: record per-chunk/per-item cost without changing the quota unit.
+    let providerCalls = 0;
+    let usableOutputs = 0;
+
+    // P107M1T08: bounded provider wall-clock budget (clamped — a caller can only
+    // shorten its own budget). Distinct terminal outcomes for timeout/cancel.
+    const providerTimeoutMs = parseAiProviderTimeout(input.timeoutMs);
+
+    // Bound active provider work to MAX_AI_CHUNK_CONCURRENCY at any moment.
+    const items: GenerateResultChunkItem[] = await runBoundedConcurrency(
+      chunk,
+      MAX_AI_CHUNK_CONCURRENCY,
+      async (ev): Promise<GenerateResultChunkItem> => {
         try {
           // Server-resolved employee data: use DB record, not client-provided fields.
           const employee = userMap.get(ev.employeeId);
@@ -300,7 +378,7 @@ export async function generateResultMessagesChunkAction(input: {
 
           // Governance: fail-closed on injection in evaluator notes (server-side data).
           if (detectPromptInjection(rawNotesSummary) || detectPromptInjection(rawSummaryNotes)) {
-            return { evaluationId: ev.id, ok: false, error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
+            return { evaluationId: ev.id, ok: false, outcome: 'governance-reject', error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
           }
 
           const totalScore = ev.finalScore ?? lastRound?.totalScore ?? 0;
@@ -320,21 +398,44 @@ export async function generateResultMessagesChunkAction(input: {
             periodName,
           });
 
+          // Bound the prompt BEFORE the provider call (size bound, not quota).
           const bounded = boundAITextWithMeta(prompt, MAX_AI_PROMPT_CHARS, 'characters');
-          const message = await callAI(bounded.text, { maxTokens: 800, temperature: 0.7 });
+
+          // P107M1T08: run the provider call under a bounded wall-clock timeout
+          // with an optional cancellation signal, so a timeout / cancellation is
+          // a DISTINCT terminal outcome (never a generic provider failure).
+          const call = await runProviderCallBounded(
+            (signal) => {
+              providerCalls += 1;
+              const providerOpts = { maxTokens: 800, temperature: 0.7, signal };
+              return callAI(bounded.text, providerOpts);
+            },
+            { timeoutMs: providerTimeoutMs, signal: input.signal }
+          );
+
+          if (call.status === 'timeout') {
+            return { evaluationId: ev.id, ok: false, outcome: 'timeout', error: 'AI hết thời gian phản hồi' };
+          }
+          if (call.status === 'canceled') {
+            return { evaluationId: ev.id, ok: false, outcome: 'canceled', error: 'Yêu cầu soạn thông báo đã bị hủy' };
+          }
+
+          const message = call.value;
           if (message) {
-            return { evaluationId: ev.id, message, ok: true, payloadCoverage: bounded.coverageMeta };
+            usableOutputs += 1;
+            return { evaluationId: ev.id, message, ok: true, outcome: 'ok', payloadCoverage: bounded.coverageMeta };
           } else {
-            return { evaluationId: ev.id, ok: false, error: 'AI không phản hồi' };
+            return { evaluationId: ev.id, ok: false, error: 'AI không phản hồi', outcome: 'provider-failure' };
           }
         } catch (err) {
           return {
             evaluationId: ev.id,
             ok: false,
+            outcome: 'error',
             error: toClientError(err, 'Lỗi tạo thông báo'),
           };
         }
-      })
+      }
     );
 
     const nextOffset = offset + chunk.length;
@@ -345,6 +446,7 @@ export async function generateResultMessagesChunkAction(input: {
       nextOffset,
       done,
       total: totalApproved,
+      cost: { chunkRequests: 1, providerCalls, usableOutputs },
     };
   } catch (err: unknown) {
     return {
