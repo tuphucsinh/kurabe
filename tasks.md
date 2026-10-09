@@ -650,7 +650,7 @@ DoD:
 - This task owns harness/report ONLY. Material hot-path optimization requires amend owning task/scope and tier, baseline evidence, at most two bounded fixes, full affected correctness/review requalification. No hidden region/index/cache/service change; historical report isn't current candidate evidence.
 - Shared gates remain valid; machine ownership/headroom and cleanup read back. Network/console errors fatal except proven navigation cancel; production perf remains UNKNOWN.
 
-### [ ] [#P107M1T10] Integrated exact-candidate E2E and release readiness
+### [x] [#P107M1T10] Integrated exact-candidate E2E and release readiness
 
 ```yaml
 task:
