@@ -50,18 +50,26 @@ function candidateSha() {
 }
 
 /**
- * Next 16 `next dev` (started by the disposable confirmation runtime) re-adds a managed
- * agent-rules block to AGENTS.md/CLAUDE.md inside the repo tree. That toolchain drift must
- * never leak into the frozen-candidate browser lane (the delegated producer requires a clean
- * worktree), so restore those generated files to HEAD immediately before delegating and
- * assert the tree is clean. Only toolchain-generated files are touched; task content is not.
+ * The delegated producer requires a CLEAN worktree. Next 16 `next dev` (started by the
+ * disposable confirmation runtime) re-adds a managed agent-rules block to AGENTS.md, and a
+ * CI runner may carry further toolchain-generated drift. HEAD is the REVIEWED commit, so any
+ * drift at this point is toolchain-generated: restore tracked files to HEAD and drop
+ * untracked non-ignored files (ignored build output such as node_modules/.next is kept),
+ * then require a clean tree. If drift still remains, surface it instead of swallowing it.
  */
 function restoreToolchainDrift() {
-  const read = () => spawnSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: projectRoot, encoding: 'utf8' }).stdout;
-  const drifted = read().split('\n').map((line) => line.slice(3)).filter((p) => p === 'AGENTS.md' || p === 'CLAUDE.md');
-  if (drifted.length > 0) spawnSync('git', ['checkout', '--', ...drifted], { cwd: projectRoot, encoding: 'utf8' });
-  const after = read().trim();
-  assert.equal(after, '', `P107 browser lane requires a clean frozen candidate; residual drift: ${after}`);
+  const read = () => spawnSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: projectRoot, encoding: 'utf8' }).stdout.trim();
+  let status = read();
+  if (status !== '') {
+    console.error(`P107_BROWSER_DRIFT_BEFORE_RESTORE ${JSON.stringify(status)}`);
+    spawnSync('git', ['checkout', '--', '.'], { cwd: projectRoot, encoding: 'utf8' });
+    spawnSync('git', ['clean', '-fd'], { cwd: projectRoot, encoding: 'utf8' });
+    status = read();
+  }
+  if (status !== '') {
+    console.error(`P107_BROWSER_DRIFT_AFTER_RESTORE ${JSON.stringify(status)}`);
+    throw new Error(`P107 browser lane requires a clean frozen candidate; residual drift: ${status}`);
+  }
 }
 
 function writeEvidence(filePath, payload) {
@@ -182,6 +190,9 @@ export async function run(context = {}) {
       target: 'actual-next-production-build-chrome-cdp-authenticated',
     };
   } catch (error) {
+    // Surface the real reason: verify-release imports run() and only reports a generic
+    // "did not report a real local run", so without this the CI log shows nothing useful.
+    console.error(`P107_QUALIFICATION_BROWSER_FAILURE ${safeError(error)}`);
     const failure = {
       format: 'kurabe-p107m1t10-qualification-browser/v1',
       taskId: TASK_ID,

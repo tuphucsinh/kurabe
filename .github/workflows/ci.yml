@@ -84,6 +84,13 @@ jobs:
           node scripts/verify-release.mjs --suite confirmation-matrix --tier authenticated \
             --evidence "$RUNNER_TEMP/kurabe-confirmation-matrix.json"
 
+      - name: Report worktree status before the qualification lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "WORKTREE_STATUS_BEFORE_QUALIFICATION:"
+          git status --porcelain=v1 --untracked-files=all || true
+
       - name: Run integrated P107 qualification suite
         shell: bash
         env:
