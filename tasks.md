@@ -582,8 +582,15 @@ task:
     - tests/auth-context-poll.test.mjs
     - tests/p107-lifecycle-coherence.test.mjs
     - tests/fixtures/p107/lifecycle-coherence/
+    - src/hooks/use-evaluation-page-state.ts
+    - src/lib/evaluation-period-scope.ts
+    - src/lib/db/evaluation-period-scope-admin.ts
+    - src/app/evaluations/[id]/page.tsx
+    - tests/p107-evaluation-loading.test.mjs
   locks: [KURABE_SOURCE_CONTRACT, KURABE_SCHEMA_CONTRACT]
 ```
+
+Owns amendment 1 (2026-10-09): owner requests autonomous decision and completion after the browser blocker. Add only the evaluation hydration/scope seam above and a focused regression producer. Preserve existing task ID/tier/goal/DoD/DAG/locks; no waiver. Diagnose the actual loading gate and harness interference first; the previous static exclusions and React Query key hypothesis are not proof of a product defect. Change product source only when a reproducible trace demonstrates the cause. Preserve failed evidence; unique disposable run roots and exact process teardown are required. No push/deploy/production/paid application AI authority is added.
 
 Goal: N1/N2/N6/L5 eliminate stale provider period state and return/config/resubmit collision while preserving closed firewall and no-blink scope polling.
 Interface: authenticated period metadata refresh shared by create/close/delete-empty/select/login; reconcile selected cookie/provider/server props/scoped keys with late-response epoch protection. Active-only default detail/compare remains; explicit historical read separate.

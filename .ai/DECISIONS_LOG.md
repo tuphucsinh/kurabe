@@ -1,5 +1,12 @@
 # Decisions Log
 
+## P107M1T07 bounded loading-scope amendment — 2026-10-09
+
+- Owner: “tụ quyết định và làm hết đi” following T07 owns-amendment versus waiver question. Mika chooses actual acceptance repair, not waiver; remaining P107 serial queue and exact fresh CONTROLLED reviews retained. No push/deploy/production/paid application provider rollout.
+- Add `src/hooks/use-evaluation-page-state.ts`, `src/lib/evaluation-period-scope.ts`, `src/lib/db/evaluation-period-scope-admin.ts`, `src/app/evaluations/[id]/page.tsx`, and `tests/p107-evaluation-loading.test.mjs` to T07 owns. These are the smallest hydration/scope seam implicated by the observed static shell. Extra ownership permits diagnosis/fix, not a mandate to change all files.
+- Existing browser run at candidate `73d2dd70bc6bc459976d7f6eba5eb97e9d2eb454` failed the first five-role flow after 14 asserted cases. The previous finding that all possible in-owns defects were excluded was unsupported. Server payload success does not prove the hook read key, data/error state, or rendered props. Root cause remains UNKNOWN pending trace; test the diagnostic fetch wrapper and failed-runtime teardown before speculative cache edits.
+- Preserve original failures and task-owned delta. Reconcile/stop only exact owned browser process handles; do not reuse or delete the overwritten browser-run artifact root. New runs require unique artifact/profile roots and explicit resource ownership through teardown. Goal/DoD/DAG/tier/locks unchanged; no extra feature or framework.
+
 ## P107M1T06 owns amendment 1 — 2026-10-09
 
 - Runner (coder lane) reported `BLOCKED_SCOPE_CONFLICT` on P107M1T06 with zero writes: the goal requires the dashboard heavy public DTO to drop `rawEvaluations`/`rawCriteriaGroups`, but `src/components/charts/LazySkillGapRadar.tsx` forwards those raw props to `SkillGapRadar` and `tests/targeted-lazy-load.test.mjs` pins both the wrapper's raw prop contract (lines 84-88) and `DashboardHeavySection` rendering `<LazySkillGapRadar evaluations={data.rawEvaluations} criteriaGroups={data.rawCriteriaGroups} />` (lines 158-163). Mika independently verified both references by grep.
