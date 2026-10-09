@@ -631,7 +631,7 @@ DoD:
 - Returned error/thrown error both observable; committed-business outcome and audit diagnostic separate, no double-write on retry; token/hash/code/private text redacted.
 - Shared gates + fresh review. No quota redesign/new migration/paid traffic without scoped amendment+approval.
 
-### [ ] [#P107M1T09] Same-fixture performance measurement and bounded attribution
+### [x] [#P107M1T09] Same-fixture performance measurement and bounded attribution
 
 ```yaml
 task:
