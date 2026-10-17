@@ -35,11 +35,10 @@ import {
   upsertCriteriaGroupAction,
   upsertCriterionAction,
   updateDefaultLevelAction,
-  updateCriterionAudiencesAction
+  getCriteriaEditStateAction,
 } from '@/actions/criteria';
-import { CriterionAudience } from '@/lib/criteria-applicability';
 
-import { CriteriaGroup, Criterion, EvaluationDisplayDto, Team, User, ViewerScope } from '@/types';
+import { CriteriaGroup, Criterion, CriteriaSetKey, EvaluationDisplayDto, Team, User, ViewerScope } from '@/types';
 
 type ScopeQueryOptions = {
   viewerScope: ViewerScope | null;
@@ -410,11 +409,26 @@ export const useCriteria = () => {
   });
 };
 
+export const useCriteriaEditState = () => {
+  const { user } = useAuth();
+  const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
+  return useQuery({
+    queryKey: scopedKey('criteria-edit-state', [], user, viewerScope, scopeEpoch),
+    queryFn: async () => {
+      const res = await getCriteriaEditStateAction();
+      if (!res.success || !res.state) throw new Error(res.error || 'Lỗi khi kiểm tra trạng thái chỉnh sửa');
+      return res.state;
+    },
+    staleTime: 60 * 1000,
+    enabled: user != null && viewerScope != null,
+  });
+};
+
 export const useUpsertCriteriaGroup = () => {
   const queryClient = useQueryClient();
   const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: async ({ group, expectedVersion }: { group: Partial<CriteriaGroup>; expectedVersion?: number }) => {
+    mutationFn: async ({ group, expectedVersion }: { group: Partial<CriteriaGroup> & { setKey?: CriteriaSetKey | null }; expectedVersion?: number }) => {
       const res = await upsertCriteriaGroupAction(group, expectedVersion);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật nhóm tiêu chí');
       return res.group;
@@ -429,8 +443,8 @@ export const useDeleteCriteriaGroup = () => {
   const queryClient = useQueryClient();
   const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
-      const res = await deleteCriteriaGroupAction(id, expectedVersion);
+    mutationFn: async ({ id, expectedVersion, expectedSetKey }: { id: string; expectedVersion?: number; expectedSetKey: CriteriaSetKey }) => {
+      const res = await deleteCriteriaGroupAction(id, expectedVersion, expectedSetKey);
       if (!res.success) throw new Error(res.error || 'Lỗi khi xóa nhóm tiêu chí');
       return res;
     },
@@ -445,8 +459,8 @@ export const useUpsertCriterion = () => {
   const queryClient = useQueryClient();
   const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: async ({ criterion, groupId, expectedVersion }: { criterion: Partial<Criterion>; groupId: string; expectedVersion?: number }) => {
-      const res = await upsertCriterionAction(criterion, groupId, expectedVersion);
+    mutationFn: async ({ criterion, groupId, expectedVersion, expectedSetKey }: { criterion: Partial<Criterion> & { setKey?: CriteriaSetKey | null }; groupId: string; expectedVersion?: number; expectedSetKey?: CriteriaSetKey }) => {
+      const res = await upsertCriterionAction(criterion, groupId, expectedVersion, expectedSetKey);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật tiêu chí');
       return res.criterion;
     },
@@ -460,8 +474,8 @@ export const useDeleteCriterion = () => {
   const queryClient = useQueryClient();
   const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: async ({ id, expectedVersion }: { id: string; expectedVersion?: number }) => {
-      const res = await deleteCriterionAction(id, expectedVersion);
+    mutationFn: async ({ id, expectedVersion, expectedSetKey }: { id: string; expectedVersion?: number; expectedSetKey: CriteriaSetKey }) => {
+      const res = await deleteCriterionAction(id, expectedVersion, expectedSetKey);
       if (!res.success) throw new Error(res.error || 'Lỗi khi xóa tiêu chí');
       return res;
     },
@@ -476,24 +490,9 @@ export const useUpdateDefaultLevel = () => {
   const queryClient = useQueryClient();
   const requesterRef = useRequesterRef();
   return useMutation({
-    mutationFn: async ({ criterionId, levelIndex, expectedVersion }: { criterionId: string; levelIndex: number | null; expectedVersion?: number }) => {
-      const res = await updateDefaultLevelAction(criterionId, levelIndex, expectedVersion);
+    mutationFn: async ({ criterionId, levelIndex, expectedVersion, expectedSetKey }: { criterionId: string; levelIndex: number | null; expectedVersion?: number; expectedSetKey: CriteriaSetKey }) => {
+      const res = await updateDefaultLevelAction(criterionId, levelIndex, expectedVersion, expectedSetKey);
       if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật mức mặc định');
-      return res;
-    },
-    onSuccess: () => {
-      invalidateRequesterQueries(queryClient, 'criteria', requesterRef.current);
-    },
-  });
-};
-
-export const useUpdateCriterionAudiences = () => {
-  const queryClient = useQueryClient();
-  const requesterRef = useRequesterRef();
-  return useMutation({
-    mutationFn: async ({ criterionId, audiences, expectedVersion }: { criterionId: string; audiences: CriterionAudience[]; expectedVersion?: number }) => {
-      const res = await updateCriterionAudiencesAction(criterionId, audiences, expectedVersion);
-      if (!res.success) throw new Error(res.error || 'Lỗi khi cập nhật đối tượng áp dụng');
       return res;
     },
     onSuccess: () => {

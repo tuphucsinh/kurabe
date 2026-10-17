@@ -10,7 +10,7 @@ import { validateGradeBands, GradeBandsInput } from '@/lib/grade-bands-validate'
 import { saveGradeBands } from '@/actions/grade-bands';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useCriteria } from '@/hooks/use-db';
-import { CriterionAudience, mapRolesToAudiences } from '@/lib/criteria-applicability';
+import { CriterionAudience, mapRolesToAudiences, setKeyToAudience, isCriteriaSetKey } from '@/lib/criteria-applicability';
 
 const GROUP_LABEL: Record<'leader' | 'staff' | 'worker', string> = {
   leader: 'Quản lý (Leader/Manager/SubLeader)',
@@ -65,7 +65,10 @@ export default function GradeBandsTab() {
 
     for (const group of criteriaGroups) {
       for (const criterion of group.criteria || []) {
-        const audiences = mapRolesToAudiences(criterion.appliesTo || []);
+        const setKey = criterion.setKey || group.setKey;
+        const audiences: CriterionAudience[] = setKey && isCriteriaSetKey(setKey)
+          ? [setKeyToAudience(setKey)]
+          : mapRolesToAudiences(criterion.appliesTo || []);
         const validPoints = (criterion.levels || [])
           .map((l) => l.points)
           .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));

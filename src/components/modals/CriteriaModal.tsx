@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { Criterion, CriteriaGroup, CriteriaLevel } from '@/types';
+import { Criterion, CriteriaGroup, CriteriaLevel, CriteriaSetKey } from '@/types';
 import {
-  CriterionAudience,
-  CRITERION_AUDIENCES,
-  mapRolesToAudiences,
-  mapAudiencesToRoles
+  setKeyToAudience,
+  mapAudiencesToRoles,
 } from '@/lib/criteria-applicability';
 
 interface CriteriaModalProps {
@@ -17,95 +15,121 @@ interface CriteriaModalProps {
   criterion?: Criterion | null;
   groupId?: string;
   groups: CriteriaGroup[];
+  setKey?: CriteriaSetKey;
+  disabled?: boolean;
 }
 
-const AUDIENCE_OPTIONS: { id: CriterionAudience; label: string }[] = [
-  { id: 'management', label: 'Quản lý (QL)' },
-  { id: 'employee', label: 'Nhân viên (NV)' },
-  { id: 'worker', label: 'Công nhân (CN)' },
-];
+export default function CriteriaModal(props: CriteriaModalProps) {
+  if (!props.isOpen) return null;
 
-const DEFAULT_AUDIENCES: CriterionAudience[] = ['management', 'employee'];
+  const groupId = props.groupId
+    || props.groups.find((group) => group.criteria.some((item) => item.id === props.criterion?.id))?.id
+    || props.groups[0]?.id
+    || '';
 
-export default function CriteriaModal({ isOpen, onClose, onSave, criterion, groupId, groups }: CriteriaModalProps) {
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [idSuffix, setIdSuffix] = useState<string>('');
-  const [name, setName] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [selectedAudiences, setSelectedAudiences] = useState<CriterionAudience[]>(DEFAULT_AUDIENCES);
-  const [audienceError, setAudienceError] = useState<string | null>(null);
-  const [levels, setLevels] = useState<CriteriaLevel[]>([{ label: '', points: 0 }]);
+  return (
+    <CriteriaModalForm
+      {...props}
+      groupId={groupId}
+      key={JSON.stringify([props.criterion?.id ?? null, groupId, props.setKey ?? null])}
+    />
+  );
+}
 
-  useEffect(() => {
-    if (!isOpen) return;
+function CriteriaModalForm({
+  onClose,
+  onSave,
+  criterion,
+  groupId,
+  groups,
+  setKey,
+  disabled = false,
+}: Omit<CriteriaModalProps, 'isOpen'>) {
+  const [initial] = useState(() => {
+    const activeGroupId = groupId || groups[0]?.id || '';
+    const groupCode = groups.find((group) => group.id === activeGroupId)?.code || '';
+    const code = criterion?.code || '';
+    return {
+      groupId: activeGroupId,
+      suffix: groupCode && code.startsWith(groupCode) ? code.slice(groupCode.length) : code,
+      name: criterion?.name || '',
+      description: criterion?.description || '',
+      levels: criterion?.levels?.length
+        ? criterion.levels.map((level) => ({ ...level }))
+        : [{ label: '', points: 0 }],
+    };
+  });
+  const [selectedGroupId, setSelectedGroupId] = useState(initial.groupId);
+  const [idSuffix, setIdSuffix] = useState(initial.suffix);
+  const [name, setName] = useState(initial.name);
+  const [description, setDescription] = useState(initial.description);
+  const [levels, setLevels] = useState<CriteriaLevel[]>(initial.levels);
+  const initialGroupId = initial.groupId;
+  const initialSuffix = initial.suffix;
+  const initialName = initial.name;
+  const initialDescription = initial.description;
+  const initialLevels = initial.levels;
 
-    if (criterion) {
-      const activeGroup = groupId || groups.find(g => g.criteria.some(c => c.id === criterion.id))?.id || groups[0]?.id || '';
-      const activeGroupCode = groups.find(g => g.id === activeGroup)?.code || '';
-
-      let suffix = criterion.code || '';
-      if (activeGroupCode && suffix.startsWith(activeGroupCode)) {
-        suffix = suffix.slice(activeGroupCode.length);
-      }
-
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedGroupId(activeGroup);
-      setIdSuffix(suffix);
-      setName(criterion.name);
-      setDescription(criterion.description || '');
-
-      const mapped = criterion.appliesTo && criterion.appliesTo.length > 0
-        ? mapRolesToAudiences(criterion.appliesTo)
-        : DEFAULT_AUDIENCES;
-      setSelectedAudiences(mapped.length > 0 ? mapped : DEFAULT_AUDIENCES);
-      setAudienceError(null);
-
-      setLevels(criterion.levels && criterion.levels.length > 0
-        ? criterion.levels.map(l => ({ ...l }))
-        : [{ label: '', points: 0 }]);
-    } else {
-      setSelectedGroupId(groupId || groups[0]?.id || '');
-      setIdSuffix('');
-      setName('');
-      setDescription('');
-      setSelectedAudiences(DEFAULT_AUDIENCES);
-      setAudienceError(null);
-      setLevels([{ label: '', points: 0 }]);
-    }
-  }, [criterion, groupId, groups, isOpen]);
-
-  if (!isOpen) return null;
-
-  const toggleAudience = (aud: CriterionAudience) => {
-    setSelectedAudiences(prev => {
-      const next = prev.includes(aud)
-        ? prev.filter(a => a !== aud)
-        : CRITERION_AUDIENCES.filter(a => prev.includes(a) || a === aud);
-      if (next.length > 0) {
-        setAudienceError(null);
-      }
-      return next;
+  const isLevelsChanged = useMemo(() => {
+    if (levels.length !== initialLevels.length) return true;
+    return levels.some((l, idx) => {
+      const init = initialLevels[idx];
+      if (!init) return true;
+      return l.points !== init.points || l.label !== init.label || (l.description || '') !== (init.description || '');
     });
-  };
+  }, [levels, initialLevels]);
+
+  const isFormChanged = useMemo(() => {
+    if (!criterion) {
+      return name.trim().length > 0 && idSuffix.trim().length > 0 && levels.length > 0 && levels.every((l) => l.label.trim().length > 0);
+    }
+    const groupChanged = selectedGroupId !== initialGroupId;
+    const suffixChanged = idSuffix !== initialSuffix;
+    const nameChanged = name.trim() !== initialName.trim();
+    const descChanged = (description || '').trim() !== (initialDescription || '').trim();
+    return groupChanged || suffixChanged || nameChanged || descChanged || isLevelsChanged;
+  }, [criterion, name, idSuffix, levels, selectedGroupId, initialGroupId, initialSuffix, initialName, initialDescription, description, isLevelsChanged]);
+
+  const isValid = useMemo(() => {
+    const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+    if (!selectedGroup) return false;
+    const targetSet = setKey || selectedGroup.setKey || criterion?.setKey;
+    if (setKey && selectedGroup.setKey && selectedGroup.setKey !== setKey) return false;
+    if (targetSet && selectedGroup.setKey && selectedGroup.setKey !== targetSet) return false;
+
+    return (
+      idSuffix.trim() !== '' &&
+      name.trim() !== '' &&
+      levels.length > 0 &&
+      levels.every((l) => l.label.trim() !== '' && typeof l.points === 'number' && !Number.isNaN(l.points))
+    );
+  }, [selectedGroupId, groups, setKey, criterion?.setKey, idSuffix, name, levels]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (levels.length === 0) return;
-    if (selectedAudiences.length === 0) {
-      setAudienceError('Vui lòng chọn ít nhất một đối tượng áp dụng.');
-      return;
-    }
+    if (!isValid || !isFormChanged || disabled) return;
 
-    const selectedGroupCode = groups.find(g => g.id === selectedGroupId)?.code || '';
-    const roleAppliesTo = mapAudiencesToRoles(selectedAudiences);
+    const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+    if (!selectedGroup) return;
+    const targetSet = setKey || selectedGroup.setKey || criterion?.setKey || null;
+    if (setKey && selectedGroup.setKey && selectedGroup.setKey !== setKey) return;
+    if (targetSet && selectedGroup.setKey && selectedGroup.setKey !== targetSet) return;
+
+    const roleAppliesTo = targetSet ? mapAudiencesToRoles([setKeyToAudience(targetSet)]) : (criterion?.appliesTo || []);
 
     const newCriterion: Criterion = {
       id: criterion?.id || '',
-      code: selectedGroupCode + idSuffix,
-      name,
+      code: (selectedGroup.code || '') + idSuffix,
+      name: name.trim(),
+      description: description.trim(),
       appliesTo: roleAppliesTo,
       levels,
-      ...(description.trim() ? { description: description.trim() } : {})
+      setKey: targetSet,
+      defaultLevelIndex: criterion?.defaultLevelIndex,
+      weight: criterion?.weight ?? 0,
+      sortOrder: criterion?.sortOrder,
+      configVersion: criterion?.configVersion,
+      configVersionId: criterion?.configVersionId,
     };
 
     onSave(newCriterion, selectedGroupId);
@@ -141,6 +165,8 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
             {criterion ? 'Chỉnh sửa tiêu chuẩn' : 'Thêm tiêu chuẩn mới'}
           </h2>
           <button
+            type="button"
+            aria-label="Đóng"
             onClick={onClose}
             className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-muted transition-all"
           >
@@ -159,12 +185,13 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                   Nhóm
                 </label>
                 <select
+                  id="criteria-group"
                   required
                   className="w-full px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised"
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
                 >
-                  {groups.map(g => (
+                  {groups.map((g) => (
                     <option key={g.id} value={g.id}>[{g.code}] {g.name}</option>
                   ))}
                 </select>
@@ -176,9 +203,10 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                 </label>
                 <div className="relative w-full">
                   <span className="absolute left-0 inset-y-0 flex items-center font-bold text-ink-muted bg-surface-muted border border-r-0 border-outline-soft rounded-l-lg px-2 pointer-events-none select-none text-sm">
-                    {groups.find(g => g.id === selectedGroupId)?.code || ''}
+                    {groups.find((g) => g.id === selectedGroupId)?.code || ''}
                   </span>
                   <input
+                    id="criteria-code-suffix"
                     type="text"
                     required
                     pattern="\d+"
@@ -197,6 +225,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                 Tên TC
               </label>
               <input
+                id="criteria-name"
                 type="text"
                 required
                 className="flex-1 px-3 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none transition-all text-sm text-ink bg-surface-raised"
@@ -206,39 +235,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
               />
             </div>
 
-            {/* Row 3: Áp dụng (3 checkboxes) */}
-            <div className="flex items-start gap-2">
-              <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-3">
-                Áp dụng
-              </label>
-              <div className="flex-1">
-                <fieldset className="flex flex-wrap items-center gap-x-6 gap-y-2 border-0 p-0 m-0" aria-label="Đối tượng áp dụng">
-                  <legend className="sr-only">Đối tượng áp dụng</legend>
-                  {AUDIENCE_OPTIONS.map((opt) => {
-                    const checked = selectedAudiences.includes(opt.id);
-                    return (
-                      <label
-                        key={opt.id}
-                        className="min-h-[44px] inline-flex items-center gap-2.5 cursor-pointer select-none text-sm text-ink font-medium hover:text-ink transition-colors focus-within:ring-2 focus-within:ring-brand-soft rounded-lg px-2 py-1"
-                      >
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-outline-soft text-brand focus:ring-brand-soft focus:ring-2 cursor-pointer accent-brand"
-                          checked={checked}
-                          onChange={() => toggleAudience(opt.id)}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    );
-                  })}
-                </fieldset>
-                {audienceError && (
-                  <p className="text-xs text-rose-500 font-medium mt-1">{audienceError}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Row 4: Mô tả */}
+            {/* Row 3: Mô tả */}
             <div className="flex items-start gap-2">
               <label className="text-[11px] font-bold text-ink-muted uppercase tracking-wider whitespace-nowrap w-[72px] text-right shrink-0 pt-2">
                 Mô tả
@@ -271,6 +268,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                 {levels.map((level, idx) => (
                   <div key={idx} className="flex gap-2 items-center">
                     <input
+                      id={`criteria-level-label-${idx}`}
                       type="text"
                       required
                       placeholder="Mô tả mức (VD: Rất tốt, 1 lần...)"
@@ -280,11 +278,12 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
                     />
                     <div className="relative w-24">
                       <input
+                        id={`criteria-level-points-${idx}`}
                         type="number"
                         required
                         placeholder="Điểm"
                         className="w-full pl-3 pr-8 py-2 rounded-lg border border-outline-soft focus:border-brand focus:ring-2 focus:ring-brand-soft outline-none text-sm text-right font-mono text-ink bg-surface-raised"
-                        value={level.points === 0 && level.label === '' ? '' : level.points} // UX: allow empty initial state but required on submit
+                        value={level.points === 0 && level.label === '' ? '' : level.points}
                         onChange={(e) => updateLevel(idx, 'points', Number(e.target.value))}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-muted font-bold">pt</span>
@@ -317,7 +316,7 @@ export default function CriteriaModal({ isOpen, onClose, onSave, criterion, grou
           <button
             type="submit"
             form="criteria-form"
-            disabled={selectedAudiences.length === 0}
+            disabled={disabled || !isFormChanged || !isValid}
             className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-brand hover:bg-brand-strong shadow-md shadow-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {criterion ? 'Cập nhật' : 'Thêm mới'}

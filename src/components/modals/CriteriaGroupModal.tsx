@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Layers, Tag } from 'lucide-react';
-import { CriteriaGroup } from '@/types';
+import { CriteriaGroup, CriteriaSetKey } from '@/types';
 
 interface CriteriaGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (group: { id: string; code: string; name: string; shortName: string }) => void;
+  onSave: (group: { id: string; code: string; name: string; shortName: string; setKey?: CriteriaSetKey }) => void;
   group?: CriteriaGroup | null;
   existingGroupIds?: string[];
+  setKey?: CriteriaSetKey;
+  disabled?: boolean;
 }
 
 export default function CriteriaGroupModal({ 
@@ -17,13 +19,29 @@ export default function CriteriaGroupModal({
   onClose, 
   onSave, 
   group,
-  existingGroupIds = [] 
+  existingGroupIds = [],
+  setKey,
+  disabled = false,
 }: CriteriaGroupModalProps) {
-  // Init từ props + parent truyền key={group?.id ?? 'new'} để đổi đối tượng → remount (state reset)
   const [code, setCode] = useState(group?.code || '');
   const [name, setName] = useState(group?.name || '');
   const [shortName, setShortName] = useState(group?.shortName || '');
   const [error, setError] = useState('');
+
+  const initialCode = group?.code || '';
+  const initialName = group?.name || '';
+  const initialShortName = group?.shortName || '';
+
+  const isChanged = useMemo(() => {
+    if (!group) {
+      return code.trim().length > 0 && name.trim().length > 0;
+    }
+    return code !== initialCode || name.trim() !== initialName.trim() || shortName.trim() !== initialShortName.trim();
+  }, [group, code, name, shortName, initialCode, initialName, initialShortName]);
+
+  const isValid = useMemo(() => {
+    return code.length === 1 && /^[A-Z]$/.test(code) && name.trim().length > 0;
+  }, [code, name]);
 
   if (!isOpen) return null;
 
@@ -31,23 +49,26 @@ export default function CriteriaGroupModal({
     e.preventDefault();
     setError('');
 
+    if (disabled || !isChanged || !isValid) return;
+
     // Validate 1 uppercase char
     if (code.length !== 1 || !/^[A-Z]$/.test(code)) {
       setError('Mã nhóm phải là 1 ký tự chữ cái in hoa (A-Z).');
       return;
     }
 
-    // Validate unique on Add
+    // Validate unique on Add within active set
     if (!group && existingGroupIds.includes(code)) {
-      setError('Mã nhóm đã tồn tại.');
+      setError('Mã nhóm đã tồn tại trong bộ tiêu chí này.');
       return;
     }
 
     onSave({ 
-      id: group?.id || '', // UUID - giữ nguyên khi edit, rỗng khi add (Supabase tự gen)
+      id: group?.id || '',
       code,
       name: name.trim(), 
-      shortName: shortName.trim() || name.trim().split(' ')[0] 
+      shortName: shortName.trim() || name.trim().split(' ')[0],
+      setKey: setKey || (group?.setKey as CriteriaSetKey) || undefined,
     });
     onClose();
   };
@@ -150,7 +171,8 @@ export default function CriteriaGroupModal({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-brand hover:bg-brand-mid shadow-md shadow-brand/20 transition-all"
+              disabled={disabled || !isChanged || !isValid}
+              className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-brand hover:bg-brand-mid shadow-md shadow-brand/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {group ? 'Cập nhật' : 'Thêm mới'}
             </button>
