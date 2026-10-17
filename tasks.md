@@ -737,6 +737,7 @@ product/policy change; production writes/migrations 0/0.
 - Every code task: matching behavioural tests + wiring; `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build` (no `.env.local`), `node scripts/scan-source-secrets.mjs`, scope/diff checks. Exact-candidate checks are run by Mika. CONTROLLED tasks need a fresh selected-review PASS for that exact candidate.
 - DB work: one new migration only; never edit applied migrations. Disposable PostgreSQL / local Supabase stack, real RPCs, synthetic fixtures, exact run-owned cleanup with residue readback. No fake auth/API adapters, no disabled triggers.
 - Production access, credentials, deletion, push, deploy and import are **only** in P108M1T01 (read-only), P108M1T11 and P108M2T01, each behind explicit owner approval.
+- Push freeze: a push to `main` auto-deploys Vercel production. From the first P108 code commit on canonical `main` until T11 step 3 (migration applied and read back), `main` is not pushed, not even for control-only commits; otherwise the new app would run on the old schema, which is never tested.
 - Keep unchanged: negative points, arithmetic total, grade bands, P107 workflow and lifecycle, Approved-only results. KPI policy (D2) unchanged unless approved.
 - STOP: unresolved scope/consumer/catalog identity, unsigned business data needed for a DoD, failed rollback qualification, or any production need without approval. Preserve the first failure.
 
@@ -756,7 +757,7 @@ Changes (no product writes):
 - Repo inventory: every reader/writer/consumer of criteria, set, role snapshot and snapshot versions (starting from MASTER_PLAN P108.2); exact constraint/index names on criteria and version tables; callers of `draftResultMessageAction`.
 - Production read-only, aggregates and IDs only, owner-approved:
   - `server_version` and extensions; constraint/index inventory;
-  - effective privileges (`has_table_privilege`) of `anon`, `authenticated` and `service_role` on the four live and six version criteria tables; RLS flags, policies, triggers, function owners/SECURITY DEFINER; Auth signup setting;
+  - effective privileges (`has_table_privilege`) of `anon`, `authenticated` and `service_role` on the live criteria tables (`criteria_groups`, `criteria`, `criterion_levels`, `criterion_audiences`) and the version tables created in `20260907000600_criteria_config_version.sql:49-108`, including privileges inherited or granted to PUBLIC (with the actual grantee from the table ACL); RLS flags, policies, triggers, function owners/SECURITY DEFINER, RPC EXECUTE grants; Auth signup setting;
   - active criteria version (number, id, counts, codes, normalized duplicates) and empty groups in past versions;
   - periods (any `active`?) and rounds by version/status;
   - `evaluation_history_labels` and `evaluation_responses` counts; live grade bands vs set maxima (190/175/Worker TBD); migration ledger names;
@@ -782,17 +783,17 @@ task:
   locks: []
 ```
 
-Goal: deterministic, reviewable source manifest of 18 groups / 93 criteria from `TCDG2026.xls`, with every open business item explicit. Mika-run, because the workbook is anh-owned and untracked in the canonical root.
+Goal: deterministic, reviewable source manifest of 18 groups / 93 criteria from `TCDG2026.xls`, encoding anh's G1 answers.
+Execution (normal STANDARD path): dispatched only after anh's G1 answers are recorded in `.ai/DECISIONS_LOG.md`, and Mika copies those answers into the brief. Mika re-verifies the workbook SHA and gives the Runner the absolute read-only input path `/home/pi5/projects/kurabe/TCDG2026.xls`. The Runner reads it in place and never copies, moves, edits or commits it. Runner writes only `owns`; Mika verifies and integrates. Until then T03–T10 use the synthetic manifest.
 Changes:
 - Read-only extractor using the existing `xlsx` dependency. It verifies the workbook SHA and emits the manifest: set, doc code, group code/name, criterion code (letter + VI column-A number), VI label, JA label, source row, ordered levels (label, points), default level.
-- Manifest `open_items[]` covers every G1 question from MASTER_PLAN P108.1. Worker points are a derived **proposal**, marked unsigned.
-- No `-` is imported as a level without a per-criterion decision.
+- Every G1 item (MASTER_PLAN P108.1) is encoded exactly as answered, with the decision reference; nothing guessed. No `-` becomes a level without its per-criterion answer.
 - Every group, criterion and level carries a fixed UUIDv5 (RFC 9562, `node:crypto` SHA-1, no new dependency), using one namespace constant recorded in the manifest and the name `p108:<set>:group:<code>` / `p108:<set>:criterion:<code>` / `p108:<set>:level:<criterion code>:<sort index>`. Sets never share a UUID.
 DoD:
 - Extractor is deterministic (same SHA → same manifest bytes and UUIDs; a second run is byte-identical).
 - Test asserts: 6/6/6 groups; 33/30/30 criteria; Leader maximum 190; Staff maximum 175; unique codes per set; source-row provenance for every level.
-- Business sign-off recorded by Mika in `.ai/DECISIONS_LOG.md` with the manifest SHA; `signed: true` set only after that.
-STOP: sign-off missing ⇒ task stays open. T03–T10 use the synthetic manifest; T11 import is blocked.
+- Sign-off = anh confirms the verified manifest; Mika records its SHA-256 in `.ai/DECISIONS_LOG.md`. The manifest file itself carries no `signed` flag, so its bytes stay deterministic.
+STOP: G1 answers missing or ambiguous ⇒ not dispatched. T11 import is blocked until the manifest SHA is recorded.
 
 ### [ ] [#P108M1T03] DB contract: set_key schema, Active lock, writer RPC, rollback
 
@@ -819,10 +820,10 @@ Changes:
   - set rules; immutable set per UUID; server-derived audience; temp tables keyed by `(set_key, code)`;
   - canonical checksum + no-op on unchanged content.
 - Version row counts (`group/criterion/level/audience_count`, NULL for legacy) written by the save RPC.
-- Direct-write ACL: run negative tests for each role on the four live and six version criteria tables first. Revoke INSERT/UPDATE/DELETE/TRUNCATE only on the tables and roles where a write succeeds (selective, in this migration). No new trigger, no blanket revoke.
+- Direct-write ACL: first run negative tests for `anon`, `authenticated` and `service_role` against the live and version criteria tables, using effective privileges (inherited and PUBLIC included). Only where a write actually succeeds, revoke that DML from its actual grantee (the role, or PUBLIC) on that table, in this migration. No new trigger, no blanket revoke. If nothing succeeds, there is no ACL change.
 - Rollback artifact with (a) guarded revert-import and (b) schema rollback.
 - Update the existing `tests/integration/criteria-config.mjs` legacy payloads to the new contract; keep its stale/invalid/concurrency cases.
-Constraints: P107 writer untouched; diff replaced function bodies against `20260907000600_criteria_config_version.sql`; no `NOT VALID` check; grants unchanged.
+Constraints: P107 writer untouched; diff replaced function bodies against `20260907000600_criteria_config_version.sql`; no `NOT VALID` check; RPC EXECUTE grants unchanged (table DML only as above).
 DoD:
 - All schema/RPC and concurrency cases of MASTER_PLAN P108.6, on a disposable DB with two real connections and `pg_locks` wait proof.
 - Legacy catalog fixture: migration applies; legacy versions read unchanged; legacy duplicate active code rejected.
@@ -849,7 +850,7 @@ task:
 Goal: one auditable way to load a manifest through `save_criteria_config` (never direct INSERT).
 Changes:
 - Script modes: `--dry-run` (payload + per-set canonical hashes) and `--apply --expected-version N`.
-- `--apply` refuses: an unsigned manifest unless the target is a declared disposable DB; any `active` period; a CAS mismatch.
+- `--apply` refuses: a manifest whose SHA-256 differs from `--signed-sha` (supplied by Mika from `.ai/DECISIONS_LOG.md`), unless the target is a declared disposable DB; any `active` period; a CAS mismatch.
 - `--verify` reads back counts per set, canonical hashes, one audience per criterion, active version.
 - Credentials only from the existing env loading, never printed.
 DoD:
@@ -975,7 +976,7 @@ Changes:
 - Radar computed and shown per set.
 - Average, Top 5 and team average logic unchanged; when sets mix they are marked "not directly comparable across sets" (D2 pending). D3: no grade-version note unless approved.
 DoD:
-- Golden tests: Leader A vs Staff A never merged; Leader A version 1 vs version 2 never merged; legacy period numbers equal the baseline (added DTO fields allowed); counts, progress and grade distribution unchanged; radar per set.
+- Golden tests: Leader A vs Staff A never merged; Leader A version 1 vs version 2 never merged; legacy single-version period numbers equal the baseline (added DTO fields allowed); a legacy mixed-version fixture (criteria saved while a period was active, which was possible before P108) is split per version, and the golden test records old (merged) vs new (split) values. Stored scores, grades and snapshots are never changed; counts, progress and grade distribution unchanged; radar per set.
 - Root gates pass.
 Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
 
@@ -1024,13 +1025,14 @@ Goal: one exact integrated candidate proves every MASTER_PLAN P108.6 gate end to
 Changes:
 - The CI runtime can seed a three-set catalog via the import script.
 - The browser acceptance suite covers `/criteria` and all five roles.
-- Baseline state, old app + old schema + legacy catalog: record the golden report/history/score numbers that the later states must match.
+- Offline baseline app = `701256e` (P107 release, `.ai/DECISIONS_LOG.md` row 57; app source unchanged since then, only control documents). It is a source baseline, not a VERIFIED production SHA.
+- Baseline state, baseline app + old schema + legacy catalog: record the golden report/history/score numbers that the later states must match.
 - Pre-import compatibility matrix on a migrated, not-yet-imported disposable DB (legacy catalog fixture):
-  - deployed-SHA app (built in a disposable worktree) + new schema: login, evaluation Draft → Submit → Return → Approved, history, reports, export; criteria save rejected with zero mutation;
+  - baseline app (built in a disposable worktree) + new schema: login, evaluation Draft → Submit → Return → Approved, history, reports, export; criteria save rejected with zero mutation;
   - candidate app + new schema + legacy catalog: the same flows, plus `/criteria` read-only on the legacy catalog with Save blocked in UI and SQL;
   - candidate app after import → revert-import (a): legacy catalog flows still pass.
 - Target state, new app + new schema + P108 catalog (synthetic manifest): full acceptance suite, including legacy history, every role's P107 flow, AI prompt/export criteria, and UI + SQL rejection cases.
-- Isolated `npm run build` of both the deployed SHA and the candidate (build compatibility). Vercel deployment itself happens only in T11.
+- Isolated `npm run build` of both the baseline app and the candidate (build compatibility). Vercel deployment itself happens only in T11.
 - Catalog-size smoke with the existing perf harness.
 DoD:
 - Full gate set + browser + DB suites pass on the exact candidate; evidence bound to candidate/base/tree hashes.
@@ -1051,6 +1053,7 @@ task:
 
 Goal: execute MASTER_PLAN P108.5 exactly.
 Steps, each with its own approval:
+0. read-only: the running production deployment SHA (Vercel) and its app source. If it differs from the T10 baseline app, rerun the T10 old-app compatibility on that exact SHA before step 3;
 1. backup + restore proof;
 2. confirm no active period;
 3. migration by name + fingerprint readback;
