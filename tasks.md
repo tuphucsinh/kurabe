@@ -837,7 +837,9 @@ DoD:
 - Root gates pass.
 STOP: any preflight mismatch with T01 live facts ⇒ amend the plan before changing guards.
 
-### [ ] [#P108M1T04] Import mechanism + readback verifier
+### [x] [#P108M1T04] Import mechanism + readback verifier
+
+Local technical close: candidate `f45443787f295fd307f2f453b4a856333d68334e`; DB import 11 cases (18/93 synthetic, UUID/hash/readback/no-op/refusals), root 77/77, lint/typecheck/isolated build/secret scan/diff-check PASS. Fresh reviewer `reviewer/opencode-go/deepseek-v4.1-flash`, session `20261017_133526_7027c8`, checker PASS. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T04/candidate-gates/gates.json` SHA-256 `d3dd527724eb085548112e6e51ebf5a576358838903612da60c0815bd5bf9968`. G1/T02 business sign-off NOT_RUN; no business manifest approved; production/push/deploy = 0. Initial quality findings and raw snapshot retained.
 
 ```yaml
 task:
