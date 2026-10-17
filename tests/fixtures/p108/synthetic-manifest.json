@@ -1,0 +1,2901 @@
+{
+  "_metadata": {
+    "fixture_type": "SYNTHETIC",
+    "notice": "SYNTHETIC technical fixture, not business sign-off, no workbook data, no guessed Worker points",
+    "counts": {
+      "leader": {
+        "groups": 6,
+        "criteria": 33
+      },
+      "staff": {
+        "groups": 6,
+        "criteria": 30
+      },
+      "worker": {
+        "groups": 6,
+        "criteria": 30
+      },
+      "total_groups": 18,
+      "total_criteria": 93
+    }
+  },
+  "groups": [
+    {
+      "id": "10810000-0001-4000-8000-000000000001",
+      "set_key": "leader",
+      "code": "A",
+      "name": "Leader Group A (Synthetic)",
+      "short_name": "A",
+      "sort_order": 0,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000001",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A1",
+          "name": "LEADER Criterion A1 (Synthetic)",
+          "description": "Synthetic criterion A1 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000001",
+              "criterion_id": "10810000-0002-4000-8000-000000000001",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000002",
+              "criterion_id": "10810000-0002-4000-8000-000000000001",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000002",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A2",
+          "name": "LEADER Criterion A2 (Synthetic)",
+          "description": "Synthetic criterion A2 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000003",
+              "criterion_id": "10810000-0002-4000-8000-000000000002",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000004",
+              "criterion_id": "10810000-0002-4000-8000-000000000002",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000003",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A3",
+          "name": "LEADER Criterion A3 (Synthetic)",
+          "description": "Synthetic criterion A3 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000005",
+              "criterion_id": "10810000-0002-4000-8000-000000000003",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000006",
+              "criterion_id": "10810000-0002-4000-8000-000000000003",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000004",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A4",
+          "name": "LEADER Criterion A4 (Synthetic)",
+          "description": "Synthetic criterion A4 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000007",
+              "criterion_id": "10810000-0002-4000-8000-000000000004",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000008",
+              "criterion_id": "10810000-0002-4000-8000-000000000004",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000005",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A5",
+          "name": "LEADER Criterion A5 (Synthetic)",
+          "description": "Synthetic criterion A5 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000009",
+              "criterion_id": "10810000-0002-4000-8000-000000000005",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000010",
+              "criterion_id": "10810000-0002-4000-8000-000000000005",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000006",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A6",
+          "name": "LEADER Criterion A6 (Synthetic)",
+          "description": "Synthetic criterion A6 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 5,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000011",
+              "criterion_id": "10810000-0002-4000-8000-000000000006",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000012",
+              "criterion_id": "10810000-0002-4000-8000-000000000006",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000007",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A7",
+          "name": "LEADER Criterion A7 (Synthetic)",
+          "description": "Synthetic criterion A7 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 6,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000013",
+              "criterion_id": "10810000-0002-4000-8000-000000000007",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000014",
+              "criterion_id": "10810000-0002-4000-8000-000000000007",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000008",
+          "group_id": "10810000-0001-4000-8000-000000000001",
+          "set_key": "leader",
+          "code": "A8",
+          "name": "LEADER Criterion A8 (Synthetic)",
+          "description": "Synthetic criterion A8 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 7,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000015",
+              "criterion_id": "10810000-0002-4000-8000-000000000008",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000016",
+              "criterion_id": "10810000-0002-4000-8000-000000000008",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10810000-0001-4000-8000-000000000002",
+      "set_key": "leader",
+      "code": "B",
+      "name": "Leader Group B (Synthetic)",
+      "short_name": "B",
+      "sort_order": 1,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000009",
+          "group_id": "10810000-0001-4000-8000-000000000002",
+          "set_key": "leader",
+          "code": "B9",
+          "name": "LEADER Criterion B9 (Synthetic)",
+          "description": "Synthetic criterion B9 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000017",
+              "criterion_id": "10810000-0002-4000-8000-000000000009",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000018",
+              "criterion_id": "10810000-0002-4000-8000-000000000009",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000010",
+          "group_id": "10810000-0001-4000-8000-000000000002",
+          "set_key": "leader",
+          "code": "B10",
+          "name": "LEADER Criterion B10 (Synthetic)",
+          "description": "Synthetic criterion B10 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000019",
+              "criterion_id": "10810000-0002-4000-8000-000000000010",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000020",
+              "criterion_id": "10810000-0002-4000-8000-000000000010",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10810000-0001-4000-8000-000000000003",
+      "set_key": "leader",
+      "code": "C",
+      "name": "Leader Group C (Synthetic)",
+      "short_name": "C",
+      "sort_order": 2,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000011",
+          "group_id": "10810000-0001-4000-8000-000000000003",
+          "set_key": "leader",
+          "code": "C11",
+          "name": "LEADER Criterion C11 (Synthetic)",
+          "description": "Synthetic criterion C11 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000021",
+              "criterion_id": "10810000-0002-4000-8000-000000000011",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000022",
+              "criterion_id": "10810000-0002-4000-8000-000000000011",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000012",
+          "group_id": "10810000-0001-4000-8000-000000000003",
+          "set_key": "leader",
+          "code": "C12",
+          "name": "LEADER Criterion C12 (Synthetic)",
+          "description": "Synthetic criterion C12 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000023",
+              "criterion_id": "10810000-0002-4000-8000-000000000012",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000024",
+              "criterion_id": "10810000-0002-4000-8000-000000000012",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000013",
+          "group_id": "10810000-0001-4000-8000-000000000003",
+          "set_key": "leader",
+          "code": "C13",
+          "name": "LEADER Criterion C13 (Synthetic)",
+          "description": "Synthetic criterion C13 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000025",
+              "criterion_id": "10810000-0002-4000-8000-000000000013",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000026",
+              "criterion_id": "10810000-0002-4000-8000-000000000013",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000014",
+          "group_id": "10810000-0001-4000-8000-000000000003",
+          "set_key": "leader",
+          "code": "C14",
+          "name": "LEADER Criterion C14 (Synthetic)",
+          "description": "Synthetic criterion C14 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000027",
+              "criterion_id": "10810000-0002-4000-8000-000000000014",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000028",
+              "criterion_id": "10810000-0002-4000-8000-000000000014",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000015",
+          "group_id": "10810000-0001-4000-8000-000000000003",
+          "set_key": "leader",
+          "code": "C15",
+          "name": "LEADER Criterion C15 (Synthetic)",
+          "description": "Synthetic criterion C15 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000029",
+              "criterion_id": "10810000-0002-4000-8000-000000000015",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000030",
+              "criterion_id": "10810000-0002-4000-8000-000000000015",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10810000-0001-4000-8000-000000000004",
+      "set_key": "leader",
+      "code": "D",
+      "name": "Leader Group D (Synthetic)",
+      "short_name": "D",
+      "sort_order": 3,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000016",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D16",
+          "name": "LEADER Criterion D16 (Synthetic)",
+          "description": "Synthetic criterion D16 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000031",
+              "criterion_id": "10810000-0002-4000-8000-000000000016",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000032",
+              "criterion_id": "10810000-0002-4000-8000-000000000016",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000017",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D17",
+          "name": "LEADER Criterion D17 (Synthetic)",
+          "description": "Synthetic criterion D17 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000033",
+              "criterion_id": "10810000-0002-4000-8000-000000000017",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000034",
+              "criterion_id": "10810000-0002-4000-8000-000000000017",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000018",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D18",
+          "name": "LEADER Criterion D18 (Synthetic)",
+          "description": "Synthetic criterion D18 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000035",
+              "criterion_id": "10810000-0002-4000-8000-000000000018",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000036",
+              "criterion_id": "10810000-0002-4000-8000-000000000018",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000019",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D19",
+          "name": "LEADER Criterion D19 (Synthetic)",
+          "description": "Synthetic criterion D19 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000037",
+              "criterion_id": "10810000-0002-4000-8000-000000000019",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000038",
+              "criterion_id": "10810000-0002-4000-8000-000000000019",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000020",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D20",
+          "name": "LEADER Criterion D20 (Synthetic)",
+          "description": "Synthetic criterion D20 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000039",
+              "criterion_id": "10810000-0002-4000-8000-000000000020",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000040",
+              "criterion_id": "10810000-0002-4000-8000-000000000020",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000021",
+          "group_id": "10810000-0001-4000-8000-000000000004",
+          "set_key": "leader",
+          "code": "D21",
+          "name": "LEADER Criterion D21 (Synthetic)",
+          "description": "Synthetic criterion D21 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 5,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000041",
+              "criterion_id": "10810000-0002-4000-8000-000000000021",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000042",
+              "criterion_id": "10810000-0002-4000-8000-000000000021",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10810000-0001-4000-8000-000000000005",
+      "set_key": "leader",
+      "code": "E",
+      "name": "Leader Group E (Synthetic)",
+      "short_name": "E",
+      "sort_order": 4,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000022",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E22",
+          "name": "LEADER Criterion E22 (Synthetic)",
+          "description": "Synthetic criterion E22 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000043",
+              "criterion_id": "10810000-0002-4000-8000-000000000022",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000044",
+              "criterion_id": "10810000-0002-4000-8000-000000000022",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000023",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E23",
+          "name": "LEADER Criterion E23 (Synthetic)",
+          "description": "Synthetic criterion E23 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000045",
+              "criterion_id": "10810000-0002-4000-8000-000000000023",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000046",
+              "criterion_id": "10810000-0002-4000-8000-000000000023",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000024",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E24",
+          "name": "LEADER Criterion E24 (Synthetic)",
+          "description": "Synthetic criterion E24 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000047",
+              "criterion_id": "10810000-0002-4000-8000-000000000024",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000048",
+              "criterion_id": "10810000-0002-4000-8000-000000000024",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000025",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E25",
+          "name": "LEADER Criterion E25 (Synthetic)",
+          "description": "Synthetic criterion E25 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000049",
+              "criterion_id": "10810000-0002-4000-8000-000000000025",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000050",
+              "criterion_id": "10810000-0002-4000-8000-000000000025",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000026",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E26",
+          "name": "LEADER Criterion E26 (Synthetic)",
+          "description": "Synthetic criterion E26 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000051",
+              "criterion_id": "10810000-0002-4000-8000-000000000026",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000052",
+              "criterion_id": "10810000-0002-4000-8000-000000000026",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000027",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E27",
+          "name": "LEADER Criterion E27 (Synthetic)",
+          "description": "Synthetic criterion E27 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 5,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000053",
+              "criterion_id": "10810000-0002-4000-8000-000000000027",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000054",
+              "criterion_id": "10810000-0002-4000-8000-000000000027",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000028",
+          "group_id": "10810000-0001-4000-8000-000000000005",
+          "set_key": "leader",
+          "code": "E28",
+          "name": "LEADER Criterion E28 (Synthetic)",
+          "description": "Synthetic criterion E28 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 6,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000055",
+              "criterion_id": "10810000-0002-4000-8000-000000000028",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000056",
+              "criterion_id": "10810000-0002-4000-8000-000000000028",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10810000-0001-4000-8000-000000000006",
+      "set_key": "leader",
+      "code": "F",
+      "name": "Leader Group F (Synthetic)",
+      "short_name": "F",
+      "sort_order": 5,
+      "criteria": [
+        {
+          "id": "10810000-0002-4000-8000-000000000029",
+          "group_id": "10810000-0001-4000-8000-000000000006",
+          "set_key": "leader",
+          "code": "F29",
+          "name": "LEADER Criterion F29 (Synthetic)",
+          "description": "Synthetic criterion F29 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000057",
+              "criterion_id": "10810000-0002-4000-8000-000000000029",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000058",
+              "criterion_id": "10810000-0002-4000-8000-000000000029",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000030",
+          "group_id": "10810000-0001-4000-8000-000000000006",
+          "set_key": "leader",
+          "code": "F30",
+          "name": "LEADER Criterion F30 (Synthetic)",
+          "description": "Synthetic criterion F30 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000059",
+              "criterion_id": "10810000-0002-4000-8000-000000000030",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000060",
+              "criterion_id": "10810000-0002-4000-8000-000000000030",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000031",
+          "group_id": "10810000-0001-4000-8000-000000000006",
+          "set_key": "leader",
+          "code": "F31",
+          "name": "LEADER Criterion F31 (Synthetic)",
+          "description": "Synthetic criterion F31 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000061",
+              "criterion_id": "10810000-0002-4000-8000-000000000031",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000062",
+              "criterion_id": "10810000-0002-4000-8000-000000000031",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000032",
+          "group_id": "10810000-0001-4000-8000-000000000006",
+          "set_key": "leader",
+          "code": "F32",
+          "name": "LEADER Criterion F32 (Synthetic)",
+          "description": "Synthetic criterion F32 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000063",
+              "criterion_id": "10810000-0002-4000-8000-000000000032",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000064",
+              "criterion_id": "10810000-0002-4000-8000-000000000032",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10810000-0002-4000-8000-000000000033",
+          "group_id": "10810000-0001-4000-8000-000000000006",
+          "set_key": "leader",
+          "code": "F33",
+          "name": "LEADER Criterion F33 (Synthetic)",
+          "description": "Synthetic criterion F33 for set leader",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10810000-0003-4000-8000-000000000065",
+              "criterion_id": "10810000-0002-4000-8000-000000000033",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10810000-0003-4000-8000-000000000066",
+              "criterion_id": "10810000-0002-4000-8000-000000000033",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000001",
+      "set_key": "staff",
+      "code": "A",
+      "name": "Staff Group A (Synthetic)",
+      "short_name": "A",
+      "sort_order": 0,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000001",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A1",
+          "name": "STAFF Criterion A1 (Synthetic)",
+          "description": "Synthetic criterion A1 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000001",
+              "criterion_id": "10820000-0002-4000-8000-000000000001",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000002",
+              "criterion_id": "10820000-0002-4000-8000-000000000001",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000002",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A2",
+          "name": "STAFF Criterion A2 (Synthetic)",
+          "description": "Synthetic criterion A2 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000003",
+              "criterion_id": "10820000-0002-4000-8000-000000000002",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000004",
+              "criterion_id": "10820000-0002-4000-8000-000000000002",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000003",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A3",
+          "name": "STAFF Criterion A3 (Synthetic)",
+          "description": "Synthetic criterion A3 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000005",
+              "criterion_id": "10820000-0002-4000-8000-000000000003",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000006",
+              "criterion_id": "10820000-0002-4000-8000-000000000003",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000004",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A4",
+          "name": "STAFF Criterion A4 (Synthetic)",
+          "description": "Synthetic criterion A4 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000007",
+              "criterion_id": "10820000-0002-4000-8000-000000000004",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000008",
+              "criterion_id": "10820000-0002-4000-8000-000000000004",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000005",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A5",
+          "name": "STAFF Criterion A5 (Synthetic)",
+          "description": "Synthetic criterion A5 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000009",
+              "criterion_id": "10820000-0002-4000-8000-000000000005",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000010",
+              "criterion_id": "10820000-0002-4000-8000-000000000005",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000006",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A6",
+          "name": "STAFF Criterion A6 (Synthetic)",
+          "description": "Synthetic criterion A6 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 5,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000011",
+              "criterion_id": "10820000-0002-4000-8000-000000000006",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000012",
+              "criterion_id": "10820000-0002-4000-8000-000000000006",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000007",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A7",
+          "name": "STAFF Criterion A7 (Synthetic)",
+          "description": "Synthetic criterion A7 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 6,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000013",
+              "criterion_id": "10820000-0002-4000-8000-000000000007",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000014",
+              "criterion_id": "10820000-0002-4000-8000-000000000007",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000008",
+          "group_id": "10820000-0001-4000-8000-000000000001",
+          "set_key": "staff",
+          "code": "A8",
+          "name": "STAFF Criterion A8 (Synthetic)",
+          "description": "Synthetic criterion A8 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 7,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000015",
+              "criterion_id": "10820000-0002-4000-8000-000000000008",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000016",
+              "criterion_id": "10820000-0002-4000-8000-000000000008",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000002",
+      "set_key": "staff",
+      "code": "B",
+      "name": "Staff Group B (Synthetic)",
+      "short_name": "B",
+      "sort_order": 1,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000009",
+          "group_id": "10820000-0001-4000-8000-000000000002",
+          "set_key": "staff",
+          "code": "B9",
+          "name": "STAFF Criterion B9 (Synthetic)",
+          "description": "Synthetic criterion B9 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000017",
+              "criterion_id": "10820000-0002-4000-8000-000000000009",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000018",
+              "criterion_id": "10820000-0002-4000-8000-000000000009",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000010",
+          "group_id": "10820000-0001-4000-8000-000000000002",
+          "set_key": "staff",
+          "code": "B10",
+          "name": "STAFF Criterion B10 (Synthetic)",
+          "description": "Synthetic criterion B10 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000019",
+              "criterion_id": "10820000-0002-4000-8000-000000000010",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000020",
+              "criterion_id": "10820000-0002-4000-8000-000000000010",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000003",
+      "set_key": "staff",
+      "code": "C",
+      "name": "Staff Group C (Synthetic)",
+      "short_name": "C",
+      "sort_order": 2,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000011",
+          "group_id": "10820000-0001-4000-8000-000000000003",
+          "set_key": "staff",
+          "code": "C11",
+          "name": "STAFF Criterion C11 (Synthetic)",
+          "description": "Synthetic criterion C11 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000021",
+              "criterion_id": "10820000-0002-4000-8000-000000000011",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000022",
+              "criterion_id": "10820000-0002-4000-8000-000000000011",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000012",
+          "group_id": "10820000-0001-4000-8000-000000000003",
+          "set_key": "staff",
+          "code": "C12",
+          "name": "STAFF Criterion C12 (Synthetic)",
+          "description": "Synthetic criterion C12 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000023",
+              "criterion_id": "10820000-0002-4000-8000-000000000012",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000024",
+              "criterion_id": "10820000-0002-4000-8000-000000000012",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000013",
+          "group_id": "10820000-0001-4000-8000-000000000003",
+          "set_key": "staff",
+          "code": "C13",
+          "name": "STAFF Criterion C13 (Synthetic)",
+          "description": "Synthetic criterion C13 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000025",
+              "criterion_id": "10820000-0002-4000-8000-000000000013",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000026",
+              "criterion_id": "10820000-0002-4000-8000-000000000013",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000014",
+          "group_id": "10820000-0001-4000-8000-000000000003",
+          "set_key": "staff",
+          "code": "C14",
+          "name": "STAFF Criterion C14 (Synthetic)",
+          "description": "Synthetic criterion C14 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000027",
+              "criterion_id": "10820000-0002-4000-8000-000000000014",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000028",
+              "criterion_id": "10820000-0002-4000-8000-000000000014",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000015",
+          "group_id": "10820000-0001-4000-8000-000000000003",
+          "set_key": "staff",
+          "code": "C15",
+          "name": "STAFF Criterion C15 (Synthetic)",
+          "description": "Synthetic criterion C15 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000029",
+              "criterion_id": "10820000-0002-4000-8000-000000000015",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000030",
+              "criterion_id": "10820000-0002-4000-8000-000000000015",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000004",
+      "set_key": "staff",
+      "code": "D",
+      "name": "Staff Group D (Synthetic)",
+      "short_name": "D",
+      "sort_order": 3,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000016",
+          "group_id": "10820000-0001-4000-8000-000000000004",
+          "set_key": "staff",
+          "code": "D16",
+          "name": "STAFF Criterion D16 (Synthetic)",
+          "description": "Synthetic criterion D16 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000031",
+              "criterion_id": "10820000-0002-4000-8000-000000000016",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000032",
+              "criterion_id": "10820000-0002-4000-8000-000000000016",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000017",
+          "group_id": "10820000-0001-4000-8000-000000000004",
+          "set_key": "staff",
+          "code": "D17",
+          "name": "STAFF Criterion D17 (Synthetic)",
+          "description": "Synthetic criterion D17 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000033",
+              "criterion_id": "10820000-0002-4000-8000-000000000017",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000034",
+              "criterion_id": "10820000-0002-4000-8000-000000000017",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000018",
+          "group_id": "10820000-0001-4000-8000-000000000004",
+          "set_key": "staff",
+          "code": "D18",
+          "name": "STAFF Criterion D18 (Synthetic)",
+          "description": "Synthetic criterion D18 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000035",
+              "criterion_id": "10820000-0002-4000-8000-000000000018",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000036",
+              "criterion_id": "10820000-0002-4000-8000-000000000018",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000019",
+          "group_id": "10820000-0001-4000-8000-000000000004",
+          "set_key": "staff",
+          "code": "D19",
+          "name": "STAFF Criterion D19 (Synthetic)",
+          "description": "Synthetic criterion D19 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000037",
+              "criterion_id": "10820000-0002-4000-8000-000000000019",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000038",
+              "criterion_id": "10820000-0002-4000-8000-000000000019",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000020",
+          "group_id": "10820000-0001-4000-8000-000000000004",
+          "set_key": "staff",
+          "code": "D20",
+          "name": "STAFF Criterion D20 (Synthetic)",
+          "description": "Synthetic criterion D20 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000039",
+              "criterion_id": "10820000-0002-4000-8000-000000000020",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000040",
+              "criterion_id": "10820000-0002-4000-8000-000000000020",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000005",
+      "set_key": "staff",
+      "code": "E",
+      "name": "Staff Group E (Synthetic)",
+      "short_name": "E",
+      "sort_order": 4,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000021",
+          "group_id": "10820000-0001-4000-8000-000000000005",
+          "set_key": "staff",
+          "code": "E21",
+          "name": "STAFF Criterion E21 (Synthetic)",
+          "description": "Synthetic criterion E21 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000041",
+              "criterion_id": "10820000-0002-4000-8000-000000000021",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000042",
+              "criterion_id": "10820000-0002-4000-8000-000000000021",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000022",
+          "group_id": "10820000-0001-4000-8000-000000000005",
+          "set_key": "staff",
+          "code": "E22",
+          "name": "STAFF Criterion E22 (Synthetic)",
+          "description": "Synthetic criterion E22 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000043",
+              "criterion_id": "10820000-0002-4000-8000-000000000022",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000044",
+              "criterion_id": "10820000-0002-4000-8000-000000000022",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000023",
+          "group_id": "10820000-0001-4000-8000-000000000005",
+          "set_key": "staff",
+          "code": "E23",
+          "name": "STAFF Criterion E23 (Synthetic)",
+          "description": "Synthetic criterion E23 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000045",
+              "criterion_id": "10820000-0002-4000-8000-000000000023",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000046",
+              "criterion_id": "10820000-0002-4000-8000-000000000023",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000024",
+          "group_id": "10820000-0001-4000-8000-000000000005",
+          "set_key": "staff",
+          "code": "E24",
+          "name": "STAFF Criterion E24 (Synthetic)",
+          "description": "Synthetic criterion E24 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000047",
+              "criterion_id": "10820000-0002-4000-8000-000000000024",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000048",
+              "criterion_id": "10820000-0002-4000-8000-000000000024",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000025",
+          "group_id": "10820000-0001-4000-8000-000000000005",
+          "set_key": "staff",
+          "code": "E25",
+          "name": "STAFF Criterion E25 (Synthetic)",
+          "description": "Synthetic criterion E25 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000049",
+              "criterion_id": "10820000-0002-4000-8000-000000000025",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000050",
+              "criterion_id": "10820000-0002-4000-8000-000000000025",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10820000-0001-4000-8000-000000000006",
+      "set_key": "staff",
+      "code": "F",
+      "name": "Staff Group F (Synthetic)",
+      "short_name": "F",
+      "sort_order": 5,
+      "criteria": [
+        {
+          "id": "10820000-0002-4000-8000-000000000026",
+          "group_id": "10820000-0001-4000-8000-000000000006",
+          "set_key": "staff",
+          "code": "F26",
+          "name": "STAFF Criterion F26 (Synthetic)",
+          "description": "Synthetic criterion F26 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000051",
+              "criterion_id": "10820000-0002-4000-8000-000000000026",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000052",
+              "criterion_id": "10820000-0002-4000-8000-000000000026",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000027",
+          "group_id": "10820000-0001-4000-8000-000000000006",
+          "set_key": "staff",
+          "code": "F27",
+          "name": "STAFF Criterion F27 (Synthetic)",
+          "description": "Synthetic criterion F27 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000053",
+              "criterion_id": "10820000-0002-4000-8000-000000000027",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000054",
+              "criterion_id": "10820000-0002-4000-8000-000000000027",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000028",
+          "group_id": "10820000-0001-4000-8000-000000000006",
+          "set_key": "staff",
+          "code": "F28",
+          "name": "STAFF Criterion F28 (Synthetic)",
+          "description": "Synthetic criterion F28 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000055",
+              "criterion_id": "10820000-0002-4000-8000-000000000028",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000056",
+              "criterion_id": "10820000-0002-4000-8000-000000000028",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000029",
+          "group_id": "10820000-0001-4000-8000-000000000006",
+          "set_key": "staff",
+          "code": "F29",
+          "name": "STAFF Criterion F29 (Synthetic)",
+          "description": "Synthetic criterion F29 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000057",
+              "criterion_id": "10820000-0002-4000-8000-000000000029",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000058",
+              "criterion_id": "10820000-0002-4000-8000-000000000029",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10820000-0002-4000-8000-000000000030",
+          "group_id": "10820000-0001-4000-8000-000000000006",
+          "set_key": "staff",
+          "code": "F30",
+          "name": "STAFF Criterion F30 (Synthetic)",
+          "description": "Synthetic criterion F30 for set staff",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10820000-0003-4000-8000-000000000059",
+              "criterion_id": "10820000-0002-4000-8000-000000000030",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10820000-0003-4000-8000-000000000060",
+              "criterion_id": "10820000-0002-4000-8000-000000000030",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000001",
+      "set_key": "worker",
+      "code": "A",
+      "name": "Worker Group A (Synthetic)",
+      "short_name": "A",
+      "sort_order": 0,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000001",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A1",
+          "name": "WORKER Criterion A1 (Synthetic)",
+          "description": "Synthetic criterion A1 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000001",
+              "criterion_id": "10830000-0002-4000-8000-000000000001",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000002",
+              "criterion_id": "10830000-0002-4000-8000-000000000001",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000002",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A2",
+          "name": "WORKER Criterion A2 (Synthetic)",
+          "description": "Synthetic criterion A2 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000003",
+              "criterion_id": "10830000-0002-4000-8000-000000000002",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000004",
+              "criterion_id": "10830000-0002-4000-8000-000000000002",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000003",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A3",
+          "name": "WORKER Criterion A3 (Synthetic)",
+          "description": "Synthetic criterion A3 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000005",
+              "criterion_id": "10830000-0002-4000-8000-000000000003",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000006",
+              "criterion_id": "10830000-0002-4000-8000-000000000003",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000004",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A4",
+          "name": "WORKER Criterion A4 (Synthetic)",
+          "description": "Synthetic criterion A4 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000007",
+              "criterion_id": "10830000-0002-4000-8000-000000000004",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000008",
+              "criterion_id": "10830000-0002-4000-8000-000000000004",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000005",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A5",
+          "name": "WORKER Criterion A5 (Synthetic)",
+          "description": "Synthetic criterion A5 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000009",
+              "criterion_id": "10830000-0002-4000-8000-000000000005",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000010",
+              "criterion_id": "10830000-0002-4000-8000-000000000005",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000006",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A6",
+          "name": "WORKER Criterion A6 (Synthetic)",
+          "description": "Synthetic criterion A6 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 5,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000011",
+              "criterion_id": "10830000-0002-4000-8000-000000000006",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000012",
+              "criterion_id": "10830000-0002-4000-8000-000000000006",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000007",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A7",
+          "name": "WORKER Criterion A7 (Synthetic)",
+          "description": "Synthetic criterion A7 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 6,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000013",
+              "criterion_id": "10830000-0002-4000-8000-000000000007",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000014",
+              "criterion_id": "10830000-0002-4000-8000-000000000007",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000008",
+          "group_id": "10830000-0001-4000-8000-000000000001",
+          "set_key": "worker",
+          "code": "A8",
+          "name": "WORKER Criterion A8 (Synthetic)",
+          "description": "Synthetic criterion A8 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 7,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000015",
+              "criterion_id": "10830000-0002-4000-8000-000000000008",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000016",
+              "criterion_id": "10830000-0002-4000-8000-000000000008",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000002",
+      "set_key": "worker",
+      "code": "B",
+      "name": "Worker Group B (Synthetic)",
+      "short_name": "B",
+      "sort_order": 1,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000009",
+          "group_id": "10830000-0001-4000-8000-000000000002",
+          "set_key": "worker",
+          "code": "B9",
+          "name": "WORKER Criterion B9 (Synthetic)",
+          "description": "Synthetic criterion B9 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000017",
+              "criterion_id": "10830000-0002-4000-8000-000000000009",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000018",
+              "criterion_id": "10830000-0002-4000-8000-000000000009",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000010",
+          "group_id": "10830000-0001-4000-8000-000000000002",
+          "set_key": "worker",
+          "code": "B10",
+          "name": "WORKER Criterion B10 (Synthetic)",
+          "description": "Synthetic criterion B10 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000019",
+              "criterion_id": "10830000-0002-4000-8000-000000000010",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000020",
+              "criterion_id": "10830000-0002-4000-8000-000000000010",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000003",
+      "set_key": "worker",
+      "code": "C",
+      "name": "Worker Group C (Synthetic)",
+      "short_name": "C",
+      "sort_order": 2,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000011",
+          "group_id": "10830000-0001-4000-8000-000000000003",
+          "set_key": "worker",
+          "code": "C11",
+          "name": "WORKER Criterion C11 (Synthetic)",
+          "description": "Synthetic criterion C11 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000021",
+              "criterion_id": "10830000-0002-4000-8000-000000000011",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000022",
+              "criterion_id": "10830000-0002-4000-8000-000000000011",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000012",
+          "group_id": "10830000-0001-4000-8000-000000000003",
+          "set_key": "worker",
+          "code": "C12",
+          "name": "WORKER Criterion C12 (Synthetic)",
+          "description": "Synthetic criterion C12 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000023",
+              "criterion_id": "10830000-0002-4000-8000-000000000012",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000024",
+              "criterion_id": "10830000-0002-4000-8000-000000000012",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000013",
+          "group_id": "10830000-0001-4000-8000-000000000003",
+          "set_key": "worker",
+          "code": "C13",
+          "name": "WORKER Criterion C13 (Synthetic)",
+          "description": "Synthetic criterion C13 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000025",
+              "criterion_id": "10830000-0002-4000-8000-000000000013",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000026",
+              "criterion_id": "10830000-0002-4000-8000-000000000013",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000014",
+          "group_id": "10830000-0001-4000-8000-000000000003",
+          "set_key": "worker",
+          "code": "C14",
+          "name": "WORKER Criterion C14 (Synthetic)",
+          "description": "Synthetic criterion C14 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000027",
+              "criterion_id": "10830000-0002-4000-8000-000000000014",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000028",
+              "criterion_id": "10830000-0002-4000-8000-000000000014",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000015",
+          "group_id": "10830000-0001-4000-8000-000000000003",
+          "set_key": "worker",
+          "code": "C15",
+          "name": "WORKER Criterion C15 (Synthetic)",
+          "description": "Synthetic criterion C15 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000029",
+              "criterion_id": "10830000-0002-4000-8000-000000000015",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000030",
+              "criterion_id": "10830000-0002-4000-8000-000000000015",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000004",
+      "set_key": "worker",
+      "code": "D",
+      "name": "Worker Group D (Synthetic)",
+      "short_name": "D",
+      "sort_order": 3,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000016",
+          "group_id": "10830000-0001-4000-8000-000000000004",
+          "set_key": "worker",
+          "code": "D16",
+          "name": "WORKER Criterion D16 (Synthetic)",
+          "description": "Synthetic criterion D16 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000031",
+              "criterion_id": "10830000-0002-4000-8000-000000000016",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000032",
+              "criterion_id": "10830000-0002-4000-8000-000000000016",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000017",
+          "group_id": "10830000-0001-4000-8000-000000000004",
+          "set_key": "worker",
+          "code": "D17",
+          "name": "WORKER Criterion D17 (Synthetic)",
+          "description": "Synthetic criterion D17 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000033",
+              "criterion_id": "10830000-0002-4000-8000-000000000017",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000034",
+              "criterion_id": "10830000-0002-4000-8000-000000000017",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000018",
+          "group_id": "10830000-0001-4000-8000-000000000004",
+          "set_key": "worker",
+          "code": "D18",
+          "name": "WORKER Criterion D18 (Synthetic)",
+          "description": "Synthetic criterion D18 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000035",
+              "criterion_id": "10830000-0002-4000-8000-000000000018",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000036",
+              "criterion_id": "10830000-0002-4000-8000-000000000018",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000019",
+          "group_id": "10830000-0001-4000-8000-000000000004",
+          "set_key": "worker",
+          "code": "D19",
+          "name": "WORKER Criterion D19 (Synthetic)",
+          "description": "Synthetic criterion D19 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000037",
+              "criterion_id": "10830000-0002-4000-8000-000000000019",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000038",
+              "criterion_id": "10830000-0002-4000-8000-000000000019",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000020",
+          "group_id": "10830000-0001-4000-8000-000000000004",
+          "set_key": "worker",
+          "code": "D20",
+          "name": "WORKER Criterion D20 (Synthetic)",
+          "description": "Synthetic criterion D20 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000039",
+              "criterion_id": "10830000-0002-4000-8000-000000000020",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000040",
+              "criterion_id": "10830000-0002-4000-8000-000000000020",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000005",
+      "set_key": "worker",
+      "code": "E",
+      "name": "Worker Group E (Synthetic)",
+      "short_name": "E",
+      "sort_order": 4,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000021",
+          "group_id": "10830000-0001-4000-8000-000000000005",
+          "set_key": "worker",
+          "code": "E21",
+          "name": "WORKER Criterion E21 (Synthetic)",
+          "description": "Synthetic criterion E21 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000041",
+              "criterion_id": "10830000-0002-4000-8000-000000000021",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000042",
+              "criterion_id": "10830000-0002-4000-8000-000000000021",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000022",
+          "group_id": "10830000-0001-4000-8000-000000000005",
+          "set_key": "worker",
+          "code": "E22",
+          "name": "WORKER Criterion E22 (Synthetic)",
+          "description": "Synthetic criterion E22 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000043",
+              "criterion_id": "10830000-0002-4000-8000-000000000022",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000044",
+              "criterion_id": "10830000-0002-4000-8000-000000000022",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000023",
+          "group_id": "10830000-0001-4000-8000-000000000005",
+          "set_key": "worker",
+          "code": "E23",
+          "name": "WORKER Criterion E23 (Synthetic)",
+          "description": "Synthetic criterion E23 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000045",
+              "criterion_id": "10830000-0002-4000-8000-000000000023",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000046",
+              "criterion_id": "10830000-0002-4000-8000-000000000023",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000024",
+          "group_id": "10830000-0001-4000-8000-000000000005",
+          "set_key": "worker",
+          "code": "E24",
+          "name": "WORKER Criterion E24 (Synthetic)",
+          "description": "Synthetic criterion E24 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000047",
+              "criterion_id": "10830000-0002-4000-8000-000000000024",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000048",
+              "criterion_id": "10830000-0002-4000-8000-000000000024",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000025",
+          "group_id": "10830000-0001-4000-8000-000000000005",
+          "set_key": "worker",
+          "code": "E25",
+          "name": "WORKER Criterion E25 (Synthetic)",
+          "description": "Synthetic criterion E25 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000049",
+              "criterion_id": "10830000-0002-4000-8000-000000000025",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000050",
+              "criterion_id": "10830000-0002-4000-8000-000000000025",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10830000-0001-4000-8000-000000000006",
+      "set_key": "worker",
+      "code": "F",
+      "name": "Worker Group F (Synthetic)",
+      "short_name": "F",
+      "sort_order": 5,
+      "criteria": [
+        {
+          "id": "10830000-0002-4000-8000-000000000026",
+          "group_id": "10830000-0001-4000-8000-000000000006",
+          "set_key": "worker",
+          "code": "F26",
+          "name": "WORKER Criterion F26 (Synthetic)",
+          "description": "Synthetic criterion F26 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 0,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000051",
+              "criterion_id": "10830000-0002-4000-8000-000000000026",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000052",
+              "criterion_id": "10830000-0002-4000-8000-000000000026",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000027",
+          "group_id": "10830000-0001-4000-8000-000000000006",
+          "set_key": "worker",
+          "code": "F27",
+          "name": "WORKER Criterion F27 (Synthetic)",
+          "description": "Synthetic criterion F27 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 1,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000053",
+              "criterion_id": "10830000-0002-4000-8000-000000000027",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000054",
+              "criterion_id": "10830000-0002-4000-8000-000000000027",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000028",
+          "group_id": "10830000-0001-4000-8000-000000000006",
+          "set_key": "worker",
+          "code": "F28",
+          "name": "WORKER Criterion F28 (Synthetic)",
+          "description": "Synthetic criterion F28 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 2,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000055",
+              "criterion_id": "10830000-0002-4000-8000-000000000028",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000056",
+              "criterion_id": "10830000-0002-4000-8000-000000000028",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000029",
+          "group_id": "10830000-0001-4000-8000-000000000006",
+          "set_key": "worker",
+          "code": "F29",
+          "name": "WORKER Criterion F29 (Synthetic)",
+          "description": "Synthetic criterion F29 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 3,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000057",
+              "criterion_id": "10830000-0002-4000-8000-000000000029",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000058",
+              "criterion_id": "10830000-0002-4000-8000-000000000029",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        },
+        {
+          "id": "10830000-0002-4000-8000-000000000030",
+          "group_id": "10830000-0001-4000-8000-000000000006",
+          "set_key": "worker",
+          "code": "F30",
+          "name": "WORKER Criterion F30 (Synthetic)",
+          "description": "Synthetic criterion F30 for set worker",
+          "weight": 0,
+          "default_level_index": 0,
+          "sort_order": 4,
+          "levels": [
+            {
+              "id": "10830000-0003-4000-8000-000000000059",
+              "criterion_id": "10830000-0002-4000-8000-000000000030",
+              "points": 10,
+              "label": "Level 1 (Synthetic)",
+              "description": "Synthetic level 1",
+              "sort_order": 0
+            },
+            {
+              "id": "10830000-0003-4000-8000-000000000060",
+              "criterion_id": "10830000-0002-4000-8000-000000000030",
+              "points": 5,
+              "label": "Level 2 (Synthetic)",
+              "description": "Synthetic level 2",
+              "sort_order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
