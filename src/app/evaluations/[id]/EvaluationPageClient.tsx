@@ -516,7 +516,13 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
       const period = evaluation?.periodId ? periods.find((p) => p.id === evaluation.periodId) : undefined;
       const periodName = period ? `${period.name} (${period.year})` : 'Kỳ đánh giá';
 
+      if (!evaluation?.periodId) {
+        toast('Lỗi khi tạo nhận xét AI.', 'error');
+        return;
+      }
+
       const result = await draftResultMessageAction({
+        periodId: evaluation.periodId,
         employeeCode: employee.employeeCode || '',
         name: employee.name || '',
         role: employee.role || '',

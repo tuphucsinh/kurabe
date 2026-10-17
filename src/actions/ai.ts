@@ -15,6 +15,25 @@ import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
 import { detectPromptInjection, boundAIText, boundAITextWithMeta, parseAiChunkBounds, parseAiProviderTimeout, runBoundedConcurrency, runProviderCallBounded, MAX_AI_PROMPT_CHARS, MAX_AI_CHUNK_CONCURRENCY, type AIPayloadCoverage } from '@/lib/ai-governance';
+import type {
+  CriteriaSnapshot,
+  groupsForVersion as GroupsForVersionFn,
+  filterGroupsForDisplay as FilterGroupsForDisplayFn,
+} from '@/lib/db/evaluation-display-admin';
+import type { Evaluation, EvaluationRound, CriteriaGroup, Criterion } from '@/types';
+
+let displayAdminModule: {
+  loadCriteriaSnapshots: typeof import('@/lib/db/evaluation-display-admin').loadCriteriaSnapshots;
+  groupsForVersion: typeof import('@/lib/db/evaluation-display-admin').groupsForVersion;
+  filterGroupsForDisplay: typeof import('@/lib/db/evaluation-display-admin').filterGroupsForDisplay;
+} | null = null;
+
+async function getDisplayAdmin() {
+  if (!displayAdminModule) {
+    displayAdminModule = await import('@/lib/db/evaluation-display-admin');
+  }
+  return displayAdminModule;
+}
 
 const AI_NOT_CONFIGURED = 'AI chưa được cấu hình — chờ cung cấp API key.';
 
@@ -29,6 +48,84 @@ const AI_TARGET_NOT_FOUND = 'Không tìm thấy dữ liệu đánh giá hợp l�
 
 function aiError(): { error: string } {
   return { error: 'AI không phản hồi (lỗi hoặc hết thời gian).' };
+}
+
+/**
+ * Builds criteriaDetail and notesSummary from either a pinned snapshot (P108)
+ * or the live criteria catalog (legacy). Non-exported helper so tests can bind it
+ * via loader transform while keeping every export in this 'use server' module an async function.
+ */
+function buildEvaluationCriteriaDetail(
+  evaluation: Pick<Evaluation, 'employeeRole'>,
+  round: Pick<EvaluationRound, 'criteriaConfigVersionId' | 'scores' | 'selectedLevelIndexes' | 'notes'>,
+  snapshot: CriteriaSnapshot | null,
+  liveCriteriaGroups: CriteriaGroup[] | null,
+  helpers?: {
+    groupsForVersion?: typeof GroupsForVersionFn;
+    filterGroupsForDisplay?: typeof FilterGroupsForDisplayFn;
+  },
+  options?: { formatNotesWithCriterionName?: boolean }
+): {
+  ok: boolean;
+  criteriaDetail: { code: string; name: string; points: number; levelLabel: string }[];
+  notesSummary: string;
+  allCriteria: Criterion[];
+  error?: string;
+} {
+  const lastScores = round.scores || {};
+  let allCriteria: Criterion[];
+  let criteriaMap: Map<string, Criterion>;
+
+  if (round.criteriaConfigVersionId) {
+    if (!snapshot || snapshot.unavailable.has(round.criteriaConfigVersionId)) {
+      return { ok: false, criteriaDetail: [], notesSummary: '', allCriteria: [], error: AI_TARGET_NOT_FOUND };
+    }
+    const gfv = helpers?.groupsForVersion ?? displayAdminModule?.groupsForVersion;
+    const fgfd = helpers?.filterGroupsForDisplay ?? displayAdminModule?.filterGroupsForDisplay;
+    if (!gfv || !fgfd) {
+      return { ok: false, criteriaDetail: [], notesSummary: '', allCriteria: [], error: AI_TARGET_NOT_FOUND };
+    }
+    const versionGroups = gfv(round.criteriaConfigVersionId, snapshot);
+    if (versionGroups.length === 0) {
+      return { ok: false, criteriaDetail: [], notesSummary: '', allCriteria: [], error: AI_TARGET_NOT_FOUND };
+    }
+    const filteredGroups = fgfd(versionGroups, evaluation.employeeRole);
+    allCriteria = filteredGroups.flatMap((g) => g.criteria);
+    criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
+  } else {
+    // Legacy evaluation: use live catalog
+    const liveGroups = liveCriteriaGroups || [];
+    allCriteria = liveGroups.flatMap((g) => g.criteria);
+    criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
+  }
+
+  const criteriaDetail = allCriteria
+    .filter((c) => lastScores[c.id] !== undefined)
+    .map((c) => {
+      const levelIdx = round.selectedLevelIndexes?.[c.id] ?? 0;
+      const level = c.levels?.[levelIdx];
+      return {
+        code: c.code,
+        name: c.name,
+        points: Number(lastScores[c.id]) || 0,
+        levelLabel: level?.label || '',
+      };
+    });
+
+  const notesSummary = Object.entries(round.notes || {})
+    .filter(([k, v]) => Boolean(v && v.trim() && (round.criteriaConfigVersionId ? criteriaMap.has(k) : true)))
+    .slice(0, 3)
+    .map(([k, v]) => {
+      const c = criteriaMap.get(k);
+      if (options?.formatNotesWithCriterionName) {
+        return `${c?.code || ''} ${c?.name || ''}: ${boundAIText(v, 200)}`;
+      }
+      return `${c?.code || ''}: ${boundAIText(v, 200)}`;
+    })
+    .filter(Boolean)
+    .join(' | ');
+
+  return { ok: true, criteriaDetail, notesSummary, allCriteria };
 }
 
 /**
@@ -65,6 +162,7 @@ export async function explainAnomalyAction(input: {
 }
 
 export async function draftResultMessageAction(input: {
+  periodId: string;
   employeeCode: string;
   name: string;
   role: string;
@@ -96,12 +194,36 @@ export async function draftResultMessageAction(input: {
     .from('evaluation_periods')
     .select('id, name, year')
     .order('year', { ascending: false });
-  const period = (visiblePeriods || []).find((candidate) => `${candidate.name} (${candidate.year})` === input.periodName);
-  if (!period) return { error: AI_TARGET_NOT_FOUND };
-  const [evaluations, users, criteriaGroups] = await Promise.all([
+
+  const periodsList = visiblePeriods || [];
+  let period: { id: string; name: string; year: number } | undefined;
+
+  const hasSuppliedPeriodId = typeof input.periodId === 'string' && input.periodId.trim().length > 0;
+  if (hasSuppliedPeriodId) {
+    period = periodsList.find((candidate) => candidate.id === input.periodId);
+    if (!period) {
+      return { error: AI_TARGET_NOT_FOUND };
+    }
+  } else {
+    // Untyped legacy caller without periodId: resolve by periodName ONLY if exactly
+    // one visible period matches name+year; zero or multiple matches => AI_TARGET_NOT_FOUND
+    if (typeof input.periodName !== 'string' || !input.periodName.trim()) {
+      return { error: AI_TARGET_NOT_FOUND };
+    }
+    const matches = periodsList.filter(
+      (candidate) =>
+        `${candidate.name} (${candidate.year})` === input.periodName ||
+        candidate.name === input.periodName
+    );
+    if (matches.length !== 1) {
+      return { error: AI_TARGET_NOT_FOUND };
+    }
+    period = matches[0];
+  }
+
+  const [evaluations, users] = await Promise.all([
     getEvaluationsByPeriodAdmin(period.id, auth.user),
     getUsersAdmin(auth.user),
-    getAllCriteriaGroups(),
   ]);
   const employee = users.find((candidate) => candidate.employeeCode === input.employeeCode);
   // P107M1T08: same Approved-only server-side projection as the batch path — a
@@ -118,28 +240,41 @@ export async function draftResultMessageAction(input: {
     rounds[rounds.length - 1];
   if (!lastRound) return { error: AI_TARGET_NOT_FOUND };
 
-  const allCriteria = criteriaGroups.flatMap((group) => group.criteria);
-  const criteriaDetail = allCriteria
-    .filter((criterion) => lastRound.scores?.[criterion.id] !== undefined)
-    .map((criterion) => {
-      const levelIndex = lastRound.selectedLevelIndexes?.[criterion.id] ?? 0;
-      return {
-        code: criterion.code,
-        name: criterion.name,
-        points: Number(lastRound.scores?.[criterion.id]) || 0,
-        levelLabel: criterion.levels?.[levelIndex]?.label || '',
-      };
-    });
+  let criteriaSnapshot: CriteriaSnapshot | null = null;
+  let liveCriteriaGroups: CriteriaGroup[] | null = null;
+  let displayAdmin: {
+    groupsForVersion: typeof GroupsForVersionFn;
+    filterGroupsForDisplay: typeof FilterGroupsForDisplayFn;
+  } | undefined = undefined;
+
+  if (lastRound.criteriaConfigVersionId) {
+    const admin = await getDisplayAdmin();
+    displayAdmin = admin;
+    criteriaSnapshot = await admin.loadCriteriaSnapshots([lastRound.criteriaConfigVersionId]);
+    if (criteriaSnapshot.unavailable.has(lastRound.criteriaConfigVersionId)) {
+      return { error: AI_TARGET_NOT_FOUND };
+    }
+  } else {
+    liveCriteriaGroups = await getAllCriteriaGroups();
+  }
+
+  const criteriaContext = buildEvaluationCriteriaDetail(
+    evaluation,
+    lastRound,
+    criteriaSnapshot,
+    liveCriteriaGroups,
+    displayAdmin
+  );
+  if (!criteriaContext.ok) {
+    return { error: AI_TARGET_NOT_FOUND };
+  }
+  const { criteriaDetail, notesSummary } = criteriaContext;
+
   const previousComments = rounds
     .filter((round) => round.round < (lastRound.round ?? 0))
     .map((round) => boundAIText(round.comment, 500))
     .filter(Boolean);
-  const criteriaMap = new Map(allCriteria.map((criterion) => [criterion.id, criterion]));
-  const notesSummary = Object.entries(lastRound.notes || {})
-    .filter(([, value]) => value && value.trim())
-    .slice(0, 3)
-    .map(([criterionId, value]) => `${criteriaMap.get(criterionId)?.code || ''}: ${boundAIText(value, 200)}`)
-    .join(' | ');
+
   const summaryNotes = boundAIText(lastRound.comment, 500) || previousComments.join(' | ');
   if (detectPromptInjection(notesSummary) || detectPromptInjection(summaryNotes)) {
     return { error: 'Ghi chú đánh giá chứa nội dung không hợp lệ.' };
@@ -287,10 +422,9 @@ export async function generateResultMessagesChunkAction(input: {
   const { offset, limit } = bounds;
 
   try {
-    const [evaluations, users, criteriaGroups] = await Promise.all([
+    const [evaluations, users] = await Promise.all([
       getEvaluationsByPeriodAdmin(input.periodId, auth.user),
       getUsersAdmin(auth.user),
-      getAllCriteriaGroups(),
     ]);
 
     const { data: periodData } = await supabaseAdmin
@@ -315,12 +449,43 @@ export async function generateResultMessagesChunkAction(input: {
       };
     }
 
+    const chunkChosenRounds = new Map<string, Evaluation['rounds'][number]>();
+    for (const ev of chunk) {
+      const rounds = ev.rounds || [];
+      const chosen =
+        [...rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0) ||
+        rounds[rounds.length - 1];
+      if (chosen) {
+        chunkChosenRounds.set(ev.id, chosen);
+      }
+    }
+
+    const distinctVersionIds = [
+      ...new Set(
+        [...chunkChosenRounds.values()]
+          .map((r) => r.criteriaConfigVersionId)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      ),
+    ];
+
+    const needsLive = chunk.some((ev) => {
+      const r = chunkChosenRounds.get(ev.id);
+      return !r?.criteriaConfigVersionId;
+    });
+
+    const displayAdmin = distinctVersionIds.length > 0 ? await getDisplayAdmin() : null;
+
+    const [criteriaSnapshot, liveCriteriaGroups] = await Promise.all([
+      distinctVersionIds.length > 0 && displayAdmin
+        ? displayAdmin.loadCriteriaSnapshots(distinctVersionIds)
+        : Promise.resolve({ groups: new Map(), unavailable: new Set<string>() }),
+      needsLive ? getAllCriteriaGroups() : Promise.resolve([]),
+    ]);
+
     const aiQuota = await checkAndRecordAiUsage(auth.user.id, 'generateResultMessagesChunk');
     if (!aiQuota.allowed) return { error: aiQuota.error };
 
     const userMap = new Map(users.map((u) => [u.id, u]));
-    const allCriteria = criteriaGroups.flatMap((g) => g.criteria);
-    const criteriaMap = new Map(allCriteria.map((c) => [c.id, c]));
 
     // P107M1T08: record per-chunk/per-item cost without changing the quota unit.
     let providerCalls = 0;
@@ -339,38 +504,40 @@ export async function generateResultMessagesChunkAction(input: {
           // Server-resolved employee data: use DB record, not client-provided fields.
           const employee = userMap.get(ev.employeeId);
           const rounds = ev.rounds || [];
-          const lastRound =
-            [...rounds].sort((a, b) => b.round - a.round).find((r) => (r.totalScore || 0) > 0) ||
-            rounds[rounds.length - 1];
-          const lastScores = lastRound?.scores || {};
+          const lastRound = chunkChosenRounds.get(ev.id);
+          if (!lastRound) {
+            return {
+              evaluationId: ev.id,
+              ok: false,
+              outcome: 'error',
+              error: AI_TARGET_NOT_FOUND,
+            };
+          }
 
-          const criteriaDetail = allCriteria
-            .filter((c) => lastScores[c.id] !== undefined)
-            .map((c) => {
-              const levelIdx = lastRound?.selectedLevelIndexes?.[c.id] ?? 0;
-              const level = c.levels?.[levelIdx];
-              return {
-                code: c.code,
-                name: c.name,
-                points: Number(lastScores[c.id]) || 0,
-                levelLabel: level?.label || '',
-              };
-            });
+          const criteriaContext = buildEvaluationCriteriaDetail(
+            ev,
+            lastRound,
+            criteriaSnapshot,
+            liveCriteriaGroups,
+            displayAdmin ?? undefined,
+            { formatNotesWithCriterionName: true }
+          );
+
+          if (!criteriaContext.ok) {
+            return {
+              evaluationId: ev.id,
+              ok: false,
+              outcome: 'error',
+              error: criteriaContext.error || AI_TARGET_NOT_FOUND,
+            };
+          }
+
+          const { criteriaDetail, notesSummary: rawNotesSummary } = criteriaContext;
 
           const previousComments = rounds
             .filter((r) => r.round < (lastRound?.round ?? 0))
             .map((r) => boundAIText(r.comment, 500))
             .filter(Boolean);
-
-          const rawNotesSummary = Object.entries(lastRound?.notes || {})
-            .filter(([, v]) => v && v.trim())
-            .slice(0, 3)
-            .map(([k, v]) => {
-              const c = criteriaMap.get(k);
-              return `${c?.code || ''} ${c?.name || ''}: ${boundAIText(v, 200)}`;
-            })
-            .filter(Boolean)
-            .join(' | ');
 
           const rawSummaryNotes =
             boundAIText(lastRound?.comment, 500) ||

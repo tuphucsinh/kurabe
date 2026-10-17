@@ -209,9 +209,10 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
       const lastRound = [...(ev?.rounds || [])].sort((a, b) => b.round - a.round)[0];
 
       const res = await draftResultMessageAction({
+        periodId,
         employeeCode: item.employeeCode,
         name: item.employeeName,
-        role: item.role,
+        role: ev?.employeeRole || item.role,
         totalScore: item.score,
         grade: item.grade,
         criteriaDetail: [],
