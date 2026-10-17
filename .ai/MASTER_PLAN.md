@@ -1,82 +1,149 @@
 # Kurabe — current plan and closed execution record
 
-## P108 — 3 bộ tiêu chuẩn độc lập Leader / Staff / Worker (CURRENT PLAN, 2026-10-16)
+## P108 — 3 bộ tiêu chuẩn độc lập Leader / Staff / Worker (CURRENT PLAN, revised 2026-10-17)
 
-**Status:** `PLAN_APPROVED_IN_PRINCIPLE / IMPLEMENTATION_NOT_STARTED`. **This document update:** planning only; no application code/SQL/data changed, no test evaluations deleted, no Pi5 file altered, no deployment. Owner explicitly requested this GitHub master-plan update. P108 replaces the previously discussed v1–v4 proposals as the **single current implementation plan**; historical P103–P107 sections below are preserved as provenance, not reopened.
+**Status:** `PLANNED / IMPLEMENTATION_NOT_STARTED / NOT_REGISTERED`. This is the single canonical P108 plan. It supersedes the 2026-10-16 P108 text (Git `bd89e183238a91d6948dc027629cba5d1657546e`) after two review rounds (Mika + ChatGPT, 2026-10-17). Executable WBS: `tasks.md` § P108 (all `PLANNED`). This update is planning only: no application code, SQL, data, production, deletion or deployment change. P103–P107 below remain provenance and are not reopened.
 
-**Reference:** source `TCDG2026.xls` attached in conversation; SHA-256 `3e3cfd7eddc18567eb3dfaaaf6586696044681fbfb337df845d043d884811743`. Physical Pi5 reference `/home/pi5/projects/kurabe/TCDG2026.xls` has **not** been verified on Pi5; verify hash before consuming. Workbook content is OOXML despite `.xls` filename extension. Source-code audit baseline: GitHub main `cb3477769b276bff2ebdcd222f183364f49042a6` (2026-10-10); live Supabase schema, migration ledger, data and deployment **not** verified in this planning update. Local evidence/extraction is a review aid, **not** a production seed approved by business.
+**Sources:** workbook `/home/pi5/projects/kurabe/TCDG2026.xls` (anh-owned, untracked, never modified), SHA-256 `3e3cfd7eddc18567eb3dfaaaf6586696044681fbfb337df845d043d884811743`, verified on Pi5 2026-10-17; content is OOXML despite the `.xls` extension. Source baseline `bd89e183`. Live Supabase schema, catalog, PostgreSQL version and data remain `UNKNOWN` until P108M1T01.
 
-### P108.1 — Owner decisions and scope (authoritative)
+### P108.1 Decisions
 
-1. **Three truly independent catalogs of data, one existing system.** `leader` = Manager, Leader, SubLeader; `staff` = Employee; `worker` = Worker. Each set has its **own group/criterion/level UUIDs, criterion numbers, descriptions and points**. Never share a criterion object or level ID between sets. Reuse the **existing** evaluation engine, grade-band mechanism and **one global active immutable criteria config/version**. No three separate databases, engines, version streams, or new catalog administration framework.
-2. **A code has meaning only within one set.** The business key is `(set_key, normalized_code)`; the technical key is an immutable UUID. `staff:C11` may have identical subject matter to `worker:C10`; `staff:E22` and `worker:E22` are *different criteria*, while the improvement criterion is `leader:E23 / staff:E22 / worker:E24`. Identical group codes A–F in different sets must be valid with different UUIDs. No matching by code/name/position/translation across catalogs.
-3. **Source workbook, not the old shared catalog, determines new contents.** `KIV-AD-WI-007/01` Leader = **33 criteria, 6 groups, confirmed maximum 190**; `/02` Staff = **30 criteria, 6 groups, confirmed maximum 175**; `/03` Worker = **30 criteria, 6 groups; numeric levels/max still require business signoff**. Total **93 criteria, 18 groups**. Six sheets include three standard sheets and their change logs. Keep original workbook unchanged. Exclude section G (maternity/contract-suspension months) from the point-based 93 unless separately approved.
-4. **Score policy unchanged by owner decision.** Keep negative *criterion-level* penalties exactly as in approved source, existing arithmetic sum, grade bands, and current SQL `total_score >= 0` / `final_score >= 0` constraints. **Do not clamp negative totals, change grade thresholds, or remove the checks in P108.** Test negative penalty choices and boundary combinations. Mathematically negative aggregate combinations can exist in the form: if reached, current DB intentionally rejects the transaction; document this existing limitation rather than silently changing policy.
-5. **Two-step Manager UX:** choose Leader/Staff/Worker and add/edit/delete criterion/group → press **Save**. Save performs validation, atomic version increment and historic snapshot. **No separate draft manager, publish/approval button, future scheduling, or version management UI.** Remove the multi-audience checkbox and update-audience editing path for new data. Manager-only editing; all other roles remain read-only/authorized as before.
-6. **Freeze criteria writes while a period is Active**, including direct SQL/RPC routes, not just disabled UI. Show a clear short explanation. After the Active period is closed, a Manager can save immediately; no waiting workflow. Closed periods may contain unfinished evaluations under preserved P107 policy. Do not silently reopen or erase them.
-7. **Adding a Leader criterion later** changes Leader only. Staff/Worker content and UUIDs remain byte/logically identical; global criteria version still increases. Existing periods keep their pinned immutable snapshots. A prior application form should never start using the new code halfway through a period.
-8. **Five-role evaluation flow and authorization do not change:** Manager SELF→Approved; Leader SELF→Manager; SubLeader SELF→Leader→Manager; Employee/Worker SubLeader→Leader→Manager. For every round select the catalog by **`evaluations.employee_role` captured for the subject**, never the currently loaded `users.role` or the grader's role. Official results remain **Approved-only**.
+**Decided by owner:**
 
-### P108.2 — Resolve source ambiguities **before** production import
+1. Three data-independent sets: `leader` = Manager, Leader, SubLeader (33 criteria, 6 groups); `staff` = Employee (30, 6); `worker` = Worker (30, 6). Total 93 criteria / 18 groups. Each set has its own group, criterion and level UUIDs, codes, wording and points. Never match criteria across sets by code, name, position or translation.
+2. Code = group letter + Vietnamese column-A number of the workbook. Leader: `A1–A8, B9–B10, C11–C15, D16–D21, E22–E28, F29–F33`. Staff and Worker: `A1–A8, B9–B10, C11–C15, D16–D20, E21–E25, F26–F30`. A code is unique only inside its set (example: the improvement criterion is `leader:E23`, `staff:E22`, `worker:E24`). Section G (maternity / contract-suspension months) is not a scored criterion.
+3. One evaluation engine and one global immutable criteria version stream. Reuse P99 `validate_criteria_config` / `get_active_criteria_config` / `save_criteria_config` with CAS. The P107 evaluation writer and guards stay unchanged unless a real test proves an incompatibility. No three engines, no per-set version streams, no draft/publish/approval/scheduling, no new framework or admin tables.
+4. `/criteria`: three set tabs; each tab shows only that set's groups (A–F), keyed by UUID. Flow: choose set → add/edit/delete → Save. One effective Save = one version; a Save with unchanged content creates no version. The multi-audience checkbox and audience-update path are removed. Manager-only writes.
+5. Criteria writes are rejected while any evaluation period is `active`. SQL is the authority; the UI shows the same rule.
+6. Unchanged: negative criterion-level points, arithmetic total, grade bands and thresholds, `total_score >= 0` / `final_score >= 0` checks, the five-role workflow, Approved-only official results, P107 lifecycle (close freezes unfinished work; there is no reopen).
+7. Every read, write, score and display path uses the set of the subject role snapshot `evaluations.employee_role`, never the current `users.role` or the grader's role.
 
-A small signed-off source mapping sheet/manifest is sufficient; **do not build a review workflow UI**.
+**Open — not authorized by this plan:**
 
-| Gate | Source issue | Minimum action |
+- **D1:** trial-evaluation disposition before cutover (task P108M2T01). No existing path deletes evaluations safely (see P108.2). The owner chooses: keep them frozen in a closed period, or approve a dedicated purge RPC that uses an explicit, audited transition context. Disabling triggers or deleting immutable history is not allowed.
+- **D2:** cross-set raw-score KPIs (overall average, Top 5, team average). Recommendation: per-set average and per-set Top 5. Current behaviour stays until approved.
+- **D3:** comparability when grade versions differ inside one report. Recommendation: flag/note only, no hidden policy change.
+- **G1 business sign-off** (task P108M1T02): Worker numeric points and maximum (the Worker sheet has no numeric columns or total row; values are derivable from the group headers and penalty text for 28/30 criteria); Worker criterion 8 "Không có" points; per-criterion meaning of `-` for criteria 4–8 and 15 in all sets (criterion 15 has no "0 proposals" option, yet its `-` columns carry 0 in the Leader/Staff totals); A1 boundaries (VI "Trên" vs JA "以上", overlapping "Dưới 95%" / "Dưới 93%"); C14 (VI "4+/3" vs JA "5+/4"); Staff JA numbering lag; the number of selectable levels per criterion; the default level; the effective date (change log: 2026/10/01) and which period first uses it. Proposal: Vietnamese revision 07 is authoritative (the Leader Japanese header reads `Lbh: 06`). No guessed points are imported.
+
+### P108.2 Verified facts that drive the design
+
+| Area | Fact | Evidence |
 |---|---|---|
-| S1 (BLOCKING) | Worker sheet does not contain explicit numeric H–L score columns equivalent to Leader/Staff | Produce a precise 30-criterion × applicable-level numeric mapping; get authorized business confirmation; **no guessed Worker points or max** |
-| S2 (BLOCKING if changes grading) | C14 VI/JA wording differs on 3/4/5 occurrences | Record which threshold applies to each selectable level, preserve the original and document the correction |
-| S3 (BLOCKING if changes grading) | A1 attendance ranges overlap/leave unclear boundaries | Define non-overlapping inclusive/exclusive boundaries and test examples 93/95/98/99/100 |
-| S4 | `-` placeholders vs legitimate zero-point choices | Placeholders are **not** selectable numeric levels unless explicitly approved; retain legitimate zero-point options. Do not turn `-` into 0 |
-| S5 | A8 exceptions, optional criterion semantics, unscored G | Confirm source meaning; don't invent score or new criterion |
-| S6 | Existing S/A/AB/B/C/D grade thresholds | Keep active DB grade bands; check achievable maxima per set, do not infer thresholds from Excel |
+| Uniqueness | Global `UNIQUE(code)` on live groups/criteria also counts inactive rows; save never deletes, it deactivates and upserts; version tables have `UNIQUE(version_id, code)`; the save RPC temp tables have `code UNIQUE` | `db/bootstrap/baseline.sql:213-214`; `supabase/migrations/20260907000600_criteria_config_version.sql:68,82,413,416,469-495` |
+| Writer | The P107 writer is catalog-agnostic: every persisted save must carry the active criteria version; scores are validated by criterion UUID | `supabase/migrations/20261008000300_p107_lifecycle_coherence.sql:494-513`; `src/lib/evaluation-round-validation.ts:114-142,273-277` |
+| Scoring readers | Readers filter by audience; they keep working when audience = set | `src/lib/db/criteria-admin.ts:42-46`; `src/lib/db/criteria.ts:115-122` |
+| History | Display returns every group of the pinned version (no role filter); one empty group makes the whole version `unavailable`; the loader reads five tables without pagination under `max_rows = 1000`, so a truncated read can leave a criterion with fewer levels that still looks authoritative | `src/lib/db/evaluation-display-admin.ts:86-89,98-108,157-175,255-257`; `supabase/config.toml:18` |
+| Reports | Criteria breakdown is keyed by `group.code`; snapshot lookup uses `configKey` = criteria version id; average, Top 5 and team average use raw scores across roles | `src/lib/evaluation-result-projection.ts:224,237,317,323,329-347,389-404` |
+| Other consumers | Radar keyed by group id with set-duplicated labels; AI uses the live catalog for historical Approved rounds and selects the period by name; compare filters by current `users.role`; heatmap hardcodes A–F names and keys by code; criteria page and modal key by code and list every group | `src/actions/dashboard.ts:310-311`; `src/actions/ai.ts:95-104,121,293`; `src/app/evaluations/[id]/compare/ComparePageClient.tsx:190-193`; `src/components/reports/CriteriaHeatmap.tsx:26-27,66-74`; `src/app/criteria/page.tsx:157-171,338`; `src/components/modals/CriteriaModal.tsx:44-46,168`; `src/hooks/use-evaluation-page-state.ts:345,349` |
+| Version churn | The checksum hashes the payload including the previous version metadata, so every Save creates a version | `20260907000600_criteria_config_version.sql:462-464`; `src/actions/criteria.ts:61-68` |
+| Lifecycle | At most one active period; close only moves `active → closed`; create always inserts `active`; no reopen path | `db/bootstrap/baseline.sql:255`; `src/actions/period.ts:240-248`; `20261008000200_p107_roster_personnel.sql:237-248` |
+| Deletion | Round DELETE is blocked unless a `save_rpc`/`return_rpc` transition context exists; history labels are FK `RESTRICT` + immutable trigger (no writer found in repo); period delete only for an exactly empty closed period | `20260911000300_evaluation_transition_guard.sql:281-289,303-306`; `20261008000200_p107_roster_personnel.sql:1143,1180`; `20260826010000_p96t04_atomic_period_lifecycle.sql:250-290` |
+| Workbook | 33/30/30 criteria, 6 groups each; Leader maximum 190 (row 51), Staff 175 (row 48); Worker sheet has no numeric columns or total; criterion 15 F/G = `-` with 0 in the totals; Leader JA `Lbh: 06` vs VI `Lbh: 07`; change log effective date 2026/10/01 | Leader rows 5–52 (G2/S2, H51), Staff rows 5–49 (H48), Worker rows 5–49, change-log sheets row 9 |
 
-Check import manifest with exact workbook SHA, set/doc code, group UUID/code, criterion UUID/code, VI/JA label/source row, ordered choices and points, canonical level ID, default option, negative/zero handling and provenance. Import exactly **18 groups + 93 criteria** plus signed-off selectable levels; immutable historic records remain intact. The workbook's original wording is reference; any business interpretation must be an explicit erratum.
+### P108.3 Target architecture
 
-### P108.3 — Minimal technical design (no duplicated engines)
+```text
+criteria_groups(set_key) ──┐ composite FK criteria(group_id,set_key) → criteria_groups(id,set_key)
+criteria(set_key) ─────────┘ criterion_audiences: exactly one row, derived from set_key
+        │ save_criteria_config = the only writer (CAS, Active lock, canonical checksum)
+        ▼
+criteria_config_versions (one active, global) + *_versions(set_key; NULL = legacy snapshot)
+        │ get_active_criteria_config (adds set_key, otherwise unchanged)
+        ▼
+scoring readers + P107 writer (unchanged)    history/report readers: subject-role filter, set-aware keys
+```
 
-**Database:** One forward-only P108 migration (do not rewrite previously applied migrations). Add `set_key` to live `criteria_groups` and `criteria`, and to `criteria_group_versions`/`criterion_versions` as required for authoritative historical display. Keep old pre-P108 version rows readable (nullable `set_key` only for legacy); new live/snapshot entries must have a valid non-null set. Replace global `UNIQUE(code)` for both group and criterion with appropriate normalized composite uniqueness `(set_key,code)`; update snapshot `UNIQUE(version_id,code)` to per-set keys and **also update temporary tables**, validation and all readers/lookups. Preserve UUID primary keys, FK referential integrity, level/audience historic snapshots, and all old scores/responses. Enforce criterion→group **same-set ownership at DB boundary**, not only in the UI. Each new criterion has one derived audience according to `set_key`; legacy multi-audience snapshots remain historical/read-only. Do not use `encodeAudiencesToLegacy()` as Worker authority (its Worker-only case cannot be expressed faithfully as old `applies_to`).
+- **Data:** `set_key text CHECK (set_key IN ('leader','staff','worker'))`, nullable, on `criteria_groups` and `criteria`. `UNIQUE(id, set_key)` on groups plus composite FK `criteria(group_id, set_key) → criteria_groups(id, set_key)`: a criterion cannot belong to a group of another set. Active-only unique `(COALESCE(set_key,'~legacy'), upper(btrim(code))) WHERE is_active` on each table replaces the dropped global `UNIQUE(code)`. Legacy rows keep `set_key = NULL` and are never deleted; legacy active duplicates stay rejected; re-creating a deleted code is allowed. Version tables get nullable `set_key` with `UNIQUE(version_id, code) WHERE set_key IS NULL` and `UNIQUE(version_id, set_key, code) WHERE set_key IS NOT NULL`.
+- **Writer:** `save_criteria_config` takes `LOCK TABLE evaluation_periods IN SHARE MODE` first, then the existing advisory lock, then rejects if any period is `active`. It must run under READ COMMITTED (the PostgREST default; asserted). CAS is unchanged. The payload must give `set_key` for every group and criterion; criterion set = group set; an existing UUID cannot change set; audiences are derived server-side (`leader→management`, `staff→employee`, `worker→worker`) and client audiences are ignored; codes are unique per set; empty groups are allowed. The checksum is computed from the normalized temp-table content; identical content returns the current version without creating one.
+- **Readers:** scoring readers stay audience-based. One role→set helper lives in `src/lib/criteria-applicability.ts`. History and display use one rule for legacy and P108 versions: keep criteria whose roles include the evaluation's role snapshot, drop empty groups. The snapshot loader reads per version with bounded pagination and exact counts; any incomplete read makes that version `unavailable`, never partially authoritative.
+- **Reports:** keep `configKey = versionId` for the snapshot lookup. The criteria-breakdown key becomes `setKey:code` (legacy `NULL` keeps the old `code` key and numbers), with labels taken from the snapshot. Radar is per set. Counts, progress, Approved count and grade distribution aggregate across sets. Raw average, Top 5 and team average stay unchanged until D2.
+- **Future change:** adding or editing a Leader criterion is data only through `/criteria`; no SQL, migration or code change; Staff/Worker UUIDs and content stay byte-identical; a new global version is created.
 
-**Existing writer/version:** Extend `validate_criteria_config(jsonb)`, `get_active_criteria_config()` and **reuse** `save_criteria_config(p_config,p_expected_version)`; keep `criteria_config_versions` **one globally active version**, version CAS, `evaluation_rounds.criteria_config_version_id`, P107 transaction validation/lock and grade config versioning wherever tests show compatibility. For a Manager write, server loads current complete config, mutates only the selected set, verifies same-set UUID/ownership, then saves the full config atomically. Verify unchanged set content + UUID/levels after each write. Stale global CAS must return a reload message, never overwrite. No additional per-set save RPC unless a test proves a mandatory safety limitation.
+### P108.4 Migration contract
 
-**Active-period race:** Gate writes at the **database transaction** boundary and verify concurrency both ways: configuration save vs `create_evaluation_period_atomic`, plus save vs a live evaluation submit. Use a deterministic compatible lock order with existing P107 locks; front-end guard is an extra UX layer, not the authority. No `TRUNCATE` / schema-wide locks as a workaround and no deadlock regressions.
+One forward migration plus one tested rollback artifact. Applied migrations are never edited.
 
-**Application:** A single role→set helper in `src/lib/criteria-applicability.ts`; update `src/lib/db/criteria.ts`, `src/lib/db/criteria-admin.ts`, `src/actions/criteria.ts` and affected `src/actions/read.ts`/hooks/types so every authorizing read/write is set-scoped. In `src/hooks/use-evaluation-page-state.ts` change the active-round criteria loader from `getCriteriaForRoleAction(employee.role)` to the immutable subject `evaluation.employeeRole`; keep submitted rounds sourced from their **pinned** historical snapshot, filtered to the subject's set. Validate scores, notes, level indexes and UUIDs against the authoritative rules for **only that set**. On the Manager Criteria page show three set tabs; inside each show its own A–F groups by **group UUID**, not global group code. Remove multi-audience edit UI/action path. Preserve all five roles' transition and authorization logic.
+1. **Preflight (fail closed):** required tables and functions exist with their P99/P107 provenance comments; exactly one constraint matches each legacy unique definition (`criteria_code_key`, `criteria_groups_code_key`, and the two auto-named `UNIQUE(version_id, code)` constraints, located by definition, not by assumed name); no duplicate normalized active codes; P107 writer present.
+2. **DDL:** add the columns, `UNIQUE(id, set_key)`, the composite FK and the replacement unique indexes, then drop the four legacy unique constraints, all in the same transaction.
+3. **Functions:** replace `validate_criteria_config`, `get_active_criteria_config` and `save_criteria_config`. Diff each body against `20260907000600_criteria_config_version.sql`; only the intended deltas are allowed. Grants unchanged.
+4. **No `CHECK … NOT VALID`:** PostgreSQL still checks it on every new INSERT/UPDATE, so it adds risk without benefit. Enforcement lives in the single writer, the composite FK and the unique indexes, proven by tests.
 
-**History/report/export:** Read pre-P108 history with legacy pinned audiences, P108 history with set ownership; never re-label old criteria with current ones. `src/lib/evaluation-result-projection.ts` currently accumulates by `group.code`: instead group by set + stable group/pinned-version identity so identically coded A–F do not mix. A single global criteria version **does not** make raw 190-point Leader and 175-point Staff scores comparable: preserve Approved-only metrics, separate role/set statistics, avoid global cross-set raw-score ranking and misleading average or percentage. Compare `gradeConfigVersionId` as well as criteria basis where a same-basis metric is claimed. Export keys include set + criterion ID/pinned version to disambiguate repeated codes; never expose raw notes/scores beyond existing viewer permissions. Avoid unrelated redesign and N+1 queries.
+**Compatibility window:** after the migration the currently deployed app can still read (extra JSON keys are ignored; version readers select explicit columns), but its criteria saves are rejected because its payload has no `set_key`. This is accepted inside the maintenance window: with no active period there are no evaluation writes. It must be proven in P108M1T10 by running the deployed-SHA app read smoke against a migrated, not-yet-imported disposable database.
 
-**Touched code (bounded):** `src/types/index.ts`, `src/types/database.ts`; `src/lib/criteria-applicability.ts`, `src/lib/db/{criteria.ts,criteria-admin.ts,evaluation-display-admin.ts}`, `src/actions/{criteria.ts,read.ts}`, `src/hooks/{use-db.ts,use-evaluation-page-state.ts}`, `src/app/criteria/page.tsx`, `src/components/modals/{CriteriaModal.tsx,CriteriaGroupModal.tsx}`, `src/lib/evaluation-result-projection.ts`, affected report/export/compare consumers. Modify `src/actions/evaluation.ts` or P107 RPC only if real integration tests prove necessary. Reconcile bootstrap schema/manifest, tests and runbook. No new criteria-set table is required for the fixed enum.
+**Rollback artifact `db/rollback-p108-criteria-sets.sql`:**
 
-### P108.4 — PDCA execution WBS (6 groups, sequential release gates)
+- **(a) revert-import:** guarded so it runs only when the latest version is the import version, no round pins it, no later version exists and no period was created after the import. It reactivates the previous version's live projection and the active pointer.
+- **(b) schema rollback:** restores the previous function bodies, drops the new indexes, FK and columns, and recreates the global `UNIQUE(code)`. Guard: no active P108 rows.
 
-| WBS | Work / evidence deliverable | Gate / dependency |
-|---|---|---|
-| **G0 — LIVE PREFLIGHT & TEST CLEANUP** | Read-only actual Supabase project/schema/ledger, deployed app SHA/flags, period/evaluation/round/history/FK/trigger inventory. Identify **exact trial-evaluation IDs**; independent restore-test of backup/PITR, hash/counter/allowlist readback. Only after scoped owner approval to delete those exact IDs, execute atomic selective cleanup and postcheck; history immutability/FK `RESTRICT` ⇒ **STOP, no trigger bypass**. | Prerequisite for production cutover; source development can use disposable DB before live cleanup. No delete until IDs and restore evidence are known |
-| **G1 — WORKBOOK SIGNOFF** | Verify Pi5 SHA, classify all 93 criteria/levels, fix S1–S6 in a signed-off manifest with bilingual row references and point bounds. | Worker point mapping + material errata approved; no guessed source values |
-| **G2 — DB/CATALOG** | Implement/test additive forward migration, set ownership + composite unique, one active global version, Writer/CAS/Active guard, cloned UUIDs + snapshot. Run migration and rollback drill on disposable target. | 18/93 exact, no cross-set FK, legacy history intact, concurrent writer/period tests pass |
-| **G3 — UI/EVALUATION** | Three tabs, two-step CRUD, correct role snapshot, strict per-set payload validation, no multi-audience toggles; render/hydrate/autosave/change-role behavior. | Five-role save/submit/return/approve and Manager CRUD tests pass; no cross-set leak |
-| **G4 — HISTORY/REPORT/EXPORT** | Correct old/new historical display, avoid group-code mixing, role-scoped report/leaderboard, version/grade comparability, authorized export. | Golden numerical results and permission comparisons match expected values |
-| **G5 — QUALIFY/RELEASE** | Same integrated candidate: tests, typecheck, lint, build, secret scan, real local DB transaction races + browser matrix, staging restored/sanitized dataset and 1500 synthetic personnel perf; backup restore/rollback drill. Separate protected production push/apply/deploy approval, controlled smoke and monitoring. | No known blocking functional/security/data issues; exact app SHA + migration fingerprints/evidence; production only after explicit release approval |
+Qualified on a disposable DB in the order apply → import → (a) → (b) → reapply.
 
-**DAG:** `G0(read-only) || G1` → `G1 signed off` → `G2 → G3 → G4 → G5`; production destructive cleanup is a separate controlled subgate after G0 exact allowlist approval, before production cutover. Keep protected write tasks serial where overlapping; avoid multiple concurrent heavy builds on Pi5. This master-plan change is **not** permission to operate Supabase production.
+### P108.5 Release, cutover and rollback
 
-### P108.5 — Critical acceptance matrix (behavior + DB, not only static grep)
+**Preconditions:**
 
-1. **Codes/ownership:** 3 independent UUID trees; `staff:E22` vs `worker:E22` distinct, and `leader:E23/staff:E22/worker:E24` same subject but distinct; same A–F group codes permitted in each set, same normalized code twice *within* a set rejected.
-2. **Data import:** exactly 33/30/30 criteria and 6 groups per set; no invented Worker scores, no numeric `-`, VI/JA source row audit; level defaults and grade-range maxima validated.
-3. **Version/CAS:** edit Leader to add another criterion; unchanged Staff+Worker checksum/UUID/levels, new global snapshot ID; stale concurrent Manager save rejects without lost update; old pinned version still displays.
-4. **Active-period fence:** Manager read-only in Active; direct RPC bypass denied; race `create-period ↔ save-config` and `submit ↔ config-update` yields one consistent winner without deadlock.
-5. **All role flows:** Manager 1 round, Leader 2, SubLeader 3, Employee/Worker 3; Draft/first-open autosave/submit/return/resubmit/Approved, role transfer while period exists, evaluator change, old closed history.
-6. **Scores/security:** negative *level* and score zero preserved; negative total fails via existing guard; forged criterion UUID/level index/wrong set/stale version fail closed; Manager-only catalog writes, viewer read-scopes preserved.
-7. **Reports/export:** group C by set never mixed; different maximums not raw-ranked globally; Approved-only, historic pinned grades/labels, legacy result states preserved, authorized CSV/XLSX unambiguous.
-8. **Scale/release:** root `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, secret scan; authenticated browser/API + real DB test; 1500 synthetic roster; baseline vs candidate p95 measured under same lane (proposed no >15% degradation; investigate, not fake a PASS). Confirm zero orphan/history mutation, backup restore, migration provenance, rollback readiness and real production smoke.
+- P108M1T10 PASS on the exact candidate, including a fresh independent review;
+- G1 signed manifest (SHA recorded);
+- D1 executed, or explicitly re-decided by the owner;
+- backup and restore proof;
+- no `active` period;
+- an agreed maintenance window.
 
-### P108.6 — Fail-closed / rollback and non-goals
+Every production step needs its own explicit owner approval.
 
-- **STOP** on uncertain live schema/ledger/DB identity, Worker score signoff missing, wrong 18/93 mapping, failed constraints/snapshot/history, blocked trial cleanup without approved handling, absent restore proof, unexpected global version interference, authorization/regression, Active race/deadlock, red tests, or missing exact release approval. Do not automatically turn a blocker into a guessed default.
-- Migration/seed apply must be atomic on disposable/staging first. Prior to cutover, rollback transaction / tested restore is valid. **After production P108 data has been written, redeploying old app alone is NOT a safe rollback** (the old app assumes globally unique code); use assessed fix-forward or controlled PITR/restore with loss-of-new-writes analysis and owner decision. Never delete immutable history or widen privileges to force migration.
-- Out of scope: 3 engines/version streams, extra `criteria_sets` manager UI, standalone draft/publish/schedule/approval workflow, global raw leaderboards, changing negative total rule/grade threshold, mass personal-data rework, unrelated security/auth/AI redesign, new performance/cache framework. Fix only directly related errors.
-- **Current execution markers:** `P108_PLAN_DOCUMENTED=YES`; `P108_APP_CODE_CHANGED=NO`; `P108_DB_MIGRATION_APPLIED=NO`; `P108_TRIAL_EVALUATIONS_DELETED=NO`; `P108_PRODUCTION_DEPLOYED=NO`; `WORKBOOK_WORKER_POINTS_SIGNED_OFF=NO`; `LIVE_SUPABASE_CATALOG_VERIFIED=NO`.
+**Steps:**
 
+1. **Backup:** `supabase db dump` (roles / schema / data) through the pooler with a `pg_dump` matching the server major version. Files mode 600 with SHA-256, kept under `/home/pi5/hermes-artifacts/kurabe-p108/backup/`.
+2. **Restore proof:** restore into an owned, loopback-only disposable local Supabase stack at the production major version with `ON_ERROR_STOP`. Row counts, ordered md5 of key tables, migration ledger, function md5s and `get_active_criteria_config()` must equal the production readback taken in the same window. A successful dump alone is not proof. Destroy the stack and read back zero residue. Dumps contain personnel data: restricted path, owner-approved retention and deletion.
+3. **Migration:** apply by name in one transaction, record the ledger row, read back object and function fingerprints.
+4. **App:** push; verify the Vercel production deployment SHA, the `lykiv.vercel.app` alias and a smoke on the still-legacy catalog.
+5. **Import:** call `save_criteria_config` with the signed-manifest payload and the expected version. Read back 6/6/6 groups, 33/30/30 criteria, per-set canonical hash = manifest, exactly one audience per criterion, new version active.
+6. **Smoke:** read-only checks as Manager, Leader, Staff and Worker. The owner creates the next period when ready.
+
+**Rollback by stage:**
+
+| Stage | Allowed action |
+|---|---|
+| Before migration | Nothing to roll back |
+| After migration, before import | Schema rollback (b); redeploy the previous app if needed (the new app also renders the legacy catalog) |
+| After import, before any business data (no newer version, no new period, no round pinned to the import version, no catalog edit) | Revert-import (a), then optionally (b) |
+| After any P108 business data | No revert and no old-app redeploy (the old app cannot render a three-set catalog). Freeze criteria edits and fix forward under control. Restoring the backup is only for catastrophic corruption, with a loss analysis of data written since the backup (sessions, audit, personnel, evaluations) and an owner decision |
+
+### P108.6 Acceptance gates
+
+Behavioural tests only, kept to what protects correctness, integrity or access:
+
+- **Schema/RPC (disposable PostgreSQL, real RPCs):**
+  - unique: same code in different sets accepted; duplicate inside a set rejected (case/space normalized); duplicate active legacy `NULL` codes rejected; re-created deleted code accepted;
+  - set integrity: cross-set group link rejected; a UUID cannot move to another set; exactly one audience per criterion, equal to its set;
+  - legacy versions still readable;
+  - P107 save/submit/return work on a three-set catalog;
+  - CAS: two concurrent Managers → exactly one `STALE`;
+  - an unchanged Save creates no version;
+  - adding a Leader criterion leaves the Staff/Worker canonical hash and UUIDs unchanged.
+- **Concurrency on two real connections:** waits proven via `pg_locks`, bounded timeout, no deadlock. Cases: create period ↔ save; close period ↔ save; evaluation writer ↔ save; direct RPC while active is rejected.
+- **Import:** exactly 18 groups / 93 criteria from the manifest; an unsigned manifest is refused outside disposable targets; readback hashes match.
+- **History:**
+  - pagination beyond 1,000 rows across at least 3 versions;
+  - a simulated truncated read yields `unavailable`;
+  - empty group handled;
+  - legacy and P108 rounds display only the subject's set.
+- **App and browser** (real local Supabase stack, synthetic fixtures):
+  - `/criteria`: three tabs with UUID keys; the Active lock blocks both UI and SQL;
+  - all five roles run Draft → Submit → Return → Resubmit → Approved across the three sets;
+  - a role change mid-period keeps the snapshot set;
+  - compare page; history before and after P108.
+- **Reports, AI, export:**
+  - golden numbers; no group mixing across sets; legacy numbers unchanged;
+  - radar per set;
+  - AI prompt uses the pinned snapshot and a period id (prompt-builder test, no paid provider call);
+  - export columns per set.
+- **Release gates:** `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build`, secret scan; catalog-size smoke with the existing performance harness; old-app read smoke against the migrated database.
+
+### P108.7 Non-goals and markers
+
+**Out of scope:** KPI policy change before D2; grade-band or threshold changes; per-set versions; draft/publish; mass personnel rework; 1,500-roster or production-data staging tests; unrelated refactors or new frameworks. Fix only directly related defects.
+
+**Markers:** `P108_PLAN_TASKED=YES`; `P108_TASKS_REGISTERED=NO`; `P108_APP_CODE_CHANGED=NO`; `P108_DB_MIGRATION_APPLIED=NO`; `P108_TRIAL_EVALUATIONS_DELETED=NO`; `P108_PRODUCTION_DEPLOYED=NO`; `WORKBOOK_SIGNED_OFF=NO`; `LIVE_SUPABASE_VERIFIED=NO`.
 
 ## Historical P107 planning control state (2026-10-08 snapshot; not current)
 

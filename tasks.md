@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active preparation: **P107 — one phase, 10 PLANNED tasks, 0 started; READY registration deferred**. P104/P105 and completed P106 tasks remain historical; no re-open.
+- Active preparation: **P108 — 12 PLANNED tasks (P108M1T01–T11, P108M2T01), not registered**. P107 released 2026-10-10 (`.ai/DECISIONS_LOG.md` rows 57–61); P104–P107 tasks remain historical; no re-open.
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -725,6 +725,357 @@ product/policy change; production writes/migrations 0/0.
 - S2/S3 default+optional policy preserved in T04; S4/S9/S10/T5 behavior-qualified, not speculative policy change. S5–S8/S11/N4/N7 T03; L3/L6/L7/P3 T05; L1/L2/L4/N3/P4–P6 T06; N1/N2/N6/L5 T07; S12/S13/N5/N8 T08; N10 T04; N9 T01→T02.
 - P1–P9 measurement/provenance T09; P7 concurrency conditional after seed CAS; P8 indexes/region optional owner-gated, not automatic. L8 dead tags remove only if T07 inventory proves unused and within owns. T1–T4 readiness T01 + exact qualification T10, existing authenticated CI/transactional flag preserved. T6 broad artifact cleanup deferred.
 - Stage order is deliberately serial on shared Pi5 and overlapping source interfaces. No parallel_safe field, no phase split or new dispatcher. Do not infer production acceptance from local completion.
+
+## P108 — three independent criteria sets (M1 build, M2 trial-data track)
+
+`WBS_STATUS=PLANNED`. Plan authority: `.ai/MASTER_PLAN.md` § P108 (revised 2026-10-17). Every checkbox below is **PLANNED**, not READY/RUNNING. Nothing is registered in `.state/agent-state.json`. Registration requires: owner approval of this WBS, canonical control commit + readback, a reconciled `.state` (`canonical_head`/`BASE_SHA` refreshed under `control.lock`), and the gates named per task. Business sign-off (G1) and decisions D1–D3 are **not** granted by this WBS.
+
+### Shared execution envelope — applies to every P108 task
+
+- Task WT = `/home/pi5/projects/kurabe-task-wts/<ID>`; candidate WT = `/home/pi5/projects/kurabe-integration-wts/<ID>`; evidence = `/home/pi5/hermes-artifacts/kurabe-p108/<ID>/evidence.json` + `runner-report.md`. Dispatch `BASE_SHA` = canonical HEAD at dispatch, with dependencies integrated.
+- One Runner/verifier at a time on Pi5. Runners never edit `tasks.md`, `AGENTS.md`, `HANDOFF.md`, `.ai/*`, `.state/*`. A discovered consumer outside `owns` requires a Mika owns amendment before any write.
+- Every code task: matching behavioural tests + wiring; `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build` (no `.env.local`), `node scripts/scan-source-secrets.mjs`, scope/diff checks. Exact-candidate checks are run by Mika. CONTROLLED tasks need a fresh selected-review PASS for that exact candidate.
+- DB work: one new migration only; never edit applied migrations. Disposable PostgreSQL / local Supabase stack, real RPCs, synthetic fixtures, exact run-owned cleanup with residue readback. No fake auth/API adapters, no disabled triggers.
+- Production access, credentials, deletion, push, deploy and import are **only** in P108M1T01 (read-only), P108M1T11 and P108M2T01, each behind explicit owner approval.
+- Keep unchanged: negative points, arithmetic total, grade bands, P107 workflow and lifecycle, Approved-only results. KPI policy (D2) unchanged unless approved.
+- STOP: unresolved scope/consumer/catalog identity, unsigned business data needed for a DoD, failed rollback qualification, or any production need without approval. Preserve the first failure.
+
+### [ ] [#P108M1T01] Preflight: source/runtime inventory + production read-only snapshot
+
+```yaml
+task:
+  id: P108M1T01
+  tier: CONTROLLED
+  depends: []
+  owns: []
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: Mika-only read-only prerequisite that fixes the migration and consumer contract and replaces live `UNKNOWN`s with evidence.
+Changes (no product writes):
+- Repo inventory: every reader/writer/consumer of criteria, set, role snapshot and snapshot versions (starting from MASTER_PLAN P108.2); exact constraint/index names on criteria and version tables; callers of `draftResultMessageAction`.
+- Production read-only, aggregates and IDs only, owner-approved:
+  - `server_version` and extensions; constraint/index inventory;
+  - active criteria version (number, id, counts, codes, normalized duplicates) and empty groups in past versions;
+  - periods (any `active`?) and rounds by version/status;
+  - `evaluation_history_labels` and `evaluation_responses` counts; live grade bands vs set maxima (190/175/Worker TBD); migration ledger names;
+  - Supabase CLI / `pg_dump` availability;
+  - trial-data candidate inventory for P108M2T01: counts by period, rounds, labels, `ai_summaries`.
+DoD:
+- Evidence JSON with source SHA and production identity (project ref), redacted (no personal fields beyond IDs/counts); hash read back.
+- Every consumer mapped to an owning task, or flagged as an owns amendment.
+- Live facts that change migration preflight (duplicates, empty groups, PG version, constraint names) are recorded as inputs for T03/T11.
+STOP / partial close: if production read access is not approved, T01 closes on the repo inventory with live facts recorded as `UNKNOWN` (offline work is not blocked, same rule as P107M1T01). The live section is then mandatory inside T11 (before migration) and M2T01 (before any disposition) under their own approvals.
+
+### [ ] [#P108M1T02] Workbook manifest + business sign-off
+
+```yaml
+task:
+  id: P108M1T02
+  tier: STANDARD
+  depends: []
+  owns:
+    - scripts/p108-criteria-manifest.mjs
+    - db/seed/p108-criteria-manifest.json
+    - tests/p108-criteria-manifest.test.mjs
+  locks: []
+```
+
+Goal: deterministic, reviewable source manifest of 18 groups / 93 criteria from `TCDG2026.xls`, with every open business item explicit. Mika-run, because the workbook is anh-owned and untracked in the canonical root.
+Changes:
+- Read-only extractor using the existing `xlsx` dependency. It verifies the workbook SHA and emits the manifest: set, doc code, group code/name, criterion code (letter + VI column-A number), VI label, JA label, source row, ordered levels (label, points), default level.
+- Manifest `open_items[]` covers every G1 question from MASTER_PLAN P108.1. Worker points are a derived **proposal**, marked unsigned.
+- No `-` is imported as a level without a per-criterion decision.
+DoD:
+- Extractor is deterministic (same SHA → same manifest bytes).
+- Test asserts: 6/6/6 groups; 33/30/30 criteria; Leader maximum 190; Staff maximum 175; unique codes per set; source-row provenance for every level.
+- Business sign-off recorded by Mika in `.ai/DECISIONS_LOG.md` with the manifest SHA; `signed: true` set only after that.
+STOP: sign-off missing ⇒ task stays open. T03–T10 use the synthetic manifest; T11 import is blocked.
+
+### [ ] [#P108M1T03] DB contract: set_key schema, Active lock, writer RPC, rollback
+
+```yaml
+task:
+  id: P108M1T03
+  tier: CONTROLLED
+  depends: [P108M1T01]
+  owns:
+    - supabase/migrations/<timestamp>_p108_criteria_sets.sql
+    - db/rollback-p108-criteria-sets.sql
+    - tests/integration/criteria-config.mjs
+    - tests/integration/p108-criteria-sets.mjs
+    - tests/p108-criteria-sets-contract.test.mjs
+    - src/types/database.ts
+  locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
+```
+
+Goal: implement MASTER_PLAN P108.3–P108.4 at the database boundary.
+Changes:
+- Migration: preflight; `set_key` columns; `UNIQUE(id, set_key)` + composite FK; active-only normalized unique indexes; version-table `set_key` with partial uniques; drop the four legacy unique constraints located by definition.
+- Replace `validate/get/save_criteria_config`:
+  - lock order: `LOCK evaluation_periods SHARE` → advisory → Active check → READ COMMITTED assert;
+  - set rules; immutable set per UUID; server-derived audience; temp tables keyed by `(set_key, code)`;
+  - canonical checksum + no-op on unchanged content.
+- Rollback artifact with (a) guarded revert-import and (b) schema rollback.
+- Update the existing `tests/integration/criteria-config.mjs` legacy payloads to the new contract; keep its stale/invalid/concurrency cases.
+Constraints: P107 writer untouched; diff replaced function bodies against `20260907000600_criteria_config_version.sql`; no `NOT VALID` check; grants unchanged.
+DoD:
+- All schema/RPC and concurrency cases of MASTER_PLAN P108.6, on a disposable DB with two real connections and `pg_locks` wait proof.
+- Legacy catalog fixture: migration applies; legacy versions read unchanged; legacy duplicate active code rejected.
+- P107 save/submit/return pass on a three-set catalog.
+- apply → import(synthetic) → revert-import → schema rollback → reapply all pass, with zero partial mutation.
+- Root gates pass.
+STOP: any preflight mismatch with T01 live facts ⇒ amend the plan before changing guards.
+
+### [ ] [#P108M1T04] Import mechanism + readback verifier
+
+```yaml
+task:
+  id: P108M1T04
+  tier: CONTROLLED
+  depends: [P108M1T03]
+  owns:
+    - scripts/p108-import-criteria.mjs
+    - tests/fixtures/p108/synthetic-manifest.json
+    - tests/integration/p108-import.mjs
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: one auditable way to load a manifest through `save_criteria_config` (never direct INSERT).
+Changes:
+- Script modes: `--dry-run` (payload + per-set canonical hashes) and `--apply --expected-version N`.
+- `--apply` refuses: an unsigned manifest unless the target is a declared disposable DB; any `active` period; a CAS mismatch.
+- `--verify` reads back counts per set, canonical hashes, one audience per criterion, active version.
+- Credentials only from the existing env loading, never printed.
+DoD:
+- On the disposable DB with the legacy fixture: dry-run and apply produce exactly 18/93 from the synthetic manifest; hashes equal the dry-run; second apply with the same content = no-op; refusal cases proven.
+- Root gates pass.
+Out of scope: running against production (T11).
+
+### [ ] [#P108M1T05] Shared set contract + complete snapshot reader
+
+```yaml
+task:
+  id: P108M1T05
+  tier: STANDARD
+  depends: [P108M1T03]
+  owns:
+    - src/lib/criteria-applicability.ts
+    - src/types/index.ts
+    - src/lib/db/criteria.ts
+    - src/lib/db/criteria-admin.ts
+    - src/lib/db/evaluation-display-admin.ts
+    - tests/p108-snapshot-reader.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: the one TS contract every consumer uses, plus a history loader that cannot return a partial snapshot.
+Changes:
+- `CriteriaSetKey`, role→set and set→audience helper; `setKey` on `CriteriaGroup`/`Criterion` (NULL = legacy); `get_active_criteria_config` mapping.
+- Snapshot loader: per-version bounded pagination + exact counts for groups/criteria/levels/audiences; incomplete ⇒ `unavailable`.
+- Empty group no longer invalidates a complete version.
+- Display DTO filters every version (legacy and P108) to the evaluation's role snapshot and drops empty groups.
+DoD:
+- Tests: more than 1,000 level rows across at least 3 versions read completely; simulated truncation ⇒ `unavailable`; legacy multi-audience version filtered by role exactly as before for its audience; P108 version shows only the subject set; audience→role mapping verified for all 93 synthetic criteria.
+- Root gates pass.
+
+### [ ] [#P108M1T06] Criteria admin: 3 tabs, set-scoped CRUD, Active lock UI
+
+```yaml
+task:
+  id: P108M1T06
+  tier: STANDARD
+  depends: [P108M1T05]
+  owns:
+    - src/actions/criteria.ts
+    - src/hooks/use-db.ts
+    - src/app/criteria/page.tsx
+    - src/components/modals/CriteriaModal.tsx
+    - src/components/modals/CriteriaGroupModal.tsx
+    - src/components/settings/GradeBandsTab.tsx
+    - tests/p108-criteria-admin.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: Manager edits one set at a time with the simplest flow.
+Changes:
+- Leader/Staff/Worker tabs; groups and React keys by UUID; per-set maximum shown.
+- Group select limited to the active set; create carries `set_key`; delete limited to the set.
+- Remove `updateCriterionAudiencesAction`, its hook and the checkbox UI.
+- Save disabled when unchanged.
+- Read-only banner + disabled actions while a period is active, from the same server signal; the SQL rejection surfaces as a clear message.
+- STALE CAS → reload message.
+DoD:
+- Tests: actions send set-scoped full config; no audience path remains (source contract); cross-set group id rejected client- and server-side; adding a Leader criterion leaves the Staff/Worker payload byte-identical.
+- Browser check at 390 and 1440 on the local stack.
+- Root gates pass.
+
+### [ ] [#P108M1T07] Evaluation + compare use the subject role snapshot
+
+```yaml
+task:
+  id: P108M1T07
+  tier: STANDARD
+  depends: [P108M1T05]
+  owns:
+    - src/hooks/use-evaluation-page-state.ts
+    - src/app/evaluations/[id]/compare/ComparePageClient.tsx
+    - tests/p108-role-snapshot.test.mjs
+    - tests/integration/p108-evaluation-flow.mjs
+  locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
+```
+
+Goal: the active-round loader and compare filter use `evaluation.employeeRole`; the P107 workflow behaves identically on a three-set catalog.
+Changes: replace `employee.role` at the loader (`use-evaluation-page-state.ts:349`) and compare filter (`ComparePageClient.tsx:190-193`). No writer/RPC change.
+DoD:
+- Disposable Supabase stack with real RPCs: five roles run Draft → Submit → Return → Resubmit → Approved, across all three sets.
+- A role change mid-period keeps the snapshot set (client renders = server validates); forged cross-set criterion UUID rejected.
+- Root gates pass.
+STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
+
+### [ ] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
+
+```yaml
+task:
+  id: P108M1T08
+  tier: STANDARD
+  depends: [P108M1T05]
+  owns:
+    - src/lib/evaluation-result-projection.ts
+    - src/actions/reports.ts
+    - src/components/reports/CriteriaHeatmap.tsx
+    - src/actions/dashboard.ts
+    - src/components/dashboard/DashboardHeavySection.tsx
+    - src/components/charts/LazySkillGapRadar.tsx
+    - src/components/charts/SkillGapRadar.tsx
+    - tests/p108-report-projection.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: correct per-set criteria analytics without changing KPI policy.
+Changes:
+- Keep `configKey = versionId` and the snapshot lookup.
+- Criteria-breakdown key `setKey:code` (legacy `code`) with label/name from the snapshot; heatmap uses those labels and keys.
+- Radar computed and shown per set.
+- Average, Top 5 and team average logic unchanged, labelled as cross-set when sets mix (D2 pending).
+DoD:
+- Golden tests: Leader A vs Staff A never merged; legacy period output byte-identical to the baseline; counts, progress and grade distribution unchanged; radar per set.
+- Root gates pass.
+Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
+
+### [ ] [#P108M1T09] AI and export historical correctness
+
+```yaml
+task:
+  id: P108M1T09
+  tier: CONTROLLED
+  depends: [P108M1T05]
+  owns:
+    - src/actions/ai.ts
+    - src/components/reports/BatchResultMessageModal.tsx
+    - src/app/evaluations/[id]/EvaluationPageClient.tsx
+    - src/lib/export.ts
+    - tests/p108-ai-export.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: AI and export describe each evaluation with its pinned snapshot and target the exact period.
+Changes:
+- AI single and batch paths load the pinned snapshot of the Approved round (not the live catalog), filtered to the subject set.
+- `draftResultMessageAction` selects the period by id (callers pass id); prompt redaction and Approved-only rules unchanged.
+- Export inherits the role-filtered DTO; add only what the test proves missing.
+DoD:
+- Prompt-builder tests without a provider call: legacy and P108 evaluations produce correct criteria detail; two periods with the same name resolve by id.
+- Export columns per set.
+- AI egress tests from P107 still pass.
+- Root gates pass.
+
+### [ ] [#P108M1T10] Integrated qualification
+
+```yaml
+task:
+  id: P108M1T10
+  tier: CONTROLLED
+  depends: [P108M1T04, P108M1T06, P108M1T07, P108M1T08, P108M1T09]
+  owns:
+    - .github/ci/confirmation-runtime.mjs
+    - tests/browser/p108-acceptance.mjs
+    - tests/integration/p108-old-app-compat.mjs
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: one exact integrated candidate proves every MASTER_PLAN P108.6 gate end to end.
+Changes:
+- The CI runtime can seed a three-set catalog via the import script.
+- The browser acceptance suite covers `/criteria` and all five roles.
+- Old-app compatibility: build the deployed SHA in a disposable worktree against a migrated, not-yet-imported DB; check read smoke + rejected criteria save.
+- Catalog-size smoke with the existing perf harness.
+DoD:
+- Full gate set + browser + DB suites pass on the exact candidate; evidence bound to candidate/base/tree hashes.
+- Fresh independent review PASS.
+- Signed manifest dry-run (when T02 is signed) equals 18/93 with recorded hashes.
+
+### [ ] [#P108M1T11] Release + cutover (protected, owner-approved per step)
+
+```yaml
+task:
+  id: P108M1T11
+  tier: CONTROLLED
+  depends: [P108M1T01, P108M1T02, P108M1T10, P108M2T01]
+  owns: []
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: execute MASTER_PLAN P108.5 exactly.
+Steps, each with its own approval:
+1. backup + restore proof;
+2. confirm no active period;
+3. migration by name + fingerprint readback;
+4. push + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke;
+5. import of the signed manifest + per-set readback;
+6. role smoke.
+DoD:
+- Every step has a readback artifact.
+- Rollback stage recorded at each step.
+- `HANDOFF.md` and `.ai/DECISIONS_LOG.md` updated by Mika.
+STOP: restore proof not exact; active period present; T02 unsigned; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
+
+### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
+
+```yaml
+task:
+  id: P108M2T01
+  tier: CONTROLLED
+  depends: [P108M1T01]
+  owns: []
+  locks: [MACHINE_EXCLUSIVE]
+```
+
+Goal: handle trial evaluations before cutover without weakening history guarantees.
+Facts:
+- No current safe delete path: round DELETE needs a `save_rpc`/`return_rpc` transition context; history labels are `RESTRICT` + immutable; period delete only works for an exactly empty closed period.
+Options for D1:
+- (A) close the trial period and keep it frozen (zero risk, but its Approved rows appear in employee history and that period's reports);
+- (B) a dedicated purge RPC in its own migration: exact owner-approved ID allowlist, new audited `purge_rpc` context recognised by the round guard, refusal if any history label references the IDs, backup + restore proof first, row-count/hash readback.
+DoD:
+- Owner decision recorded.
+- For (B): a separate CONTROLLED implementation task registered first; qualified on a disposable DB; production run approved separately with exact IDs.
+- Post-state readback shows no unrelated row changed.
+STOP: IDs ambiguous, history labels present, or no approval ⇒ no deletion.
+
+### P108 dependency order
+
+```text
+T01 ──> T03 ──> T04 ─────────────────┐
+         └────> T05 ──> T06 ─────────┤
+                  ├───> T07 ─────────┤
+                  ├───> T08 ─────────┼──> T10 ──┐
+                  └───> T09 ─────────┘          │
+T02 (parallel; business sign-off) ──────────────┼──> T11 (release)
+T01 ──> M2T01 (D1 decision/execution) ──────────┘
+```
+
+T06–T09 have disjoint `owns` but run serially on Pi5 (one Runner).
 
 ## Closed / historical record
 

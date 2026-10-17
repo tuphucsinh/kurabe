@@ -11,3 +11,4 @@
 **Tooling:** `.ai/PROJECT_TOOLING.md`; one Runner/verifier; separate task/integration roots; real local services + synthetic fixture. Env wrapper prefers `.env.local`: never let production env enter disposable build.
 **Routing:** Runner `agy` / `gemini-3.8-flash-high`; gate fresh `reviewer` / `opencode-go` / `deepseek-v4.1-flash`. Continue serially through P107; no-tool replies are reachability only, actual review acceptance requires the qualified checker.
 **Outside phase:** push/remote CI/deploy, production/private-data/catalog/credentials/grants/migration, paid application AI calls; no production mutation authorized. Local candidate SQL + owned synthetic fixture required by DoD authorized.
+**Next (P108):** plan + WBS `PLANNED` (`.ai/MASTER_PLAN.md` § P108, `tasks.md` § P108), not registered. Open: business sign-off G1, owner decisions D1–D3. `.state` still records `701256e`; reconcile under `control.lock` before registration.
