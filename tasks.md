@@ -805,7 +805,7 @@ task:
   tier: CONTROLLED
   depends: [P108M1T01]
   owns:
-    - supabase/migrations/<timestamp>_p108_criteria_sets.sql
+    - supabase/migrations/20261017093100_p108_criteria_sets.sql
     - db/rollback-p108-criteria-sets.sql
     - tests/integration/criteria-config.mjs
     - tests/integration/p108-criteria-sets.mjs
