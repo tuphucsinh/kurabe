@@ -186,13 +186,14 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
   const activeVisibleRound = allRounds.length > 0 ? allRounds[allRounds.length - 1].round : null;
 
   const liveCriteria = useMemo(() => {
-    if (!employee || groups.length === 0) return [];
-    const role = employee.role;
+    if ((!employee && !evaluation) || groups.length === 0) return [];
+    const role = evaluation?.employeeRole ?? employee?.role;
+    if (!role) return [];
     return groups.map(group => ({
       ...group,
       criteria: group.criteria?.filter(c => c.appliesTo.includes(role)) || [],
     })).filter(g => g.criteria.length > 0);
-  }, [employee, groups]);
+  }, [employee, evaluation?.employeeRole, groups]);
 
   const displayRounds = useMemo(() => new Map(
     (displayQuery.data && displayQuery.data.evaluationId === evaluation?.id ? displayQuery.data.rounds : [])
@@ -231,8 +232,8 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
   }, [roundViews]);
 
   const roundResults = useMemo(() => {
-    if (!employee) return [];
-    const evaluatorRole = employee.role;
+    const evaluatorRole = evaluation?.employeeRole ?? employee?.role;
+    if (!evaluatorRole) return [];
     return roundViews.map((view) => ({
       round: view.round,
       displayRound: view.displayRound,
@@ -240,7 +241,7 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
         ? { totalScore: view.displayRound.totalScore, grade: view.displayRound.grade }
         : calculateRoundScore({ ...view.round, evaluatorRole }, gradeBands),
     }));
-  }, [roundViews, employee, gradeBands]);
+  }, [roundViews, employee, evaluation?.employeeRole, gradeBands]);
 
   const changedCriteriaIds = useMemo(() => {
     const ids = new Set<string>();

@@ -61,9 +61,10 @@ export default function ResultCard({ employee, evaluation, totalScore, grade, gr
         const explanation = finalGradeVal ? GRADE_EXPLANATION[finalGradeVal] : null;
         if (!explanation) return null;
 
-        const roleGroup: keyof GradeBands = employee.role === 'Worker'
+        const subjectRole = evaluation?.employeeRole ?? employee.role;
+        const roleGroup: keyof GradeBands = subjectRole === 'Worker'
           ? 'worker'
-          : isLeaderGradingRole(employee.role)
+          : isLeaderGradingRole(subjectRole)
           ? 'leader'
           : 'staff';
         const bands = gradeBands[roleGroup];

@@ -346,7 +346,8 @@ export function useEvaluationPageState({
       return () => { cancelled = true; };
     }
 
-    getCriteriaForRoleAction(employee.role)
+    const subjectRole = evaluation ? evaluation.employeeRole : employee.role;
+    getCriteriaForRoleAction(subjectRole)
       .then(hydrateCriteria)
       .catch((err) => {
         if (cancelled || criteriaGenRef.current !== currentGen) return;

@@ -54,7 +54,11 @@ export function verifySourceContracts(rootDir = projectRoot) {
   assert.ok(detail.includes('Không dùng cấu hình hiện tại'), 'detail must not use live-config fallback');
   assert.ok(compare.includes('Không dùng cấu hình hiện tại'), 'compare must not use live-config fallback');
   cases.push(REQUIRED_CASES[4]);
-  assert.ok(pageState.includes('getCriteriaForRoleAction(employee.role)'), 'draft current-rules loader must remain');
+  assert.ok(
+    pageState.includes('const subjectRole = evaluation ? evaluation.employeeRole : employee.role;'),
+    'draft must resolve subjectRole from evaluation.employeeRole with employee.role fallback'
+  );
+  assert.ok(pageState.includes('getCriteriaForRoleAction(subjectRole)'), 'draft current-rules loader must remain');
   assert.ok(pageState.includes('if (isSubmittedRound)'), 'submitted criteria path must be distinct from draft');
   cases.push(REQUIRED_CASES[5]);
   assert.ok(compare.includes("scope.kind === 'NO_ACTIVE_PERIOD'"), 'compare must retain active-period gate');

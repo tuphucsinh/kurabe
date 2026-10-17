@@ -14,7 +14,14 @@ assert.ok(compare.includes('useEvaluationDisplay'), 'compare must consume useEva
 assert.ok(detail.includes('useEvaluationDisplay'), 'detail must consume useEvaluationDisplay');
 assert.ok(pageState.includes('evaluationDisplay?: EvaluationDisplayDto | null'), 'page state must accept the fixed H7 DTO');
 assert.ok(pageState.includes("historicalDisplayRound.snapshotState !== 'authoritative'"), 'page state must fail closed for non-authoritative snapshots');
-assert.ok(pageState.includes('getCriteriaForRoleAction(employee.role)'), 'draft must retain the current-rules criteria workflow');
+assert.ok(
+  pageState.includes('const subjectRole = evaluation ? evaluation.employeeRole : employee.role;'),
+  'draft must resolve subjectRole from evaluation.employeeRole with employee.role fallback'
+);
+assert.ok(
+  pageState.includes('getCriteriaForRoleAction(subjectRole)'),
+  'draft must retain the current-rules criteria workflow for subjectRole'
+);
 assert.ok(pageState.includes('if (isSubmittedRound)'), 'submitted and draft criteria paths must be separate');
 
 // Submitted summary values come directly from the historical DTO.

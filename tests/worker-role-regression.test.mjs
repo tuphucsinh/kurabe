@@ -60,8 +60,8 @@ function stripComments(code) {
     'src/app/evaluations/[id]/EvaluationPageClient.tsx must not collapse Worker to Employee in currentSummaryRound'
   );
   assert.ok(
-    code.includes('evaluatorRole: employee.role'),
-    'src/app/evaluations/[id]/EvaluationPageClient.tsx must pass employee.role into currentSummaryRound.evaluatorRole'
+    code.includes('evaluatorRole: evaluation.employeeRole'),
+    'src/app/evaluations/[id]/EvaluationPageClient.tsx must pass evaluation.employeeRole into currentSummaryRound.evaluatorRole'
   );
 }
 
@@ -77,12 +77,12 @@ function stripComments(code) {
     'src/app/evaluations/[id]/compare/ComparePageClient.tsx must not collapse Worker to Employee for round scoring'
   );
   assert.ok(
-    code.includes('const role = employee.role;'),
-    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must filter criteria using employee.role'
+    code.includes('const role = evaluation?.employeeRole ?? employee?.role;'),
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must filter criteria using snapshot-first role'
   );
   assert.ok(
-    code.includes('const evaluatorRole = employee.role;'),
-    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must calculate round score using employee.role'
+    code.includes('const evaluatorRole = evaluation?.employeeRole ?? employee?.role;'),
+    'src/app/evaluations/[id]/compare/ComparePageClient.tsx must calculate round score using snapshot-first evaluatorRole'
   );
 }
 
@@ -94,21 +94,38 @@ function stripComments(code) {
     'src/components/evaluation/ResultCard.tsx must not use binary leader/staff fallback without Worker handling'
   );
   assert.ok(
-    code.includes("employee.role === 'Worker'") && (code.includes("'worker'") || code.includes('gradeBands.worker')),
-    "src/components/evaluation/ResultCard.tsx must handle employee.role === 'Worker' and select worker grade band"
+    code.includes('const subjectRole = evaluation?.employeeRole ?? employee.role;'),
+    'src/components/evaluation/ResultCard.tsx must assert subjectRole is snapshot-first'
+  );
+  assert.ok(
+    code.includes("subjectRole === 'Worker'") && (code.includes("'worker'") || code.includes('gradeBands.worker')),
+    "src/components/evaluation/ResultCard.tsx must handle subjectRole === 'Worker' and select worker grade band"
   );
 }
 
 // 5. src/components/evaluation/EvaluationHeader.tsx
 {
   const code = readProjectFile('src/components/evaluation/EvaluationHeader.tsx');
+  const parentCode = readProjectFile('src/app/evaluations/[id]/EvaluationPageClient.tsx');
   assert.ok(
     !code.includes('calculateGrade(rScore, isLeader)'),
     'src/components/evaluation/EvaluationHeader.tsx must not use boolean-only calculateGrade for previous rounds'
   );
   assert.ok(
-    code.includes('getGradeFromScore(rScore, employee.role'),
-    'src/components/evaluation/EvaluationHeader.tsx must use role-aware getGradeFromScore with employee.role'
+    code.includes('employeeRole?: Role') && code.includes('const subjectRole = employeeRole ?? employee.role;'),
+    'src/components/evaluation/EvaluationHeader.tsx must assert employeeRole snapshot input and fallback'
+  );
+  assert.ok(
+    code.includes('getGradeFromScore(rScore, subjectRole, gradeBands)'),
+    'src/components/evaluation/EvaluationHeader.tsx must assert Draft getGradeFromScore(rScore, subjectRole,...)'
+  );
+  assert.ok(
+    code.includes('r.totalScore') && code.includes('r.grade') && code.includes('const isSubmitted = r.status === \'Submitted\';'),
+    'src/components/evaluation/EvaluationHeader.tsx must assert Submitted uses stored r.totalScore/r.grade'
+  );
+  assert.ok(
+    parentCode.includes('employeeRole={evaluation.employeeRole}'),
+    'src/app/evaluations/[id]/EvaluationPageClient.tsx must pass snapshot employeeRole to EvaluationHeader'
   );
 }
 

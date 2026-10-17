@@ -294,7 +294,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
   // Blocked UI
   if (accessState.mode === 'blocked') {
-    const blockedMaxRound = getMaxEvaluationRound(employee.role);
+    const blockedMaxRound = getMaxEvaluationRound(evaluation.employeeRole);
     const blockedDetail =
       accessState.reason === 'NO_DRAFT'
         ? `${employee.name} (${roleLabel(employee.role)}) chưa có đánh giá — hiện đang ở vòng ${evaluation.currentRound}/${blockedMaxRound}, chưa ai khởi tạo bản nháp cho vòng này.`
@@ -314,7 +314,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const isReadOnly = accessState.mode === 'readonly';
-  const maxRound = getMaxEvaluationRound(employee.role);
+  const maxRound = getMaxEvaluationRound(evaluation.employeeRole);
   const activeRound = accessState.editableRound || accessState.displayRound;
   const activeRoundExists = activeRound
     ? evaluation.rounds.some(r => r.round === activeRound)
@@ -462,7 +462,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     evaluationId: evaluation.id,
     round: activeRound,
     evaluatorId: activeRoundData.evaluatorId || user?.id || '',
-    evaluatorRole: employee.role,
+    evaluatorRole: evaluation.employeeRole,
     scores,
     selectedLevelIndexes,
     notes,
@@ -648,6 +648,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
           <EvaluationHeader
             employee={displayEmployee}
+            employeeRole={evaluation.employeeRole}
             isLeader={usesLeaderGrading}
             scores={scores}
             criteriaGroups={criteriaGroups}

@@ -349,8 +349,14 @@ assert.ok(cleanClient.includes('router.push(`/evaluations/${employeeId}`)'), 'Co
 assert.ok(cleanClient.includes('router.push(`/evaluations/${employeeId}?round=${r.round}`)'), 'ComparePageClient must preserve round detail router push');
 
 // Worker role invariants
-assert.ok(cleanClient.includes('const role = employee.role;'), 'ComparePageClient must filter criteria using employee.role');
-assert.ok(cleanClient.includes('const evaluatorRole = employee.role;'), 'ComparePageClient must score using employee.role');
+assert.ok(
+  cleanClient.includes('const role = evaluation?.employeeRole ?? employee?.role;'),
+  'ComparePageClient must filter criteria using snapshot-first role'
+);
+assert.ok(
+  cleanClient.includes('const evaluatorRole = evaluation?.employeeRole ?? employee?.role;'),
+  'ComparePageClient must score using snapshot-first evaluatorRole'
+);
 
 // ============================================================
 // 8. FIREWALL / PERIMETER INTEGRITY
