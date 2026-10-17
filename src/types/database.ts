@@ -24,6 +24,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          set_key: string | null
           sort_order: number | null
           weight: number | null
         }
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          set_key?: string | null
           sort_order?: number | null
           weight?: number | null
         }
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          set_key?: string | null
           sort_order?: number | null
           weight?: number | null
         }
@@ -67,6 +70,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          set_key: string | null
           short_name: string | null
           sort_order: number | null
         }
@@ -75,6 +79,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          set_key?: string | null
           short_name?: string | null
           sort_order?: number | null
         }
@@ -83,6 +88,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          set_key?: string | null
           short_name?: string | null
           sort_order?: number | null
         }
@@ -627,27 +633,39 @@ export type Database = {
       }
       criteria_config_versions: {
         Row: {
+          audience_count: number | null
           checksum: string
           created_at: string
           created_by: string | null
+          criterion_count: number | null
+          group_count: number | null
           id: string
           is_active: boolean
+          level_count: number | null
           version_no: number
         }
         Insert: {
+          audience_count?: number | null
           checksum: string
           created_at?: string
           created_by?: string | null
+          criterion_count?: number | null
+          group_count?: number | null
           id?: string
           is_active?: boolean
+          level_count?: number | null
           version_no: number
         }
         Update: {
+          audience_count?: number | null
           checksum?: string
           created_at?: string
           created_by?: string | null
+          criterion_count?: number | null
+          group_count?: number | null
           id?: string
           is_active?: boolean
+          level_count?: number | null
           version_no?: number
         }
         Relationships: []
@@ -657,6 +675,7 @@ export type Database = {
           code: string
           group_id: string
           name: string
+          set_key: string | null
           short_name: string | null
           sort_order: number
           version_id: string
@@ -665,6 +684,7 @@ export type Database = {
           code: string
           group_id: string
           name: string
+          set_key?: string | null
           short_name?: string | null
           sort_order?: number
           version_id: string
@@ -673,6 +693,7 @@ export type Database = {
           code?: string
           group_id?: string
           name?: string
+          set_key?: string | null
           short_name?: string | null
           sort_order?: number
           version_id?: string
@@ -695,6 +716,7 @@ export type Database = {
           description: string | null
           group_id: string
           name: string
+          set_key: string | null
           sort_order: number
           version_id: string
           weight: number | null
@@ -707,6 +729,7 @@ export type Database = {
           description?: string | null
           group_id: string
           name: string
+          set_key?: string | null
           sort_order?: number
           version_id: string
           weight?: number | null
@@ -719,6 +742,7 @@ export type Database = {
           description?: string | null
           group_id?: string
           name?: string
+          set_key?: string | null
           sort_order?: number
           version_id?: string
           weight?: number | null
