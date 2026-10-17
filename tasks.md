@@ -728,7 +728,7 @@ product/policy change; production writes/migrations 0/0.
 
 ## P108 — three independent criteria sets (M1 build, M2 trial-data track)
 
-`WBS_STATUS=PLANNED`. Plan authority: `.ai/MASTER_PLAN.md` § P108 (revised 2026-10-17). Every checkbox below is **PLANNED**, not READY/RUNNING. Nothing is registered in `.state/agent-state.json`. Registration requires: owner approval of this WBS, canonical control commit + readback, a reconciled `.state` (`canonical_head`/`BASE_SHA` refreshed under `control.lock`), and the gates named per task. Business sign-off (G1) and decisions D1–D3 are **not** granted by this WBS.
+`WBS_STATUS=LOCAL_EXECUTION_AUTHORIZED`. Plan authority: `.ai/MASTER_PLAN.md` § P108 at `45d9562` (12 task IDs/DAG retained). Owner authorizes local T01, T03–T10 with synthetic fixtures, Agy `gemini-3.8-flash-high`, fresh CONTROLLED reviewer `opencode-go/deepseek-v4.1-flash`; no fallback without approval. Checkboxes stay pending until exact verified integration. Register only these nine tasks under `control.lock` after canonical activation readback. T02, M2T01 and T11 remain PLANNED and are not registered. T01 production facts remain UNKNOWN; signed-manifest checks remain release gates, not synthetic PASS. No push/deploy/Vercel changes, production reads/writes/migrations/import/deletion, real personnel test data or production AI calls. G1/D1/D2/D3 remain undecided. This local scope overrides stale P107 runtime metadata; no old active process/worktree was observed during activation preflight.
 
 ### Shared execution envelope — applies to every P108 task
 
