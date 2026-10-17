@@ -865,7 +865,9 @@ DoD:
 - Root gates pass.
 Out of scope: running against production (T11).
 
-### [ ] [#P108M1T05] Shared set contract + complete snapshot reader
+### [x] [#P108M1T05] Shared set contract + complete snapshot reader
+
+Local STANDARD close: candidate `ab19c47a6ad7f61c67c17d029b96048ed9c3b819`; actual PostgREST cap1000 confirmed 0-999/1116, paginated loader reads 3 versions ×1116 levels completely; physical truncation and deleted P108 level produce unavailable. Pure regressions cover 93-criterion role/set mapping, legacy multi-audience, empty groups, invalid/missing metadata/set fail-closed; no fake runtime/auth/API adapter. Root 78/78, lint/typecheck/isolated build/secret scan/diff-check PASS (`/home/pi5/hermes-artifacts/kurabe-p108/P108M1T05/repair-2-candidate-gates/gates.json`, SHA-256 `28ed1372c7bcea5ca3f6bf17e1f948abe1c2bfd150fc34dce1a8c029161ef509`). Independent review NOT_REQUIRED (declared STANDARD). Initial AGY partial transport + fixture failure and repair1 missing-import failure retained; failure_count=1 retained. Production/push/deploy = 0.
 
 ```yaml
 task:
