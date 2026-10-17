@@ -3,6 +3,7 @@ import type { XLSX$Utils, WorkBook, WritingOptions } from 'xlsx';
 export type Role = 'Manager' | 'Leader' | 'SubLeader' | 'Employee' | 'Worker';
 
 export type AppliesTo = 'leader' | 'staff' | 'both';
+export type CriteriaSetKey = 'leader' | 'staff' | 'worker';
 export type GradeBandRoleGroup = 'leader' | 'staff' | 'worker';
 export type Grade = 'S' | 'A' | 'AB' | 'B' | 'C' | 'D' | 'Pending';
 export type PeriodStatus = 'Active' | 'Closed';
@@ -185,6 +186,7 @@ export interface Criterion extends CriteriaVersionMetadata {
   weight?: number;
   defaultLevelIndex?: number;
   sortOrder?: number;
+  setKey?: CriteriaSetKey | null;
 }
 
 export interface CriteriaGroup {
@@ -196,6 +198,7 @@ export interface CriteriaGroup {
   sortOrder?: number;
   configVersion?: number;
   configVersionId?: string;
+  setKey?: CriteriaSetKey | null;
 }
 
 /**

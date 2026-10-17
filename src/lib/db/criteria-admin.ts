@@ -1,7 +1,15 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { Role } from '@/types';
-import { isCriterionAudience, mapAudiencesToRoles, decodeLegacyAppliesToRoles, CriterionAudience } from '@/lib/criteria-applicability';
+import type { Role, CriteriaSetKey } from '@/types';
+import {
+  isCriterionAudience,
+  mapAudiencesToRoles,
+  decodeLegacyAppliesToRoles,
+  type CriterionAudience,
+  isCriteriaSetKey,
+  roleToSetKey,
+  setKeyToAudience,
+} from '@/lib/criteria-applicability';
 import type { EvaluationCriterionRule } from '@/lib/evaluation-round-validation';
 import { toClientError } from '@/lib/errors';
 
@@ -15,8 +23,9 @@ type ConfigCriterion = {
   applies_to?: string | null;
   audiences?: string[];
   levels?: ConfigLevel[];
+  set_key?: string | null;
 };
-type ConfigGroup = { criteria?: ConfigCriterion[] };
+type ConfigGroup = { set_key?: string | null; criteria?: ConfigCriterion[] };
 type ActiveConfig = { version: number; version_id: string; groups?: ConfigGroup[] };
 
 function isActiveConfig(value: unknown): value is ActiveConfig {
@@ -35,15 +44,51 @@ export async function loadAuthoritativeCriteriaForRole(role: Role): Promise<Load
       return { success: false, error: toClientError(error, 'Lỗi tải danh mục tiêu chí đánh giá.') };
     }
 
+    const targetSet = roleToSetKey(role);
     const rules: EvaluationCriterionRule[] = [];
     for (const group of data.groups || []) {
+      if (group.set_key !== null && group.set_key !== undefined) {
+        if (!isCriteriaSetKey(group.set_key)) {
+          return { success: false, error: 'Cấu hình tiêu chí chứa group set_key không hợp lệ.' };
+        }
+      }
+
       for (const criterion of group.criteria || []) {
         if (!criterion || typeof criterion.id !== 'string' || !criterion.id.trim()) continue;
-        const audiences = (criterion.audiences || []).filter(isCriterionAudience) as CriterionAudience[];
-        const applicableRoles = audiences.length > 0
-          ? mapAudiencesToRoles(audiences)
-          : decodeLegacyAppliesToRoles(criterion.applies_to || null);
-        if (!applicableRoles.includes(role)) continue;
+
+        if (criterion.set_key !== null && criterion.set_key !== undefined) {
+          if (!isCriteriaSetKey(criterion.set_key)) {
+            return { success: false, error: 'Cấu hình tiêu chí chứa criterion set_key không hợp lệ.' };
+          }
+        }
+
+        // Group / criterion set mismatch check
+        if (group.set_key != null || criterion.set_key != null) {
+          if (group.set_key !== criterion.set_key) {
+            return { success: false, error: 'Cấu hình tiêu chí không đồng nhất set_key giữa nhóm và tiêu chí.' };
+          }
+        }
+
+        if (criterion.set_key != null) {
+          const expectedAudience = setKeyToAudience(criterion.set_key as CriteriaSetKey);
+          const audiences = criterion.audiences || [];
+          if (!Array.isArray(audiences) || audiences.length !== 1 || audiences[0] !== expectedAudience) {
+            return { success: false, error: 'Cấu hình đối tượng áp dụng tiêu chí không hợp lệ.' };
+          }
+          if (criterion.set_key !== targetSet) {
+            continue;
+          }
+        } else {
+          // Genuinely legacy NULL
+          if (group.set_key != null && group.set_key !== targetSet) {
+            continue;
+          }
+          const audiences = (criterion.audiences || []).filter(isCriterionAudience) as CriterionAudience[];
+          const applicableRoles = audiences.length > 0
+            ? mapAudiencesToRoles(audiences)
+            : decodeLegacyAppliesToRoles(criterion.applies_to || null);
+          if (!applicableRoles.includes(role)) continue;
+        }
 
         const levels = (criterion.levels || []).slice().sort((a, b) => a.sort_order - b.sort_order);
         if (levels.length === 0 || levels.some((level) => typeof level.points !== 'number' || !Number.isFinite(level.points))) {

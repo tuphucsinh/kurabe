@@ -1,10 +1,18 @@
-import { Role } from '@/types';
+import type { Role, CriteriaSetKey } from '@/types';
+
+export type { CriteriaSetKey };
 
 export type CriterionAudience = 'management' | 'employee' | 'worker';
 
 export const CRITERION_AUDIENCES: readonly CriterionAudience[] = [
   'management',
   'employee',
+  'worker',
+] as const;
+
+export const CRITERIA_SET_KEYS: readonly CriteriaSetKey[] = [
+  'leader',
+  'staff',
   'worker',
 ] as const;
 
@@ -21,6 +29,44 @@ export const ROLE_TO_AUDIENCE: Record<Role, CriterionAudience> = {
   Employee: 'employee',
   Worker: 'worker',
 } as const;
+
+export const ROLE_TO_SET_KEY: Record<Role, CriteriaSetKey> = {
+  Manager: 'leader',
+  Leader: 'leader',
+  SubLeader: 'leader',
+  Employee: 'staff',
+  Worker: 'worker',
+} as const;
+
+export function roleToSetKey(role: Role): CriteriaSetKey {
+  return ROLE_TO_SET_KEY[role];
+}
+
+export const SET_KEY_TO_AUDIENCE: Record<CriteriaSetKey, CriterionAudience> = {
+  leader: 'management',
+  staff: 'employee',
+  worker: 'worker',
+} as const;
+
+export function setKeyToAudience(setKey: CriteriaSetKey): CriterionAudience {
+  return SET_KEY_TO_AUDIENCE[setKey];
+}
+
+export const AUDIENCE_TO_SET_KEY: Record<CriterionAudience, CriteriaSetKey> = {
+  management: 'leader',
+  employee: 'staff',
+  worker: 'worker',
+} as const;
+
+export function audienceToSetKey(audience: CriterionAudience): CriteriaSetKey {
+  return AUDIENCE_TO_SET_KEY[audience];
+}
+
+const VALID_SET_KEY_SET = new Set<string>(CRITERIA_SET_KEYS);
+
+export function isCriteriaSetKey(value: unknown): value is CriteriaSetKey {
+  return typeof value === 'string' && VALID_SET_KEY_SET.has(value);
+}
 
 const VALID_AUDIENCE_SET = new Set<string>(CRITERION_AUDIENCES);
 
