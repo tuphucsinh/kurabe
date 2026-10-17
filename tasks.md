@@ -1029,7 +1029,9 @@ DoD:
 - AI egress tests from P107 still pass.
 - Root gates pass.
 
-### [ ] [#P108M1T10] Integrated qualification
+### [x] [#P108M1T10] Integrated qualification
+
+Local technical acceptance: `PASS_TECHNICAL_WITH_NA`. Exact candidate `45950dfec84506d6ae67e626eefcb99f6e511906` (base `aa2c9ab`, includes T09 amendment A). Gates exit0: clean-install, root tests, lint, typecheck, build, secret-scan, old-app compatibility matrix S1-S4 (30 cases; isolated builds of baseline `701256e` and candidate), acceptance orchestrator (9 child suites + legacy compare/history DOM fidelity pinned/unpinned + 18/93 catalog smoke), diff-check. Fresh reviewer PASS session `20261018_011432_206c60` after two CHANGES_REQUIRED rounds (failure_count=3, owner-approved recoveries, harness-only). Signed manifest dry-run `BLOCKED_NA`: T02/G1 unsigned, synthetic manifest only, NOT business sign-off, NOT production-ready. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T10/`. Residual risks: legacy graded fixtures are SQL-seeded in the disposable runtime; baseline `701256e` is a source baseline, not a verified production SHA; no cross-set KPI validation (D2).
 
 ```yaml
 task:
