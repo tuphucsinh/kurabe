@@ -432,9 +432,9 @@ console.log('=== P107M1T08 bounded AI + visible audit failures ===');
     criteriaDetail: [], previousComments: [], notesSummary: '', summaryNotes: '',
   };
   const notFound = 'Không tìm thấy dữ liệu đánh giá hợp lệ.';
-  const r1 = await draftResultMessageAction({ ...base, employeeCode: 'NV-A1', periodName: 'Không tồn tại (1999)' });
-  const r2 = await draftResultMessageAction({ ...base, employeeCode: 'NV-UNKNOWN', periodName: `${fixture.period.name} (${fixture.period.year})` });
-  const r3 = await draftResultMessageAction({ ...base, employeeCode: 'NV-NOEVAL', periodName: `${fixture.period.name} (${fixture.period.year})` });
+  const r1 = await draftResultMessageAction({ ...base, periodId: 'period-does-not-exist', employeeCode: 'NV-A1', periodName: 'Không tồn tại (1999)' });
+  const r2 = await draftResultMessageAction({ ...base, periodId: fixture.period.id, employeeCode: 'NV-UNKNOWN', periodName: `${fixture.period.name} (${fixture.period.year})` });
+  const r3 = await draftResultMessageAction({ ...base, periodId: fixture.period.id, employeeCode: 'NV-NOEVAL', periodName: `${fixture.period.name} (${fixture.period.year})` });
 
   assert.equal(r1.error, notFound, 'unknown period');
   assert.equal(r2.error, notFound, 'unknown employee shares the same response');
@@ -650,8 +650,8 @@ console.log('=== P107M1T08 bounded AI + visible audit failures ===');
   const periodName = `${fixture.period.name} (${fixture.period.year})`;
   const notFound = 'Không tìm thấy dữ liệu đánh giá hợp lệ.';
 
-  const draft = await draftResultMessageAction({ ...base, employeeCode: 'NV-D1', periodName });
-  const submitted = await draftResultMessageAction({ ...base, employeeCode: 'NV-S1', periodName });
+  const draft = await draftResultMessageAction({ ...base, periodId: fixture.period.id, employeeCode: 'NV-D1', periodName });
+  const submitted = await draftResultMessageAction({ ...base, periodId: fixture.period.id, employeeCode: 'NV-S1', periodName });
   assert.equal(draft.error, notFound, 'Draft evaluation is not projected (shares not-found response)');
   assert.equal(submitted.error, notFound, 'Submitted evaluation is not projected (shares not-found response)');
   assert.equal(S.calls.callAI.length, 0, 'non-Approved single target never reaches the provider');
@@ -659,7 +659,7 @@ console.log('=== P107M1T08 bounded AI + visible audit failures ===');
   assert.ok(!S.calls.callAI.some((p) => p.includes('SUBMITTED-COMMENT-MUST-NOT-REACH-PROMPT')), 'SUBMITTED comment not in any prompt');
 
   // An Approved target still drafts, and a zero score survives the projection.
-  const approved = await draftResultMessageAction({ ...base, employeeCode: 'NV-A2', periodName });
+  const approved = await draftResultMessageAction({ ...base, periodId: fixture.period.id, employeeCode: 'NV-A2', periodName });
   assert.equal(approved.error, undefined, 'Approved target drafts');
   const a2Prompt = S.calls.callAI.find((p) => p.includes('NV-A2'));
   assert.ok(a2Prompt, 'Approved draft prompt issued');

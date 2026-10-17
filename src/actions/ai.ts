@@ -190,35 +190,20 @@ export async function draftResultMessageAction(input: {
 
   // Resolve the target and all score/criteria fields from the requester-visible DB
   // scope. Client values remain only a selector and are never placed in the prompt.
+  // P108M1T09A: period is selected ONLY by periodId; missing/empty/non-string or not found => AI_TARGET_NOT_FOUND
+  if (typeof input.periodId !== 'string' || !input.periodId.trim()) {
+    return { error: AI_TARGET_NOT_FOUND };
+  }
+
   const { data: visiblePeriods } = await supabaseAdmin
     .from('evaluation_periods')
     .select('id, name, year')
     .order('year', { ascending: false });
 
   const periodsList = visiblePeriods || [];
-  let period: { id: string; name: string; year: number } | undefined;
-
-  const hasSuppliedPeriodId = typeof input.periodId === 'string' && input.periodId.trim().length > 0;
-  if (hasSuppliedPeriodId) {
-    period = periodsList.find((candidate) => candidate.id === input.periodId);
-    if (!period) {
-      return { error: AI_TARGET_NOT_FOUND };
-    }
-  } else {
-    // Untyped legacy caller without periodId: resolve by periodName ONLY if exactly
-    // one visible period matches name+year; zero or multiple matches => AI_TARGET_NOT_FOUND
-    if (typeof input.periodName !== 'string' || !input.periodName.trim()) {
-      return { error: AI_TARGET_NOT_FOUND };
-    }
-    const matches = periodsList.filter(
-      (candidate) =>
-        `${candidate.name} (${candidate.year})` === input.periodName ||
-        candidate.name === input.periodName
-    );
-    if (matches.length !== 1) {
-      return { error: AI_TARGET_NOT_FOUND };
-    }
-    period = matches[0];
+  const period = periodsList.find((candidate) => candidate.id === input.periodId);
+  if (!period) {
+    return { error: AI_TARGET_NOT_FOUND };
   }
 
   const [evaluations, users] = await Promise.all([

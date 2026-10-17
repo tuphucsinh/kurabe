@@ -629,7 +629,7 @@ function resetState() {
     'Omitted periodId with ambiguous periodName fails closed'
   );
 
-  // (iv) no id + unique name => resolves (legacy)
+  // (iv) omitted periodId with a name that matches exactly one visible period => AI_TARGET_NOT_FOUND
   const singlePeriod = { id: 'period-unique-match', name: 'Kỳ Đánh Giá Duy Nhất', year: 2026 };
   globalThis.__p108_ai_export_state.periods.push(singlePeriod);
   const evalInSingle = {
@@ -655,20 +655,37 @@ function resetState() {
   };
   globalThis.__p108_ai_export_state.evaluations.push(evalInSingle);
 
+  const aiCallsBefore = globalThis.__p108_ai_export_state.aiCalls.length;
   const resNameMatchNoId = await draftResultMessageAction({
     ...omittedPeriodInput,
     periodName: `${singlePeriod.name} (${singlePeriod.year})`,
   });
   assert.equal(
     resNameMatchNoId.error,
-    undefined,
-    'periodName that matches visible unique period with no periodId resolves (legacy)'
+    'Không tìm thấy dữ liệu đánh giá hợp lệ.',
+    'Omitted periodId with uniquely matching periodName fails closed (no periodName fallback)'
   );
-  assert.ok(resNameMatchNoId.message, 'Legacy unique period draft succeeds with generated message');
-  const lastCallSingle = globalThis.__p108_ai_export_state.aiCalls[globalThis.__p108_ai_export_state.aiCalls.length - 1];
-  assert.ok(lastCallSingle.prompt.includes('Tổng điểm: 88'), 'Resolved unique period evaluation');
+  assert.equal(
+    globalThis.__p108_ai_export_state.aiCalls.length,
+    aiCallsBefore,
+    'Provider must not be called when periodId is omitted'
+  );
 
-  console.log('  PASS (c): (i) supplied id resolves with dup name+year; (ii) wrong id => not found; (iii) no id + ambiguous name => not found; (iv) no id + unique name => resolves');
+  // (v) supplied valid periodId with a mismatching periodName still resolves by id (periodName is a label only)
+  const resMismatchName = await draftResultMessageAction({
+    ...baseInput,
+    periodId: periodA.id,
+    periodName: 'Kỳ Tên Khác Hoàn Toàn (2099)',
+  });
+  assert.equal(
+    resMismatchName.error,
+    undefined,
+    'Supplied valid periodId resolves by id even when periodName mismatches'
+  );
+  const lastCallMismatch = globalThis.__p108_ai_export_state.aiCalls[globalThis.__p108_ai_export_state.aiCalls.length - 1];
+  assert.ok(lastCallMismatch.prompt.includes('Tổng điểm: 85'), 'Resolved period A evaluation by id');
+
+  console.log('  PASS (c): (i) supplied id resolves with dup name+year; (ii) wrong id => not found; (iii) no id + ambiguous name => not found; (iv) omitted id with unique name => not found; (v) valid id with mismatching name resolves by id');
 }
 
 // ---------------------------------------------------------------------------
