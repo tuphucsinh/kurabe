@@ -797,7 +797,9 @@ DoD:
 - Sign-off = anh confirms the verified manifest; Mika records its SHA-256 in `.ai/DECISIONS_LOG.md`. The manifest file itself carries no `signed` flag, so its bytes stay deterministic.
 STOP: G1 answers missing or ambiguous ⇒ not dispatched. T11 import is blocked until the manifest SHA is recorded.
 
-### [ ] [#P108M1T03] DB contract: set_key schema, Active lock, writer RPC, rollback
+### [x] [#P108M1T03] DB contract: set_key schema, Active lock, writer RPC, rollback
+
+Local close: candidate `29adeca8346d6b291288b327c6067578333156f2` on base `34580068a3827cae0b0750a41d713379d3fa6055`. Exact-candidate gates PASS (`/home/pi5/hermes-artifacts/kurabe-p108/P108M1T03/final-candidate-gates/gates.json`, SHA-256 `575133a58f3c65c24cafab05f4e0615a32068773b7eea023fd4936ac3f62cfce`): disposable PG17 producer 39 cases, legacy lane 29 cases, npm test 77/77, lint, typecheck, isolated build, secret scan 0 findings. Fresh reviewer `reviewer/opencode-go/deepseek-v4.1-flash`, session `20261017_130214_5291ce`, canonical checker PASS (`final-review-1/gate-check.log`). Closed under owner-approved recovery exceptions after HALT; failure_count=2 retained; all failed snapshots/evidence retained. Known cosmetic: contract test trailing EOF blank line. Push/deploy/production = 0.
 
 ```yaml
 task:
