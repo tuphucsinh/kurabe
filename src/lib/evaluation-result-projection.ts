@@ -110,6 +110,26 @@ export interface CriteriaBreakdownEntry {
   group: string;
   avgScore: number;
   percentage: number;
+  groupId: string;
+  versionId: string;
+  setKey: string | null;
+  configVersion: number | null;
+  label: string;
+}
+
+export function formatCriteriaSetLabel(setKey?: string | null, configVersion?: number | null): string {
+  const normalized = typeof setKey === 'string' ? setKey.toLowerCase() : null;
+  let setName: string | null = null;
+  if (normalized === 'leader') setName = 'Quản lý';
+  else if (normalized === 'staff') setName = 'Nhân viên';
+  else if (normalized === 'worker') setName = 'Công nhân';
+  else if (setKey) setName = setKey;
+
+  const versionLabel = configVersion != null ? `v${configVersion}` : null;
+  if (setName && versionLabel) return `${setName} (${versionLabel})`;
+  if (setName) return setName;
+  if (versionLabel) return `Tiêu chuẩn (${versionLabel})`;
+  return 'Tiêu chuẩn';
 }
 
 export interface EvaluationResultProjection {
@@ -199,6 +219,12 @@ const highGradeRateOf = (entries: ResultEntry[]): number => {
 };
 
 interface CriteriaAccumulator {
+  groupId: string;
+  groupCode: string;
+  versionId: string;
+  setKey: string | null;
+  configVersion: number | null;
+  label: string;
   total: number;
   samples: number;
   groupMaxScore: number;
@@ -208,7 +234,8 @@ interface CriteriaAccumulator {
 function accumulateCriteria(
   accumulator: Map<string, CriteriaAccumulator>,
   evaluation: Evaluation,
-  groups: CriteriaGroup[]
+  groups: CriteriaGroup[],
+  fallbackVersionId: string
 ): void {
   const round = lastRound(evaluation);
   if (!round || !round.scores) return;
@@ -221,20 +248,30 @@ function accumulateCriteria(
   for (const [criterionId, score] of Object.entries(round.scores)) {
     const group = groupByCriterion.get(criterionId);
     if (!group || typeof score !== 'number' || !Number.isFinite(score)) continue;
-    let entry = accumulator.get(group.code);
+    const versionId = group.configVersionId || fallbackVersionId;
+    const key = `${versionId}:${group.id}`;
+    let entry = accumulator.get(key);
     if (!entry) {
       const groupMaxScore = (group.criteria || []).reduce(
         (max, criterion) =>
           max + (criterion.levels || []).reduce((m, level) => Math.max(m, level.points || 0), 0),
         0
       );
+      const setKey = (group.setKey as string) ?? null;
+      const configVersion = group.configVersion ?? null;
       entry = {
+        groupId: group.id,
+        groupCode: group.code,
+        versionId,
+        setKey,
+        configVersion,
+        label: formatCriteriaSetLabel(setKey, configVersion),
         total: 0,
         samples: 0,
         groupMaxScore,
         groupCriteriaCount: (group.criteria || []).length,
       };
-      accumulator.set(group.code, entry);
+      accumulator.set(key, entry);
     }
     entry.total += score;
     entry.samples += 1;
@@ -242,17 +279,40 @@ function accumulateCriteria(
 }
 
 function buildCriteriaBreakdown(accumulator: Map<string, CriteriaAccumulator>): CriteriaBreakdownEntry[] {
-  return [...accumulator.entries()]
-    .map(([group, entry]) => {
+  return [...accumulator.values()]
+    .map((entry) => {
       const avgScore = entry.samples > 0 ? entry.total / entry.samples : 0;
       const avgMax = entry.groupCriteriaCount > 0 ? entry.groupMaxScore / entry.groupCriteriaCount : 0;
       return {
-        group,
+        group: entry.groupCode,
         avgScore,
         percentage: avgMax > 0 ? (avgScore / avgMax) * 100 : 0,
+        groupId: entry.groupId,
+        versionId: entry.versionId,
+        setKey: entry.setKey,
+        configVersion: entry.configVersion,
+        label: entry.label,
       };
     })
-    .sort((a, b) => a.group.localeCompare(b.group));
+    .sort((a, b) => {
+      // Deterministic order: by setKey, version, group code.
+      const setA = a.setKey ?? '';
+      const setB = b.setKey ?? '';
+      if (setA !== setB) return setA.localeCompare(setB);
+
+      const verNumA = a.configVersion ?? -1;
+      const verNumB = b.configVersion ?? -1;
+      if (verNumA !== verNumB) return verNumA - verNumB;
+
+      const verA = a.versionId ?? '';
+      const verB = b.versionId ?? '';
+      if (verA !== verB) return verA.localeCompare(verB);
+
+      const groupComp = a.group.localeCompare(b.group);
+      if (groupComp !== 0) return groupComp;
+
+      return a.groupId.localeCompare(b.groupId);
+    });
 }
 
 /**
@@ -321,7 +381,7 @@ export function projectEvaluationResults(input: ProjectionInput): EvaluationResu
 
     if (entry.valid && input.criteriaGroupsByVersion) {
       const groups = input.criteriaGroupsByVersion.get(entry.configKey);
-      if (groups) accumulateCriteria(criteriaAccumulator, evaluation, groups);
+      if (groups) accumulateCriteria(criteriaAccumulator, evaluation, groups, entry.configKey);
     }
   }
 

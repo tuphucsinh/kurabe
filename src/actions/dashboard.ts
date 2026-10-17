@@ -10,12 +10,22 @@ import { loadCriteriaSnapshots, groupsForVersion } from '@/lib/db/evaluation-dis
 import { requireRole } from '@/lib/auth';
 import { detectAnomalies } from '@/lib/anomaly';
 import {
+  formatCriteriaSetLabel,
   getEvaluationResultProjection,
   projectEvaluationResults,
   type EvaluationResultProjection,
   type ProjectionCoverage,
 } from '@/lib/evaluation-result-projection';
 import type { CriteriaGroup, Evaluation, EvaluationRound, Grade, SkillGapRadarDatum, User } from '@/types';
+
+export interface DashboardRadarSet {
+  key: string;
+  setKey: string | null;
+  versionId: string;
+  label: string;
+  data: SkillGapRadarDatum[];
+  sampleCount: number;
+}
 
 export interface DashboardStats {
   completed: number;
@@ -94,6 +104,8 @@ export interface DashboardHeavyData {
   radar: SkillGapRadarDatum[];
   /** Number of evaluations that contributed a paired self/manager radar sample. */
   radarSampleCount: number;
+  /** Per-set radar breakdown when multiple sets or versions are present. */
+  radarSets?: DashboardRadarSet[];
   /** Non-Approved records already holding a submitted round (visible in progress only). */
   frozenIncomplete: number;
   result: DashboardResultSummary;
@@ -277,9 +289,19 @@ function buildAnomalies(
 function buildRadar(
   evaluations: Evaluation[],
   criteriaGroupsByVersion: Map<string, CriteriaGroup[]>
-): { radar: SkillGapRadarDatum[]; sampleCount: number } {
+): { radar: SkillGapRadarDatum[]; sampleCount: number; radarSets: DashboardRadarSet[] } {
   const accum = new Map<string, { subject: string; self: number; manager: number; count: number }>();
   let sampleCount = 0;
+
+  interface SetBucket {
+    key: string;
+    setKey: string | null;
+    versionId: string;
+    label: string;
+    groupAccum: Map<string, { subject: string; self: number; manager: number; count: number }>;
+    sampleCount: number;
+  }
+  const setBuckets = new Map<string, SetBucket>();
 
   for (const evaluation of evaluations) {
     const rounds = evaluation.rounds || [];
@@ -289,10 +311,13 @@ function buildRadar(
     const managerRound = managerRounds.length > 0 ? managerRounds[managerRounds.length - 1] : null;
     if (!selfRound || !managerRound || Object.keys(managerRound.scores || {}).length === 0) continue;
 
+    const versionId = managerRound.criteriaConfigVersionId ?? 'legacy_unknown';
     const groups = criteriaGroupsByVersion.get(managerRound.criteriaConfigVersionId ?? '') ?? [];
     if (groups.length === 0) continue;
 
-    let contributed = false;
+    let contributedOverall = false;
+    const contributedSetsThisEval = new Set<string>();
+
     for (const group of groups) {
       let selfGroupScore = 0;
       let managerGroupScore = 0;
@@ -307,15 +332,49 @@ function buildRadar(
         }
       }
       if (maxApplicableScore <= 0) continue;
+
+      const setKey = (group.setKey as string) ?? null;
+      const groupVersionId = group.configVersionId || versionId;
+      const setBucketKey = `${setKey ?? ''}:${groupVersionId}`;
+      let bucket = setBuckets.get(setBucketKey);
+      if (!bucket) {
+        bucket = {
+          key: setBucketKey,
+          setKey,
+          versionId: groupVersionId,
+          label: formatCriteriaSetLabel(setKey, group.configVersion ?? null),
+          groupAccum: new Map(),
+          sampleCount: 0,
+        };
+        setBuckets.set(setBucketKey, bucket);
+      }
+
+      const setGroupEntry = bucket.groupAccum.get(group.id) || {
+        subject: group.shortName || group.name,
+        self: 0,
+        manager: 0,
+        count: 0,
+      };
+      setGroupEntry.self += (selfGroupScore / maxApplicableScore) * 100;
+      setGroupEntry.manager += (managerGroupScore / maxApplicableScore) * 100;
+      setGroupEntry.count += 1;
+      bucket.groupAccum.set(group.id, setGroupEntry);
+      contributedSetsThisEval.add(setBucketKey);
+
       const key = group.id;
       const entry = accum.get(key) || { subject: group.shortName || group.name, self: 0, manager: 0, count: 0 };
       entry.self += (selfGroupScore / maxApplicableScore) * 100;
       entry.manager += (managerGroupScore / maxApplicableScore) * 100;
       entry.count += 1;
       accum.set(key, entry);
-      contributed = true;
+      contributedOverall = true;
     }
-    if (contributed) sampleCount += 1;
+
+    if (contributedOverall) sampleCount += 1;
+    for (const sKey of contributedSetsThisEval) {
+      const b = setBuckets.get(sKey);
+      if (b) b.sampleCount += 1;
+    }
   }
 
   const radar = [...accum.values()].map((entry) => ({
@@ -325,7 +384,28 @@ function buildRadar(
     fullMark: 100,
   }));
 
-  return { radar, sampleCount };
+  const radarSets: DashboardRadarSet[] = [...setBuckets.values()]
+    .map((bucket) => ({
+      key: bucket.key,
+      setKey: bucket.setKey,
+      versionId: bucket.versionId,
+      label: bucket.label,
+      data: [...bucket.groupAccum.values()].map((entry) => ({
+        subject: entry.subject,
+        Self: entry.count > 0 ? Math.round(entry.self / entry.count) : 0,
+        Manager: entry.count > 0 ? Math.round(entry.manager / entry.count) : 0,
+        fullMark: 100,
+      })),
+      sampleCount: bucket.sampleCount,
+    }))
+    .sort((a, b) => {
+      const setA = a.setKey ?? '';
+      const setB = b.setKey ?? '';
+      if (setA !== setB) return setA.localeCompare(setB);
+      return a.versionId.localeCompare(b.versionId);
+    });
+
+  return { radar, sampleCount, radarSets };
 }
 
 function summarizeResult(projection: EvaluationResultProjection): DashboardResultSummary {
@@ -408,7 +488,7 @@ export async function getDashboardHeavyData(
       loadCriteriaGroupsByVersion(evaluations),
     ]);
     if (!projection) return null;
-    const { radar, sampleCount } = buildRadar(evaluations, criteriaGroupsByVersion);
+    const { radar, sampleCount, radarSets } = buildRadar(evaluations, criteriaGroupsByVersion);
 
     return {
       recentActivities: buildRecentActivities(evaluations, nameLookup),
@@ -416,6 +496,7 @@ export async function getDashboardHeavyData(
       anomalies: buildAnomalies(evaluations, nameById),
       radar,
       radarSampleCount: sampleCount,
+      radarSets,
       frozenIncomplete: projection.progress.filter((entry) => entry.frozenIncomplete).length,
       result: summarizeResult(projection),
       coverage: projection.coverage,
@@ -456,7 +537,7 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
       evaluations,
       criteriaGroupsByVersion,
     });
-    const { radar, sampleCount } = buildRadar(evaluations, criteriaGroupsByVersion);
+    const { radar, sampleCount, radarSets } = buildRadar(evaluations, criteriaGroupsByVersion);
     const nameLookup = (id: string) => users.find((u) => u.id === id)?.name;
 
     return {
@@ -466,6 +547,7 @@ export async function getDashboardData(periodId: string): Promise<DashboardData 
       anomalies: buildAnomalies(evaluations, nameById),
       radar,
       radarSampleCount: sampleCount,
+      radarSets,
       frozenIncomplete: projection.progress.filter((entry) => entry.frozenIncomplete).length,
       result: summarizeResult(projection),
       coverage: projection.coverage,

@@ -6,6 +6,17 @@ import { requireRole } from '@/lib/auth';
 import { getEvaluationResultProjection } from '@/lib/evaluation-result-projection';
 import { Grade, Evaluation, User } from '@/types';
 
+export interface CriteriaAnalysisItem {
+  group: string;
+  avgScore: number;
+  percentage: number;
+  groupId: string;
+  versionId: string;
+  setKey: string | null;
+  configVersion: number | null;
+  label: string;
+}
+
 export interface ReportAggregationData {
   stats: {
     totalEmployees: number;
@@ -22,7 +33,10 @@ export interface ReportAggregationData {
   };
   gradeDistribution: { grade: Grade; count: number; color: string }[];
   teamStats: { id: string; name: string; avgScore: number; progress: number }[];
-  criteriaAnalysis: { group: string; avgScore: number; percentage: number }[];
+  criteriaAnalysis: CriteriaAnalysisItem[];
+  mixedSets?: boolean;
+  note?: string | null;
+  mixedSetsNote?: string | null;
   topPerformers: { id: string; name: string; teamName: string; score: number; grade: string }[];
 }
 
@@ -94,11 +108,35 @@ async function getReportAggregationInner(
     team.progress = maxTeamAvg > 0 ? Math.min(100, (team.avgScore / maxTeamAvg) * 100) : 0;
   });
 
-  const criteriaAnalysis = projection.criteriaBreakdown.map((entry) => ({
+  const criteriaAnalysis: CriteriaAnalysisItem[] = projection.criteriaBreakdown.map((entry) => ({
     group: entry.group,
     avgScore: entry.avgScore,
     percentage: entry.percentage,
+    groupId: entry.groupId,
+    versionId: entry.versionId,
+    setKey: entry.setKey,
+    configVersion: entry.configVersion,
+    label: entry.label,
   }));
+
+  const distinctSetsOrVersions = new Set(
+    criteriaAnalysis.map((entry) => `${entry.setKey ?? ''}:${entry.versionId ?? ''}`)
+  );
+  const mixedSets = distinctSetsOrVersions.size > 1;
+  const note = mixedSets ? 'Không so sánh trực tiếp giữa các bộ tiêu chí' : null;
+
+  Object.defineProperty(criteriaAnalysis, 'mixedSets', {
+    value: mixedSets,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+  Object.defineProperty(criteriaAnalysis, 'note', {
+    value: note,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
 
   // Top performers come from the team-scoped top slice (the projector already
   // selected them from the scoped valid set BEFORE the TOP_LIMIT cap), so no
@@ -135,6 +173,9 @@ async function getReportAggregationInner(
     teamStats,
     criteriaAnalysis,
     topPerformers,
+    mixedSets,
+    note,
+    mixedSetsNote: note,
   };
 }
 

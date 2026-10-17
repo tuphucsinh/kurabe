@@ -204,7 +204,18 @@ console.log('=== P107M1T06 official result projection — golden suite ===');
   assert.deepEqual(scoped.result.top.map((t) => t.evaluationId), ['ev-c-emp', 'ev-c-sub']);
   assert.deepEqual(scoped.coverage, { total: 2, approved: 2, valid: 2, invalid: 0, legacy: 0, pending: 0 });
   // Criteria analysis is scoped too (F1): group A avg (0 + 10) / 2 = 5 of max 20.
-  assert.deepEqual(scoped.criteriaBreakdown, [{ group: 'A', avgScore: 5, percentage: 25 }]);
+  assert.deepEqual(scoped.criteriaBreakdown, [
+    {
+      group: 'A',
+      avgScore: 5,
+      percentage: 25,
+      groupId: 'grp-A',
+      versionId: 'cfg-1',
+      setKey: null,
+      configVersion: null,
+      label: 'Tiêu chuẩn',
+    },
+  ]);
 
   console.log('  PASS: team filter scopes headline aggregates, grade distribution, criteria analysis and top slice');
 }
@@ -349,7 +360,22 @@ export async function resolve(specifier, context, nextResolve) {
     [['B', 1], ['C', 1]],
     'team-scoped grade distribution'
   );
-  assert.deepEqual(scoped.criteriaAnalysis, [{ group: 'A', avgScore: 5, percentage: 25 }], 'team-scoped criteria analysis');
+  assert.deepEqual(
+    scoped.criteriaAnalysis,
+    [
+      {
+        group: 'A',
+        avgScore: 5,
+        percentage: 25,
+        groupId: 'grp-A',
+        versionId: 'cfg-1',
+        setKey: null,
+        configVersion: null,
+        label: 'Tiêu chuẩn',
+      },
+    ],
+    'team-scoped criteria analysis'
+  );
   assert.deepEqual(
     scoped.topPerformers.map((p) => [p.id, p.score]),
     [['e-emp', 50], ['e-sub', 0]],

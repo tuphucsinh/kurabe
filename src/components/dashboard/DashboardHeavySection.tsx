@@ -95,7 +95,7 @@ export default function DashboardHeavySection({
           {/* Grid: Radar | Recent */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div>
-              <LazySkillGapRadar data={data.radar} />
+              <LazySkillGapRadar data={data.radar} radarSets={data.radarSets} />
             </div>
             <div className="bg-surface-raised p-4 sm:p-6 rounded-2xl shadow-sm border border-outline-soft flex flex-col">
               <h3 className="text-base sm:text-lg font-semibold text-ink mb-4 sm:mb-6">Hoạt động gần đây</h3>

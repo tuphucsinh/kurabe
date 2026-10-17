@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import type { SkillGapRadarDatum } from '@/types';
+import type { RadarSetItem } from '@/components/charts/SkillGapRadar';
 
 const Radar = dynamic(
   () => import('@/components/charts/SkillGapRadar').then((mod) => mod.SkillGapRadar),
@@ -17,12 +18,14 @@ const Radar = dynamic(
 
 export default function LazySkillGapRadar({
   data = [],
+  radarSets,
 }: {
   data?: SkillGapRadarDatum[];
+  radarSets?: RadarSetItem[];
 }) {
   return (
     <div data-load-layer="heavy">
-      <Radar data={data} />
+      <Radar data={data} radarSets={radarSets} />
     </div>
   );
 }
