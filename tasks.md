@@ -756,6 +756,7 @@ Changes (no product writes):
 - Repo inventory: every reader/writer/consumer of criteria, set, role snapshot and snapshot versions (starting from MASTER_PLAN P108.2); exact constraint/index names on criteria and version tables; callers of `draftResultMessageAction`.
 - Production read-only, aggregates and IDs only, owner-approved:
   - `server_version` and extensions; constraint/index inventory;
+  - effective privileges (`has_table_privilege`) of `anon`, `authenticated` and `service_role` on the four live and six version criteria tables; RLS flags, policies, triggers, function owners/SECURITY DEFINER; Auth signup setting;
   - active criteria version (number, id, counts, codes, normalized duplicates) and empty groups in past versions;
   - periods (any `active`?) and rounds by version/status;
   - `evaluation_history_labels` and `evaluation_responses` counts; live grade bands vs set maxima (190/175/Worker TBD); migration ledger names;
@@ -786,8 +787,9 @@ Changes:
 - Read-only extractor using the existing `xlsx` dependency. It verifies the workbook SHA and emits the manifest: set, doc code, group code/name, criterion code (letter + VI column-A number), VI label, JA label, source row, ordered levels (label, points), default level.
 - Manifest `open_items[]` covers every G1 question from MASTER_PLAN P108.1. Worker points are a derived **proposal**, marked unsigned.
 - No `-` is imported as a level without a per-criterion decision.
+- Every group, criterion and level carries a fixed UUIDv5 (RFC 9562, `node:crypto` SHA-1, no new dependency), using one namespace constant recorded in the manifest and the name `p108:<set>:group:<code>` / `p108:<set>:criterion:<code>` / `p108:<set>:level:<criterion code>:<sort index>`. Sets never share a UUID.
 DoD:
-- Extractor is deterministic (same SHA → same manifest bytes).
+- Extractor is deterministic (same SHA → same manifest bytes and UUIDs; a second run is byte-identical).
 - Test asserts: 6/6/6 groups; 33/30/30 criteria; Leader maximum 190; Staff maximum 175; unique codes per set; source-row provenance for every level.
 - Business sign-off recorded by Mika in `.ai/DECISIONS_LOG.md` with the manifest SHA; `signed: true` set only after that.
 STOP: sign-off missing ⇒ task stays open. T03–T10 use the synthetic manifest; T11 import is blocked.
@@ -816,6 +818,8 @@ Changes:
   - lock order: `LOCK evaluation_periods SHARE` → advisory → Active check → READ COMMITTED assert;
   - set rules; immutable set per UUID; server-derived audience; temp tables keyed by `(set_key, code)`;
   - canonical checksum + no-op on unchanged content.
+- Version row counts (`group/criterion/level/audience_count`, NULL for legacy) written by the save RPC.
+- Direct-write ACL: run negative tests for each role on the four live and six version criteria tables first. Revoke INSERT/UPDATE/DELETE/TRUNCATE only on the tables and roles where a write succeeds (selective, in this migration). No new trigger, no blanket revoke.
 - Rollback artifact with (a) guarded revert-import and (b) schema rollback.
 - Update the existing `tests/integration/criteria-config.mjs` legacy payloads to the new contract; keep its stale/invalid/concurrency cases.
 Constraints: P107 writer untouched; diff replaced function bodies against `20260907000600_criteria_config_version.sql`; no `NOT VALID` check; grants unchanged.
@@ -823,6 +827,7 @@ DoD:
 - All schema/RPC and concurrency cases of MASTER_PLAN P108.6, on a disposable DB with two real connections and `pg_locks` wait proof.
 - Legacy catalog fixture: migration applies; legacy versions read unchanged; legacy duplicate active code rejected.
 - P107 save/submit/return pass on a three-set catalog.
+- Direct-write negative tests: after the migration every proven write path fails for its role (also while a period is active); the RPC still saves; a save writes the correct version counts.
 - apply → schema rollback (b) → reapply pass; apply → import(synthetic) → revert-import (a) pass; (b) after import is refused with zero mutation.
 - Root gates pass.
 STOP: any preflight mismatch with T01 live facts ⇒ amend the plan before changing guards.
@@ -848,7 +853,8 @@ Changes:
 - `--verify` reads back counts per set, canonical hashes, one audience per criterion, active version.
 - Credentials only from the existing env loading, never printed.
 DoD:
-- On the disposable DB with the legacy fixture: dry-run and apply produce exactly 18/93 from the synthetic manifest; hashes equal the dry-run; second apply with the same content = no-op; refusal cases proven.
+- The payload uses only manifest UUIDs; a payload node without an id is refused before the RPC call.
+- On the disposable DB with the legacy fixture: dry-run and apply produce exactly 18/93 from the synthetic manifest; hashes equal the dry-run; every live and version row has the manifest UUID; second apply with the same content = no-op (same `version_no`, no UUID changed); refusal cases proven.
 - Root gates pass.
 Out of scope: running against production (T11).
 
@@ -872,11 +878,11 @@ task:
 Goal: the one TS contract every consumer uses, plus a history loader that cannot return a partial snapshot.
 Changes:
 - `CriteriaSetKey`, role→set and set→audience helper; `setKey` on `CriteriaGroup`/`Criterion` (NULL = legacy); `get_active_criteria_config` mapping.
-- Snapshot loader: per-version bounded pagination + exact counts for groups/criteria/levels/audiences; incomplete ⇒ `unavailable`.
-- Empty group no longer invalidates a complete version.
+- Snapshot loader: per-version bounded pagination + exact query counts for groups/criteria/levels/audiences. Rows received < counted (truncation) ⇒ `unavailable`; rows ≠ stored version counts (P108 versions) ⇒ `unavailable`; legacy versions (no counts) ⇒ structural check only (criterion with zero levels ⇒ `unavailable`), documented as a limitation.
+- Empty group (zero criteria) is valid and no longer invalidates a complete version.
 - Display DTO filters every version (legacy and P108) to the evaluation's role snapshot and drops empty groups.
 DoD:
-- Tests: more than 1,000 level rows across at least 3 versions read completely; simulated truncation ⇒ `unavailable`; legacy multi-audience version filtered by role exactly as before for its audience; P108 version shows only the subject set; audience→role mapping verified for all 93 synthetic criteria.
+- Tests: more than 1,000 level rows across at least 3 versions read completely on the local Supabase stack (real `max_rows = 1000`); truncation ⇒ `unavailable`; a level row deleted as `postgres` from a P108 version ⇒ `unavailable`; a valid empty group stays available; legacy multi-audience version filtered by role exactly as before for its audience; P108 version shows only the subject set; audience→role mapping verified for all 93 synthetic criteria.
 - Root gates pass.
 
 ### [ ] [#P108M1T06] Criteria admin: 3 tabs, set-scoped CRUD, Active lock UI
@@ -921,16 +927,25 @@ task:
   owns:
     - src/hooks/use-evaluation-page-state.ts
     - src/app/evaluations/[id]/compare/ComparePageClient.tsx
+    - src/app/evaluations/[id]/EvaluationPageClient.tsx
+    - src/components/evaluation/EvaluationHeader.tsx
+    - src/components/evaluation/ResultCard.tsx
     - tests/p108-role-snapshot.test.mjs
     - tests/integration/p108-evaluation-flow.mjs
   locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 
-Goal: the active-round loader and compare filter use `evaluation.employeeRole`; the P107 workflow behaves identically on a three-set catalog.
-Changes: replace `employee.role` at the loader (`use-evaluation-page-state.ts:349`) and compare filter (`ComparePageClient.tsx:190-193`). No writer/RPC change.
+Goal: every subject-role computation on the evaluation and compare pages uses `evaluation.employeeRole`; the P107 workflow behaves identically on a three-set catalog.
+Changes: replace the subject's current `employee.role` with `evaluation.employeeRole` for:
+- the criteria loader (`use-evaluation-page-state.ts:349`);
+- the compare criteria filter and Draft grade (`ComparePageClient.tsx:190-193,235`);
+- max round and the current-round grade (`EvaluationPageClient.tsx:297,317,465`);
+- previous-round grade (`EvaluationHeader.tsx:92`) and the grade-band explanation (`ResultCard.tsx:64-66`).
+Submitted rounds keep their snapshot score and grade. Evaluator authorization keeps using the grader's real role. No writer/RPC change. The AI call at `EvaluationPageClient.tsx:519-522` is left to T09.
+Out of scope (round-count display only, not criteria or score): `EmployeeEvaluationCell.tsx:16`, `TeamDetailMemberCell.tsx:33`.
 DoD:
-- Disposable Supabase stack with real RPCs: five roles run Draft → Submit → Return → Resubmit → Approved, across all three sets.
-- A role change mid-period keeps the snapshot set (client renders = server validates); forged cross-set criterion UUID rejected.
+- Disposable Supabase stack with real RPCs: each of the five roles runs its own valid P107 flow (its round count; Return/Resubmit only where P107 allows it), across all three sets.
+- Role change after period creation (Leader ↔ Employee, Leader ↔ Worker, Manager ↔ Leader/SubLeader inside one set): criteria, Draft score, grade bands and max round follow the snapshot (client renders = server validates); grader authorization unchanged; forged cross-set criterion UUID rejected.
 - Root gates pass.
 STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
 
@@ -956,11 +971,11 @@ task:
 Goal: correct per-set criteria analytics without changing KPI policy.
 Changes:
 - Keep `configKey = versionId` and the snapshot lookup.
-- Criteria-breakdown key `setKey:code` (legacy `code`) with label/name from the snapshot; heatmap uses those labels and keys.
+- Criteria-breakdown accumulator keyed by `versionId:groupId` (never merges two sets or two versions; group maximum from that version). Output entries carry set, version, code and snapshot label; heatmap uses those labels and keys.
 - Radar computed and shown per set.
-- Average, Top 5 and team average logic unchanged, labelled as cross-set when sets mix (D2 pending).
+- Average, Top 5 and team average logic unchanged; when sets mix they are marked "not directly comparable across sets" (D2 pending). D3: no grade-version note unless approved.
 DoD:
-- Golden tests: Leader A vs Staff A never merged; legacy period output byte-identical to the baseline; counts, progress and grade distribution unchanged; radar per set.
+- Golden tests: Leader A vs Staff A never merged; Leader A version 1 vs version 2 never merged; legacy period numbers equal the baseline (added DTO fields allowed); counts, progress and grade distribution unchanged; radar per set.
 - Root gates pass.
 Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
 
@@ -970,11 +985,11 @@ Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
 task:
   id: P108M1T09
   tier: CONTROLLED
-  depends: [P108M1T05]
+  depends: [P108M1T05, P108M1T07]
   owns:
     - src/actions/ai.ts
     - src/components/reports/BatchResultMessageModal.tsx
-    - src/app/evaluations/[id]/EvaluationPageClient.tsx
+    - src/app/evaluations/[id]/EvaluationPageClient.tsx  # sequential handoff after T07 is integrated; only the AI call
     - src/lib/export.ts
     - tests/p108-ai-export.test.mjs
   locks: [KURABE_SOURCE_CONTRACT]
@@ -983,7 +998,7 @@ task:
 Goal: AI and export describe each evaluation with its pinned snapshot and target the exact period.
 Changes:
 - AI single and batch paths load the pinned snapshot of the Approved round (not the live catalog), filtered to the subject set.
-- `draftResultMessageAction` selects the period by id (callers pass id); prompt redaction and Approved-only rules unchanged.
+- `draftResultMessageAction` selects the period by id (callers pass id) and receives the subject role snapshot (`EvaluationPageClient.tsx:519-522`); prompt redaction and Approved-only rules unchanged.
 - Export inherits the role-filtered DTO; add only what the test proves missing.
 DoD:
 - Prompt-builder tests without a provider call: legacy and P108 evaluations produce correct criteria detail; two periods with the same name resolve by id.
@@ -1009,15 +1024,19 @@ Goal: one exact integrated candidate proves every MASTER_PLAN P108.6 gate end to
 Changes:
 - The CI runtime can seed a three-set catalog via the import script.
 - The browser acceptance suite covers `/criteria` and all five roles.
+- Baseline state, old app + old schema + legacy catalog: record the golden report/history/score numbers that the later states must match.
 - Pre-import compatibility matrix on a migrated, not-yet-imported disposable DB (legacy catalog fixture):
   - deployed-SHA app (built in a disposable worktree) + new schema: login, evaluation Draft → Submit → Return → Approved, history, reports, export; criteria save rejected with zero mutation;
   - candidate app + new schema + legacy catalog: the same flows, plus `/criteria` read-only on the legacy catalog with Save blocked in UI and SQL;
   - candidate app after import → revert-import (a): legacy catalog flows still pass.
+- Target state, new app + new schema + P108 catalog (synthetic manifest): full acceptance suite, including legacy history, every role's P107 flow, AI prompt/export criteria, and UI + SQL rejection cases.
+- Isolated `npm run build` of both the deployed SHA and the candidate (build compatibility). Vercel deployment itself happens only in T11.
 - Catalog-size smoke with the existing perf harness.
 DoD:
 - Full gate set + browser + DB suites pass on the exact candidate; evidence bound to candidate/base/tree hashes.
 - Fresh independent review PASS.
 - Signed manifest dry-run (when T02 is signed) equals 18/93 with recorded hashes.
+- T10 PASS is technical only (synthetic data). It is not business sign-off (G1) and does not validate cross-set KPIs (D2).
 
 ### [ ] [#P108M1T11] Release + cutover (protected, owner-approved per step)
 
@@ -1035,14 +1054,14 @@ Steps, each with its own approval:
 1. backup + restore proof;
 2. confirm no active period;
 3. migration by name + fingerprint readback;
-4. push + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke (rollback here: redeploy the previous app first, then (b));
+4. push (a push to `main` auto-deploys Vercel production, so it is its own approval) + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke (rollback here: redeploy the previous app first, then (b));
 5. import of the signed manifest + per-set readback;
 6. role smoke.
 DoD:
 - Every step has a readback artifact.
 - Rollback stage recorded at each step.
 - `HANDOFF.md` and `.ai/DECISIONS_LOG.md` updated by Mika.
-STOP: live schema, constraint names, migration ledger, PostgreSQL version or active catalog still `UNKNOWN` (the T01 live section was not run, or failed); restore proof not exact; active period present; T02 unsigned; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
+STOP: live schema, constraint names, migration ledger, PostgreSQL version or active catalog still `UNKNOWN` (the T01 live section was not run, or failed); restore proof not exact; active period present; T02 unsigned (no unsigned workbook data is ever imported); D2 not decided and the marked cross-set KPI display not approved; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
 
 ### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
 
@@ -1073,14 +1092,14 @@ STOP: IDs ambiguous, history labels present, or no approval ⇒ no deletion.
 ```text
 T01 ──> T03 ──> T04 ─────────────────┐
          └────> T05 ──> T06 ─────────┤
-                  ├───> T07 ─────────┤
-                  ├───> T08 ─────────┼──> T10 ──┐
-                  └───> T09 ─────────┘          │
+                  ├───> T07 ──> T09 ─┤
+                  └───> T08 ─────────┼──> T10 ──┐
+                                     │          │
 T02 (parallel; business sign-off) ──────────────┼──> T11 (release)
 T01 ──> M2T01 (D1 decision/execution) ──────────┘
 ```
 
-T06–T09 have disjoint `owns` but run serially on Pi5 (one Runner).
+T06–T09 run serially on Pi5 (one Runner). Their `owns` are disjoint except `EvaluationPageClient.tsx`, handed from T07 to T09 through the T07 → T09 dependency.
 
 ## Closed / historical record
 
