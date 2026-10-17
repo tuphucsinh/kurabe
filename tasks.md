@@ -999,7 +999,9 @@ DoD:
 - Root gates pass.
 Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
 
-### [ ] [#P108M1T09] AI and export historical correctness
+### [x] [#P108M1T09] AI and export historical correctness
+
+Local technical acceptance: candidate `140697af7aa4ad14fc1eb4116e1ffb10be8807d0`; AI single/batch criteria from pinned snapshot filtered to subject set, period resolved by id (legacy unique-name compatibility only when id absent, fail-closed), role from server employeeRole, export per-set proven by test (export.ts unchanged); P107 AI egress/audit tests unedited PASS; clean-install, root tests, lint, typecheck, build, secret scan PASS. Fresh reviewer PASS session `20261017_210513_0df7ea`. Repair #1 (failure_count=1 retained). Known residual: name-based legacy period path for callers omitting periodId. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T09/candidate-gates/gates.json`. Synthetic only; no provider call, push/deploy/production.
 
 ```yaml
 task:
