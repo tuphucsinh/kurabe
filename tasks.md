@@ -894,7 +894,9 @@ DoD:
 - Tests: more than 1,000 level rows across at least 3 versions read completely on the local Supabase stack (real `max_rows = 1000`); truncation ⇒ `unavailable`; a level row deleted as `postgres` from a P108 version ⇒ `unavailable`; a valid empty group stays available; legacy multi-audience version filtered by role exactly as before for its audience; P108 version shows only the subject set; audience→role mapping verified for all 93 synthetic criteria.
 - Root gates pass.
 
-### [ ] [#P108M1T06] Criteria admin: 3 tabs, set-scoped CRUD, Active lock UI
+### [x] [#P108M1T06] Criteria admin: 3 tabs, set-scoped CRUD, Active lock UI
+
+Local technical acceptance: candidate `d5a35dca0d6e9655340c4972183ff495edd514fe`; lint/typecheck/build/root79/browser9 (390/1440)/secret scan296 files0 findings/diff-check PASS. Fresh reviewer/checker PASS session `20261017_161825_d6a91b`. Closed under single owner-approved modal lifecycle recovery; only CriteriaModal.tsx changed during recovery, failure_count=2 and all prior snapshots/evidence retained. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T06/owner-modal-candidate-gates/gates.json`. Synthetic only; no business G1 signoff, push/deploy/production access.
 
 ```yaml
 task:
