@@ -57,7 +57,27 @@ function waitFor(command, args, label, attempts = 90) {
   }
 }
 
+function getAppRoot() {
+  const raw = process.env.KURABE_CI_APP_ROOT;
+  if (!raw) return null;
+  const appRoot = path.resolve(raw);
+  if (!path.isAbsolute(raw) || !fs.existsSync(appRoot) || !fs.statSync(appRoot).isDirectory()) {
+    throw new Error(`KURABE_CI_APP_ROOT must be an existing absolute directory: ${raw}`);
+  }
+  if (!fs.existsSync(path.join(appRoot, 'node_modules/.bin/next'))) {
+    throw new Error(`KURABE_CI_APP_ROOT missing node_modules/.bin/next: ${raw}`);
+  }
+  try {
+    const isWorkTree = run('git', ['rev-parse', '--is-inside-work-tree'], { cwd: appRoot });
+    if (isWorkTree !== 'true') throw new Error('not a git worktree');
+  } catch (error) {
+    throw new Error(`KURABE_CI_APP_ROOT is not a git worktree: ${raw} (${safeError(error)})`);
+  }
+  return appRoot;
+}
+
 function startNext(state) {
+  const appRoot = (state && state.appRoot) || getAppRoot() || projectRoot;
   const nextLog = fs.openSync(path.join(runtimeRoot, 'next.log'), 'a');
   const env = {
     ...process.env,
@@ -69,8 +89,8 @@ function startNext(state) {
     KURABE_ENABLE_TRANSACTIONAL_EVALUATION_RPC: 'true',
     NODE_ENV: 'development',
   };
-  const next = spawn(path.join(projectRoot, 'node_modules/.bin/next'), ['dev', '--hostname', '127.0.0.1', '--port', String(state.nextPort)], {
-    cwd: projectRoot,
+  const next = spawn(path.join(appRoot, 'node_modules/.bin/next'), ['dev', '--hostname', '127.0.0.1', '--port', String(state.nextPort)], {
+    cwd: appRoot,
     env,
     stdio: ['ignore', nextLog, nextLog],
     detached: true,
@@ -99,8 +119,23 @@ function startProxy(state) {
  */
 function restoreToolchainDrift() {
   const status = run('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: projectRoot });
-  const drifted = status.split('\n').map((line) => line.slice(3)).filter((p) => p === 'AGENTS.md' || p === 'CLAUDE.md');
+  // run() trims its output, so the first porcelain line loses its leading space: take the last token (path) instead of a fixed column.
+  const drifted = status.split('\n').map((line) => line.trim().split(/\s+/).pop()).filter((p) => p === 'AGENTS.md' || p === 'CLAUDE.md');
   if (drifted.length > 0) run('git', ['checkout', '--', ...drifted], { cwd: projectRoot });
+
+  let appRoot = null;
+  try {
+    appRoot = getAppRoot();
+    if (!appRoot && fs.existsSync(statePath)) {
+      const state = readState();
+      if (state && state.appRoot) appRoot = state.appRoot;
+    }
+  } catch {}
+  if (appRoot && appRoot !== projectRoot) {
+    const appStatus = run('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: appRoot });
+    const appDrifted = appStatus.split('\n').map((line) => line.trim().split(/\s+/).pop()).filter((p) => p === 'AGENTS.md' || p === 'CLAUDE.md');
+    if (appDrifted.length > 0) run('git', ['checkout', '--', ...appDrifted], { cwd: appRoot });
+  }
 }
 
 async function start() {
@@ -128,6 +163,8 @@ async function start() {
   state.serviceRoleKey = token('service_role', state.jwtSecret);
   state.supabaseUrl = `http://127.0.0.1:${state.restPort}`;
   state.networkId = state.name;
+  const appRoot = getAppRoot();
+  if (appRoot) state.appRoot = appRoot;
   await assertPortFree(state.dbPort);
   writeState(state);
   try {
@@ -385,6 +422,48 @@ export function exportEnv(options = {}) {
   console.log(JSON.stringify({ envPath, exported: Object.keys(values).filter((name) => !name.includes('KEY') && !name.includes('PASSWORD')).length }));
 }
 
+/**
+ * SQL that turns the pre-seeded H7 closed-period Approved evaluation into a real graded legacy evaluation
+ * (three Submitted rounds, scores against the seeded legacy criterion, final score/grade). Disposable-fixture
+ * seeding only: runs with triggers bypassed because it writes immutable history, and is used by the P108
+ * compatibility/acceptance suites so their golden numbers are not vacuous.
+ */
+export function legacyGradedApprovedSql(evaluationId, { pins = true } = {}) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(evaluationId))) throw new Error('legacyGradedApprovedSql requires an evaluation UUID');
+  return `
+DO $seed$
+DECLARE
+  v_scores jsonb;
+  v_total numeric;
+  v_grade text;
+  pins boolean := ${pins ? 'true' : 'false'};
+  v_has_criteria_ver boolean := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'evaluation_rounds' AND column_name = 'criteria_config_version_id');
+  v_has_grade_ver boolean := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'evaluation_rounds' AND column_name = 'grade_config_version_id');
+BEGIN
+  SET LOCAL session_replication_role = replica;
+  SELECT jsonb_object_agg(s.id::text, s.pts), sum(s.pts) INTO v_scores, v_total
+  FROM (SELECT c.id, (SELECT max(l.points) FROM public.criterion_levels l WHERE l.criterion_id = c.id) AS pts
+        FROM public.criteria c WHERE c.is_active IS TRUE) s WHERE s.pts IS NOT NULL;
+  IF v_scores IS NULL OR v_total IS NULL OR v_total <= 0 THEN RAISE EXCEPTION 'LEGACY_FIXTURE_NO_SCORABLE_CRITERIA'; END IF;
+  SELECT gb.grade INTO v_grade FROM public.grade_bands gb
+   WHERE gb.min_score <= v_total AND (gb.max_score IS NULL OR v_total <= gb.max_score)
+   ORDER BY gb.min_score DESC, gb.sort_order LIMIT 1;
+  IF v_grade IS NULL THEN RAISE EXCEPTION 'LEGACY_FIXTURE_NO_GRADE_BAND'; END IF;
+  UPDATE public.evaluation_rounds SET status = 'Submitted', scores = v_scores, notes = '{}'::jsonb,
+    total_score = v_total, grade = v_grade, comment = 'Legacy graded fixture', submitted_at = now() - interval '2 days'
+   WHERE evaluation_id = '${evaluationId}';
+  IF pins AND v_has_criteria_ver THEN
+    EXECUTE 'UPDATE public.evaluation_rounds SET criteria_config_version_id = (SELECT id FROM public.criteria_config_versions WHERE is_active) WHERE evaluation_id = $1' USING '${evaluationId}'::uuid;
+  END IF;
+  IF pins AND v_has_grade_ver THEN
+    EXECUTE 'UPDATE public.evaluation_rounds SET grade_config_version_id = (SELECT id FROM public.grade_band_versions WHERE is_active IS TRUE) WHERE evaluation_id = $1' USING '${evaluationId}'::uuid;
+  END IF;
+  UPDATE public.evaluations SET status = 'Approved', current_round = 3, final_score = v_total, final_grade = v_grade WHERE id = '${evaluationId}';
+END
+$seed$;
+`;
+}
+
 function proxy() {
   const state = readState();
   const server = http.createServer((request, response) => {
@@ -401,6 +480,8 @@ function proxy() {
 }
 
 function cleanup() {
+  // Generated agent-rules blocks appended by `next dev` must never survive a cleanup (success or failure path).
+  try { restoreToolchainDrift(); } catch { /* cleanup must still tear the runtime down */ }
   if (!fs.existsSync(statePath)) { console.log(JSON.stringify({ cleaned: true, residue: 0 })); return; }
   const state = readState();
   for (const pid of [state.nextPid, state.proxyPid]) {
