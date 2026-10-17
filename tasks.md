@@ -741,7 +741,9 @@ product/policy change; production writes/migrations 0/0.
 - Keep unchanged: negative points, arithmetic total, grade bands, P107 workflow and lifecycle, Approved-only results. KPI policy (D2) unchanged unless approved.
 - STOP: unresolved scope/consumer/catalog identity, unsigned business data needed for a DoD, failed rollback qualification, or any production need without approval. Preserve the first failure.
 
-### [ ] [#P108M1T01] Preflight: source/runtime inventory + production read-only snapshot
+### [x] [#P108M1T01] Preflight: source/runtime inventory + production read-only snapshot
+
+Local source-only close: evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T01/evidence.json`, SHA-256 `5297396778235a7cb6ceb92ab5a5b1e2825b0726f539ea1e440f76b5fac17882`, source `e623a5d998c261214fc4c5fc65669028d759d7f7`. Fresh reviewer `reviewer/opencode-go/deepseek-v4.1-flash`, session `20261017_092742_54b4bc`, canonical checker PASS (`review-3/gate-check.log`). Thirty source consumers mapped/flagged; no application delta. Production facts UNKNOWN_NOT_AUTHORIZED and mandatory at T11/M2T01; production reads/writes/migrations/deploy/AI calls = 0. Review-1 findings and review-2 malformed transport retained; repaired source inventory accepted, no DoD waiver.
 
 ```yaml
 task:
