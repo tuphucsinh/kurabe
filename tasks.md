@@ -966,7 +966,9 @@ DoD:
 - Root gates pass.
 STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
 
-### [ ] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
+### [x] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
+
+Local technical acceptance: candidate `a4624dca9e88a6a10e2a32378db9ebf3f0d332d2`; golden tests on actual projection/radar source (Leader vs Staff, version 1 vs 2, legacy baseline, legacy mixed-version old-vs-new), clean-install, focused, root tests, lint, typecheck, build, secret scan, diff-check PASS. Fresh reviewer PASS session `20261017_201030_d9bb69`. One Repair #1 (non-async export in use-server file, failure_count=1 retained, snapshots/evidence retained). Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T08/candidate-gates/gates.json`. Synthetic only; no push/deploy/production.
 
 ```yaml
 task:
