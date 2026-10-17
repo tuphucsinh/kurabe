@@ -20,7 +20,7 @@
 
 **Open — not authorized by this plan:**
 
-- **D1:** trial-evaluation disposition before cutover (task P108M2T01). No existing path deletes evaluations safely (see P108.2). The owner chooses: keep them frozen in a closed period, or approve a dedicated purge RPC that uses an explicit, audited transition context. Disabling triggers or deleting immutable history is not allowed.
+- **D1:** trial-evaluation disposition before cutover (task P108M2T01). No existing path deletes evaluations safely (see P108.2). The owner chooses, after the P108M1T01 inventory: keep them frozen in a closed period, or approve a dedicated purge RPC that uses an explicit, audited transition context. Until one specific option is approved, no guard change, `purge_rpc` or deletion code is written. Disabling triggers or deleting immutable history is not allowed.
 - **D2:** cross-set raw-score KPIs (overall average, Top 5, team average). Recommendation: per-set average and per-set Top 5. Current behaviour stays until approved.
 - **D3:** comparability when grade versions differ inside one report. Recommendation: flag/note only, no hidden policy change.
 - **G1 business sign-off** (task P108M1T02): Worker numeric points and maximum (the Worker sheet has no numeric columns or total row; values are derivable from the group headers and penalty text for 28/30 criteria); Worker criterion 8 "Không có" points; per-criterion meaning of `-` for criteria 4–8 and 15 in all sets (criterion 15 has no "0 proposals" option, yet its `-` columns carry 0 in the Leader/Staff totals); A1 boundaries (VI "Trên" vs JA "以上", overlapping "Dưới 95%" / "Dưới 93%"); C14 (VI "4+/3" vs JA "5+/4"); Staff JA numbering lag; the number of selectable levels per criterion; the default level; the effective date (change log: 2026/10/01) and which period first uses it. Proposal: Vietnamese revision 07 is authoritative (the Leader Japanese header reads `Lbh: 06`). No guessed points are imported.
@@ -68,14 +68,14 @@ One forward migration plus one tested rollback artifact. Applied migrations are 
 3. **Functions:** replace `validate_criteria_config`, `get_active_criteria_config` and `save_criteria_config`. Diff each body against `20260907000600_criteria_config_version.sql`; only the intended deltas are allowed. Grants unchanged.
 4. **No `CHECK … NOT VALID`:** PostgreSQL still checks it on every new INSERT/UPDATE, so it adds risk without benefit. Enforcement lives in the single writer, the composite FK and the unique indexes, proven by tests.
 
-**Compatibility window:** after the migration the currently deployed app can still read (extra JSON keys are ignored; version readers select explicit columns), but its criteria saves are rejected because its payload has no `set_key`. This is accepted inside the maintenance window: with no active period there are no evaluation writes. It must be proven in P108M1T10 by running the deployed-SHA app read smoke against a migrated, not-yet-imported disposable database.
+**Compatibility window:** after the migration the currently deployed app can still read (extra JSON keys are ignored; version readers select explicit columns), but its criteria saves are rejected because its payload has no `set_key`. This is accepted inside the maintenance window: with no active period there are no evaluation writes. Both states before import must be proven in P108M1T10 on a migrated, not-yet-imported disposable database: the deployed-SHA app on the new schema, and the new app on the new schema with the legacy catalog. The new app on the old schema is never run: rollback redeploys the previous app before any schema rollback.
 
 **Rollback artifact `db/rollback-p108-criteria-sets.sql`:**
 
 - **(a) revert-import:** guarded so it runs only when the latest version is the import version, no round pins it, no later version exists and no period was created after the import. It reactivates the previous version's live projection and the active pointer.
-- **(b) schema rollback:** restores the previous function bodies, drops the new indexes, FK and columns, and recreates the global `UNIQUE(code)`. Guard: no active P108 rows.
+- **(b) schema rollback:** restores the previous function bodies, drops the new indexes, FK and columns, and recreates the legacy unique constraints. Valid **only before import**. Guard: no row with a non-NULL `set_key` in any live or version table. After an import it is refused: the import version and the deactivated P108 rows repeat codes across sets, so the legacy `UNIQUE(code)` / `UNIQUE(version_id, code)` cannot be recreated without deleting catalog history.
 
-Qualified on a disposable DB in the order apply → import → (a) → (b) → reapply.
+Qualified on a disposable DB in two sequences: apply → (b) → reapply; and apply → import → (a) → (b) refused with zero mutation.
 
 ### P108.5 Release, cutover and rollback
 
@@ -84,6 +84,7 @@ Qualified on a disposable DB in the order apply → import → (a) → (b) → r
 - P108M1T10 PASS on the exact candidate, including a fresh independent review;
 - G1 signed manifest (SHA recorded);
 - D1 executed, or explicitly re-decided by the owner;
+- live schema, constraint names, migration ledger, PostgreSQL major version and active catalog `VERIFIED` by a read-only production snapshot (P108M1T01 live section, or a T11 pre-step under its own approval). Any of these still `UNKNOWN` ⇒ no release;
 - backup and restore proof;
 - no `active` period;
 - an agreed maintenance window.
@@ -104,9 +105,11 @@ Every production step needs its own explicit owner approval.
 | Stage | Allowed action |
 |---|---|
 | Before migration | Nothing to roll back |
-| After migration, before import | Schema rollback (b); redeploy the previous app if needed (the new app also renders the legacy catalog) |
-| After import, before any business data (no newer version, no new period, no round pinned to the import version, no catalog edit) | Revert-import (a), then optionally (b) |
-| After any P108 business data | No revert and no old-app redeploy (the old app cannot render a three-set catalog). Freeze criteria edits and fix forward under control. Restoring the backup is only for catastrophic corruption, with a loss analysis of data written since the backup (sessions, audit, personnel, evaluations) and an owner decision |
+| After migration, before import | If the new app is deployed, redeploy the previous app first; then schema rollback (b) |
+| After import, before any business data (no newer version, no new period, no round pinned to the import version, no catalog edit) | Revert-import (a) only; the new app stays (proven on the legacy catalog). Schema rollback is not possible after import |
+| After any P108 business data | No revert and no old-app redeploy (the old app cannot render a three-set catalog). Freeze criteria edits and fix forward under control |
+
+Backup restore is never used as rollback when any business data may have been written after the backup (sessions, audit, personnel, periods, evaluations, criteria edits), because that data would be lost. It is used only when readback proves zero such writes since the backup; otherwise Mika stops and reports to anh. (a) and (b) restore nothing from the backup and delete no business data.
 
 ### P108.6 Acceptance gates
 
@@ -137,7 +140,7 @@ Behavioural tests only, kept to what protects correctness, integrity or access:
   - radar per set;
   - AI prompt uses the pinned snapshot and a period id (prompt-builder test, no paid provider call);
   - export columns per set.
-- **Release gates:** `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build`, secret scan; catalog-size smoke with the existing performance harness; old-app read smoke against the migrated database.
+- **Release gates:** `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build`, secret scan; catalog-size smoke with the existing performance harness; pre-import compatibility matrix on the migrated database (deployed-SHA app + new schema; new app + new schema + legacy catalog).
 
 ### P108.7 Non-goals and markers
 

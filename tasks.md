@@ -809,7 +809,7 @@ task:
   locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 
-Goal: implement MASTER_PLAN P108.3–P108.4 at the database boundary.
+Goal: implement MASTER_PLAN P108.3–P108.4 at the database boundary. Runs entirely on disposable databases from the repo baseline (T01 may close with live facts `UNKNOWN`); it never needs production access. Live facts found later re-check the migration preflight before T11.
 Changes:
 - Migration: preflight; `set_key` columns; `UNIQUE(id, set_key)` + composite FK; active-only normalized unique indexes; version-table `set_key` with partial uniques; drop the four legacy unique constraints located by definition.
 - Replace `validate/get/save_criteria_config`:
@@ -823,7 +823,7 @@ DoD:
 - All schema/RPC and concurrency cases of MASTER_PLAN P108.6, on a disposable DB with two real connections and `pg_locks` wait proof.
 - Legacy catalog fixture: migration applies; legacy versions read unchanged; legacy duplicate active code rejected.
 - P107 save/submit/return pass on a three-set catalog.
-- apply → import(synthetic) → revert-import → schema rollback → reapply all pass, with zero partial mutation.
+- apply → schema rollback (b) → reapply pass; apply → import(synthetic) → revert-import (a) pass; (b) after import is refused with zero mutation.
 - Root gates pass.
 STOP: any preflight mismatch with T01 live facts ⇒ amend the plan before changing guards.
 
@@ -903,6 +903,7 @@ Changes:
 - Group select limited to the active set; create carries `set_key`; delete limited to the set.
 - Remove `updateCriterionAudiencesAction`, its hook and the checkbox UI.
 - Save disabled when unchanged.
+- Legacy catalog (no `set_key`, before import) renders read-only with a "waiting for import" notice; Save disabled.
 - Read-only banner + disabled actions while a period is active, from the same server signal; the SQL rejection surfaces as a clear message.
 - STALE CAS → reload message.
 DoD:
@@ -1008,7 +1009,10 @@ Goal: one exact integrated candidate proves every MASTER_PLAN P108.6 gate end to
 Changes:
 - The CI runtime can seed a three-set catalog via the import script.
 - The browser acceptance suite covers `/criteria` and all five roles.
-- Old-app compatibility: build the deployed SHA in a disposable worktree against a migrated, not-yet-imported DB; check read smoke + rejected criteria save.
+- Pre-import compatibility matrix on a migrated, not-yet-imported disposable DB (legacy catalog fixture):
+  - deployed-SHA app (built in a disposable worktree) + new schema: login, evaluation Draft → Submit → Return → Approved, history, reports, export; criteria save rejected with zero mutation;
+  - candidate app + new schema + legacy catalog: the same flows, plus `/criteria` read-only on the legacy catalog with Save blocked in UI and SQL;
+  - candidate app after import → revert-import (a): legacy catalog flows still pass.
 - Catalog-size smoke with the existing perf harness.
 DoD:
 - Full gate set + browser + DB suites pass on the exact candidate; evidence bound to candidate/base/tree hashes.
@@ -1031,14 +1035,14 @@ Steps, each with its own approval:
 1. backup + restore proof;
 2. confirm no active period;
 3. migration by name + fingerprint readback;
-4. push + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke;
+4. push + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke (rollback here: redeploy the previous app first, then (b));
 5. import of the signed manifest + per-set readback;
 6. role smoke.
 DoD:
 - Every step has a readback artifact.
 - Rollback stage recorded at each step.
 - `HANDOFF.md` and `.ai/DECISIONS_LOG.md` updated by Mika.
-STOP: restore proof not exact; active period present; T02 unsigned; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
+STOP: live schema, constraint names, migration ledger, PostgreSQL version or active catalog still `UNKNOWN` (the T01 live section was not run, or failed); restore proof not exact; active period present; T02 unsigned; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
 
 ### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
 
@@ -1061,6 +1065,7 @@ DoD:
 - Owner decision recorded.
 - For (B): a separate CONTROLLED implementation task registered first; qualified on a disposable DB; production run approved separately with exact IDs.
 - Post-state readback shows no unrelated row changed.
+Until anh approves one specific option after the inventory, no immutable-guard change, `purge_rpc`, migration or deletion script is written or registered; option (B) is only a description for the decision.
 STOP: IDs ambiguous, history labels present, or no approval ⇒ no deletion.
 
 ### P108 dependency order
