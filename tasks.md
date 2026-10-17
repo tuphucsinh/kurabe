@@ -1001,7 +1001,7 @@ Out of scope: per-set KPI/Top 5 (only after D2; Mika amends this task first).
 
 ### [x] [#P108M1T09] AI and export historical correctness
 
-Local technical acceptance: candidate `140697af7aa4ad14fc1eb4116e1ffb10be8807d0`; AI single/batch criteria from pinned snapshot filtered to subject set, period resolved by id (legacy unique-name compatibility only when id absent, fail-closed), role from server employeeRole, export per-set proven by test (export.ts unchanged); P107 AI egress/audit tests unedited PASS; clean-install, root tests, lint, typecheck, build, secret scan PASS. Fresh reviewer PASS session `20261017_210513_0df7ea`. Repair #1 (failure_count=1 retained). Known residual: name-based legacy period path for callers omitting periodId. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T09/candidate-gates/gates.json`. Synthetic only; no provider call, push/deploy/production.
+Local technical acceptance: candidate `140697af7aa4ad14fc1eb4116e1ffb10be8807d0`; AI single/batch criteria from pinned snapshot filtered to subject set, period resolved by id (legacy unique-name compatibility only when id absent, fail-closed), role from server employeeRole, export per-set proven by test (export.ts unchanged); P107 AI egress/audit tests unedited PASS; clean-install, root tests, lint, typecheck, build, secret scan PASS. Fresh reviewer PASS session `20261017_210513_0df7ea`. Repair #1 (failure_count=1 retained). Known residual: name-based legacy period path for callers omitting periodId (owner chose option A on 2026-10-17: amendment in progress to remove it; owns += tests/p107-ai-audit.test.mjs). Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T09/candidate-gates/gates.json`. Synthetic only; no provider call, push/deploy/production.
 
 ```yaml
 task:
@@ -1014,6 +1014,7 @@ task:
     - src/app/evaluations/[id]/EvaluationPageClient.tsx  # sequential handoff after T07 is integrated; only the AI call
     - src/lib/export.ts
     - tests/p108-ai-export.test.mjs
+    - tests/p107-ai-audit.test.mjs  # owner amendment A (2026-10-17): test-only call-site update, periodId required
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
