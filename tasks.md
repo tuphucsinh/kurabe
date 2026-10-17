@@ -928,7 +928,9 @@ DoD:
 - Browser check at 390 and 1440 on the local stack.
 - Root gates pass.
 
-### [ ] [#P108M1T07] Evaluation + compare use the subject role snapshot
+### [x] [#P108M1T07] Evaluation + compare use the subject role snapshot
+
+Local technical acceptance: candidate `aabe4119b1d3bc48573c0e595b0243040e932459`; clean-install, root tests, lint, typecheck, build, secret scan, diff-check and 18/18 disposable DB+browser integration cases (5 role flows, 8 role-drift directions, grader authorization, forged cross-set criterion, historical preservation) PASS. Fresh reviewer PASS session `20261017_191917_4e86a3` (one Low note: blocked-state text mixes live-role label with snapshot round count; not blocking). Closed after owner-approved owns amendment `1575ed0` and harness-only repairs; failure_count=1 and all snapshots/evidence retained. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T07/candidate-gates/gates.json`. Synthetic only; no push/deploy/production access.
 
 ```yaml
 task:
