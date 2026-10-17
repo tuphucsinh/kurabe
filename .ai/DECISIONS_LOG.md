@@ -1,5 +1,12 @@
 # Decisions Log
 
+## P108 T07/T08 owner-approved stale-test owns amendment
+
+- Anh explicitly approved exactly the four T07 tests named in `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T07/scope-blocker.json`: `tests/h7-display-rendering.test.ts`, `tests/browser/h7-display.mjs`, `tests/worker-role-regression.test.mjs`, `tests/p96t08-compare-render-cost.test.mjs`; T08 adds only `tests/p107-official-results.test.mjs`.
+- Change only assertions proven obsolete by the accepted P108 DoD: subject role snapshot for T07, additive set/version metadata for T08. Preserve legacy numeric results, historical/Submitted snapshots, Approved-only and authorization checks. No test deletion, arbitrary weakening, business-policy change, refactor, new task/gate, workbook or Master Plan change. `no_waiver: true`; `product_change: false`; `policy_change: false` for this test-only amendment.
+- Preserve all prior snapshots/failures and T06 failure_count2/fulfilled owner exception. T07/T08 root gates and actual acceptance remain mandatory; independent review follows the existing tier. Once verified, integrate locally and continue T08–T10 in the existing DAG; a new product defect or genuine blocker stops for owner reporting. No push/deploy/production/paid application AI.
+
+
 ## P107M1T07 bounded loading-scope amendment — 2026-10-09
 
 - Owner: “tụ quyết định và làm hết đi” following T07 owns-amendment versus waiver question. Mika chooses actual acceptance repair, not waiver; remaining P107 serial queue and exact fresh CONTROLLED reviews retained. No push/deploy/production/paid application provider rollout.

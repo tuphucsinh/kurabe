@@ -943,6 +943,10 @@ task:
     - src/components/evaluation/ResultCard.tsx
     - tests/p108-role-snapshot.test.mjs
     - tests/integration/p108-evaluation-flow.mjs
+    - tests/h7-display-rendering.test.ts
+    - tests/browser/h7-display.mjs
+    - tests/worker-role-regression.test.mjs
+    - tests/p96t08-compare-render-cost.test.mjs
   locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 
@@ -976,6 +980,7 @@ task:
     - src/components/charts/LazySkillGapRadar.tsx
     - src/components/charts/SkillGapRadar.tsx
     - tests/p108-report-projection.test.mjs
+    - tests/p107-official-results.test.mjs
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
