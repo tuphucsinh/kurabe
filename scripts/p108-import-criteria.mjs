@@ -16,8 +16,40 @@ async function createSupabaseServiceClient(supabaseUrl, serviceRoleKey) {
 }
 
 
+export const SYNTHETIC_FIXTURE_SHA256_ALLOWLIST = Object.freeze([
+  'df47ee294d5b4158fbbee49341420fc6e639fc1fc64e50bc86dd52e8ccb56216',
+]);
+
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function uuidV5(name, namespace) {
+  let nsBuf;
+  if (typeof namespace === 'string') {
+    if (!UUID_REGEX.test(namespace)) {
+      throw new Error(`Invalid namespace UUID format: ${namespace}`);
+    }
+    const clean = namespace.replace(/-/g, '');
+    nsBuf = Buffer.from(clean, 'hex');
+    if (nsBuf.length !== 16) {
+      throw new Error(`Namespace must decode to exactly 16 bytes: ${namespace}`);
+    }
+  } else if (Buffer.isBuffer(namespace) && namespace.length === 16) {
+    nsBuf = namespace;
+  } else {
+    throw new Error('Namespace must be a valid UUID string or 16-byte Buffer');
+  }
+
+  const hash = crypto.createHash('sha1').update(nsBuf).update(Buffer.from(String(name), 'utf8')).digest();
+
+  // Set version 5 (0x50) in byte 6
+  hash[6] = (hash[6] & 0x0f) | 0x50;
+  // Set variant RFC 4122 / 9562 (0x80) in byte 8
+  hash[8] = (hash[8] & 0x3f) | 0x80;
+
+  const hex = hash.toString('hex', 0, 16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 
 export function redact(text) {
   return String(text || '')
@@ -191,10 +223,17 @@ export function validateManifestNodes(manifest) {
     throw new Error('REFUSE_INVALID_MANIFEST: manifest must have a non-empty groups array');
   }
 
+  const seenUuids = new Set();
+
   for (const group of groups) {
     if (!isUuid(group.id)) {
       throw new Error(`REFUSE_MISSING_UUID: group code=${group.code || 'unknown'} missing UUID id`);
     }
+    if (seenUuids.has(group.id)) {
+      throw new Error(`REFUSE_DUPLICATE_UUID: duplicate group UUID: ${group.id}`);
+    }
+    seenUuids.add(group.id);
+
     if (!group.set_key || !['leader', 'staff', 'worker'].includes(group.set_key)) {
       throw new Error(`REFUSE_INVALID_SET: group code=${group.code} invalid set_key ${group.set_key}`);
     }
@@ -202,6 +241,20 @@ export function validateManifestNodes(manifest) {
     for (const criterion of criteria) {
       if (!isUuid(criterion.id)) {
         throw new Error(`REFUSE_MISSING_UUID: criterion code=${criterion.code || 'unknown'} missing UUID id`);
+      }
+      if (seenUuids.has(criterion.id)) {
+        throw new Error(`REFUSE_DUPLICATE_UUID: duplicate criterion UUID: ${criterion.id}`);
+      }
+      seenUuids.add(criterion.id);
+
+      if (criterion.group_id === undefined || criterion.group_id === null || typeof criterion.group_id !== 'string' || criterion.group_id.trim() === '') {
+        throw new Error(`REFUSE_RELATION_MISSING: criterion ${criterion.code || 'unknown'} missing required group_id`);
+      }
+      if (!isUuid(criterion.group_id)) {
+        throw new Error(`REFUSE_RELATION_MISSING: criterion ${criterion.code || 'unknown'} group_id must be a valid UUID`);
+      }
+      if (criterion.group_id !== group.id) {
+        throw new Error(`REFUSE_RELATION_MISMATCH: criterion ${criterion.code} group_id ${criterion.group_id} does not match group id ${group.id}`);
       }
       if (criterion.set_key !== group.set_key) {
         throw new Error(`REFUSE_SET_MISMATCH: criterion code=${criterion.code} set_key ${criterion.set_key} does not match group set_key ${group.set_key}`);
@@ -214,7 +267,229 @@ export function validateManifestNodes(manifest) {
         if (!isUuid(level.id)) {
           throw new Error(`REFUSE_MISSING_UUID: level label=${level.label || 'unknown'} for criterion ${criterion.code} missing UUID id`);
         }
+        if (seenUuids.has(level.id)) {
+          throw new Error(`REFUSE_DUPLICATE_UUID: duplicate level UUID: ${level.id}`);
+        }
+        seenUuids.add(level.id);
+
+        if (level.criterion_id === undefined || level.criterion_id === null || typeof level.criterion_id !== 'string' || level.criterion_id.trim() === '') {
+          throw new Error(`REFUSE_RELATION_MISSING: level ${level.id || 'unknown'} missing required criterion_id`);
+        }
+        if (!isUuid(level.criterion_id)) {
+          throw new Error(`REFUSE_RELATION_MISSING: level ${level.id || 'unknown'} criterion_id must be a valid UUID`);
+        }
+        if (level.criterion_id !== criterion.id) {
+          throw new Error(`REFUSE_RELATION_MISMATCH: level ${level.id} criterion_id ${level.criterion_id} does not match criterion id ${criterion.id}`);
+        }
       }
+    }
+  }
+}
+
+export const G1_NAMESPACE = 'bdb8cc91-a1b0-5e76-807c-bf46cf444dc1';
+export const PINNED_WORKBOOK_SHA256 = '3e3cfd7eddc18567eb3dfaaaf6586696044681fbfb337df845d043d884811743';
+export const G1_DECISION_REF = '.ai/DECISIONS_LOG.md: P108 G1 — FULL owner approval / T02 local execution; manifest NOT SIGNED';
+
+// The G1 pins are intentionally tied to the verified content; a future criteria revision must update the pin in code review
+export const G1_CANONICAL_CONTENT_SHA256 = '2b91d4623c57f047b323632809490c86ddea9f059e3e10807d85537eb9d11893';
+export const G1_PINNED_SET_HASHES = Object.freeze({
+  leader: '82d98df54eb057c54d77c6bc2ecd278370fe4c2556f3b1715f30d58dd6fe0f22',
+  staff: '10e3fcc8abd7637c0bb9337ae6667efd2e63606ef0e7c8b36d1b41120dc036b8',
+  worker: 'e13625dd25f234c64e2820a435c0ddc414f1ed2d6adfbed135dabc67d418ade6',
+});
+
+export function projectCanonicalContent(manifest) {
+  const groups = manifest?.groups || [];
+  return {
+    groups: groups.map((g) => ({
+      id: g.id,
+      set_key: g.set_key,
+      code: g.code,
+      name: g.name,
+      short_name: g.short_name,
+      sort_order: g.sort_order,
+      criteria: (g.criteria || []).map((c) => ({
+        id: c.id,
+        group_id: c.group_id,
+        set_key: c.set_key,
+        code: c.code,
+        name: c.name,
+        description: c.description,
+        weight: c.weight,
+        default_level_index: c.default_level_index,
+        sort_order: c.sort_order,
+        levels: (c.levels || []).map((l) => ({
+          id: l.id,
+          criterion_id: l.criterion_id,
+          points: l.points,
+          label: l.label,
+          description: l.description,
+          sort_order: l.sort_order,
+        })),
+      })),
+    })),
+  };
+}
+
+export function validateG1Manifest(manifest) {
+  if (!manifest || !manifest._metadata || typeof manifest._metadata !== 'object') {
+    throw new Error('REFUSE_G1_MISSING_METADATA: manifest must contain _metadata object');
+  }
+  const meta = manifest._metadata;
+
+  if (meta.workbook_sha256 !== PINNED_WORKBOOK_SHA256) {
+    throw new Error(`REFUSE_G1_METADATA_WORKBOOK_SHA_MISMATCH: workbook_sha256 must be ${PINNED_WORKBOOK_SHA256}, got ${meta.workbook_sha256}`);
+  }
+  if (meta.uuid_namespace !== G1_NAMESPACE) {
+    throw new Error(`REFUSE_G1_INVALID_NAMESPACE: uuid_namespace must be ${G1_NAMESPACE}, got ${meta.uuid_namespace}`);
+  }
+  if (meta.revision !== '07') {
+    throw new Error(`REFUSE_G1_METADATA_REVISION_MISMATCH: revision must be 07, got ${meta.revision}`);
+  }
+  if (meta.effective_date !== '2026-10-01') {
+    throw new Error(`REFUSE_G1_METADATA_EFFECTIVE_DATE_MISMATCH: effective_date must be 2026-10-01, got ${meta.effective_date}`);
+  }
+  if (meta.revised_date !== '2026-07-28') {
+    throw new Error(`REFUSE_G1_METADATA_REVISED_DATE_MISMATCH: revised_date must be 2026-07-28, got ${meta.revised_date}`);
+  }
+  if (meta.first_period !== 'Kỳ 2026') {
+    throw new Error(`REFUSE_G1_METADATA_FIRST_PERIOD_MISMATCH: first_period must be Kỳ 2026, got ${meta.first_period}`);
+  }
+  if (meta.period_frequency !== 'yearly') {
+    throw new Error(`REFUSE_G1_METADATA_PERIOD_FREQUENCY_MISMATCH: period_frequency must be yearly, got ${meta.period_frequency}`);
+  }
+  if (meta.g1_decision_ref !== G1_DECISION_REF) {
+    throw new Error('REFUSE_G1_METADATA_DECISION_REF_MISMATCH: g1_decision_ref mismatch');
+  }
+
+  const actualCounts = getCounts(manifest);
+  if (
+    actualCounts.leader.groups !== 6 || actualCounts.leader.criteria !== 33 ||
+    actualCounts.staff.groups !== 6 || actualCounts.staff.criteria !== 30 ||
+    actualCounts.worker.groups !== 6 || actualCounts.worker.criteria !== 30 ||
+    actualCounts.total_groups !== 18 || actualCounts.total_criteria !== 93
+  ) {
+    throw new Error('REFUSE_G1_INVALID_COUNTS: manifest counts must be leader 6/33, staff 6/30, worker 6/30, total 18/93');
+  }
+
+  const expectedMetaCounts = {
+    leader: { groups: 6, criteria: 33 },
+    staff: { groups: 6, criteria: 30 },
+    worker: { groups: 6, criteria: 30 },
+    total_groups: 18,
+    total_criteria: 93,
+  };
+  if (JSON.stringify(meta.counts) !== JSON.stringify(expectedMetaCounts)) {
+    throw new Error('REFUSE_G1_METADATA_COUNTS_MISMATCH: _metadata.counts does not match expected G1 counts');
+  }
+
+  const expectedSets = ['leader', 'staff', 'worker'];
+  for (const setKey of expectedSets) {
+    const setGroups = (manifest.groups || []).filter((g) => g.set_key === setKey);
+    const groupCodes = setGroups.map((g) => g.code);
+    const expectedCodes = ['A', 'B', 'C', 'D', 'E', 'F'];
+    if (JSON.stringify(groupCodes) !== JSON.stringify(expectedCodes)) {
+      throw new Error(`REFUSE_G1_INVALID_GROUP_CODES: set ${setKey} group codes must be A..F in order`);
+    }
+  }
+
+  for (const group of manifest.groups || []) {
+    const expectedGroupId = uuidV5(`p108:${group.set_key}:group:${group.code}`, G1_NAMESPACE);
+    if (group.id !== expectedGroupId) {
+      throw new Error(`REFUSE_G1_INVALID_UUID: group ${group.code} (${group.set_key}) id must be ${expectedGroupId}, got ${group.id}`);
+    }
+
+    if (!group.provenance || typeof group.provenance !== 'object') {
+      throw new Error(`REFUSE_G1_MISSING_PROVENANCE: group ${group.code} missing provenance`);
+    }
+    if (!group.provenance.source_sheet || !group.provenance.source_row || !group.provenance.document_code) {
+      throw new Error(`REFUSE_G1_MISSING_PROVENANCE: group ${group.code} missing required provenance keys`);
+    }
+
+    for (const criterion of group.criteria || []) {
+      const expectedCritId = uuidV5(`p108:${criterion.set_key}:criterion:${criterion.code}`, G1_NAMESPACE);
+      if (criterion.id !== expectedCritId) {
+        throw new Error(`REFUSE_G1_INVALID_UUID: criterion ${criterion.code} (${criterion.set_key}) id must be ${expectedCritId}, got ${criterion.id}`);
+      }
+      if (criterion.default_level_index !== null) {
+        throw new Error(`REFUSE_G1_DEFAULT_LEVEL_INDEX_NOT_NULL: criterion ${criterion.code} default_level_index must be null, got ${criterion.default_level_index}`);
+      }
+      if (criterion.weight !== 0) {
+        throw new Error(`REFUSE_G1_INVALID_WEIGHT: criterion ${criterion.code} weight must be 0, got ${criterion.weight}`);
+      }
+
+      if (!criterion.provenance || typeof criterion.provenance !== 'object') {
+        throw new Error(`REFUSE_G1_MISSING_PROVENANCE: criterion ${criterion.code} missing provenance`);
+      }
+      if (!criterion.provenance.source_sheet || !criterion.provenance.source_row) {
+        throw new Error(`REFUSE_G1_MISSING_PROVENANCE: criterion ${criterion.code} missing required provenance keys`);
+      }
+
+      const levels = criterion.levels || [];
+      for (let idx = 0; idx < levels.length; idx++) {
+        const level = levels[idx];
+        if (level.sort_order !== idx) {
+          throw new Error(`REFUSE_G1_INVALID_SORT_ORDER: level on ${criterion.code} sort_order must be sequential starting at 0, got ${level.sort_order}`);
+        }
+        const expectedLevelId = uuidV5(`p108:${criterion.set_key}:level:${criterion.code}:${level.sort_order}`, G1_NAMESPACE);
+        if (level.id !== expectedLevelId) {
+          throw new Error(`REFUSE_G1_INVALID_UUID: level on ${criterion.code} sort_order ${level.sort_order} id must be ${expectedLevelId}, got ${level.id}`);
+        }
+        if (!Number.isInteger(level.points)) {
+          throw new Error(`REFUSE_G1_NON_INTEGER_POINTS: level on ${criterion.code} points must be an integer, got ${level.points}`);
+        }
+
+        if (!level.provenance || typeof level.provenance !== 'object') {
+          throw new Error(`REFUSE_G1_MISSING_PROVENANCE: level on ${criterion.code} sort_order ${level.sort_order} missing provenance`);
+        }
+        if (!level.provenance.source_sheet || !level.provenance.source_row) {
+          throw new Error(`REFUSE_G1_MISSING_PROVENANCE: level on ${criterion.code} sort_order ${level.sort_order} missing required provenance keys`);
+        }
+        if (level.provenance.points_origin === 'WORKBOOK_CELL') {
+          if (!level.provenance.points_cell || level.provenance.points_raw === undefined) {
+            throw new Error(`REFUSE_G1_MISSING_PROVENANCE: level on ${criterion.code} sort_order ${level.sort_order} missing points_cell or points_raw`);
+          }
+        } else if (level.provenance.points_origin === 'G1_DECISION') {
+          if (!level.provenance.decision_ref || !level.provenance.rule_id) {
+            throw new Error(`REFUSE_G1_MISSING_PROVENANCE: level on ${criterion.code} sort_order ${level.sort_order} missing decision_ref or rule_id`);
+          }
+        } else {
+          throw new Error(`REFUSE_G1_MISSING_PROVENANCE: level on ${criterion.code} sort_order ${level.sort_order} invalid points_origin: ${level.provenance.points_origin}`);
+        }
+      }
+    }
+  }
+
+  const projected = projectCanonicalContent(manifest);
+  const actualProjectedSha = crypto.createHash('sha256').update(JSON.stringify(projected)).digest('hex');
+  if (actualProjectedSha !== G1_CANONICAL_CONTENT_SHA256) {
+    throw new Error(`REFUSE_G1_CANONICAL_CONTENT_MISMATCH: canonical content projection digest ${actualProjectedSha} does not match pinned ${G1_CANONICAL_CONTENT_SHA256}`);
+  }
+
+  const actualPayloadSha = crypto.createHash('sha256').update(JSON.stringify({ groups: manifest.groups })).digest('hex');
+  if (meta.payload_sha256 !== actualPayloadSha) {
+    throw new Error('REFUSE_G1_PAYLOAD_SHA_MISMATCH: _metadata.payload_sha256 mismatch');
+  }
+
+  const actualSetHashes = computeAllSetHashes(buildPayload(manifest));
+  if (JSON.stringify(meta.set_hashes) !== JSON.stringify(actualSetHashes) || JSON.stringify(actualSetHashes) !== JSON.stringify(G1_PINNED_SET_HASHES)) {
+    throw new Error('REFUSE_G1_SET_HASHES_MISMATCH: _metadata.set_hashes mismatch');
+  }
+
+  const targetMaxima = { leader: 190, staff: 175, worker: 175 };
+  for (const setKey of expectedSets) {
+    const gList = (manifest.groups || []).filter((g) => g.set_key === setKey);
+    let maxTotal = 0;
+    for (const g of gList) {
+      for (const c of g.criteria || []) {
+        maxTotal += Math.max(...(c.levels || []).map((l) => l.points));
+      }
+    }
+    if (maxTotal !== targetMaxima[setKey]) {
+      throw new Error(`REFUSE_G1_MAXIMA_MISMATCH: calculated max for ${setKey} is ${maxTotal}, expected ${targetMaxima[setKey]}`);
+    }
+    if (!meta.maxima || meta.maxima[setKey] !== targetMaxima[setKey]) {
+      throw new Error(`REFUSE_G1_METADATA_MAXIMA_MISMATCH: metadata.maxima for ${setKey} is ${meta.maxima?.[setKey]}, expected ${targetMaxima[setKey]}`);
     }
   }
 }
@@ -297,6 +572,7 @@ Options:
   let manifest = null;
   let manifestSha = null;
   let payload = null;
+  let isSynthetic = false;
 
   if (options.mode === 'dry-run' || options.mode === 'apply' || (options.mode === 'verify' && options.manifestPath)) {
     if (!options.manifestPath) {
@@ -320,7 +596,19 @@ Options:
     try {
       validateManifestNodes(manifest);
     } catch (err) {
-      return exitFail('REFUSE_MANIFEST_VALIDATION', err.message);
+      const match = err.message.match(/^(REFUSE_[A-Z0-9_]+):/);
+      return exitFail(match ? match[1] : 'REFUSE_MANIFEST_VALIDATION', err.message);
+    }
+
+    isSynthetic = SYNTHETIC_FIXTURE_SHA256_ALLOWLIST.includes(manifestSha.toLowerCase()) &&
+      manifest._metadata?.uuid_namespace !== G1_NAMESPACE;
+    if (!isSynthetic) {
+      try {
+        validateG1Manifest(manifest);
+      } catch (err) {
+        const match = err.message.match(/^(REFUSE_G1_[A-Z0-9_]+):/);
+        return exitFail(match ? match[1] : 'REFUSE_G1_VALIDATION', err.message);
+      }
     }
 
     payload = buildPayload(manifest);
@@ -382,11 +670,14 @@ Options:
   if (options.mode === 'apply') {
     // Refusal: manifest SHA-256 != --signed-sha unless the target is an explicitly declared disposable target
     if (!isDeclaredDisposable) {
+      if (options.signedSha && manifestSha.toLowerCase() !== options.signedSha.toLowerCase()) {
+        return exitFail('REFUSE_SIGNED_SHA_MISMATCH', `Manifest SHA-256 (${manifestSha}) does not match --signed-sha (${options.signedSha})`);
+      }
+      if (isSynthetic) {
+        return exitFail('REFUSE_SYNTHETIC_NON_DISPOSABLE', 'A synthetic manifest cannot be applied to a non-disposable target');
+      }
       if (!options.signedSha) {
         return exitFail('REFUSE_NON_DISPOSABLE_MISSING_SIGNED_SHA', 'Non-disposable target requires --signed-sha argument matching the manifest SHA-256');
-      }
-      if (manifestSha.toLowerCase() !== options.signedSha.toLowerCase()) {
-        return exitFail('REFUSE_SIGNED_SHA_MISMATCH', `Manifest SHA-256 (${manifestSha}) does not match --signed-sha (${options.signedSha})`);
       }
     }
 

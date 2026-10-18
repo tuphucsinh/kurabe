@@ -5,6 +5,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  buildPayload,
+  computeAllSetHashes,
+  uuidV5,
+  G1_NAMESPACE,
+} from '../../scripts/p108-import-criteria.mjs';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(moduleDir, '../..');
@@ -92,6 +98,25 @@ function criteriaDigest(dbTarget) {
   }
 
   return crypto.createHash('sha256').update(parts.join('\n')).digest('hex');
+}
+
+function historyDigest(dbTarget) {
+  const res = runPsql(dbTarget, `
+    SELECT (SELECT count(*) FROM public.evaluations)::text
+      || '|' || (SELECT count(*) FROM public.evaluation_rounds)::text;
+  `);
+  return res.out;
+}
+
+function configVersionSnapshot(dbTarget) {
+  const res = runPsql(dbTarget, `SELECT COALESCE(max(version_no)::text, '0') FROM public.criteria_config_versions;`);
+  return res.out;
+}
+
+function recomputeChecksums(m) {
+  const payload = buildPayload(m);
+  m._metadata.set_hashes = computeAllSetHashes(payload);
+  m._metadata.payload_sha256 = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 function runScript(args, extraEnv = {}) {
@@ -569,6 +594,149 @@ async function main() {
     assert.ok(!unknownOptResult.stdout.includes(secretValue), 'secret value was echoed in stdout');
     assert.ok(!unknownOptResult.stderr.includes(secretValue), 'secret value was echoed in stderr');
     casesPassed.push('refusal-unknown-service-role-key-no-echo');
+
+    // Refusal F: table-driven malformed G1 manifests rejected with zero mutation
+    const g1SeedPath = path.join(projectRoot, 'db/seed/p108-criteria-manifest.json');
+    const baseG1Manifest = JSON.parse(fs.readFileSync(g1SeedPath, 'utf8'));
+
+    const g1RefusalCases = [
+      {
+        name: 'synthetic_fixture_type_bypass',
+        expected: 'REFUSE_G1_DEFAULT_LEVEL_INDEX_NOT_NULL',
+        mutate: (m) => {
+          m._metadata.fixture_type = 'SYNTHETIC';
+          m.groups[0].criteria[0].default_level_index = 0;
+        },
+      },
+      {
+        name: 'missing_group_id',
+        expected: 'REFUSE_RELATION_MISSING',
+        mutate: (m) => {
+          delete m.groups[0].criteria[0].group_id;
+        },
+      },
+      {
+        name: 'missing_criterion_id',
+        expected: 'REFUSE_RELATION_MISSING',
+        mutate: (m) => {
+          delete m.groups[0].criteria[0].levels[0].criterion_id;
+        },
+      },
+      {
+        name: 'tampered_payload_sha256',
+        expected: 'REFUSE_G1_PAYLOAD_SHA_MISMATCH',
+        mutate: (m) => {
+          m._metadata.payload_sha256 = '0'.repeat(64);
+        },
+      },
+      {
+        name: 'tampered_set_hashes',
+        expected: 'REFUSE_G1_SET_HASHES_MISMATCH',
+        mutate: (m) => {
+          m._metadata.set_hashes.leader = '0'.repeat(64);
+        },
+      },
+      {
+        name: 'wrong_uuid',
+        expected: 'REFUSE_G1_INVALID_UUID',
+        mutate: (m) => {
+          const badId = '00000000-0000-4000-8000-000000000999';
+          m.groups[0].criteria[0].id = badId;
+          for (const l of m.groups[0].criteria[0].levels) {
+            l.criterion_id = badId;
+          }
+        },
+      },
+      {
+        name: 'wrong_namespace',
+        expected: 'REFUSE_G1_INVALID_NAMESPACE',
+        mutate: (m) => {
+          m._metadata.uuid_namespace = '00000000-0000-4000-8000-000000000001';
+        },
+      },
+      {
+        name: 'nonzero_weight',
+        expected: 'REFUSE_G1_INVALID_WEIGHT',
+        mutate: (m) => {
+          m.groups[0].criteria[0].weight = 10;
+        },
+      },
+      {
+        name: 'changed_label_recomputed',
+        expected: 'REFUSE_G1_CANONICAL_CONTENT_MISMATCH',
+        mutate: (m) => {
+          m.groups[0].criteria[0].levels[0].label = 'Tampered Level Label';
+          recomputeChecksums(m);
+        },
+      },
+      {
+        name: 'changed_points_same_max_recomputed',
+        expected: 'REFUSE_G1_CANONICAL_CONTENT_MISMATCH',
+        mutate: (m) => {
+          const p1 = m.groups[0].criteria[0].levels[1].points;
+          m.groups[0].criteria[0].levels[1].points = m.groups[0].criteria[0].levels[2].points;
+          m.groups[0].criteria[0].levels[2].points = p1;
+          recomputeChecksums(m);
+        },
+      },
+      {
+        name: 'extra_level_recomputed',
+        expected: 'REFUSE_G1_CANONICAL_CONTENT_MISMATCH',
+        mutate: (m) => {
+          const extra = structuredClone(m.groups[0].criteria[0].levels[0]);
+          extra.sort_order = m.groups[0].criteria[0].levels.length;
+          extra.id = uuidV5(`p108:leader:level:A1:${extra.sort_order}`, G1_NAMESPACE);
+          extra.points = 0;
+          m.groups[0].criteria[0].levels.push(extra);
+          recomputeChecksums(m);
+        },
+      },
+      {
+        name: 'reordered_criteria',
+        expected: 'REFUSE_G1_CANONICAL_CONTENT_MISMATCH',
+        mutate: (m) => {
+          const c0 = m.groups[0].criteria[0];
+          m.groups[0].criteria[0] = m.groups[0].criteria[1];
+          m.groups[0].criteria[1] = c0;
+          recomputeChecksums(m);
+        },
+      },
+    ];
+
+    for (const c of g1RefusalCases) {
+      const malformedG1Path = path.join(runtimeRoot, `malformed-g1-${c.name}.json`);
+      const mutatedManifest = structuredClone(baseG1Manifest);
+      c.mutate(mutatedManifest);
+      fs.writeFileSync(malformedG1Path, JSON.stringify(mutatedManifest));
+
+      const digestBefore = criteriaDigest(dbTarget);
+      const versionBefore = configVersionSnapshot(dbTarget);
+      const historyBefore = historyDigest(dbTarget);
+
+      const malformedResult = runScript([
+        '--apply',
+        '--expected-version', '2',
+        '--manifest', malformedG1Path,
+        '--disposable',
+      ], scriptEnv);
+
+      fs.rmSync(malformedG1Path, { force: true });
+
+      assert.notEqual(malformedResult.status, 0, `malformed G1 case ${c.name} must be refused`);
+      assert.ok(
+        malformedResult.stdout.includes(c.expected) || malformedResult.stderr.includes(c.expected),
+        `expected ${c.expected} for ${c.name}, got: ${malformedResult.stdout} ${malformedResult.stderr}`
+      );
+
+      const digestAfter = criteriaDigest(dbTarget);
+      const versionAfter = configVersionSnapshot(dbTarget);
+      const historyAfter = historyDigest(dbTarget);
+
+      assert.equal(digestBefore, digestAfter, `malformed G1 case ${c.name} mutated criteria tables`);
+      assert.equal(versionBefore, versionAfter, `malformed G1 case ${c.name} mutated config version`);
+      assert.equal(historyBefore, historyAfter, `malformed G1 case ${c.name} mutated history tables`);
+    }
+    casesPassed.push('refusal-malformed-g1-manifest-zero-mutation');
 
     console.log(`\nALL ${casesPassed.length} P108 IMPORT TEST CASES PASSED:`);
     for (const c of casesPassed) {
