@@ -987,7 +987,7 @@ STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
 
 ### [x] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
 
-D2 amendment OWNER_APPROVED, IMPLEMENTATION_NOT_STARTED; REVIEW_ROUTE_BLOCKED_CAPABILITY (DeepSeek quota exhausted; Sonnet substitution was T02-only). Per-set average/Top5/team average, same period/comparable criteria version, Approved valid only; no cross-set raw ranking/percentage conversion or stored-result/history/grade changes. Original T08 DONE/failure_count1 preserved. See latest DECISIONS_LOG for manifest owner signature/content lock, D1 and T11 limits.
+D2 amendment OWNER_APPROVED / EXECUTION_AUTHORIZED; owner-approved reviewer substitution for D2 = fresh Sonnet5.5, global selector unchanged. See latest DECISIONS_LOG for exact owns/DoD/stop limits. Original T08 DONE untouched; D2 is separate amendment.
 
 Local technical acceptance: candidate `a4624dca9e88a6a10e2a32378db9ebf3f0d332d2`; golden tests on actual projection/radar source (Leader vs Staff, version 1 vs 2, legacy baseline, legacy mixed-version old-vs-new), clean-install, focused, root tests, lint, typecheck, build, secret scan, diff-check PASS. Fresh reviewer PASS session `20261017_201030_d9bb69`. One Repair #1 (non-async export in use-server file, failure_count=1 retained, snapshots/evidence retained). Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T08/candidate-gates/gates.json`. Synthetic only; no push/deploy/production.
 
