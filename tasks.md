@@ -987,7 +987,7 @@ STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
 
 ### [x] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
 
-D2 amendment OWNER_APPROVED / EXECUTION_AUTHORIZED; owner-approved reviewer substitution for D2 = fresh Sonnet5.5, global selector unchanged. See latest DECISIONS_LOG for exact owns/DoD/stop limits. Original T08 DONE untouched; D2 is separate amendment.
+D2 amendment OWNER_APPROVED / EXECUTION_AUTHORIZED; owner-approved reviewer substitution for D2 = fresh Sonnet5.5, global selector unchanged. See latest DECISIONS_LOG for exact owns/DoD/stop limits. Original T08 DONE untouched; D2 is separate amendment. Directly affected test owns addition: tests/reports-staged-loading-regression.test.mjs (stale global component assertion -> per-set wiring, no waiver).
 
 Local technical acceptance: candidate `a4624dca9e88a6a10e2a32378db9ebf3f0d332d2`; golden tests on actual projection/radar source (Leader vs Staff, version 1 vs 2, legacy baseline, legacy mixed-version old-vs-new), clean-install, focused, root tests, lint, typecheck, build, secret scan, diff-check PASS. Fresh reviewer PASS session `20261017_201030_d9bb69`. One Repair #1 (non-async export in use-server file, failure_count=1 retained, snapshots/evidence retained). Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T08/candidate-gates/gates.json`. Synthetic only; no push/deploy/production.
 

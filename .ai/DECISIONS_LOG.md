@@ -1,5 +1,10 @@
 # Decisions Log
 
+## P108 D2 — directly affected staged-loading regression contract
+
+Root gate on candidate27434a9 failed only the old source-wiring assertion `tests/reports-staged-loading-regression.test.mjs:148` demanding global TeamComparison/TopPerformers names in ReportsDataLayer. D2 intentionally replaces those global metrics with SetKpiSummary per comparable set/basis. This is a stale harness contract, not an authorized policy rollback or waiver. Within owner's approved directly related regression scope, add ONLY this regression file to amendment owns and replace that assertion by equivalent/stronger per-set component wiring + raw average/Top/team rendering source assertions. Preserve auth/period/single-fetch/loading/error/empty/AI/export and legacy component checks. No new feature/task/repair beyond D2; fresh review has NOT run. Original first-failure logs/candidate retained. Original T08 DONE and failure_count1 unchanged; D2 quality counter not charged for stale harness.
+
+
 ## P108 T08 amendment D2 — execution/reviewer explicitly approved
 
 Owner approves AGY gemini-3.8-flash-high implementation; `owner-approved reviewer substitution for D2`: fresh independent read-only Claude Sonnet 5.5 (anthropic/claude-sonnet-5-5), task-local credential profile wrapper, no resume/tools, global reviewer selector unchanged. Exact candidate independent Mika gates then reviewer. CHANGES_REQUIRED/BLOCKED => HALT (no repair dispatch without owner decision). This is the D2 amendment of existing T08, not a new task/reopening original DONE. Original T08 DONE/failure_count1 untouched.
