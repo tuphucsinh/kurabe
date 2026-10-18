@@ -1,5 +1,10 @@
 # Decisions Log
 
+## D2 P104 contract-only alignment — owner approved
+
+Owner approves only tests/p104m1t01-scope-state.test.mjs: empty eligible KPI=>null, genuine numeric mean0=>0. Scan directly related empty-state assertions once; keep all error/auth/scope/zero semantics, no assertion weakening/test deletion. Supply missing period/role/pinned-catalog fixture context for valid-sample controls rather than changing their expected40/score0 to null. No product code/business/grade/history/manifest changes. Frozen D2 input0ffd4a27f1f24db4cd8f38724cdedd2dad383d40 bytes must survive exactly. Mika direct test-only, NO AGY; this is a scoped subrecord of existing D2 recovery, no new task or budget reset. New candidate mandatory gates (P104, D2/P107/AI regressions, full npm test, lint/typecheck/build/scans) then fresh read-only independent Sonnet5.5 (owner-approved reviewer substitution for D2, global selector unchanged). Product defect or review CHANGES_REQUIRED=>HALT, no next repair. No production/push/deploy/import/period close/Kỳ2026. Original T08 DONE/count1 and all prior failed evidence retained.
+
+
 ## P108 T08 D2 — owner-approved one limited repair after review172139
 
 Pre-dispatch boundary inventory additionally found src/actions/read.ts:getEvaluationResultProjectionAction directly returns the complete legacy projection to clients/export. Include ONLY this D2 serialization boundary in owns (auth/history rows unchanged) so unsafe legacy aggregates cannot bypass Reports/Dashboard sanitization. Same owner-approved consumer scope, not a new task. No further scope discovery deferred to the Runner.
