@@ -776,26 +776,27 @@ STOP / partial close: if production read access is not approved, T01 closes on t
 ```yaml
 task:
   id: P108M1T02
-  tier: STANDARD
+  tier: CONTROLLED
   depends: []
   owns:
     - scripts/p108-criteria-manifest.mjs
     - db/seed/p108-criteria-manifest.json
     - tests/p108-criteria-manifest.test.mjs
-  locks: []
+  locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 
 Goal: deterministic, reviewable source manifest of 18 groups / 93 criteria from `TCDG2026.xls`, encoding anh's G1 answers.
-Execution (normal STANDARD path): dispatched only after anh's G1 answers are recorded in `.ai/DECISIONS_LOG.md`, and Mika copies those answers into the brief. Mika re-verifies the workbook SHA and gives the Runner the absolute read-only input path `/home/pi5/projects/kurabe/TCDG2026.xls`. The Runner reads it in place and never copies, moves, edits or commits it. Runner writes only `owns`; Mika verifies and integrates. Until then T03–T10 use the synthetic manifest.
+Execution (owner-approved CONTROLLED local path; fresh review required): dispatched only after anh's G1 answers are recorded in `.ai/DECISIONS_LOG.md`, and Mika copies those answers into the brief. Mika re-verifies the workbook SHA and gives the Runner the absolute read-only input path `/home/pi5/projects/kurabe/TCDG2026.xls`. The workbook is never copied, moved, edited or committed. In the existing AGY sandbox, Mika supplies a derived cell view (not workbook bytes); AGY authors the extractor and manifest. Mika executes that same extractor on the original absolute workbook path and requires byte-identical output. Runner writes only `owns`; Mika verifies and integrates. Until then T03–T10 use the synthetic manifest.
 Changes:
 - Read-only extractor using the existing `xlsx` dependency. It verifies the workbook SHA and emits the manifest: set, doc code, group code/name, criterion code (letter + VI column-A number), VI label, JA label, source row, ordered levels (label, points), default level.
 - Every G1 item (MASTER_PLAN P108.1) is encoded exactly as answered, with the decision reference; nothing guessed. No `-` becomes a level without its per-criterion answer.
 - Every group, criterion and level carries a fixed UUIDv5 (RFC 9562, `node:crypto` SHA-1, no new dependency), using one namespace constant recorded in the manifest and the name `p108:<set>:group:<code>` / `p108:<set>:criterion:<code>` / `p108:<set>:level:<criterion code>:<sort index>`. Sets never share a UUID.
 DoD:
 - Extractor is deterministic (same SHA → same manifest bytes and UUIDs; a second run is byte-identical).
-- Test asserts: 6/6/6 groups; 33/30/30 criteria; Leader maximum 190; Staff maximum 175; unique codes per set; source-row provenance for every level.
-- Sign-off = anh confirms the verified manifest; Mika records its SHA-256 in `.ai/DECISIONS_LOG.md`. The manifest file itself carries no `signed` flag, so its bytes stay deterministic.
-STOP: G1 answers missing or ambiguous ⇒ not dispatched. T11 import is blocked until the manifest SHA is recorded.
+- Test asserts: 6/6/6 groups; 33/30/30 criteria; Leader maximum 190; Staff maximum 175; Worker maximum 175; unique codes per set; source-row provenance for every level.
+- Owner-authorized local technical completion: full G1 encoded, Mika independent source/UUID/checksum verification, existing T04 tool dry-run/import/readback/no-op on disposable DB, required root gates and fresh reviewer PASS. Complete T02 local and present exact manifest SHA-256 for separate owner signature; this does not authorize production import. The manifest file carries no signed flag/timestamp, so its bytes stay deterministic.
+- Separate business sign-off remains pending until anh explicitly signs the exact manifest SHA; only then Mika records that signature (not merely a computed digest) in `.ai/DECISIONS_LOG.md`.
+STOP: G1 answers missing or ambiguous ⇒ not dispatched. T11 import stays blocked until anh separately signs the exact verified manifest SHA (computing/recording its digest alone is not signature).
 
 ### [x] [#P108M1T03] DB contract: set_key schema, Active lock, writer RPC, rollback
 
