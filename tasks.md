@@ -784,6 +784,9 @@ task:
     - scripts/p108-criteria-manifest.mjs
     - db/seed/p108-criteria-manifest.json
     - tests/p108-criteria-manifest.test.mjs
+    - scripts/p108-import-criteria.mjs
+    - tests/integration/p108-import.mjs
+    - tests/fixtures/p108/synthetic-manifest.json
   locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
 ```
 
