@@ -771,7 +771,7 @@ DoD:
 - Live facts that change migration preflight (duplicates, empty groups, PG version, constraint names) are recorded as inputs for T03/T11.
 STOP / partial close: if production read access is not approved, T01 closes on the repo inventory with live facts recorded as `UNKNOWN` (offline work is not blocked, same rule as P107M1T01). The live section is then mandatory inside T11 (before migration) and M2T01 (before any disposition) under their own approvals.
 
-### [x] [#P108M1T02] Workbook manifest + business sign-off (local technical DONE; owner signature PENDING)
+### [x] [#P108M1T02] Workbook manifest + business sign-off (DONE_LOCAL; owner signature VERIFIED)
 
 T02 DONE local technical qualification (NOT SIGNED): exact candidate `1911b15a32223ca6c10fc0c0027144afcfe7334b` integrated canonical (FF from base `63d602f9d60253ccab77ba9d9fc29761ad20dd39`); manifest `db/seed/p108-criteria-manifest.json` SHA256 `043ef0fd688c59664fea4e6209448e775ea7e4b7f797b5b40bfcdb6a2026caea`. 3 sets/18 groups/93 criteria/444 levels/555 UUIDv5; 345 level points have workbook-cell provenance, 99 cite G1 decision; business content + set_hashes identical to prior verified manifest. 14 gates PASS (extractor x2 deterministic vs original workbook, independent audit, T04 disposable DB 12/12 incl. table-driven zero-mutation refusals, root tests, lint0err/54 existing warnings, typecheck, build, secret scans, residue0). Fresh review `20261018_142833_3ef60f` PASS (review-6; 7 LOW non-blocking, optional). owner-approved reviewer substitution: Claude Sonnet 5.5 (anthropic/claude-sonnet-5-5) for T02 Repair3 only, because opencode-go DeepSeek quota/credential HTTP401 (review-3/3b; not a quality failure). Fresh no-tool one-shot session launched via a task-local sidecar copy of tool-free-native-reviewer.py bound to profile mika (reviewer profile lacks anthropic credentials); no resume, no tools, did not write the code. failure_count stays2. OWNER SIGNATURE of the exact manifest SHA remains PENDING; T11 production import, M2T01 (D1), D2 still gated. No push/deploy/production/Kỳ 2026.
 
@@ -986,6 +986,8 @@ DoD:
 STOP: a writer incompatibility ⇒ amend scope before touching P107 RPCs.
 
 ### [x] [#P108M1T08] Reports, heatmap, radar: no cross-set mixing
+
+D2 amendment OWNER_APPROVED, IMPLEMENTATION_NOT_STARTED; REVIEW_ROUTE_BLOCKED_CAPABILITY (DeepSeek quota exhausted; Sonnet substitution was T02-only). Per-set average/Top5/team average, same period/comparable criteria version, Approved valid only; no cross-set raw ranking/percentage conversion or stored-result/history/grade changes. Original T08 DONE/failure_count1 preserved. See latest DECISIONS_LOG for manifest owner signature/content lock, D1 and T11 limits.
 
 Local technical acceptance: candidate `a4624dca9e88a6a10e2a32378db9ebf3f0d332d2`; golden tests on actual projection/radar source (Leader vs Staff, version 1 vs 2, legacy baseline, legacy mixed-version old-vs-new), clean-install, focused, root tests, lint, typecheck, build, secret scan, diff-check PASS. Fresh reviewer PASS session `20261017_201030_d9bb69`. One Repair #1 (non-async export in use-server file, failure_count=1 retained, snapshots/evidence retained). Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T08/candidate-gates/gates.json`. Synthetic only; no push/deploy/production.
 
