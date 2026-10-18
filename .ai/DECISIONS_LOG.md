@@ -1,5 +1,10 @@
 # Decisions Log
 
+## P108 T02 — local candidate withheld at fresh-review/scope gate
+
+Local execution checkpoint — BLOCKED (not DONE): candidate `d8146063e163cfc0e308147192a7d9c50751192a`, manifest candidate SHA256 `74dbea84e4a66b4414191bc2f402fff6b7b2212cc6cad1e0426e2a56b0ff5cab`, NOT SIGNED / not eligible for signature yet. AGY initial + one bounded repair; Mika original-workbook extraction twice byte-identical, independent 18/93/444 levels/555 UUIDs and all G1 values, T04 real disposable dry-run/apply/readback/no-op/history preservation6 cases, root83/83/lint0errors54existingWarnings/typecheck/build/scans and all12 gates PASS. Fresh reviewer/checker CHANGES_REQUIRED `20261018_125210_6bb322`: source API can fall back/ignore altered source cells; existing passed T04 importer preflight does not enforce G1/internal checksums/UUID relationships. Mika independently reproduced source-object/preflight counterexamples WITHOUT writing original workbook or applying malformed DB input. Reviewer requires strict source validation + negative tests and changes to T04 import boundary outside T02 owns; no silent scope expansion or review waiver. Preserve raw/full review notes (structured findings array empty; supplemental raw text retained; provider raw SHA readback malformed, no PASS inferred). T02 failure_count1 after failed Repair1 review, original T07/G1 count2/DONE unchanged. Need owner approval for bounded T02 owns amendment to importer and actually affected T04 regressions/fixtures; no new task/framework/production. Candidate NOT integrated; runtime0/reservations released, snapshots/worktrees/evidence retained. Evidence `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T02/blocker-evidence.json`.
+
+
 ## P108 G1 — FULL owner approval / T02 local execution; manifest NOT SIGNED
 
 - Direct owner approval supersedes the historical partial/open G1 records below. A1 bands >=99%,98..<99%,95..<98%,93..<95%,<93% =5/4/3/2/1. A4 counts0/1/2/>=3 =0/-15/-20/-25; A5=0/-5/-10/-15; A6/A7=0/-3/-6/-10. Remove redundant dash choices in A4-A7; A7 is not unexcused absence.
