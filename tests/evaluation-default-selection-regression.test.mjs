@@ -1,23 +1,110 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import ts from 'typescript';
 
-// 1. Hook default selection regression
+// 1. G1 explicit scoring hook contracts & behavioral regressions
 const hookSource = fs.readFileSync('src/hooks/use-evaluation-page-state.ts', 'utf8');
-const defaultBlock = hookSource.match(
-  /if \(Object\.keys\((?:initialScores|currentScores)\)\.length === 0 && !!accessState\.editableRound\) \{([\s\S]*?)\n        \}/
-)?.[1];
 
-assert.ok(defaultBlock, 'default evaluation selection block must exist');
-assert.match(
-  defaultBlock,
-  /(?:initialScores|currentScores)\[criterion\.id!\] = criterion\.levels\[criterion\.defaultLevelIndex\]\.points;/,
-  'default level must initialize its score'
+// 1.1 Static guards: hook must NOT prefill defaults or carry forward previous round scores
+assert.doesNotMatch(
+  hookSource,
+  /currentScores\[criterion\.id!\]\s*=\s*criterion\.levels\[criterion\.defaultLevelIndex\]\.points/,
+  'hook must NOT pre-fill default level scores'
+);
+assert.doesNotMatch(
+  hookSource,
+  /currentSelectedLevelIndexes\[criterion\.id!\]\s*=\s*criterion\.defaultLevelIndex/,
+  'hook must NOT pre-fill default level indexes'
+);
+assert.doesNotMatch(
+  hookSource,
+  /initialScores\s*=\s*\{\s*\.\.\.lastRound\.scores\s*\}/,
+  'hook must NOT copy scores from lastRound/prevRounds'
 );
 assert.match(
-  defaultBlock,
-  /(?:initialSelectedLevelIndexes|currentSelectedLevelIndexes)\[criterion\.id!\] = criterion\.defaultLevelIndex;/,
-  'default level must initialize its selected index so draft save passes validation'
+  hookSource,
+  /initialScores\s*=\s*\{\s*\.\.\.\(targetRound\.scores\s*\|\|\s*\{\}\)\s*\}/,
+  'layer 1 must restore scores directly from targetRound'
 );
+assert.match(
+  hookSource,
+  /initialNotes\s*=\s*\{\s*\.\.\.\(targetRound\.notes\s*\|\|\s*\{\}\)\s*\}/,
+  'layer 1 must restore notes directly from targetRound'
+);
+
+// 1.2 Behavioral regressions driven from actual evaluationReducer
+const hookTranspiled = ts.transpileModule(hookSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const hookModule = { exports: {} };
+new Function('exports', 'require', 'module', hookTranspiled)(
+  hookModule.exports,
+  () => ({}),
+  hookModule
+);
+const { evaluationReducer } = hookModule.exports;
+assert.equal(typeof evaluationReducer, 'function', 'evaluationReducer must be exported function');
+
+// Test A: Initial unstarted round starts with empty scores, indexes, notes, comment
+const initialState = {
+  employee: null,
+  evaluation: null,
+  currentRoundData: null,
+  allPreviousRounds: [],
+  scores: {},
+  selectedLevelIndexes: {},
+  notes: {},
+  comment: '',
+};
+
+const emptyInitState = evaluationReducer(initialState, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    scores: {},
+    selectedLevelIndexes: {},
+    notes: {},
+    comment: '',
+  },
+});
+assert.deepEqual(emptyInitState.scores, {}, 'Initial round scores must be empty {}');
+assert.deepEqual(emptyInitState.selectedLevelIndexes, {}, 'Initial round selectedLevelIndexes must be empty {}');
+
+// Test B: Note/comment-only saved Draft restores preserved notes and comment with empty scores
+const noteCommentDraftState = evaluationReducer(initialState, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    scores: {},
+    selectedLevelIndexes: {},
+    notes: { 'crit-note-1': 'Ghi chú tự lưu nháp' },
+    comment: 'Nhận xét bản nháp chưa chấm điểm',
+  },
+});
+assert.deepEqual(noteCommentDraftState.scores, {}, 'Note/comment-only draft must retain empty scores');
+assert.equal(noteCommentDraftState.notes['crit-note-1'], 'Ghi chú tự lưu nháp');
+assert.equal(noteCommentDraftState.comment, 'Nhận xét bản nháp chưa chấm điểm');
+
+// Test C: Explicit zero scoring creates genuine score 0 and levelIndex
+const zeroScoreState = evaluationReducer(emptyInitState, {
+  type: 'SET_SCORE',
+  criterionId: 'crit-zero',
+  points: 0,
+  levelIndex: 1,
+});
+assert.equal(zeroScoreState.scores['crit-zero'], 0, 'Explicit zero score must be stored as number 0');
+assert.equal(zeroScoreState.selectedLevelIndexes['crit-zero'], 1, 'Matching selected level index must be stored');
+
+// Test D: Reopening saved round with zero score restores exact 0 score and index
+const reopenedZeroState = evaluationReducer(initialState, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    scores: { 'crit-zero': 0 },
+    selectedLevelIndexes: { 'crit-zero': 1 },
+    notes: {},
+    comment: '',
+  },
+});
+assert.equal(reopenedZeroState.scores['crit-zero'], 0, 'Reopening zero score round must preserve score 0');
+assert.equal(reopenedZeroState.selectedLevelIndexes['crit-zero'], 1, 'Reopening zero score round must preserve level index');
 
 // 2. Shared pure static frame contracts
 const staticFrameSource = fs.readFileSync('src/components/evaluation/EvaluationStaticFrame.tsx', 'utf8');

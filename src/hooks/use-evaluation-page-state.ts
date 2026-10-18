@@ -112,7 +112,7 @@ interface UseEvaluationPageStateArgs {
  * State + data-loading của trang đánh giá (D3 / Phase 94 Staged loading):
  * - Layer 1: dispatch ngay context cơ bản (employee/evaluation/persisted scores/notes/comment/rounds).
  * - Layer 2: nạp criteria độc lập với loading/error/loaded/empty + stale-response cancellation + retry.
- * - Hydrate default levels & selectedLevelIndexes chỉ khi criteria sẵn sàng, khóa autosave trước khi hydrate.
+ * - G1: Chấm điểm tường minh (không tự động pre-fill mặc định); hydrate selectedLevelIndexes tương thích chỉ cho điểm đã lưu trước đó.
  * - Layer 3: nạp history & grade bands non-blocking với guard riêng.
  */
 export function useEvaluationPageState({
@@ -203,21 +203,14 @@ export function useEvaluationPageState({
       let initialNotes: Record<string, string> = {};
       let initialComment = '';
 
-      if (targetRound?.scores && Object.keys(targetRound.scores).length > 0) {
-        initialScores = { ...targetRound.scores };
-        initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
-        initialNotes = targetRound.notes || {};
+      // G1: Chấm điểm tường minh (explicit scoring) - chỉ khôi phục dữ liệu từ chính targetRound
+      // (bao gồm cả trường hợp scores rỗng nhưng có notes/comment đã lưu).
+      // Tuyệt đối không sao chép scores/indexes/notes từ prevRounds (các vòng trước chỉ dùng để tham khảo).
+      if (targetRound) {
+        initialScores = { ...(targetRound.scores || {}) };
+        initialSelectedLevelIndexes = { ...(targetRound.selectedLevelIndexes || {}) };
+        initialNotes = { ...(targetRound.notes || {}) };
         initialComment = targetRound.comment || '';
-      } else if (!accessState.editableRound && targetRound) {
-        initialScores = { ...targetRound.scores };
-        initialSelectedLevelIndexes = targetRound.selectedLevelIndexes || {};
-        initialNotes = targetRound.notes || {};
-        initialComment = targetRound.comment || '';
-      } else if (prevRounds.length > 0 && accessState.editableRound) {
-        const lastRound = prevRounds[prevRounds.length - 1];
-        initialScores = { ...lastRound.scores };
-        initialSelectedLevelIndexes = lastRound.selectedLevelIndexes || {};
-        initialNotes = lastRound.notes || {};
       }
 
       dispatch({
@@ -263,23 +256,11 @@ export function useEvaluationPageState({
       setCriteriaGroups(dbCriteria);
       setCriteriaStatus('loaded');
 
-      // Hydrate default levels & missing selectedLevelIndexes
+      // G1: Chấm điểm tường minh (explicit scoring) - không tự động điền điểm mặc định cho vòng mới.
+      // fillMissingSelectedLevelIndexes là path tương thích hiển thị cho các điểm số đã tồn tại từ trước (P107/lịch sử),
+      // tuyệt đối không tự sinh điểm hoặc lựa chọn cho các tiêu chí chưa chấm.
       const currentScores = { ...stateRef.current.scores };
       let currentSelectedLevelIndexes = { ...stateRef.current.selectedLevelIndexes };
-
-      // Pre-fill defaults chỉ khi đang edit round và chưa có điểm nào
-      if (Object.keys(currentScores).length === 0 && !!accessState.editableRound) {
-        if (!isSubmittedRound) {
-          for (const group of dbCriteria) {
-            for (const criterion of group.criteria) {
-              if (criterion.defaultLevelIndex != null && criterion.levels[criterion.defaultLevelIndex]) {
-                currentScores[criterion.id!] = criterion.levels[criterion.defaultLevelIndex].points;
-                currentSelectedLevelIndexes[criterion.id!] = criterion.defaultLevelIndex;
-              }
-            }
-          }
-        }
-      }
 
       currentSelectedLevelIndexes = fillMissingSelectedLevelIndexes(
         currentScores,

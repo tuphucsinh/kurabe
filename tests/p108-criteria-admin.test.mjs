@@ -523,30 +523,137 @@ console.log('[Test 4] (Unit) Testing cross-set rejections via actual server acti
 console.log('PASS: Actual cross-set rejections and immutable UUID invariants verified.\n');
 
 // -----------------------------------------------------------------------------
-// 5. Unit Tests: Default-Level Update Short-Circuit & Nonempty Config Rule
+// 5. Unit Tests: G1 Explicit Scoring Default Denial, Short-Circuit & Config Actions
 // -----------------------------------------------------------------------------
-console.log('[Test 5] (Unit) Testing default-level short-circuit (zero save calls) and nonempty rule...');
+console.log('[Test 5] (Unit) Testing G1 explicit scoring default denial, short-circuit, and nonempty rule...');
 
 {
   const dbState = { config: makeFixtureConfig(), saveCalls: 0 };
   const actions = createCriteriaActions(dbState);
   const leaderCritId = dbState.config.groups[0].criteria[0].id;
   const leaderGroupId = dbState.config.groups[0].id;
+  const workerCritId = dbState.config.groups[2].criteria[0].id;
+  const workerGroupId = dbState.config.groups[2].id;
 
-  // 5.1 Same default level index: MUST short-circuit save RPC (0 save calls)
+  // 5.1 Same default level index: MUST short-circuit save RPC (0 save calls, preserve pre-existing)
   dbState.saveCalls = 0;
   const noopResult = await actions.updateDefaultLevelAction(leaderCritId, 0, 1, 'leader');
   assert.equal(noopResult.success, true);
   assert.equal(dbState.saveCalls, 0, 'updateDefaultLevelAction must make 0 save calls when default level unchanged');
 
-  // 5.2 Different default level index: MUST execute save RPC (1 save call)
+  // 5.2 Direct set of new non-null default (0 and positive): MUST be refused with 0 save calls
   dbState.saveCalls = 0;
-  const changeResult = await actions.updateDefaultLevelAction(leaderCritId, 1, 1, 'leader');
-  assert.equal(changeResult.success, true);
-  assert.equal(dbState.saveCalls, 1, 'updateDefaultLevelAction must make 1 save call when default level changes');
-  assert.equal(dbState.lastSavedPayload.groups[0].criteria[0].default_level_index, 1, 'default_level_index must be updated');
+  const directPosResult = await actions.updateDefaultLevelAction(workerCritId, 1, 1, 'worker');
+  assert.equal(directPosResult.success, false);
+  assert.match(directPosResult.error, /Không thể đặt mức mặc định cho tiêu chí/);
+  assert.equal(dbState.saveCalls, 0, 'updateDefaultLevelAction must make 0 save calls when setting positive default');
 
-  // 5.3 Global nonempty config rule: deleting last remaining group in config must be refused
+  dbState.saveCalls = 0;
+  const directZeroResult = await actions.updateDefaultLevelAction(workerCritId, 0, 1, 'worker');
+  assert.equal(directZeroResult.success, false);
+  assert.match(directZeroResult.error, /Không thể đặt mức mặc định cho tiêu chí/);
+  assert.equal(dbState.saveCalls, 0, 'updateDefaultLevelAction must make 0 save calls when setting zero default');
+
+  // 5.3 Null clearing via updateDefaultLevelAction: allowed with 1 save call
+  dbState.saveCalls = 0;
+  const clearResult = await actions.updateDefaultLevelAction(leaderCritId, null, 1, 'leader');
+  assert.equal(clearResult.success, true);
+  assert.equal(dbState.saveCalls, 1, 'updateDefaultLevelAction must make 1 save call when clearing default to null');
+  assert.equal(dbState.lastSavedPayload.groups[0].criteria[0].default_level_index, null, 'default_level_index must be cleared to null');
+
+  // Clearing already-null default: zero write / no-op
+  dbState.saveCalls = 0;
+  const clearNoopResult = await actions.updateDefaultLevelAction(workerCritId, null, dbState.config.version, 'worker');
+  assert.equal(clearNoopResult.success, true);
+  assert.equal(dbState.saveCalls, 0, 'Zero save calls when clearing already-null default');
+
+  // 5.4 Upsert set of new default (0 and positive): MUST be refused with 0 save calls
+  dbState.saveCalls = 0;
+  const upPosResult = await actions.upsertCriterionAction(
+    { id: workerCritId, name: 'Worker Crit 1', defaultLevelIndex: 1 },
+    workerGroupId,
+    dbState.config.version,
+    'worker'
+  );
+  assert.equal(upPosResult.success, false);
+  assert.match(upPosResult.error, /Không thể đặt mức mặc định cho tiêu chí/);
+  assert.equal(dbState.saveCalls, 0, 'Zero save calls on upsert setting positive default');
+
+  dbState.saveCalls = 0;
+  const upZeroResult = await actions.upsertCriterionAction(
+    { id: workerCritId, name: 'Worker Crit 1', defaultLevelIndex: 0 },
+    workerGroupId,
+    dbState.config.version,
+    'worker'
+  );
+  assert.equal(upZeroResult.success, false);
+  assert.match(upZeroResult.error, /Không thể đặt mức mặc định cho tiêu chí/);
+  assert.equal(dbState.saveCalls, 0, 'Zero save calls on upsert setting zero default');
+
+  dbState.saveCalls = 0;
+  const upNewResult = await actions.upsertCriterionAction(
+    { name: 'New Criterion With Default', defaultLevelIndex: 0, levels: [{ points: 10, label: 'L1' }] },
+    leaderGroupId,
+    dbState.config.version,
+    'leader'
+  );
+  assert.equal(upNewResult.success, false);
+  assert.match(upNewResult.error, /Không thể đặt mức mặc định cho tiêu chí/);
+  assert.equal(dbState.saveCalls, 0, 'Zero save calls on creating new criterion with requested default');
+
+  // 5.5 Positive ordinary edit with old default preserved
+  // Restore pre-existing default 0 for leaderCrit
+  dbState.config.groups[0].criteria[0].default_level_index = 0;
+
+  // Edit omitting defaultLevelIndex field
+  dbState.saveCalls = 0;
+  const editOmitResult = await actions.upsertCriterionAction(
+    { id: leaderCritId, name: 'Leader Crit Renamed' },
+    leaderGroupId,
+    dbState.config.version,
+    'leader'
+  );
+  assert.equal(editOmitResult.success, true);
+  assert.equal(dbState.saveCalls, 1);
+  assert.equal(
+    dbState.lastSavedPayload.groups[0].criteria[0].default_level_index,
+    0,
+    'Old default preserved when omitting defaultLevelIndex'
+  );
+
+  // Edit passing unchanged defaultLevelIndex
+  dbState.saveCalls = 0;
+  const editSameResult = await actions.upsertCriterionAction(
+    { id: leaderCritId, name: 'Leader Crit Renamed Again', defaultLevelIndex: 0 },
+    leaderGroupId,
+    dbState.config.version,
+    'leader'
+  );
+  assert.equal(editSameResult.success, true);
+  assert.equal(dbState.saveCalls, 1);
+  assert.equal(
+    dbState.lastSavedPayload.groups[0].criteria[0].default_level_index,
+    0,
+    'Old default preserved when passing unchanged defaultLevelIndex'
+  );
+
+  // Null clearing via upsert
+  dbState.saveCalls = 0;
+  const editNullResult = await actions.upsertCriterionAction(
+    { id: leaderCritId, name: 'Leader Crit No Default', defaultLevelIndex: null },
+    leaderGroupId,
+    dbState.config.version,
+    'leader'
+  );
+  assert.equal(editNullResult.success, true);
+  assert.equal(dbState.saveCalls, 1);
+  assert.equal(
+    dbState.lastSavedPayload.groups[0].criteria[0].default_level_index,
+    null,
+    'Default cleared to null via upsert'
+  );
+
+  // 5.6 Global nonempty config rule: deleting last remaining group in config must be refused
   dbState.config.groups = [dbState.config.groups[0]]; // Only 1 group left in entire config
   dbState.saveCalls = 0;
   const delLastGrp = await actions.deleteCriteriaGroupAction(leaderGroupId, dbState.config.version, 'leader');
@@ -555,7 +662,7 @@ console.log('[Test 5] (Unit) Testing default-level short-circuit (zero save call
   assert.equal(dbState.saveCalls, 0, 'Zero save calls when deleting last group');
 }
 
-console.log('PASS: Default-level short-circuit and global nonempty config rule verified.\n');
+console.log('PASS: G1 default denial, short-circuit, and nonempty config rule verified.\n');
 
 // -----------------------------------------------------------------------------
 // 6. Unit Tests: Legacy Catalog Denial & Clearing Description Handling
@@ -682,7 +789,7 @@ if (isBrowserMode) {
   assert.ok(fs.existsSync(orgHelperPath), 'org helper must exist');
 
   const { launchChromium } = await import(browserHelperPath);
-  const { loginAs } = await import(orgHelperPath);
+  const { loginAs, browserAction, loadActionManifest } = await import(orgHelperPath);
 
   const runtimeRoot = path.join(projectRoot, '.tmp', `p108-browser-${Date.now()}-${process.pid}`);
   fs.mkdirSync(runtimeRoot, { recursive: true });
@@ -865,6 +972,35 @@ if (isBrowserMode) {
       return String(res.stdout || '').trim();
     }
 
+    function hashString(content) {
+      return crypto.createHash('sha256').update(content).digest('hex');
+    }
+
+    const CRITERIA_TABLES = [
+      'criteria_groups',
+      'criteria',
+      'criterion_levels',
+      'criterion_audiences',
+      'criteria_config_versions',
+      'criteria_group_versions',
+      'criterion_versions',
+      'criterion_level_versions',
+      'criterion_audience_versions',
+    ];
+
+    function criteriaDigest(psqlFn) {
+      const parts = [];
+      for (const tbl of CRITERIA_TABLES) {
+        const res = psqlFn(`
+          SELECT COALESCE(string_agg(row_data, E'\\n' ORDER BY row_data), '') FROM (
+            SELECT md5(t::text) AS row_data FROM public.${tbl} t
+          ) s;
+        `);
+        parts.push(`tbl:${tbl}=${res}`);
+      }
+      return hashString(parts.join('\n'));
+    }
+
     runPsql(`
       UPDATE public.users SET is_active = true, password_hash = NULL WHERE employee_code = 'P103-MGR';
       DO $$ BEGIN
@@ -992,6 +1128,152 @@ if (isBrowserMode) {
 
     await verifyModalCompositionAndUnchanged(page, runPsql, '1440');
     caseResults.push({ name: 'modal-composition-unchanged-1440', status: 'PASS' });
+
+    // 4.5. G1 Explicit Scoring: No set-default buttons when canEdit=true & direct/upsert default refusal
+    console.log('[Browser] Verifying no P108 set-default buttons exist in DOM across all three set tabs when canEdit=true...');
+    for (const tabKey of ['leader', 'staff', 'worker']) {
+      await page.evaluate(`document.querySelector('button[data-criteria-set-tab="${tabKey}"]').click()`);
+      await page.waitFor(
+        `document.querySelector('button[data-criteria-set-tab="${tabKey}"][aria-selected="true"]') !== null`,
+        { timeout: 10000, label: `set tab ${tabKey} active` }
+      );
+      // Positive control: ensure canEdit=true with visible and enabled create/edit controls
+      const hasAddBtn = await page.evaluate(
+        "Array.from(document.querySelectorAll('button')).some(b => b.textContent.includes('Thêm tiêu chuẩn') && !b.disabled)"
+      );
+      assert.equal(hasAddBtn, true, `Positive control 'Thêm tiêu chuẩn' must be visible and enabled on tab ${tabKey}`);
+
+      const hasSetDefaultButtons = await page.evaluate(`(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        return buttons.some(b => {
+          const title = b.getAttribute('title') || '';
+          const label = b.getAttribute('aria-label') || '';
+          const text = b.textContent || '';
+          return title.includes('Đặt làm mặc định') || title.includes('Đang là mức mặc định') ||
+                 label.includes('Đặt làm mặc định') || text.includes('Đặt làm mặc định');
+        });
+      })()`);
+      assert.equal(hasSetDefaultButtons, false, `Must have zero set-default buttons in DOM on tab ${tabKey} when canEdit=true`);
+    }
+    caseResults.push({ name: 'no-p108-set-default-buttons-can-edit', status: 'PASS' });
+
+    console.log('[Browser] Verifying direct and upsert default attempts are refused with exact reason and zero catalog mutation...');
+    const buildDir = path.join(projectRoot, '.next', 'dev');
+    const actionManifest = loadActionManifest(buildDir);
+    const updateDefaultAction = actionManifest.find((entry) => entry.exportedName === 'updateDefaultLevelAction');
+    if (!updateDefaultAction) {
+      throw new Error('BLOCKED CAPABILITY: updateDefaultLevelAction not found in action manifest');
+    }
+    const upsertAction = actionManifest.find((entry) => entry.exportedName === 'upsertCriterionAction');
+    if (!upsertAction) {
+      throw new Error('BLOCKED CAPABILITY: upsertCriterionAction not found in action manifest');
+    }
+
+    // Query a criterion with existing non-null default (default exists = 0 in synthetic fixtures)
+    const leaderCritRow = runPsql("SELECT id || '|' || group_id || '|' || COALESCE(default_level_index::text, '') FROM public.criteria WHERE set_key = 'leader' AND default_level_index IS NOT NULL ORDER BY sort_order, id LIMIT 1;").split('|');
+    const [leaderCritIdForAction, leaderGroupIdForAction, currentDefaultLevelIndex] = leaderCritRow;
+    assert.equal(currentDefaultLevelIndex, '0', 'Synthetic fixture leader criterion default_level_index must be 0');
+
+    let activeVer = Number(runPsql("SELECT COALESCE(max(version_no)::text, '0') FROM public.criteria_config_versions;"));
+
+    // 1. Direct default attempt with changed non-null requested index (1 vs currently stored 0)
+    const digestBeforeDirect = criteriaDigest(runPsql);
+    const directRes = await browserAction(page, {
+      manifest: actionManifest,
+      name: 'updateDefaultLevelAction',
+      args: [leaderCritIdForAction, 1, activeVer, 'leader'],
+    });
+    assert.equal(directRes.ok, true, 'Transport for direct updateDefaultLevelAction succeeded');
+    assert.equal(directRes.value?.success, false, 'Direct default set with changed index must be refused');
+    assert.equal(
+      directRes.value?.error,
+      'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).',
+      'Direct default must return exact intended error'
+    );
+    const digestAfterDirect = criteriaDigest(runPsql);
+    assert.equal(digestAfterDirect, digestBeforeDirect, 'FULL catalog/version tables digest must remain byte-identical after refused direct default');
+
+    // 2. Generic upsert default attempt with changed non-null requested index (1 vs currently stored 0)
+    const digestBeforeUpsert = criteriaDigest(runPsql);
+    const upsertRes = await browserAction(page, {
+      manifest: actionManifest,
+      name: 'upsertCriterionAction',
+      args: [
+        { id: leaderCritIdForAction, name: 'Bypass Attempt', defaultLevelIndex: 1 },
+        leaderGroupIdForAction,
+        activeVer,
+        'leader',
+      ],
+    });
+    assert.equal(upsertRes.ok, true, 'Transport for upsertCriterionAction succeeded');
+    assert.equal(upsertRes.value?.success, false, 'Upsert default set with changed index must be refused');
+    assert.equal(
+      upsertRes.value?.error,
+      'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).',
+      'Upsert default must return exact intended error'
+    );
+    const digestAfterUpsert = criteriaDigest(runPsql);
+    assert.equal(digestAfterUpsert, digestBeforeUpsert, 'FULL catalog/version tables digest must remain byte-identical after refused upsert default');
+
+    // 3. Authorized null-clear positive control, followed by NULL-default criterion direct/upsert 0 denial
+    console.log('[Browser] Executing authorized null-clear positive control...');
+    const nullClearRes = await browserAction(page, {
+      manifest: actionManifest,
+      name: 'updateDefaultLevelAction',
+      args: [leaderCritIdForAction, null, activeVer, 'leader'],
+    });
+    assert.equal(nullClearRes.ok, true, 'Transport for null-clear succeeded');
+    assert.equal(nullClearRes.value?.success, true, 'Authorized null-clear must succeed');
+
+    // Update activeVer after successful version bump
+    activeVer = Number(runPsql("SELECT COALESCE(max(version_no)::text, '0') FROM public.criteria_config_versions;"));
+    const storedAfterClear = runPsql(`SELECT default_level_index FROM public.criteria WHERE id = '${leaderCritIdForAction}';`);
+    assert.equal(storedAfterClear, '', 'default_level_index in DB must be NULL after clear');
+
+    // Direct 0 denial on NULL-default criterion:
+    const digestBeforeNullToZeroDirect = criteriaDigest(runPsql);
+    const directZeroRes = await browserAction(page, {
+      manifest: actionManifest,
+      name: 'updateDefaultLevelAction',
+      args: [leaderCritIdForAction, 0, activeVer, 'leader'],
+    });
+    assert.equal(directZeroRes.ok, true, 'Transport for direct 0 on null-default succeeded');
+    assert.equal(directZeroRes.value?.success, false, 'Direct 0 on null-default criterion must be refused');
+    assert.equal(
+      directZeroRes.value?.error,
+      'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).',
+      'Direct 0 on null-default must return exact intended error'
+    );
+    assert.equal(criteriaDigest(runPsql), digestBeforeNullToZeroDirect, 'Catalog tables digest must remain byte-identical after refused direct 0 on null-default');
+
+    // Upsert 0 denial on NULL-default criterion:
+    const digestBeforeNullToZeroUpsert = criteriaDigest(runPsql);
+    const upsertZeroRes = await browserAction(page, {
+      manifest: actionManifest,
+      name: 'upsertCriterionAction',
+      args: [
+        { id: leaderCritIdForAction, name: 'Null To Zero Attempt', defaultLevelIndex: 0 },
+        leaderGroupIdForAction,
+        activeVer,
+        'leader',
+      ],
+    });
+    assert.equal(upsertZeroRes.ok, true, 'Transport for upsert 0 on null-default succeeded');
+    assert.equal(upsertZeroRes.value?.success, false, 'Upsert 0 on null-default criterion must be refused');
+    assert.equal(
+      upsertZeroRes.value?.error,
+      'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).',
+      'Upsert 0 on null-default must return exact intended error'
+    );
+    assert.equal(criteriaDigest(runPsql), digestBeforeNullToZeroUpsert, 'Catalog tables digest must remain byte-identical after refused upsert 0 on null-default');
+
+    caseResults.push({ name: 'direct-and-upsert-default-refused-digest-unchanged', status: 'PASS' });
+
+    // Direct action probes bypass the UI mutation hook's cache invalidation.
+    // Null-clear created a new config version; reload that version before UI CRUD.
+    // The unchanged CAS guard must reject stale versions, not be bypassed.
+    await page.goto(`${origin}/criteria`);
+    await page.waitFor("document.querySelector('button[data-edit-criterion]') !== null", { timeout: 15000, label: 'fresh catalog after direct action probes' });
 
     // 5. Client-Side Cross-Set Guard & Leader Criterion Creation (Desktop only)
     console.log('[Browser] Testing CREATE modal, client cross-set guard negative, and addition...');

@@ -6,7 +6,6 @@ import {
   useCriteria,
   useUpsertCriteriaGroup,
   useUpsertCriterion,
-  useUpdateDefaultLevel,
   useDeleteCriteriaGroup,
   useDeleteCriterion,
   useCriteriaEditState,
@@ -152,7 +151,6 @@ export default function CriteriaPage() {
 
   const upsertGroup = useUpsertCriteriaGroup();
   const upsertCriterion = useUpsertCriterion();
-  const updateDefaultLevel = useUpdateDefaultLevel();
   const { mutate: deleteGroup } = useDeleteCriteriaGroup();
   const { mutate: deleteCriterion } = useDeleteCriterion();
 
@@ -234,42 +232,7 @@ export default function CriteriaPage() {
     }
   };
 
-  const handleSetDefaultLevel = async (criterionId: string, levelIndex: number, currentDefault: number | undefined) => {
-    if (!canEdit) return;
-    if (levelIndex === currentDefault) {
-      const confirmed = await confirm({
-        title: 'Bỏ mức mặc định',
-        message: 'Bạn có chắc chắn muốn bỏ chọn mức mặc định này?',
-        confirmText: 'Bỏ chọn',
-      });
-      if (confirmed) {
-        const criterion = currentSetGroups.flatMap((group) => group.criteria).find((item) => item.id === criterionId);
-        updateDefaultLevel.mutate(
-          { criterionId, levelIndex: null, expectedVersion: criterion?.configVersion, expectedSetKey: activeSetKey },
-          {
-            onSuccess: () => toast('Đã bỏ chọn mức mặc định.', 'success'),
-            onError: (err: Error) => toast(err?.message || 'Lỗi bỏ chọn mức mặc định.', 'error'),
-          }
-        );
-      }
-      return;
-    }
-    const confirmed = await confirm({
-      title: 'Đặt mức mặc định',
-      message: 'Bạn có chắc chắn muốn đặt mức này làm mặc định khi tạo đánh giá mới?',
-      confirmText: 'Đặt mặc định',
-    });
-    if (confirmed) {
-      const criterion = currentSetGroups.flatMap((group) => group.criteria).find((item) => item.id === criterionId);
-      updateDefaultLevel.mutate(
-        { criterionId, levelIndex, expectedVersion: criterion?.configVersion, expectedSetKey: activeSetKey },
-        {
-          onSuccess: () => toast('Đã đặt mức mặc định.', 'success'),
-          onError: (err: Error) => toast(err?.message || 'Lỗi đặt mức mặc định.', 'error'),
-        }
-      );
-    }
-  };
+
 
   const filteredCriteria = activeGroup?.criteria || [];
 
@@ -577,25 +540,14 @@ export default function CriteriaPage() {
                               <p className="text-sm lg:text-[13px] leading-snug flex-1 text-ink-muted pt-1.5 lg:pt-0.5">
                                 {level.label}
                               </p>
-                              {/* Read-only default star indicator */}
-                              {isDefault && !canEdit && (
-                                <span className="text-amber-500 shrink-0 p-1" title="Mức mặc định">
+                              {/* Non-interactive indicator for stored legacy default metadata (read-only reference) */}
+                              {isDefault && (
+                                <span
+                                  className="text-amber-500 shrink-0 p-1"
+                                  title="Mức mặc định lịch sử (chỉ tham khảo, không tự động chọn)"
+                                >
                                   <Star size={14} className="fill-current" />
                                 </span>
-                              )}
-                              {/* Interactive default selector */}
-                              {canEdit && (
-                                <button
-                                  onClick={() => handleSetDefaultLevel(criterion.id, idx, criterion.defaultLevelIndex)}
-                                  className={`shrink-0 p-2.5 min-w-11 min-h-11 lg:p-1 lg:min-w-10 lg:min-h-10 flex items-center justify-center rounded-lg transition-colors ${
-                                    isDefault
-                                      ? 'text-amber-500 bg-amber-100 hover:bg-amber-200'
-                                      : 'text-outline-soft hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 focus:opacity-100'
-                                  }`}
-                                  title={isDefault ? 'Đang là mức mặc định' : 'Đặt làm mặc định'}
-                                >
-                                  <Star size={16} className={isDefault ? 'fill-current' : ''} />
-                                </button>
                               )}
                             </div>
                             {level.description && (

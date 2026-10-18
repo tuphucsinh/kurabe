@@ -300,10 +300,79 @@ function catalogState(db) {
   };
 }
 
+// Loops [role="tablist"][aria-label="Nhóm tiêu chí"] button[role="tab"], clicks each tab,
+// and clicks all enabled level buttons matching topLabel per group.
+async function selectAllCriteriaAcrossGroups(page, topLabel = 'Excellent') {
+  // Editable controls precede Layer-2 criteria; retain the old helper's readiness contract.
+  await page.waitFor(`(() => {
+    const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+    return tabs.length > 0 && [...document.querySelectorAll('button:not(:disabled) p')].some(n => n.textContent.trim() === ${JSON.stringify(topLabel)});
+  })()`, { timeout: 30000, label: 'all-group criteria ready' });
+  const groupCount = await page.evaluate(`(() => {
+    const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+    return tabs.length;
+  })()`);
+  assert.ok(groupCount > 0, 'Must have at least one group tab');
+
+  let totalClicked = 0;
+  for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+    await page.evaluate(`(() => {
+      const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+      if (tabs[${groupIndex}]) tabs[${groupIndex}].click();
+    })()`);
+
+    await page.waitFor(
+      `(() => {
+        const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+        return tabs[${groupIndex}] && tabs[${groupIndex}].getAttribute('aria-selected') === 'true';
+      })()`,
+      { timeout: 10000, label: `Group tab ${groupIndex} selected` }
+    );
+
+    const clickedInGroup = await page.evaluate(`(() => {
+      let count = 0;
+      const buttons = Array.from(document.querySelectorAll('button:not(:disabled)'));
+      for (const btn of buttons) {
+        const pTag = btn.querySelector('p');
+        if (pTag && pTag.textContent.trim() === ${JSON.stringify(topLabel)}) {
+          btn.click();
+          count++;
+        }
+      }
+      return count;
+    })()`);
+    assert.ok(clickedInGroup > 0, `Must click at least one criterion with label "${topLabel}" in group tab ${groupIndex}`);
+    totalClicked += clickedInGroup;
+
+    const selectedCountInGroup = await page.evaluate(`(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.filter(b => b.className.includes('ring-brand')).length;
+    })()`);
+    assert.ok(selectedCountInGroup > 0, `Current selected count in group ${groupIndex} must be positive`);
+  }
+
+  assert.ok(totalClicked > 0, 'Total clicked criteria across all groups must be positive');
+
+  // Return to FIRST group after selection
+  await page.evaluate(`(() => {
+    const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+    if (tabs[0]) tabs[0].click();
+  })()`);
+  await page.waitFor(
+    `(() => {
+      const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
+      return tabs[0] && tabs[0].getAttribute('aria-selected') === 'true';
+    })()`,
+    { timeout: 10000, label: 'First group tab re-selected' }
+  );
+
+  return totalClicked;
+}
+
 // Real Employee lifecycle through the UI of whichever app is running: a fresh UI-created period, SubLeader -> Leader
 // -> Manager, Manager RETURN, Leader resubmit, Manager approve; DB state asserted after each transition.
 async function runEmployeeReturnResubmitLifecycle({ page, origin, db, pointers, year, deps }) {
-  const { loginAs, openEvaluation, selectTopLevel, submitViaUi, returnRoundViaUi, createPeriodViaUi } = deps;
+  const { loginAs, openEvaluation, submitViaUi, returnRoundViaUi, createPeriodViaUi } = deps;
   const LEVEL = 'Excellent';
   runPsql(db, "UPDATE public.evaluation_periods SET status = 'closed' WHERE status = 'active';");
   await loginAs(page, origin, 'P103-MGR');
@@ -323,7 +392,7 @@ async function runEmployeeReturnResubmitLifecycle({ page, origin, db, pointers, 
 
   await loginAs(page, origin, 'P103-SLB');
   await openEvaluation(page, origin, pointers.employeeBId);
-  await selectTopLevel(page, LEVEL);
+  await selectAllCriteriaAcrossGroups(page, LEVEL);
   await submitViaUi(page);
   assert.equal(ev('status'), 'Submitted');
   assert.equal(ev('current_round'), '2');
@@ -331,7 +400,7 @@ async function runEmployeeReturnResubmitLifecycle({ page, origin, db, pointers, 
 
   await loginAs(page, origin, 'P103-LDA');
   await openEvaluation(page, origin, pointers.employeeBId);
-  await selectTopLevel(page, LEVEL);
+  await selectAllCriteriaAcrossGroups(page, LEVEL);
   await submitViaUi(page);
   assert.equal(ev('status'), 'Reviewed');
   assert.equal(ev('current_round'), '3');
@@ -347,14 +416,14 @@ async function runEmployeeReturnResubmitLifecycle({ page, origin, db, pointers, 
 
   await loginAs(page, origin, 'P103-LDA');
   await openEvaluation(page, origin, pointers.employeeBId);
-  await selectTopLevel(page, LEVEL);
+  await selectAllCriteriaAcrossGroups(page, LEVEL);
   await submitViaUi(page);
   assert.equal(ev('status'), 'Reviewed');
   assert.equal(ev('current_round'), '3');
 
   await loginAs(page, origin, 'P103-MGR');
   await openEvaluation(page, origin, pointers.employeeBId);
-  await selectTopLevel(page, LEVEL);
+  await selectAllCriteriaAcrossGroups(page, LEVEL);
   await submitViaUi(page);
   assert.equal(ev('status'), 'Approved');
   assert.ok(Number(ev('final_score')) > 0 && ev('final_grade'), 'Approved evaluation must carry final score and grade');

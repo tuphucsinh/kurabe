@@ -359,6 +359,17 @@ export async function upsertCriterionAction(
         throw new ClientSafeError('Tiêu chí phải có ít nhất một mức điểm.');
       }
 
+      // P108 G1 explicit scoring: deny setting any NEW non-null default level index (including 0)
+      if (
+        criterion.defaultLevelIndex !== undefined &&
+        criterion.defaultLevelIndex !== null &&
+        criterion.defaultLevelIndex !== existingCriterion?.default_level_index
+      ) {
+        throw new ClientSafeError(
+          'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).'
+        );
+      }
+
       const next: ConfigCriterion = {
         id,
         group_id: targetGroup.id,
@@ -371,7 +382,9 @@ export async function upsertCriterionAction(
         applies_to: derivedAudience,
         audiences,
         weight: criterion.weight ?? existingCriterion?.weight ?? 0,
-        default_level_index: criterion.defaultLevelIndex !== undefined ? criterion.defaultLevelIndex : (existingCriterion?.default_level_index ?? null),
+        default_level_index: criterion.defaultLevelIndex !== undefined
+          ? criterion.defaultLevelIndex
+          : (existingCriterion?.default_level_index ?? null),
         sort_order: criterion.sortOrder ?? existingCriterion?.sort_order ?? targetGroup.criteria.length,
         levels: levels.map((level, index) => ({
           ...level,
@@ -424,11 +437,20 @@ export async function updateDefaultLevelAction(
         throw new ClientSafeError('Tiêu chí không thuộc bộ tiêu chí chỉ định.');
       }
 
+      // Preserve pre-existing values if not changed (zero write / no-op)
       if (found.criterion.default_level_index === levelIndex) {
         return { value: found.criterion, unchanged: true };
       }
 
-      found.criterion.default_level_index = levelIndex;
+      // P108 G1 explicit scoring: deny setting any NEW non-null default level index (including 0)
+      if (levelIndex !== null) {
+        throw new ClientSafeError(
+          'Không thể đặt mức mặc định cho tiêu chí. Hệ thống áp dụng cơ chế chấm điểm tường minh (không chọn sẵn mức mặc định).'
+        );
+      }
+
+      // Allow null clearing if appropriate
+      found.criterion.default_level_index = null;
       return { value: found.criterion, unchanged: false };
     });
 
