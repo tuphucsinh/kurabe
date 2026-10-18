@@ -1,5 +1,10 @@
 # Decisions Log
 
+## D2 P104 same zero/empty contract — related source guards
+
+Full root test after P104M1T01 PASS reached P104M1T02:617, requiring removed AI raw-round fallback `score: lastRound?.totalScore ?? 0`; same block629 also requires the removed Reports fallback. These are directly related P104 zero-preservation guards, not product errors: D2 uses eligible per-bucket average (numeric0 retained) and persisted entry.score??0, never fabricating0 from missing/unapproved rounds. Within owner permission to align directly related old assertions of the empty-versus-real-zero contract, include ONLY tests/p104m1t02-output-correctness.test.mjs source guards2.5/2.6 in write scope; strengthen toward actual server snapshot loader + per-bucket mean + no obsolete fallback. All other tests/values/auth/DB/chat checks remain. Product bytes frozen0ffd unchanged. Preserve first full-root failure; no AGY, no product repair/new task. Rebuild exact test-only candidate and run full required gates/review; any real product defect or non-PASS review stops.
+
+
 ## D2 P104 contract-only alignment — owner approved
 
 Owner approves only tests/p104m1t01-scope-state.test.mjs: empty eligible KPI=>null, genuine numeric mean0=>0. Scan directly related empty-state assertions once; keep all error/auth/scope/zero semantics, no assertion weakening/test deletion. Supply missing period/role/pinned-catalog fixture context for valid-sample controls rather than changing their expected40/score0 to null. No product code/business/grade/history/manifest changes. Frozen D2 input0ffd4a27f1f24db4cd8f38724cdedd2dad383d40 bytes must survive exactly. Mika direct test-only, NO AGY; this is a scoped subrecord of existing D2 recovery, no new task or budget reset. New candidate mandatory gates (P104, D2/P107/AI regressions, full npm test, lint/typecheck/build/scans) then fresh read-only independent Sonnet5.5 (owner-approved reviewer substitution for D2, global selector unchanged). Product defect or review CHANGES_REQUIRED=>HALT, no next repair. No production/push/deploy/import/period close/Kỳ2026. Original T08 DONE/count1 and all prior failed evidence retained.
