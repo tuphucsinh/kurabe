@@ -5,6 +5,7 @@ import { RefreshCw } from 'lucide-react';
 import PendingReviews from '@/components/dashboard/PendingReviews';
 import AnomalyAlertCard from '@/components/dashboard/AnomalyAlertCard';
 import LazySkillGapRadar from '@/components/charts/LazySkillGapRadar';
+import SetKpiSummary from '@/components/reports/SetKpiSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DashboardHeavyData } from '@/actions/dashboard';
 import type { User } from '@/types';
@@ -80,6 +81,15 @@ export default function DashboardHeavySection({
               <span>Chưa chốt: <b className="text-amber-600">{data.coverage.pending}</b></span>
             )}
             <span>Đang dở (frozen): <b className="text-amber-600">{data.frozenIncomplete}</b></span>
+          </div>
+
+          {/* D2 Per-set KPI summaries: labelled raw per-set averages */}
+          <div data-load-layer="heavy">
+            <SetKpiSummary
+              buckets={data.result.setKpis ?? []}
+              excludedInfo={{ totalExcluded: data.result.excludedCount ?? 0 }}
+              compact={true}
+            />
           </div>
 
           {/* Grid: PendingReviews | Anomaly */}

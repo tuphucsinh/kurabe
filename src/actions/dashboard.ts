@@ -13,6 +13,7 @@ import {
   formatCriteriaSetLabel,
   getEvaluationResultProjection,
   projectEvaluationResults,
+  sanitizeEvaluationResultProjectionForView,
   type EvaluationResultProjection,
   type ProjectionCoverage,
 } from '@/lib/evaluation-result-projection';
@@ -72,6 +73,18 @@ export interface DashboardAnomaly {
   severity: 'high' | 'medium';
 }
 
+export interface DashboardSetKpiSummaryItem {
+  key: string;
+  setKey: 'leader' | 'staff' | 'worker';
+  criteriaVersionId: string;
+  label: string;
+  sampleCount: number;
+  average: number;
+  highGradeRate?: number;
+  top?: { id: string; name: string; teamName: string; score: number; grade: string }[];
+  teams?: { id: string; name: string; avgScore: number; sampleCount: number }[];
+}
+
 /** Authoritative official-result summary surfaced on the dashboard (Approved-only). */
 export interface DashboardResultSummary {
   approvedCount: number;
@@ -81,6 +94,8 @@ export interface DashboardResultSummary {
   highGradeRate: number | null;
   mixedBasis: boolean;
   sampleCount: number;
+  setKpis: DashboardSetKpiSummaryItem[];
+  excludedCount?: number;
 }
 
 export interface DashboardLightData {
@@ -408,7 +423,21 @@ function buildRadar(
   return { radar, sampleCount, radarSets };
 }
 
-function summarizeResult(projection: EvaluationResultProjection): DashboardResultSummary {
+function summarizeResult(
+  rawProjection: EvaluationResultProjection
+): DashboardResultSummary {
+  const projection = sanitizeEvaluationResultProjectionForView(rawProjection, 'all');
+
+  const setKpis: DashboardSetKpiSummaryItem[] = (projection.result.setKpis || []).map((bucket) => ({
+    key: bucket.key,
+    setKey: bucket.setKey,
+    criteriaVersionId: bucket.criteriaVersionId,
+    label: bucket.label,
+    sampleCount: bucket.sampleCount,
+    average: bucket.average,
+    highGradeRate: bucket.highGradeRate,
+  }));
+
   return {
     approvedCount: projection.result.approvedCount,
     invalidCount: projection.result.invalidCount,
@@ -417,6 +446,8 @@ function summarizeResult(projection: EvaluationResultProjection): DashboardResul
     highGradeRate: projection.result.highGradeRate,
     mixedBasis: projection.result.mixedBasis,
     sampleCount: projection.result.sampleCount,
+    setKpis,
+    excludedCount: projection.excludedKpis?.total ?? projection.result.excludedKpiCount ?? 0,
   };
 }
 

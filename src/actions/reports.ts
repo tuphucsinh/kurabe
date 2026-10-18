@@ -3,8 +3,12 @@
 import { getEvaluationsByPeriodAdmin } from '@/lib/db/evaluations-admin';
 import { getUsersAdmin } from '@/lib/db/users-admin';
 import { requireRole } from '@/lib/auth';
-import { getEvaluationResultProjection } from '@/lib/evaluation-result-projection';
-import { Grade, Evaluation, User } from '@/types';
+import {
+  getEvaluationResultProjection,
+  sanitizeEvaluationResultProjectionForView,
+  type SetFilterOption,
+} from '@/lib/evaluation-result-projection';
+import { Grade, User } from '@/types';
 
 export interface CriteriaAnalysisItem {
   group: string;
@@ -15,6 +19,42 @@ export interface CriteriaAnalysisItem {
   setKey: string | null;
   configVersion: number | null;
   label: string;
+}
+
+export interface ReportSetKpiTeam {
+  id: string;
+  name: string;
+  avgScore: number;
+  sampleCount: number;
+  progress: number;
+}
+
+export interface ReportSetKpiTopPerformer {
+  id: string;
+  name: string;
+  teamName: string;
+  score: number;
+  grade: string;
+}
+
+export interface ReportSetKpiBucket {
+  key: string;
+  setKey: 'leader' | 'staff' | 'worker';
+  criteriaVersionId: string;
+  label: string;
+  sampleCount: number;
+  average: number;
+  highGradeRate?: number;
+  topPerformers: ReportSetKpiTopPerformer[];
+  teamStats: ReportSetKpiTeam[];
+}
+
+export interface ReportExcludedKpiInfo {
+  unavailableCount: number;
+  legacyCount: number;
+  otherPeriodCount: number;
+  totalExcluded: number;
+  notice?: string | null;
 }
 
 export interface ReportAggregationData {
@@ -38,6 +78,8 @@ export interface ReportAggregationData {
   note?: string | null;
   mixedSetsNote?: string | null;
   topPerformers: { id: string; name: string; teamName: string; score: number; grade: string }[];
+  setKpis: ReportSetKpiBucket[];
+  excludedKpis?: ReportExcludedKpiInfo;
 }
 
 const GRADE_COLOR_MAP: Record<string, string> = {
@@ -49,25 +91,19 @@ const GRADE_COLOR_MAP: Record<string, string> = {
   D: 'bg-red-500',
 };
 
-/**
- * Raw display fallback score for a single evaluation row. Official metrics never
- * use this fallback — they come from the authoritative result projector which
- * honours persisted Approved final fields with nullish (not truthy) semantics so
- * a valid score 0 is preserved. Used to render the top-performer score with the
- * same nullish score-0 semantics (identical to the official score for every
- * valid Approved row).
- */
-function evaluationScore(e: Evaluation): number {
-  const lastRound = e.rounds && e.rounds.length > 0 ? e.rounds[e.rounds.length - 1] : undefined;
-  return e.finalScore ?? lastRound?.totalScore ?? 0;
-}
-
 async function getReportAggregationInner(
   periodId: string,
   selectedTeam: string,
+  selectedSet: string = 'all',
   viewer: User | null
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
+
+  const validSetKeys = ['all', 'leader', 'staff', 'worker'] as const;
+  if (!validSetKeys.includes(selectedSet as typeof validSetKeys[number])) {
+    throw new Error('INVALID_KPI_SET_FILTER');
+  }
+  const normalizedSelectedSet = selectedSet as SetFilterOption;
 
   const [evaluations, users] = await Promise.all([
     getEvaluationsByPeriodAdmin(periodId, viewer),
@@ -91,11 +127,14 @@ async function getReportAggregationInner(
   // aggregate below (roster, average, high-grade rate, coverage, grade
   // distribution, criteria analysis, top slice) is filter-consistent server-side
   // instead of org-wide.
-  const projection = await getEvaluationResultProjection(periodId, viewer, {
+  const rawProjection = await getEvaluationResultProjection(periodId, viewer, {
     evaluations,
     employeeIds: teamFilterIds,
   });
-  if (!projection) return null;
+  if (!rawProjection) return null;
+
+  // Apply compatibility-view helper: sanitizes average/rate/top/teams when bases are mixed or excluded
+  const projection = sanitizeEvaluationResultProjectionForView(rawProjection, normalizedSelectedSet);
 
   const teamStats = projection.teamBreakdown.map((team) => ({
     id: team.teamId,
@@ -108,7 +147,11 @@ async function getReportAggregationInner(
     team.progress = maxTeamAvg > 0 ? Math.min(100, (team.avgScore / maxTeamAvg) * 100) : 0;
   });
 
-  const criteriaAnalysis: CriteriaAnalysisItem[] = projection.criteriaBreakdown.map((entry) => ({
+  const rawCriteria = normalizedSelectedSet === 'all'
+    ? rawProjection.criteriaBreakdown
+    : rawProjection.criteriaBreakdown.filter((entry) => !entry.setKey || entry.setKey === normalizedSelectedSet);
+
+  const criteriaAnalysis: CriteriaAnalysisItem[] = rawCriteria.map((entry) => ({
     group: entry.group,
     avgScore: entry.avgScore,
     percentage: entry.percentage,
@@ -138,20 +181,58 @@ async function getReportAggregationInner(
     enumerable: false,
   });
 
-  // Top performers come from the team-scoped top slice (the projector already
-  // selected them from the scoped valid set BEFORE the TOP_LIMIT cap), so no
-  // post-slice re-filtering can drop a selected team's performers.
-  const evaluationById = new Map(evaluations.map((e) => [e.id, e]));
-  const topPerformers = projection.result.top.map((entry) => {
-    const evaluation = evaluationById.get(entry.evaluationId);
-    return {
+  const topPerformers = projection.result.top.map((entry) => ({
+    id: entry.employeeId,
+    name: userMap.get(entry.employeeId)?.name || 'Unknown',
+    teamName: entry.teamId ? (rawProjection.teamBreakdown.find((t) => t.teamId === entry.teamId)?.name || '—') : '—',
+    score: entry.score ?? 0,
+    grade: entry.grade ?? '-',
+  }));
+
+  // D2 per-set / per-basis KPI mapping (using official persisted entry.score, not latest-round fallback)
+  const setKpis: ReportSetKpiBucket[] = (projection.result.setKpis || []).map((bucket) => {
+    const maxBucketTeamAvg = bucket.teams.reduce((max, t) => Math.max(max, t.average), 0);
+    const bucketTeamStats: ReportSetKpiTeam[] = bucket.teams.map((t) => ({
+      id: t.teamId,
+      name: t.name,
+      avgScore: t.average,
+      sampleCount: t.sampleCount,
+      progress: maxBucketTeamAvg > 0 ? Math.min(100, (t.average / maxBucketTeamAvg) * 100) : 0,
+    }));
+
+    const bucketTopPerformers: ReportSetKpiTopPerformer[] = bucket.top.map((entry) => ({
       id: entry.employeeId,
       name: userMap.get(entry.employeeId)?.name || 'Unknown',
-      teamName: entry.teamId ? (projection.teamBreakdown.find((t) => t.teamId === entry.teamId)?.name || '—') : '—',
-      score: evaluation ? evaluationScore(evaluation) : (entry.score ?? 0),
+      teamName: entry.teamId ? (rawProjection.teamBreakdown.find((t) => t.teamId === entry.teamId)?.name || '—') : '—',
+      score: entry.score ?? 0,
       grade: entry.grade ?? '-',
+    }));
+
+    return {
+      key: bucket.key,
+      setKey: bucket.setKey,
+      criteriaVersionId: bucket.criteriaVersionId,
+      label: bucket.label,
+      sampleCount: bucket.sampleCount,
+      average: bucket.average,
+      highGradeRate: bucket.highGradeRate,
+      topPerformers: bucketTopPerformers,
+      teamStats: bucketTeamStats,
     };
   });
+
+  const excludedKpis: ReportExcludedKpiInfo | undefined = projection.excludedKpis
+    ? {
+        unavailableCount: projection.excludedKpis.unavailableBasisCount,
+        legacyCount: projection.excludedKpis.missingBasisCount,
+        otherPeriodCount: projection.excludedKpis.otherPeriodCount,
+        totalExcluded: projection.excludedKpis.total,
+        notice:
+          projection.excludedKpis.total > 0
+            ? `Có ${projection.excludedKpis.total} đánh giá không thuộc bộ tiêu chuẩn hoặc phiên bản hợp lệ đã được tách riêng khỏi chỉ số chính thức.`
+            : null,
+      }
+    : undefined;
 
   return {
     stats: {
@@ -176,12 +257,15 @@ async function getReportAggregationInner(
     mixedSets,
     note,
     mixedSetsNote: note,
+    setKpis,
+    excludedKpis,
   };
 }
 
 export async function getReportAggregation(
   periodId: string,
-  selectedTeam: string = 'all'
+  selectedTeam: string = 'all',
+  selectedSet: string = 'all'
 ): Promise<ReportAggregationData | null> {
   if (!periodId) return null;
   const auth = await requireRole(['Manager', 'Leader', 'SubLeader']);
@@ -189,5 +273,5 @@ export async function getReportAggregation(
     throw new Error(auth.error || 'Unauthorized');
   }
   // KHÔNG unstable_cache — bỏ cache trong hàm (gây lag Vercel + trang trắng, Fix A 2026-08-16)
-  return getReportAggregationInner(periodId, selectedTeam, auth.user);
+  return getReportAggregationInner(periodId, selectedTeam, selectedSet, auth.user);
 }

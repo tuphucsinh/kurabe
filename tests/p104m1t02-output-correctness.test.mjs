@@ -614,10 +614,12 @@ console.log('\n--- Section 2: Finding F03 (Score 0 Truthiness Loss) ---');
 
   // 2.5 AI Summary Score Preservation Inspection
   const aiSummarySrc = readProjectFile('src/actions/ai-summary.ts');
-  assert.ok(
-    aiSummarySrc.includes('score: lastRound?.totalScore ?? 0'),
-    'src/actions/ai-summary.ts must use lastRound?.totalScore ?? 0'
-  );
+  assert.ok(aiSummarySrc.includes('getEvaluationResultProjection(periodId, auth.user, { evaluations })'),
+    'AI official metrics must resolve the Approved snapshot basis, not a raw-round fallback');
+  assert.ok(aiSummarySrc.includes('bucket.average.toFixed(1)'),
+    'An eligible bucket mean0 is rendered as0.0, not dropped by truthiness');
+  assert.ok(!aiSummarySrc.includes('score: lastRound?.totalScore ?? 0'),
+    'Missing/unverified raw rounds must not manufacture numeric0 in AI context');
 
   // 2.6 Reports action must preserve score 0; T01 owns and fixes this path.
   const reportsSrc = readProjectFile('src/actions/reports.ts');
@@ -625,10 +627,10 @@ console.log('\n--- Section 2: Finding F03 (Score 0 Truthiness Loss) ---');
     !reportsSrc.includes('e.finalScore || (e.rounds'),
     'src/actions/reports.ts must not lose score 0 through finalScore || fallback'
   );
-  assert.ok(
-    reportsSrc.includes('e.finalScore ?? lastRound?.totalScore ?? 0'),
-    'src/actions/reports.ts must preserve score 0 with nullish fallback'
-  );
+  assert.ok(reportsSrc.includes('score: entry.score ?? 0'),
+    'Reports serialize eligible persisted official score0 with nullish semantics');
+  assert.ok(!reportsSrc.includes('lastRound?.totalScore'),
+    'Reports must not replace missing official samples with raw-round fallback');
 
   console.log('  PASS: DB mappers, chat, and AI summary correctly preserve score 0 nullish semantics');
 }

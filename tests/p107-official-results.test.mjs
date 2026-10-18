@@ -242,11 +242,12 @@ console.log('=== P107M1T06 official result projection — golden suite ===');
   const reports = readProjectFile('src/actions/reports.ts');
   assert.match(reports, /getEvaluationResultProjection/, 'report uses the single server projector');
   assert.ok(!reports.includes('e.finalScore || (e.rounds'), 'report never falls back with truthy semantics');
-  assert.ok(reports.includes('e.finalScore ?? lastRound?.totalScore ?? 0'), 'report keeps nullish display fallback');
+  assert.match(reports, /score:\s*entry\.score \?\? 0/, 'report serializes the persisted official score with zero-safe nullish semantics');
+  assert.ok(!reports.includes('lastRound?.totalScore'), 'official report rows never fall back to a latest round');
   assert.match(reports, /employeeIds:\s*teamFilterIds/, 'report scopes the projector to the effective team filter');
   assert.match(reports, /projection\.result\.top\s*\.map/, 'top performers come from the team-scoped top set (before the limit cap)');
   assert.ok(!reports.includes('void evaluationScore'), 'report must not neutralize the score helper as dead code');
-  assert.match(reports, /evaluationScore\(/, 'report genuinely uses the nullish score helper');
+  assert.ok(!reports.includes('function evaluationScore'), 'obsolete raw-round fallback helper is removed, not retained as dead code');
 
   const read = readProjectFile('src/actions/read.ts');
   assert.match(read, /export async function getEvaluationResultProjectionAction/, 'read exposes the projection server action');
@@ -302,7 +303,10 @@ console.log('=== P107M1T06 official result projection — golden suite ===');
     role: r.role,
     teamId: r.teamId,
   }));
-  const cleanEvaluations = fixture.scenarios.clean.evaluations;
+  const cleanEvaluations = fixture.scenarios.clean.evaluations.map((e) => ({
+    ...e,
+    periodId: 'period-p107',
+  }));
   const criteriaGroup = {
     id: 'grp-A',
     code: 'A',
@@ -350,8 +354,12 @@ export async function resolve(specifier, context, nextResolve) {
   const scoped = await getReportAggregation('period-p107', 't2');
   assert.ok(scoped, 'report returns a structured result for a team filter');
   assert.equal(scoped.stats.totalEmployees, 2, 'team filter scopes the headline roster count');
-  assert.equal(scoped.stats.avgScore, 25, 'team-scoped average (0 + 50) / 2');
-  assert.equal(scoped.stats.highGradeRate, 0, 'team-scoped high-grade rate');
+  assert.equal(scoped.stats.avgScore, null, 'D2: mixed sets (leader + staff in team) null out global average');
+  assert.equal(scoped.stats.highGradeRate, null, 'D2: mixed sets null out high-grade rate');
+  assert.equal(scoped.stats.mixedBasis, true, 'D2: mixed sets marked mixedBasis=true');
+  assert.equal(scoped.setKpis.length, 2, 'D2: separate buckets for leader and staff');
+  assert.equal(scoped.setKpis.find((b) => b.setKey === 'leader')?.average, 0, 'leader bucket average');
+  assert.equal(scoped.setKpis.find((b) => b.setKey === 'staff')?.average, 50, 'staff bucket average');
   assert.equal(scoped.stats.pendingCount, 0);
   assert.equal(scoped.stats.approvedCount, 2);
   assert.equal(scoped.stats.sampleCount, 2);
@@ -376,19 +384,28 @@ export async function resolve(specifier, context, nextResolve) {
     ],
     'team-scoped criteria analysis'
   );
-  assert.deepEqual(
-    scoped.topPerformers.map((p) => [p.id, p.score]),
-    [['e-emp', 50], ['e-sub', 0]],
-    'team-scoped top performers (org-wide top filtered out, not intersected)'
-  );
-  assert.deepEqual(scoped.teamStats.map((t) => t.id), ['t2'], 'team comparison honours the filter');
+  assert.deepEqual(scoped.topPerformers, [], 'D2: legacy cross-set topPerformers empty when mixedSets');
+  assert.deepEqual(scoped.teamStats, [], 'D2: legacy cross-set teamStats empty when mixedSets');
 
   const all = await getReportAggregation('period-p107', 'all');
   assert.ok(all, 'report returns a structured result for all teams');
   assert.equal(all.stats.totalEmployees, 5, 'all-teams keeps the org-wide roster');
-  assert.equal(all.stats.avgScore, 55, 'all-teams average is org-wide 55');
-  assert.equal(all.stats.highGradeRate, 50, 'all-teams high-grade rate is org-wide 50%');
-  assert.ok(all.topPerformers.some((p) => p.id === 'e-mgr'), 'org-wide top includes the manager excluded by the team filter');
+  assert.equal(all.stats.avgScore, null, 'D2: org-wide multiple sets null out cross-set average');
+  assert.equal(all.stats.highGradeRate, null, 'D2: org-wide multiple sets null out cross-set high-grade rate');
+  assert.equal(all.stats.mixedBasis, true, 'D2: marked mixedBasis=true');
+  assert.equal(all.setKpis.length, 2, 'D2: separate buckets for leader and staff');
+  assert.equal(all.setKpis.find((b) => b.setKey === 'leader')?.sampleCount, 3, '3 leaders in all teams');
+  assert.equal(all.setKpis.find((b) => b.setKey === 'staff')?.sampleCount, 1, '1 staff in all teams');
+  assert.deepEqual(all.topPerformers, [], 'D2: cross-set top empty when mixedSets');
+
+  // Verify scoped set query works cleanly for specific set:
+  const leaderOnly = await getReportAggregation('period-p107', 'all', 'leader');
+  assert.ok(leaderOnly);
+  assert.equal(leaderOnly.stats.mixedBasis, false);
+  assert.equal(leaderOnly.stats.sampleCount, 3);
+  assert.equal(Math.round((leaderOnly.stats.avgScore ?? 0) * 10) / 10, 56.7);
+  assert.equal(leaderOnly.setKpis.length, 1);
+  assert.ok(leaderOnly.topPerformers.some((p) => p.id === 'e-mgr'), 'leader top includes manager');
 
   console.log('  PASS: report action returns team-scoped aggregates equal to the scoped projection');
 }

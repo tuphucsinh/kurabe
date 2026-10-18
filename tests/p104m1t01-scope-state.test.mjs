@@ -48,6 +48,15 @@ export async function resolve(specifier, context, nextResolve) {
       format: "module"
     };
   }
+  if (specifier === "@/lib/db/evaluation-display-admin") {
+    /* Synthetic immutable staff catalog for case2.4; mock ONLY the DB reader,
+       not the real projector or report action. Unknown IDs are not resolved. */
+    return {
+      url: "data:text/javascript,export const loadCriteriaSnapshots = async () => ({ groups:new Map([['p104-staff-v1:g-staff',{id:'g-staff',code:'A',name:'Synthetic staff',setKey:'staff',configVersion:1,configVersionId:'p104-staff-v1',criteria:[{id:'c-1',code:'A1',name:'Synthetic',levels:[{points:175,label:'Max'}]}]}]]),unavailable:new Set() }); export const groupsForVersion = (id,snapshot) => [...snapshot.groups].filter(([key])=>key.startsWith(id+':')).map(([,group])=>group);",
+      shortCircuit: true,
+      format: "module"
+    };
+  }
   if (specifier === "@/lib/db/criteria") {
     return {
       url: "data:text/javascript,export let mockCrit = [{ code: 'A', criteria: [{ id: 'c-1', levels: [{ points: 10 }, { points: 20 }] }] }]; export const getAllCriteriaGroups = async () => mockCrit;",
@@ -378,7 +387,10 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
   const res = await getReportAggregation('period-1', 'all');
   assert.ok(res !== null, 'F05: Successful query with 0 evaluations must return structured result, not null');
   assert.strictEqual(res.stats.totalEmployees, 0, 'Total employees must be 0 in empty state');
-  assert.strictEqual(res.stats.avgScore, 0, 'Average score must be 0 in empty state');
+  assert.strictEqual(res.stats.avgScore, null, 'D2: no eligible sample has no mean, not a fabricated numeric 0');
+  assert.strictEqual(res.stats.highGradeRate, null, 'D2: no eligible sample has no grade rate');
+  assert.strictEqual(res.stats.sampleCount, 0);
+  assert.deepStrictEqual(res.setKpis, []);
   assert.strictEqual(res.stats.pendingCount, 0, 'Pending count must be 0 in empty state');
   assert.strictEqual(res.topPerformers.length, 0, 'Top performers must be empty array');
   console.log('  ✓ 2.3 Truthful zero-row query returns structured empty state with totalEmployees=0');
@@ -395,6 +407,8 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
   const testEvals = [
     {
       id: 'e-zero',
+      periodId: 'period-1',
+      employeeRole: 'Employee',
       employeeId: 'u-zero',
       teamId: 't-1',
       status: 'Approved',
@@ -403,6 +417,8 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
       rounds: [
         {
           round: 1,
+          status: 'Submitted',
+          criteriaConfigVersionId: 'p104-staff-v1',
           totalScore: 50, // Should NOT fall back to 50 when finalScore is 0!
           grade: 'B',
           scores: { 'c-1': 0 },
@@ -411,6 +427,8 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
     },
     {
       id: 'e-pos',
+      periodId: 'period-1',
+      employeeRole: 'Employee',
       employeeId: 'u-pos',
       teamId: 't-1',
       status: 'Approved',
@@ -419,6 +437,8 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
       rounds: [
         {
           round: 1,
+          status: 'Submitted',
+          criteriaConfigVersionId: 'p104-staff-v1',
           totalScore: 80,
           grade: 'A',
           scores: { 'c-1': 20 },
@@ -441,6 +461,24 @@ console.log('\n--- Section 2: Finding F05 (Report Failures vs Truthful Empty Sta
   const zeroUserPerformer = res.topPerformers.find((p) => p.id === 'u-zero');
   assert.ok(zeroUserPerformer, 'Zero score user must appear in performers list');
   assert.strictEqual(zeroUserPerformer.score, 0, 'Zero score must be 0, not fallen back to 50');
+
+  // A genuinely eligible singleton with score0 must remain numeric0.
+  evalsMockModule.setMockEvals([testEvals[0]]);
+  usersMockModule.setMockUsers([testUsers[0]]);
+  const genuineZero = await getReportAggregation('period-1', 'all');
+  assert.strictEqual(genuineZero.stats.avgScore, 0, 'One eligible zero-score sample has a real mean0');
+  assert.strictEqual(genuineZero.stats.sampleCount, 1);
+  assert.strictEqual(genuineZero.topPerformers[0].score, 0);
+  assert.strictEqual(genuineZero.setKpis[0].average, 0);
+
+  // Nonempty roster with an unresolvable basis is NOT a genuine zero sample.
+  evalsMockModule.setMockEvals([{ ...testEvals[0], rounds: testEvals[0].rounds.map((round) => ({ ...round, criteriaConfigVersionId: undefined })) }]);
+  const ineligibleZero = await getReportAggregation('period-1', 'all');
+  assert.strictEqual(ineligibleZero.stats.totalEmployees, 1);
+  assert.strictEqual(ineligibleZero.stats.avgScore, null);
+  assert.strictEqual(ineligibleZero.stats.sampleCount, 0);
+  assert.deepStrictEqual(ineligibleZero.topPerformers, []);
+  assert.deepStrictEqual(ineligibleZero.setKpis, []);
 
   console.log('  ✓ 2.4 Score 0 handled with nullish semantics (avgScore=40, finalScore=0 preserved)');
 }

@@ -11,9 +11,8 @@ import ReportFilters from '@/components/reports/ReportFilters';
 import ExportReportButton from '@/components/reports/ExportReportButton';
 import AiSummaryCard from '@/components/reports/AiSummaryCard';
 import ClientGradeDistribution from '@/components/charts/ClientGradeDistribution';
-import ClientTeamComparison from '@/components/charts/ClientTeamComparison';
 import ClientCriteriaHeatmap from '@/components/charts/ClientCriteriaHeatmap';
-import TopPerformers from '@/components/reports/TopPerformers';
+import SetKpiSummary from '@/components/reports/SetKpiSummary';
 
 const BatchResultMessageModal = dynamic(() => import('@/components/reports/BatchResultMessageModal'));
 const PeriodMinutesModal = dynamic(() => import('@/components/reports/PeriodMinutesModal'));
@@ -35,6 +34,7 @@ export default function ReportsDataLayer({
 }: ReportsDataLayerProps) {
   const { user, viewerScope, scopeEpoch } = useAuth();
   const effectiveViewer = user ?? viewer;
+  const [selectedSet, setSelectedSet] = useState<'all' | 'leader' | 'staff' | 'worker'>('all');
   const [reportData, setReportData] = useState<ReportAggregationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
@@ -62,7 +62,7 @@ export default function ReportsDataLayer({
       setErrorMessage(null);
 
       try {
-        const result = await getReportAggregation(periodId, selectedTeam);
+        const result = await getReportAggregation(periodId, selectedTeam, selectedSet);
         if (
           activeReqRef.current === currentReq &&
           viewerScope?.scopeKey === currentScopeKey &&
@@ -99,7 +99,7 @@ export default function ReportsDataLayer({
         }
       }
     });
-  }, [periodId, selectedTeam, effectiveViewer, viewerScope, scopeEpoch]);
+  }, [periodId, selectedTeam, selectedSet, effectiveViewer, viewerScope, scopeEpoch]);
 
   useEffect(() => {
     const reqRef = activeReqRef;
@@ -150,31 +150,7 @@ export default function ReportsDataLayer({
                 </div>
               </div>
             ) : reportData?.stats ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.totalEmployees}</span>
-                  <span className="text-xs text-ink-muted font-medium">nhân sự</span>
-                </div>
-                <span className="text-outline-soft hidden sm:inline">•</span>
-                <div className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4 text-brand shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.avgScore === null ? '—' : reportData.stats.avgScore.toFixed(1)}</span>
-                  <span className="text-xs text-ink-muted font-medium">điểm TB</span>
-                </div>
-                <span className="text-outline-soft hidden sm:inline">•</span>
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.highGradeRate === null ? '—' : `${reportData.stats.highGradeRate.toFixed(1)}%`}</span>
-                  <span className="text-xs text-ink-muted font-medium">≥ AB</span>
-                </div>
-                <span className="text-outline-soft hidden sm:inline">•</span>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.pendingCount}</span>
-                  <span className="text-xs text-ink-muted font-medium">chưa đánh giá</span>
-                </div>
-              </>
+              <ReportsKpiPills reportData={reportData} />
             ) : isError ? (
               <div className="flex items-center gap-1.5 text-xs text-rose-600 font-medium">
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -201,6 +177,33 @@ export default function ReportsDataLayer({
 
       {/* 2. ReportFilters (Light Data Layer) */}
       <ReportFilters teams={teams} periodYear={periodYear} />
+
+      {/* Set Filter Selector */}
+      <div className="flex flex-wrap items-center gap-2 mb-4" data-testid="set-filter-selector">
+        <span className="text-xs font-medium text-ink-muted">Bộ tiêu chí:</span>
+        {(
+          [
+            { key: 'all', label: 'Tất cả' },
+            { key: 'leader', label: 'Quản lý' },
+            { key: 'staff', label: 'Nhân viên' },
+            { key: 'worker', label: 'Công nhân' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            data-testid={`set-filter-tab-${tab.key}`}
+            onClick={() => setSelectedSet(tab.key)}
+            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              selectedSet === tab.key
+                ? 'bg-brand text-white shadow-xs'
+                : 'bg-surface-raised border border-outline-soft/80 text-ink-muted hover:text-ink'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* 3. HEAVY DATA SECTIONS */}
       {isLoading ? (
@@ -308,25 +311,74 @@ export default function ReportsDataLayer({
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Grade Distribution */}
-          <div data-load-layer="heavy">
-            <ClientGradeDistribution data={reportData.gradeDistribution} />
-          </div>
-
-          {/* Grid: TeamComparison & CriteriaHeatmap */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ClientTeamComparison teams={reportData.teamStats} />
-            <ClientCriteriaHeatmap data={reportData.criteriaAnalysis} />
-          </div>
-
-          {/* Grid: TopPerformers & AiSummaryCard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TopPerformers employees={reportData.topPerformers} />
-            <AiSummaryCard periodId={periodId || ''} />
-          </div>
-        </div>
+        <LoadedReportsContent reportData={reportData} periodId={periodId || ''} />
       )}
     </>
+  );
+}
+
+export function ReportsKpiPills({ reportData }: { reportData: ReportAggregationData }) {
+  return (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.totalEmployees}</span>
+                  <span className="text-xs text-ink-muted font-medium">nhân sự</span>
+                </div>
+                <span className="text-outline-soft hidden sm:inline">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-brand shrink-0" />
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">
+                    {reportData.stats.avgScore !== null ? reportData.stats.avgScore.toFixed(1) : '—'}
+                  </span>
+                  <span className="text-xs text-ink-muted font-medium">
+                    {reportData.setKpis?.length === 1 ? `điểm TB (${reportData.setKpis[0].label})` : 'điểm TB'}
+                  </span>
+                </div>
+                <span className="text-outline-soft hidden sm:inline">•</span>
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">
+                    {reportData.stats.highGradeRate !== null ? `${reportData.stats.highGradeRate.toFixed(1)}%` : '—'}
+                  </span>
+                  <span className="text-xs text-ink-muted font-medium">≥ AB</span>
+                </div>
+                <span className="text-outline-soft hidden sm:inline">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-orange-600 shrink-0" />
+                  <span className="font-bold text-base sm:text-lg text-ink leading-none">{reportData.stats.pendingCount}</span>
+                  <span className="text-xs text-ink-muted font-medium">chưa đánh giá</span>
+                </div>
+              </>
+  );
+}
+
+export interface LoadedReportsContentProps {
+  reportData: ReportAggregationData;
+  periodId: string;
+}
+
+export function LoadedReportsContent({ reportData, periodId }: LoadedReportsContentProps) {
+  return (
+    <div className="space-y-6" data-testid="loaded-reports-content">
+      {/* Grade Distribution */}
+      <div data-load-layer="heavy">
+        <ClientGradeDistribution data={reportData.gradeDistribution} />
+      </div>
+
+      {/* D2 Per-set KPI blocks: raw average, Top 5, team averages, sample count */}
+      <div data-load-layer="heavy">
+        <SetKpiSummary
+          buckets={reportData.setKpis}
+          excludedInfo={reportData.excludedKpis}
+        />
+      </div>
+
+      {/* Grid: CriteriaHeatmap & AiSummaryCard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ClientCriteriaHeatmap data={reportData.criteriaAnalysis} />
+        <AiSummaryCard periodId={periodId || ''} />
+      </div>
+    </div>
   );
 }

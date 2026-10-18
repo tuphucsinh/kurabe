@@ -679,10 +679,18 @@ export async function generatePeriodMinutesAction(input: {
       .map((a) => `- Đánh giá trạng thái ${a.status}, xếp loại ${a.grade || 'chưa có'}`)
       .join('\n');
 
-    const summaryContent = periodSummaryRes.summary || 'Chưa có tóm tắt tổng hợp trước đó.';
+    let summaryContent = periodSummaryRes.summary || 'Chưa có tóm tắt tổng hợp trước đó.';
     if (detectPromptInjection(summaryContent)) {
       return { error: 'Tóm tắt kỳ chứa nội dung không hợp lệ.' };
     }
+    // Old cached summaries may contain pre-D2 cross-set arithmetic. Preserve the
+    // stored text as history but never feed stale/unknown text into current minutes.
+    if (periodSummaryRes.freshness !== 'current') {
+      summaryContent = 'Không sử dụng tóm tắt cũ/chưa xác minh làm chỉ số hiện hành.';
+    }
+    const officialKpis = (d.result?.setKpis || []).map((bucket) =>
+      `${bucket.label}: ${bucket.sampleCount} mẫu Approved, điểm TB ${bucket.average}; tỷ lệ ≥AB ${bucket.highGradeRate ?? 'chưa đủ cơ sở'}%`
+    ).join('; ') || 'Chưa có mẫu đủ cơ sở';
 
     const prompt = `Bạn là thư ký/trợ lý nhân sự chuyên nghiệp của công ty. Hãy soạn BIÊN BẢN KẾT THÚC KỲ ĐÁNH GIÁ NĂNG LỰC QAQC (${periodName}).
 Văn phong: Tiếng Việt, chính thức, trang trọng, cô đọng, khách quan (~250-350 từ).
@@ -690,6 +698,8 @@ Văn phong: Tiếng Việt, chính thức, trang trọng, cô đọng, khách qu
 DỮ LIỆU ĐÁNH GIÁ (Đã ẩn danh hóa):
 - Kỳ đánh giá: ${periodName} (Trạng thái: ${periodData?.status || 'Active'})
 - Thống kê tiến độ: ${statsText}
+- KPI chính thức theo bộ/phiên bản: ${officialKpis}
+- Không tính điểm TB, Top chung hoặc tỷ lệ ≥AB chung từ các bộ/phiên bản khác nhau; chỉ dùng KPI đã xác minh ở trên. Số đếm xếp loại bên dưới không phải tỷ lệ KPI.
 - Phân bổ xếp loại: ${gradeText || 'Chưa có dữ liệu'}
 - Tiến độ theo nhóm: ${teamText || 'Chưa có dữ liệu'}
 - Hoạt động gần đây:

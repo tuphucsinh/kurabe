@@ -1,5 +1,6 @@
 import type {
   CriteriaGroup,
+  CriteriaSetKey,
   EvalStatus,
   Evaluation,
   Grade,
@@ -117,6 +118,53 @@ export interface CriteriaBreakdownEntry {
   label: string;
 }
 
+export interface SetKpiTeamEntry {
+  teamId: string;
+  name: string;
+  average: number;
+  sampleCount: number;
+}
+
+export interface SetKpiBucket {
+  key: string;
+  setKey: CriteriaSetKey;
+  criteriaVersionId: string;
+  gradeVersionId?: string | null;
+  label: string;
+  sampleCount: number;
+  average: number;
+  highGradeRate?: number;
+  top: ResultEntry[];
+  teams: SetKpiTeamEntry[];
+}
+
+export interface ExcludedKpiDetails {
+  unavailableBasisCount: number;
+  missingBasisCount: number;
+  otherPeriodCount: number;
+  invalidCount: number;
+  total: number;
+  bySet?: Record<CriteriaSetKey | 'unknown', number>;
+  bySetReasons?: Record<CriteriaSetKey | 'unknown', {
+    unavailableBasisCount: number; missingBasisCount: number;
+    otherPeriodCount: number; invalidCount: number;
+  }>;
+}
+
+export const ROLE_TO_D2_SET_KEY: Record<string, CriteriaSetKey> = {
+  Manager: 'leader',
+  Leader: 'leader',
+  SubLeader: 'leader',
+  Employee: 'staff',
+  Worker: 'worker',
+};
+
+export const D2_SET_ORDER: Record<CriteriaSetKey, number> = {
+  leader: 0,
+  staff: 1,
+  worker: 2,
+};
+
 export function formatCriteriaSetLabel(setKey?: string | null, configVersion?: number | null): string {
   const normalized = typeof setKey === 'string' ? setKey.toLowerCase() : null;
   let setName: string | null = null;
@@ -151,6 +199,10 @@ export interface EvaluationResultProjection {
     invalid: ResultEntry[];
     mixedBasis: boolean;
     sampleCount: number;
+    /** D2 per-set / per-basis KPI buckets (Approved valid persisted finals only). */
+    setKpis: SetKpiBucket[];
+    /** Count of evaluations excluded from authoritative D2 KPI buckets. */
+    excludedKpiCount: number;
   };
   progress: ProjectionProgressEntry[];
   coverage: ProjectionCoverage;
@@ -164,6 +216,10 @@ export interface EvaluationResultProjection {
   configBreakdown: ConfigBreakdownEntry[];
   teamBreakdown: TeamBreakdownEntry[];
   criteriaBreakdown: CriteriaBreakdownEntry[];
+  /** D2 convenience alias for per-set / per-basis KPI buckets. */
+  setKpis: SetKpiBucket[];
+  /** Detailed counts for excluded evaluations in D2 metrics. */
+  excludedKpis?: ExcludedKpiDetails;
 }
 
 export interface ProjectionInput {
@@ -472,6 +528,166 @@ export function projectEvaluationResults(input: ProjectionInput): EvaluationResu
   const invalidCount = approvedCount - valid.length;
   const legacyCount = valid.filter((entry) => entry.basis === 'legacy_unknown').length;
 
+  // --- D2 Metric Computation: bucket by SET + PINNED CRITERIA VERSION ---
+  const evalById = new Map<string, Evaluation>();
+  for (const evaluation of input.evaluations) {
+    evalById.set(evaluation.id, evaluation);
+  }
+
+  let unavailableBasisCount = 0;
+  let missingBasisCount = 0;
+  let otherPeriodCount = 0;
+  let d2InvalidCount = 0;
+  const bySet: Record<CriteriaSetKey | 'unknown', number> = {
+    leader: 0,
+    staff: 0,
+    worker: 0,
+    unknown: 0,
+  };
+
+  const bySetReasons = Object.fromEntries(Object.keys(bySet).map((key) => [key, {
+    unavailableBasisCount: 0, missingBasisCount: 0, otherPeriodCount: 0, invalidCount: 0,
+  }])) as NonNullable<ExcludedKpiDetails['bySetReasons']>;
+  function exclude(set: CriteriaSetKey | 'unknown', reason: keyof (typeof bySetReasons)['unknown']) {
+    bySet[set] += 1;
+    bySetReasons[set][reason] += 1;
+  }
+
+  interface MutableSetBucket {
+    key: string;
+    setKey: CriteriaSetKey;
+    criteriaVersionId: string;
+    gradeVersionId: string | null;
+    entries: ResultEntry[];
+  }
+  const setBucketMap = new Map<string, MutableSetBucket>();
+
+  for (const entry of approvedEntries) {
+    const rawEval = evalById.get(entry.evaluationId);
+    // Period mismatch: drop from D2 metrics
+    if (!rawEval || !input.periodId || rawEval.periodId !== input.periodId) {
+      otherPeriodCount += 1;
+      const setKey: CriteriaSetKey | 'unknown' = (entry.employeeRole && ROLE_TO_D2_SET_KEY[entry.employeeRole]) || 'unknown';
+      exclude(setKey, 'otherPeriodCount');
+      continue;
+    }
+
+    if (!entry.valid) {
+      d2InvalidCount += 1;
+      const setKey: CriteriaSetKey | 'unknown' = (entry.employeeRole && ROLE_TO_D2_SET_KEY[entry.employeeRole]) || 'unknown';
+      exclude(setKey, 'invalidCount');
+      continue;
+    }
+
+    if (entry.basis === 'unavailable') {
+      unavailableBasisCount += 1;
+      const setKey: CriteriaSetKey | 'unknown' = (entry.employeeRole && ROLE_TO_D2_SET_KEY[entry.employeeRole]) || 'unknown';
+      exclude(setKey, 'unavailableBasisCount');
+      continue;
+    }
+
+    if (entry.basis === 'legacy_unknown' || !entry.criteriaConfigVersionId) {
+      missingBasisCount += 1;
+      const setKey: CriteriaSetKey | 'unknown' = (entry.employeeRole && ROLE_TO_D2_SET_KEY[entry.employeeRole]) || 'unknown';
+      exclude(setKey, 'missingBasisCount');
+      continue;
+    }
+
+    // Role mapping strictly from evaluation.employeeRole snapshot (no users.role fallback)
+    const setKey = ROLE_TO_D2_SET_KEY[entry.employeeRole];
+    if (!setKey) {
+      missingBasisCount += 1;
+      exclude('unknown', 'missingBasisCount');
+      continue;
+    }
+
+    const versionId = entry.criteriaConfigVersionId;
+    // Server callers supply loaded immutable snapshots. A declared ID alone does
+    // not make an absent/mismatched loaded catalog comparable.
+    const pinnedGroups = input.criteriaGroupsByVersion?.get(versionId);
+    if (!pinnedGroups?.length || !pinnedGroups.some((g) => !g.setKey || g.setKey === setKey)) {
+      unavailableBasisCount += 1;
+      exclude(setKey, 'unavailableBasisCount');
+      continue;
+    }
+    const bucketKey = `${setKey}:${versionId}:${entry.gradeConfigVersionId ?? "grade-unknown"}`;
+    let bucket = setBucketMap.get(bucketKey);
+    if (!bucket) {
+      bucket = {
+        key: bucketKey,
+        setKey,
+        criteriaVersionId: versionId,
+        gradeVersionId: entry.gradeConfigVersionId,
+        entries: [],
+      };
+      setBucketMap.set(bucketKey, bucket);
+    }
+    bucket.entries.push(entry);
+  }
+
+  const setKpis: SetKpiBucket[] = [...setBucketMap.values()]
+    .map((bucket) => {
+      const groups = input.criteriaGroupsByVersion?.get(bucket.criteriaVersionId);
+      const groupConfigVer = groups?.[0]?.configVersion ?? null;
+      let configVer = groupConfigVer;
+      if (configVer === null) {
+        const match = bucket.criteriaVersionId.match(/v(\d+)/i);
+        if (match) configVer = parseInt(match[1], 10);
+      }
+      let label = formatCriteriaSetLabel(bucket.setKey, configVer);
+      if (configVer === null && bucket.criteriaVersionId && !bucket.criteriaVersionId.startsWith('cfg-')) {
+        label = `${formatCriteriaSetLabel(bucket.setKey, null)} (${bucket.criteriaVersionId})`;
+      }
+
+      if (bucket.gradeVersionId) label += ` / grade ${bucket.gradeVersionId}`;
+
+      const bucketTop = [...bucket.entries]
+        .sort((a, b) => {
+          if ((b.score ?? 0) !== (a.score ?? 0)) return (b.score ?? 0) - (a.score ?? 0);
+          return a.evaluationId.localeCompare(b.evaluationId);
+        })
+        .slice(0, TOP_LIMIT);
+
+      const bucketTeamMap = new Map<string, ResultEntry[]>();
+      for (const entry of bucket.entries) {
+        if (!entry.teamId) continue;
+        const list = bucketTeamMap.get(entry.teamId) ?? [];
+        list.push(entry);
+        bucketTeamMap.set(entry.teamId, list);
+      }
+      const teams: SetKpiTeamEntry[] = [...bucketTeamMap.entries()]
+        .map(([teamId, entries]) => ({
+          teamId,
+          name: input.teamNames?.get(teamId) ?? teamId,
+          average: averageOf(entries),
+          sampleCount: entries.length,
+        }))
+        .sort((a, b) => a.teamId.localeCompare(b.teamId));
+
+      return {
+        key: bucket.key,
+        setKey: bucket.setKey,
+        criteriaVersionId: bucket.criteriaVersionId,
+        gradeVersionId: bucket.gradeVersionId,
+        label,
+        sampleCount: bucket.entries.length,
+        average: averageOf(bucket.entries),
+        highGradeRate: highGradeRateOf(bucket.entries),
+        top: bucketTop,
+        teams,
+      };
+    })
+    .sort((a, b) => {
+      const orderA = D2_SET_ORDER[a.setKey] ?? 99;
+      const orderB = D2_SET_ORDER[b.setKey] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      const verComp = a.criteriaVersionId.localeCompare(b.criteriaVersionId);
+      if (verComp !== 0) return verComp;
+      return (a.gradeVersionId ?? '').localeCompare(b.gradeVersionId ?? '');
+    });
+
+  const totalExcluded = unavailableBasisCount + missingBasisCount + otherPeriodCount + d2InvalidCount;
+
   return {
     periodId: input.periodId,
     roster: { total: roster.length, byRole },
@@ -489,6 +705,8 @@ export function projectEvaluationResults(input: ProjectionInput): EvaluationResu
         .sort((a, b) => a.evaluationId.localeCompare(b.evaluationId)),
       mixedBasis,
       sampleCount: valid.length,
+      setKpis,
+      excludedKpiCount: totalExcluded,
     },
     progress,
     coverage: {
@@ -509,8 +727,113 @@ export function projectEvaluationResults(input: ProjectionInput): EvaluationResu
     configBreakdown,
     teamBreakdown,
     criteriaBreakdown: buildCriteriaBreakdown(criteriaAccumulator),
+    setKpis,
+    excludedKpis: {
+      unavailableBasisCount,
+      missingBasisCount,
+      otherPeriodCount,
+      invalidCount: d2InvalidCount,
+      total: totalExcluded,
+      bySet,
+      bySetReasons,
+    },
   };
 }
+
+export type SetFilterOption = 'all' | CriteriaSetKey;
+
+/**
+ * Shared compatibility-view helper for outbound boundaries (reports, dashboard, read.ts).
+ * Enforces D2 comparability rules:
+ * - A view is comparable ONLY with exactly ONE selected set/basis bucket and NO ineligible rows in scope.
+ * - Multiple sets/versions => mixedBasis=true, average/highGradeRate=null, legacy top/team arrays=[].
+ * - When a specific set filter is active ('leader'|'staff'|'worker'), both buckets and exclusions are scoped to that set.
+ * - Empty / no eligible sample => null / [].
+ */
+export function sanitizeEvaluationResultProjectionForView(
+  projection: EvaluationResultProjection,
+  selectedSet: SetFilterOption = 'all'
+): EvaluationResultProjection {
+  if (!['all', 'leader', 'staff', 'worker'].includes(selectedSet)) {
+    throw new Error('INVALID_KPI_SET_FILTER');
+  }
+  const normalizedSelectedSet = selectedSet;
+
+  const scopedBuckets =
+    normalizedSelectedSet === 'all'
+      ? projection.result.setKpis
+      : projection.result.setKpis.filter((b) => b.setKey === normalizedSelectedSet);
+
+  const scopedExclusionCount =
+    normalizedSelectedSet === 'all'
+      ? projection.excludedKpis?.total ?? projection.result.excludedKpiCount ?? 0
+      : (projection.excludedKpis?.bySet?.[normalizedSelectedSet] ?? 0) +
+        (projection.excludedKpis?.bySet?.unknown ?? 0);
+
+  const isComparable = scopedBuckets.length === 1 && scopedExclusionCount === 0;
+
+  const average = isComparable ? scopedBuckets[0].average : null;
+  const highGradeRate = isComparable ? (scopedBuckets[0].highGradeRate ?? null) : null;
+  const top = isComparable ? scopedBuckets[0].top : [];
+  const teamBreakdown = isComparable
+    ? scopedBuckets[0].teams.map((t) => ({
+        teamId: t.teamId,
+        name: t.name,
+        approved: t.sampleCount,
+        average: t.average,
+        sampleCount: t.sampleCount,
+      }))
+    : [];
+  const mixedBasis = scopedBuckets.length > 1 || scopedExclusionCount > 0;
+  const sampleCount = scopedBuckets.reduce((sum, b) => sum + b.sampleCount, 0);
+  const inScope = (role: Role | null) => normalizedSelectedSet === 'all' ||
+    (role !== null && ROLE_TO_D2_SET_KEY[role] === normalizedSelectedSet);
+  const reasons = projection.excludedKpis?.bySetReasons;
+  const scopedReasons = normalizedSelectedSet === 'all' || !reasons
+    ? projection.excludedKpis
+    : Object.fromEntries(['unavailableBasisCount', 'missingBasisCount', 'otherPeriodCount', 'invalidCount']
+      .map((reason) => [reason, reasons[normalizedSelectedSet][reason as keyof typeof reasons.unknown] +
+        reasons.unknown[reason as keyof typeof reasons.unknown]]));
+
+  const scopedBySet = projection.excludedKpis?.bySet && Object.fromEntries(
+    Object.entries(projection.excludedKpis.bySet).map(([set, count]) => [set,
+      normalizedSelectedSet === 'all' || set === normalizedSelectedSet || set === 'unknown' ? count : 0])
+  ) as ExcludedKpiDetails['bySet'];
+  const scopedBySetReasons = reasons && Object.fromEntries(Object.entries(reasons).map(([set, counts]) => [set,
+    normalizedSelectedSet === 'all' || set === normalizedSelectedSet || set === 'unknown' ? counts : {
+      unavailableBasisCount: 0, missingBasisCount: 0, otherPeriodCount: 0, invalidCount: 0,
+    }])) as ExcludedKpiDetails['bySetReasons'];
+
+  return {
+    ...projection,
+    result: {
+      ...projection.result,
+      average,
+      highGradeRate,
+      top,
+      mixedBasis,
+      sampleCount,
+      setKpis: scopedBuckets,
+      excludedKpiCount: scopedExclusionCount,
+    },
+    teamBreakdown,
+    // Legacy breakdown averages must not bypass the same outbound eligibility gate.
+    roleBreakdown: isComparable ? projection.roleBreakdown.filter((row) => inScope(row.role)) : [],
+    configBreakdown: isComparable ? projection.configBreakdown.filter((row) => inScope(row.role)) : [],
+    snapshot: { ...projection.snapshot, mixed: mixedBasis },
+    setKpis: scopedBuckets,
+    excludedKpis: projection.excludedKpis
+      ? {
+          ...projection.excludedKpis,
+          ...scopedReasons,
+          bySet: scopedBySet,
+          bySetReasons: scopedBySetReasons,
+          total: scopedExclusionCount,
+        }
+      : undefined,
+  };
+}
+
 
 /**
  * Server loader. Reuses the batched evaluations reader and the versioned

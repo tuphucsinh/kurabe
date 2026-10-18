@@ -147,12 +147,16 @@ function normalizeWhitespace(code) {
   // 3.5 Heavy components included
   assert.ok(
     normLayer.includes('GradeDistribution') &&
-      normLayer.includes('TeamComparison') &&
+      normLayer.includes('<SetKpiSummary') &&
+      normLayer.includes('buckets={reportData.setKpis}') &&
       normLayer.includes('CriteriaHeatmap') &&
-      normLayer.includes('TopPerformers') &&
       normLayer.includes('AiSummaryCard'),
-    'ReportsDataLayer must wire GradeDistribution, TeamComparison, CriteriaHeatmap, TopPerformers, and AiSummaryCard'
+    'ReportsDataLayer must wire grade/criteria/AI and D2 per-set KPI summary, never global Top5/team comparison'
   );
+
+  const perSetCode = normalizeWhitespace(stripComments(readProjectFile('src/components/reports/SetKpiSummary.tsx')));
+  assert.ok(perSetCode.includes('allBuckets.map('), 'D2 metrics render per comparable bucket');
+  assert.ok(perSetCode.includes('b.average.toFixed(1)') && perSetCode.includes('normalizeTop(b)') && perSetCode.includes('normalizeTeams(b)'), 'D2 bucket must render raw average, Top5 and team average');
 
   // 3.6 Actions and modals preserved
   assert.ok(

@@ -179,25 +179,13 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       });
     }
 
-    // Top 5 tăng nhiều nhất (delta > 0)
-    const increases = empList
-      .filter((e): e is EmpDelta & { delta: number } => e.delta !== null && e.delta > 0)
-      .sort((a, b) => b.delta - a.delta)
-      .slice(0, 5);
-
-    // Top 5 giảm nhiều nhất (delta < 0)
-    const decreases = empList
-      .filter((e): e is EmpDelta & { delta: number } => e.delta !== null && e.delta < 0)
-      .sort((a, b) => a.delta - b.delta)
-      .slice(0, 5);
-
-    const incText = increases.length
-      ? increases.map((x) => `${x.pseudonym} (+${x.delta})`).join(', ')
-      : 'không có';
-
-    const decText = decreases.length
-      ? decreases.map((x) => `${x.pseudonym} (${x.delta})`).join(', ')
-      : 'không có';
+    // Ghi nhận biến động điểm giữa các vòng của từng nhân sự (tham chiếu độc lập, không xếp hạng chéo vai trò)
+    const deltas = empList
+      .filter((e): e is EmpDelta & { delta: number } => e.delta !== null && e.delta !== 0)
+      .slice(0, 6)
+      .map((x) => `${x.pseudonym} [${x.role}]: ${x.delta > 0 ? `+${x.delta}` : x.delta}`)
+      .join(', ');
+    const deltaText = deltas.length ? deltas : 'không có';
 
     // Nhóm tổng hợp (membersCount & approved count)
     const teamGroups = new Map<string, { total: number; approved: number }>();
@@ -239,7 +227,7 @@ async function buildManagerSemanticContext(periodId: string, periodName: string,
       .map((e) => `${e.pseudonym}(${e.roundsStr}${e.grade ? ` ${e.grade}` : ''})`)
       .join(', ');
 
-    let summary = `Dữ liệu chi tiết cho câu hỏi so sánh/tìm kiếm (Kỳ ${periodName}): ${empList.length} NV (${roleStr}). TĂNG: ${incText}. GIẢM: ${decText}. Nhóm: ${teamStr}. Xếp loại: ${gradeStr || 'chưa có'}. Điểm NV: ${empScoreList}.`;
+    let summary = `Dữ liệu chi tiết cho câu hỏi so sánh/tìm kiếm (Kỳ ${periodName}): ${empList.length} NV (${roleStr}). Biến động vòng (tham chiếu từng cá nhân, không xếp hạng chéo vai trò): ${deltaText}. Nhóm: ${teamStr}. Xếp loại: ${gradeStr || 'chưa có'}. Điểm NV: ${empScoreList}.`;
 
     if (summary.length > 1200) {
       summary = summary.slice(0, 1200) + '...';
@@ -282,6 +270,10 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
         const d = await getDashboardData(period.id);
         if (d) {
           let base = `\nNgữ cảnh Bảng điều khiển (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}% (${t.membersCount} thành viên)`).join('; ')}. Phân bổ xếp loại: ${(d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ')}.`;
+          const officialKpis = (d.result?.setKpis || []).map((bucket) =>
+            `${bucket.label}: ${bucket.sampleCount} mẫu Approved, điểm TB ${bucket.average}`
+          ).join('; ') || 'chưa có mẫu đủ cơ sở';
+          base += ` KPI chính thức theo bộ/phiên bản: ${officialKpis}. Không tính điểm TB, Top hoặc tỷ lệ ≥AB chung từ điểm tham chiếu cá nhân hay từ nhiều bộ/phiên bản.`;
           const detail = await buildManagerSemanticContext(period.id, period.name, user);
           if (detail) base += detail;
           return base;
@@ -297,6 +289,10 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
           const dist = (d.gradeDistribution || []).map((g) => `${g.grade} ${g.count}`).join(', ');
           const recent = (d.recentActivities || []).slice(0, 3).map((a) => `${a.employeeName} ${a.status || ''}`).join('; ');
           let base = `\nNgữ cảnh trang Báo cáo (Dữ liệu thật DB, kỳ ${period.name}): tổng ${d.stats.total} nhân sự; đã đánh giá ${d.stats.completed} (${d.stats.percent}%); đang thực hiện ${d.stats.inProgress}; chưa bắt đầu ${d.stats.notStarted}. Theo nhóm: ${(d.teamStatus || []).map((t) => `${t.name} ${t.progress}%`).join('; ')}. Phân bổ xếp loại: ${dist || 'chưa có'}. Hoạt động gần đây: ${recent || 'chưa có'}.`;
+          const officialKpis = (d.result?.setKpis || []).map((bucket) =>
+            `${bucket.label}: ${bucket.sampleCount} mẫu Approved, điểm TB ${bucket.average}`
+          ).join('; ') || 'chưa có mẫu đủ cơ sở';
+          base += ` KPI chính thức theo bộ/phiên bản: ${officialKpis}. Không tính điểm TB, Top hoặc tỷ lệ ≥AB chung từ điểm tham chiếu cá nhân hay từ nhiều bộ/phiên bản.`;
           const detail = await buildManagerSemanticContext(period.id, period.name, user);
           if (detail) base += detail;
           return base;

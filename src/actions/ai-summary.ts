@@ -10,6 +10,7 @@ import { toClientError } from '@/lib/errors';
 import { consumeAiQuota, refundAiQuota, reserveAiQuota } from '@/lib/ai-limit';
 import { boundAITextWithMeta, MAX_AI_PROMPT_CHARS, buildAIPayload, type AIPayloadCoverage } from '@/lib/ai-governance';
 import { assertEvaluationPeriodActive } from '@/lib/db/evaluation-period-write-guard';
+import { getEvaluationResultProjection } from '@/lib/evaluation-result-projection';
 import { createHash } from 'node:crypto';
 
 type SummaryFreshness = 'current' | 'stale' | 'unknown';
@@ -37,6 +38,7 @@ function isSubmittedRound(round: { status?: string | null; submittedAt?: string 
 function getSourceRevision(evaluations: SummarySourceEvaluation[]): string {
   const evaluated = evaluations.filter((evaluation) => (evaluation.rounds || []).some(isSubmittedRound));
   return createHash('sha256')
+    .update('D2_APPROVED_SET_KPI_V1\n')
     .update(
       JSON.stringify(
         evaluated.map((evaluation) => ({
@@ -181,15 +183,35 @@ export async function generatePeriodSummary(
     if (!aiQuota.allowed || !aiQuota.requestId) return { error: aiQuota.error };
     quotaRequestId = aiQuota.requestId;
 
+    // D2 Authoritative metrics calculation for AI summary context (Approved-only, per-set)
+    // Reuse the server loader: a claimed version ID without its pinned catalog
+    // is not an eligible basis for an official AI metric.
+    const projection = await getEvaluationResultProjection(periodId, auth.user, { evaluations });
+
+    let perSetKpiText = '';
+    if (projection && projection.result.setKpis.length > 0) {
+      const kpiLines = projection.result.setKpis.map((bucket) => {
+        const topStr = bucket.top
+          .slice(0, 3)
+          .map((t) => {
+            const u = userMap.get(t.employeeId);
+            const code = u?.employeeCode || t.employeeId.slice(0, 8);
+            return `${code} (${t.score}đ)`;
+          })
+          .join(', ');
+        return `- Bộ ${bucket.label}: Điểm TB = ${bucket.average.toFixed(1)} (${bucket.sampleCount} NV). Điểm cao: ${topStr || 'không có'}`;
+      });
+      perSetKpiText = `CHỈ SỐ CHÍNH THỨC THEO BỘ TIÊU CHUẨN (Approved):\n${kpiLines.join('\n')}\nLưu ý: Không cộng gộp điểm trung bình hay xếp hạng chung giữa các bộ tiêu chuẩn khác nhau.\n\n`;
+    } else {
+      perSetKpiText = `CHỈ SỐ CHÍNH THỨC: Chưa có chỉ số chính thức hợp lệ theo bộ tiêu chuẩn.\n\n`;
+    }
+
     // Ẩn danh hóa: mã NV thay tên; gom dữ liệu gọn
     let commentTotalChars = 0;
     let commentIncludedChars = 0;
     let commentTruncated = false;
     const rows = evaluated.map((e) => {
       const u = userMap.get(e.employeeId);
-      const lastRound = [...e.rounds]
-        .sort((a, b) => b.round - a.round)
-        .find(isSubmittedRound);
       const notes = (e.rounds || [])
         .filter((r) => isSubmittedRound(r) && (r.comment || '').trim())
         .map((r) => {
@@ -200,20 +222,21 @@ export async function generatePeriodSummary(
           return `vòng ${r.round}: ${boundedComment.text}`;
         })
         .join(' | ');
+
       return {
         code: u?.employeeCode || e.employeeId.slice(0, 8),
         role: e.employeeRole,
-        score: lastRound?.totalScore ?? 0,
-        grade: lastRound?.grade ?? '—',
+        // Individual notes/status are qualitative context, not another path
+        // for the model to recompute an unverified cross-set score or grade rate.
         status: e.status,
         notes: notes || undefined,
       };
     });
 
-    const instructions = `Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:\n1. Tổng quan: số nhân sự đã đánh giá, phân bổ xếp loại (S/A/AB/B/C/D), điểm trung bình.\n2. Điểm nổi bật: nhân sự có điểm cao nhất (mã NV), điểm yếu cần lưu ý (mã NV, xếp loại thấp).\n3. Xu hướng nhận xét chung từ các ghi chú (nếu có).\n4. Gợi ý hành động cho quản lý (1-2 ý).`;
+    const instructions = `Hãy viết TÓM TẮT KỲ ĐÁNH GIÁ bằng tiếng Việt, dạng markdown ngắn gọn (tối đa 250 từ) gồm:\n1. Tổng quan: số nhân sự đã đánh giá, phân bổ xếp loại (S/A/AB/B/C/D), chỉ dùng các chỉ số chính thức theo bộ/phiên bản được cung cấp; không tự tính điểm trung bình, phân bổ hoặc tỷ lệ xếp loại từ dữ liệu ghi chú hay danh sách Top. Không gộp điểm hoặc xếp hạng giữa các bộ/phiên bản khác nhau. Chỉ số không được cung cấp phải ghi chưa đủ cơ sở, không tự suy ra từ ghi chú hay Top.\n2. Điểm nổi bật theo từng bộ tiêu chuẩn: nhân sự có kết quả tốt theo bộ tiêu chuẩn (mã NV), điểm yếu cần lưu ý (mã NV, xếp loại thấp).\n3. Xu hướng nhận xét chung từ các ghi chú (nếu có).\n4. Gợi ý hành động cho quản lý (1-2 ý).`;
 
-    const dataHeader = `Dữ liệu đánh giá QAQC kỳ (đã ẩn danh hóa — mã NV thay tên):`;
-    const promptPrefix = `${instructions}\n\n${dataHeader}\n`;
+    const dataHeader = `Dữ liệu ghi chú và đánh giá định tính (đã ẩn danh hóa — mã NV thay tên):`;
+    const promptPrefix = `${instructions}\n\n${perSetKpiText}${dataHeader}\n`;
 
     // Use buildAIPayload for deterministic coverage-aware payload construction.
     // Returns coverage metadata so callers can disclose partial status honestly.

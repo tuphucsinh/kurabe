@@ -45,7 +45,9 @@ import { getEvaluationHistoryAdmin } from '@/lib/db/evaluation-history-admin';
 import { getEvaluationDisplayAdmin } from '@/lib/db/evaluation-display-admin';
 import {
   getEvaluationResultProjection,
+  sanitizeEvaluationResultProjectionForView,
   type EvaluationResultProjection,
+  type SetFilterOption,
 } from '@/lib/evaluation-result-projection';
 
 
@@ -122,11 +124,14 @@ export async function getEvaluationDisplayAction(
  * export and AI consumers. Returns null only for missing auth.
  */
 export async function getEvaluationResultProjectionAction(
-  periodId: string
+  periodId: string,
+  selectedSet: SetFilterOption = 'all'
 ): Promise<EvaluationResultProjection | null> {
   const auth = await requireAuth();
   if (auth.error !== null || !auth.user) return null;
-  return getEvaluationResultProjection(periodId, auth.user);
+  const raw = await getEvaluationResultProjection(periodId, auth.user);
+  if (!raw) return null;
+  return sanitizeEvaluationResultProjectionForView(raw, selectedSet);
 }
 
 export async function getPeriodsAction(): Promise<EvaluationPeriod[]> {
