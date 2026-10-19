@@ -1085,7 +1085,7 @@ DoD:
 - Signed manifest dry-run (when T02 is signed) equals 18/93 with recorded hashes.
 - T10 PASS is technical only (synthetic data). It is not business sign-off (G1) and does not validate cross-set KPIs (D2).
 
-### [ ] [#P108M1T11] Grade-version ACL + save RPC digest resolution; protected release/cutover
+### [x] [#P108M1T11] Grade-version ACL + save RPC digest resolution; protected release/cutover
 
 ```yaml
 task:
