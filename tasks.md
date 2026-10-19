@@ -1085,31 +1085,51 @@ DoD:
 - Signed manifest dry-run (when T02 is signed) equals 18/93 with recorded hashes.
 - T10 PASS is technical only (synthetic data). It is not business sign-off (G1) and does not validate cross-set KPIs (D2).
 
-### [ ] [#P108M1T11] Release + cutover (protected, owner-approved per step)
+### [ ] [#P108M1T11] Grade-version ACL closure + protected release/cutover
 
 ```yaml
 task:
   id: P108M1T11
   tier: CONTROLLED
-  depends: [P108M1T01, P108M1T02, P108M1T10, P108M2T01]
-  owns: []
+  depends: [P108M1T01, P108M1T02, P108M1T10]
+  owns:
+    - supabase/migrations/20261019000100_grade_band_versions_acl.sql  # NEW
+    - tests/integration/grade-config.mjs
   locks: [MACHINE_EXCLUSIVE]
 ```
 
-Goal: execute MASTER_PLAN P108.5 exactly.
-Steps, each with its own approval:
-0. read-only: the running production deployment SHA (Vercel) and its app source. If it differs from the T10 baseline app, rerun the T10 old-app compatibility on that exact SHA before step 3;
-1. backup + restore proof;
-2. confirm no active period;
-3. migration by name + fingerprint readback;
-4. push (a push to `main` auto-deploys Vercel production, so it is its own approval) + deployment SHA + `lykiv.vercel.app` alias + legacy-catalog smoke (rollback here: redeploy the previous app first, then (b));
-5. import of the signed manifest + per-set readback;
-6. role smoke.
-DoD:
-- Every step has a readback artifact.
-- Rollback stage recorded at each step.
-- `HANDOFF.md` and `.ai/DECISIONS_LOG.md` updated by Mika.
-STOP: live schema, constraint names, migration ledger, PostgreSQL version or active catalog still `UNKNOWN` (the T01 live section was not run, or failed); restore proof not exact; active period present; T02 unsigned (no unsigned workbook data is ever imported); D2 not decided and the marked cross-set KPI display not approved; D1 not executed or re-decided; any readback mismatch ⇒ stop at the current stage and use its rollback row.
+Goal: first close the proven `public.grade_band_versions` direct-write exposure locally and prepare a hash-bound P108.5 approval package; production cutover remains a separate, per-step owner-gated continuation of this existing task.
+
+Current context: the captured production readback reports RLS disabled and effective `anon`/`authenticated` DML/TRUNCATE, but does not preserve exact `PUBLIC` ACL rows or prove REST reachability. P108's nine-table ACL migration does not cover this table. `get_active_grade_config` and `save_grade_config` are SECURITY DEFINER RPCs; the evaluation display/admin path also reads a historical version ID directly. Evidence: `/home/pi5/hermes-artifacts/kurabe-p108/P108M2T01-purge/final-readiness/production-grade-band-acl-readback.json`; `supabase/migrations/20260907000500_grade_config_version.sql:51-58,211-334,369-377`; `src/lib/db/evaluation-display-admin.ts`; `src/actions/grade-bands.ts`; `src/lib/grade-bands.ts`.
+Interface: no application/API contract change; one table-scoped ACL migration and regression additions to the existing grade-config integration harness.
+
+Changes:
+Local/disposable ACL stage (owner-authorized; no production credentials or mutation):
+- Add one forward migration after `20261017093100_p108_criteria_sets.sql` that revokes only INSERT/UPDATE/DELETE/TRUNCATE on `public.grade_band_versions` from `PUBLIC`, `anon`, and `authenticated`; keep SELECT, RLS, service-role direct grants, RPC definitions/EXECUTE grants, grade-band data, and history unchanged. No other table. Do not add RLS unless effective direct DML still succeeds after the targeted revoke on the disposable database.
+- Extend the existing `tests/integration/grade-config.mjs`; use its real disposable PostgreSQL harness. Enumerate explicit ACL grantees with `aclexplode` (including `PUBLIC` OID 0) and effective privileges for `anon`/`authenticated`; add a disposable no-direct-grants probe role to test inherited `PUBLIC` privileges; apply migrations in order; prove direct INSERT/UPDATE/DELETE/TRUNCATE fail for the probe role, `anon`, and `authenticated`, SELECT works, and the SECURITY DEFINER `get_active_grade_config`/`save_grade_config` path still reads/saves. Verify the admin flow's direct historical version-ID read against the restored/local application stack where applicable. Preserve history/data through fixture rollback/isolated clone and assert byte/count fingerprints.
+- Reapply/order and cutover-position rehearsal use a fresh throwaway clone from `/home/pi5/hermes-artifacts/kurabe-p108/clean-start-20261018T150220Z/backup/{schema,data}.sql`, whose retained proof is `restore-proof.json` (PostgreSQL 17.6; exact schema/data hashes in the plan). Keep the source SQL mode 600 and byte-identical; run the clone with no network and no published ports; emit only counts/catalog/function results/hashes, never private rows. Apply P108 schema migration then this ACL migration; stop before D1 purge, manifest import, or period creation. Record pre/post ACL catalogs, role/RPC results, data/history fingerprints, exact-container teardown and zero residue. Production ACL/PUBLIC remains UNKNOWN/PENDING while safe read-only production access is unavailable.
+- Freeze the plan candidate locally in the isolated worktree, obtain a fresh read-only Claude Opus 4.6 plan review before canonical planning integration/registration, and persist the exact verdict at `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T11/plan-review/OPUS-PLAN-REVIEW.md`. After implementation, run focused ACL integration, related grade-config and directly affected P107/P108 compatibility checks, secret scan, diff/scope checks and relevant root gates; obtain fresh Opus 4.6 code review after candidate verification and persist `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T11/acl-review/OPUS-ACL-REVIEW.md`. Keep first failure evidence; bounded repairs stay in T11/ACL.
+- Create a new, hash-bound `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T11/cutover/CUTOVER-PLAN-v3.md` and `/home/pi5/hermes-artifacts/kurabe-p108/P108M1T11/cutover/CUTOVER-APPROVAL-PACKAGE.md`; preserve prior candidate, manifest, T02/D2, and existing approval artifacts unchanged.
+
+Constraints:
+- No production reads/writes, production schema/ACL changes, push/deploy, data deletion/import, new-period creation, WAF change, credential use or new task. Do not change another table, RLS, RPC definitions/grants, grade thresholds, T02/D2, signed manifest, or prior candidate. The M2T01/D1 disposition remains a hard production cutover precondition; local readiness never authorizes cutover.
+
+Protected production cutover stage (NOT AUTHORIZED by local acceptance; every step needs its own explicit owner approval):
+0. read-only: running production deployment SHA and app source; if different from T10 baseline, rerun compatibility on that exact SHA;
+1. backup + exact restore proof;
+2. confirm no active period and resolve D1/M2T01 disposition; verify live schema, constraints, ledger, PostgreSQL version, catalog and ACL including PUBLIC;
+3. apply the P108 schema migration and `20261019000100_grade_band_versions_acl.sql` by exact name/order with fingerprint/readback, only within the approved cutover transaction;
+4. push/deploy (a push to `main` auto-deploys production; separate approval), then verify deployment SHA, alias and legacy-catalog smoke;
+5. import only the OWNER_SIGNED manifest SHA `043ef0fd688c59664fea4e6209448e775ea7e4b7f797b5b40bfcdb6a2026caea` and verify each set;
+6. role smoke; WAF live verification remains a mandatory separate owner-approved gate and is not changed by this task.
+
+DoD for local readiness:
+- `T11_CONTROL=PASS`, `ACL_LOCAL=PASS`, `REVIEW=PASS`, `REHEARSAL=PASS` are evidenced against exact commit/candidate/tree and hashes.
+- `PRE_CUTOVER_READY=NO` for this local run. Do not promote it to YES until every future owner-authorized production read-only and non-production pre-cutover gate is verified, including exact PUBLIC/effective ACL readback, live schema/ledger/PostgreSQL/catalog, backup/restore, D1, T02/D2, active-period and WAF gates. This is not production release authorization; T11 stays open until separately approved cutover completion.
+- `LIVE_WAF_GATE=PENDING_OWNER_APPROVAL` and `PRODUCTION_MUTATION=NONE`.
+- Every prepared production step has readback, rollback/recovery and stop row; package states exact ACL migration, migration order, scope, hashes and residual production UNKNOWNs.
+
+STOP before production for any missing owner approval, unknown ACL/PUBLIC/live schema/ledger/PostgreSQL/catalog, non-exact restore, active period, unresolved D1, absent/changed signed manifest, T02/D2 decision drift, WAF not owner-approved, or any readback mismatch. Never apply the local revoke/migration to production without the explicit step approval; never push, deploy, delete/import/create a period or change WAF in this local task run. If a production change is ever separately approved, stop at that stage and follow its recorded rollback/recovery row.
 
 ### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
 
@@ -1140,12 +1160,15 @@ STOP: IDs ambiguous, history labels present, or no approval ⇒ no deletion.
 ```text
 T01 ──> T03 ──> T04 ─────────────────┐
          └────> T05 ──> T06 ─────────┤
-                  ├───> T07 ──> T09 ─┤
-                  └───> T08 ─────────┼──> T10 ──┐
-                                     │          │
-T02 (parallel; business sign-off) ──────────────┼──> T11 (release)
-T01 ──> M2T01 (D1 decision/execution) ──────────┘
+                  ├───> T07 ──> T09 ─┤──> T10 ──┐
+                  └───> T08 ─────────┘          ├──> T11 local ACL/readiness
+T02 (parallel; business sign-off) ───────────────┘
+
+T01 ──> M2T01 (D1 disposition) ──┐
+T02 + T10 + T11 local PASS ──────┴──> T11 protected P108.5 cutover
 ```
+
+The WBS `depends` for existing T11 gates only its local ACL/readiness stage. M2T01/D1 remains a hard precondition for the protected production continuation, together with every P108.5 precondition and per-step owner approval; local T11 completion does not mark M2T01 complete or authorize a release.
 
 T06–T09 run serially on Pi5 (one Runner). Their `owns` are disjoint except `EvaluationPageClient.tsx`, handed from T07 to T09 through the T07 → T09 dependency.
 
