@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active preparation: **P108 — 12 PLANNED tasks (P108M1T01–T11, P108M2T01), not registered**. P107 released 2026-10-10 (`.ai/DECISIONS_LOG.md` rows 57–61); P104–P107 tasks remain historical; no re-open.
+- Active preparation: **P108 — 12 stable task IDs (P108M1T01–T11, P108M2T01); task status follows this WBS and `.state/agent-state.json`. Existing T11 local/disposable grade-band ACL preparation is owner-authorized; protected production cutover remains separately gated. No task creation or reopening.** P107 released 2026-10-10 (`.ai/DECISIONS_LOG.md` rows 57–61); P104–P107 tasks remain historical.
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -728,7 +728,7 @@ product/policy change; production writes/migrations 0/0.
 
 ## P108 — three independent criteria sets (M1 build, M2 trial-data track)
 
-`WBS_STATUS=LOCAL_EXECUTION_AUTHORIZED`. Plan authority: `.ai/MASTER_PLAN.md` § P108 at `45d9562` (12 task IDs/DAG retained). Owner authorizes local T01, T03–T10 with synthetic fixtures, Agy `gemini-3.8-flash-high`, fresh CONTROLLED reviewer `opencode-go/deepseek-v4.1-flash`; no fallback without approval. Checkboxes stay pending until exact verified integration. Register only these nine tasks under `control.lock` after canonical activation readback. T02, M2T01 and T11 remain PLANNED and are not registered. T01 production facts remain UNKNOWN; signed-manifest checks remain release gates, not synthetic PASS. No push/deploy/Vercel changes, production reads/writes/migrations/import/deletion, real personnel test data or production AI calls. G1/D1/D2/D3 remain undecided. This local scope overrides stale P107 runtime metadata; no old active process/worktree was observed during activation preflight.
+`WBS_STATUS=OWNER_AUTHORIZED_T11_LOCAL_ACL_PREPARATION`. Plan authority: `.ai/MASTER_PLAN.md` § P108 at `45d9562` (12 stable task IDs/DAG retained). Current T01–T10 statuses remain governed by their canonical WBS/runtime records; completed tasks are not reopened. Anh authorizes only the existing T11 local/disposable grade-band ACL preparation and the scoped fresh Claude Opus 4.6 plan/code review exception; no new task or global reviewer-selector change. T11 local task state is registered only after canonical planning readback under `control.lock`; checkboxes stay `[ ]` until exact verified work is canonical. M2T01/D1 remains a hard precondition for the protected P108.5 production continuation, alongside T02/D2, signed-manifest integrity and per-step owner approvals. T01 production facts remain UNKNOWN; signed-manifest checks remain release gates, not synthetic PASS. No push/deploy/Vercel changes, production reads/writes/migrations/import/deletion, WAF change, real personnel test data or production AI calls. This local scope overrides stale P107 runtime metadata; no old active process/worktree was observed during activation preflight.
 
 ### Shared execution envelope — applies to every P108 task
 
