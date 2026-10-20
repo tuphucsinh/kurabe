@@ -77,7 +77,7 @@ const CASE_MANIFEST = [
   { id: 'deny:revoked-session-cannot-restore', group: 'deny', expected: 'revoked session cannot restore the resident payload' },
   { id: 'race:close-save-concurrent', group: 'race', expected: 'close racing an in-flight save converges without corruption' },
   { id: 'race:return-submit-concurrent', group: 'race', expected: 'return racing a submit converges on one terminal state' },
-  { id: 'fault:version-edit-resubmit-reconcile', group: 'race', expected: 'config version edit + resubmit reconciles instead of conflicting' },
+  { id: 'fault:version-edit-resubmit-reconcile', group: 'race', expected: 'active-period config edit is denied; resubmit reconciles under the current active version' },
   { id: 'fault:duplicate-response-loss-retry', group: 'race', expected: 'duplicate/response-loss retry is idempotent' },
   { id: 'tab:shared-context-create-select-convergence', group: 'tab', expected: 'second tab converges to created/selected period without reload' },
   { id: 'tab:shared-context-close-convergence', group: 'tab', expected: 'second tab converges to closed period state without reload' },
@@ -721,7 +721,7 @@ export async function run(options, ctx) {
       const result = await browserAction(pageA, {
         manifest,
         name: 'saveEvaluationRound',
-        args: [evalId.employee, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'x' }, { [config.criterionId]: 0 }, 'closed-period probe', false, { criteriaConfigVersionId: config.criteriaConfigVersionId, gradeConfigVersionId: config.gradeConfigVersionId, renderedRules: [{ id: config.criterionId, allowedPoints: [config.topLevelPoints, config.lowLevelPoints], levels: [] }] }],
+        args: [evalId.employee, 1, { [config.criterionIds.staff]: config.topLevelPoints }, { [config.criterionIds.staff]: 'x' }, { [config.criterionIds.staff]: 0 }, 'closed-period probe', false, { criteriaConfigVersionId: config.criteriaConfigVersionId, gradeConfigVersionId: config.gradeConfigVersionId, renderedRules: [{ id: config.criterionIds.staff, allowedPoints: [config.topLevelPoints, config.lowLevelPoints], levels: [] }] }],
       });
       const value = result.value;
       assert.ok(value && value.success === false, 'write into a closed period must be refused generically');
@@ -927,23 +927,24 @@ export async function run(options, ctx) {
     for (const alias of Object.keys(ACTOR_ROLES)) {
       p4Eval[alias] = await subjectEvaluationId(ctx.stack.dbTarget, periodP4, subjectId(ids, alias));
     }
-    const renderedRules = () => [{
-      id: config.criterionId,
+    const criterionForRole = (alias) => config.criterionIds[alias === 'worker' ? 'worker' : ['leader', 'manager'].includes(alias) ? 'leader' : 'staff'];
+    const renderedRules = (alias = 'staff') => [{
+      id: criterionForRole(alias),
       allowedPoints: [config.topLevelPoints, config.lowLevelPoints],
       levels: [
         { points: config.topLevelPoints, label: config.topLevelLabel, description: 'top' },
         { points: config.lowLevelPoints, label: config.lowLevelLabel, description: 'low' },
       ],
     }];
-    const configArgs = () => ({
+    const configArgs = (alias = 'staff') => ({
       criteriaConfigVersionId: config.criteriaConfigVersionId,
       gradeConfigVersionId: config.gradeConfigVersionId,
-      renderedRules: renderedRules(),
+      renderedRules: renderedRules(alias),
     });
 
     await ledger.run('fault:duplicate-response-loss-retry', async () => {
       await loginAs(pageA, ctx.origin, codesMap.subleader);
-      const submitArgs = [p4Eval.worker, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'p107t07-dup' }, { [config.criterionId]: 0 }, 'p107t07-dup', true, configArgs()];
+      const submitArgs = [p4Eval.worker, 1, { [config.criterionIds.worker]: config.topLevelPoints }, { [config.criterionIds.worker]: 'p107t07-dup' }, { [config.criterionIds.worker]: 0 }, 'p107t07-dup', true, configArgs('worker')];
       const saveActionId = actionIdFor(manifest, 'saveEvaluationRound');
       const graphIds = [p4Eval.worker];
       const zeroContext = () => assert.equal(transitionContextCount(ctx.stack.dbTarget), 0, 'no transition-context row may leak on the success/retry path');
@@ -953,7 +954,7 @@ export async function run(options, ctx) {
       //    The enforced status machine is NotStarted -> Draft -> Submitted (the
       //    P102M3T04 guard rejects a direct NotStarted->Submitted skip); the real
       //    UI auto-saves a draft on first open, so mirror that here.
-      const draftRes = await browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.worker, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'p107t07-dup-draft' }, { [config.criterionId]: 0 }, 'p107t07-dup', false, configArgs()] });
+      const draftRes = await browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.worker, 1, { [config.criterionIds.worker]: config.topLevelPoints }, { [config.criterionIds.worker]: 'p107t07-dup-draft' }, { [config.criterionIds.worker]: 0 }, 'p107t07-dup', false, configArgs('worker')] });
       assert.equal(draftRes.value?.success, true, `draft pre-save must succeed: ${JSON.stringify(draftRes.value)?.slice(0, 200)}`);
       assert.equal(readRound(ctx.stack.dbTarget, p4Eval.worker, 1).status, 'Draft', 'pre-save must move round 1 to Draft');
       await pageA.armActionResponseDrop(saveActionId);
@@ -1022,7 +1023,7 @@ export async function run(options, ctx) {
         'LOCK TABLE public.evaluation_rounds IN SHARE ROW EXCLUSIVE MODE;',
         () => Promise.all([
           browserAction(pageA, { manifest, name: 'returnEvaluationRound', args: [p4Eval.employee, 2, 'race return'] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
-          browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.employee, 2, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'race submit' }, { [config.criterionId]: 0 }, 'race submit', true, configArgs()] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
+          browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.employee, 2, { [config.criterionIds.staff]: config.topLevelPoints }, { [config.criterionIds.staff]: 'race submit' }, { [config.criterionIds.staff]: 0 }, 'race submit', true, configArgs('employee')] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
         ]),
         { label: 'return/submit' },
       );
@@ -1076,18 +1077,30 @@ export async function run(options, ctx) {
       const round1AfterFirst = readRound(ctx.stack.dbTarget, p4Eval.subleader, 1);
       assert.equal(round1AfterFirst.criteria_config_version_id, config.criteriaConfigVersionId, 'round 1 must pin V1');
 
-      // Manager edits the live criterion -> new immutable config version V2.
+      // A Manager config edit is explicitly denied while P4 is ACTIVE. The action
+      // must leave both the active version and the evaluation/config graph intact.
       await loginAs(pageA, ctx.origin, codesMap.manager);
-      const edit = await browserAction(pageA, {
+      const activeVersionBefore = psql(ctx.stack.dbTarget, "SELECT public.get_active_criteria_config() ->> 'version_id';");
+      assert.equal(activeVersionBefore, config.criteriaConfigVersionId, 'P4 must begin on fixture V1');
+      const activeSnapshotBefore = criteriaSnapshotReadback(ctx.stack.dbTarget, activeVersionBefore);
+      const activeChecksumBefore = psql(ctx.stack.dbTarget, `SELECT checksum FROM public.criteria_config_versions WHERE id='${activeVersionBefore}';`);
+      const activeGraphBefore = policyCounts(ctx.stack.dbTarget);
+      const deniedEdit = await browserAction(pageA, {
         manifest,
         name: 'upsertCriterionAction',
-        args: [{ id: config.criterionId, name: 'P107T07 Criterion v2' }, ids.criteriaGroup, config.criteriaVersion],
+        args: [{ id: config.criterionId, name: 'P107T07 Criterion v2' }, config.criteriaGroupId, config.criteriaVersion],
       });
-      assert.ok(!edit.value || edit.value.success !== false, `criteria edit failed: ${JSON.stringify(edit.value)}`);
-      const v2Row = psql(ctx.stack.dbTarget, "SELECT public.get_active_criteria_config() ->> 'version_id';")
-      assert.notEqual(v2Row, config.criteriaConfigVersionId, 'editing must activate a new criteria version');
+      assert.equal(deniedEdit.value?.success, false, `P108_PERIOD_ACTIVE must deny the real Manager config action: ${JSON.stringify(deniedEdit.value)}`);
+      assert.match(String(deniedEdit.value?.error || ''), /đang có kỳ đánh giá đang hoạt động/i, `expected explicit P108_PERIOD_ACTIVE denial: ${JSON.stringify(deniedEdit.value)}`);
+      assert.equal(psql(ctx.stack.dbTarget, "SELECT public.get_active_criteria_config() ->> 'version_id';"), activeVersionBefore, 'active denial must preserve the active criteria version');
+      assert.deepEqual(criteriaSnapshotReadback(ctx.stack.dbTarget, activeVersionBefore), activeSnapshotBefore, 'active denial must preserve the active criteria snapshot');
+      assert.equal(psql(ctx.stack.dbTarget, `SELECT checksum FROM public.criteria_config_versions WHERE id='${activeVersionBefore}';`), activeChecksumBefore, 'active denial must preserve the active criteria checksum');
+      assert.equal(policyCounts(ctx.stack.dbTarget), activeGraphBefore, 'active denial must leave the DB policy graph unchanged');
+      const activeVersionForResubmit = activeVersionBefore;
 
-      // Leader returns round 2, then SubLeader resubmits round 1 under V2.
+      // The active-period Manager config edit was denied, so Leader returns
+      // round 2 and SubLeader resubmits round 1 under the current active V1;
+      // no config mutation is allowed in this ACTIVE-period journey.
       await loginAs(pageA, ctx.origin, codesMap.leader);
       const returned = await browserAction(pageA, { manifest, name: 'returnEvaluationRound', args: [p4Eval.subleader, 2, 'version reconcile'] });
       assert.ok(!returned.value || returned.value.success !== false, 'return before reconcile failed');
@@ -1098,18 +1111,18 @@ export async function run(options, ctx) {
       const resubmit = await browserAction(pageA, {
         manifest,
         name: 'saveEvaluationRound',
-        args: [p4Eval.subleader, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'v2' }, { [config.criterionId]: 0 }, 'v2 resubmit', true, { criteriaConfigVersionId: v2Row, gradeConfigVersionId: config.gradeConfigVersionId, renderedRules: renderedRules() }],
+        args: [p4Eval.subleader, 1, { [config.criterionIds.leader]: config.topLevelPoints }, { [config.criterionIds.leader]: 'v1' }, { [config.criterionIds.leader]: 0 }, 'v1 resubmit after denied active edit', true, { criteriaConfigVersionId: activeVersionForResubmit, gradeConfigVersionId: config.gradeConfigVersionId, renderedRules: renderedRules('leader') }],
       });
-      assert.ok(!resubmit.value || resubmit.value.success !== false, `resubmit under V2 must reconcile, received: ${JSON.stringify(resubmit.value)}`);
+      assert.ok(!resubmit.value || resubmit.value.success !== false, `resubmit under the current active version must reconcile, received: ${JSON.stringify(resubmit.value)}`);
       const rounds = readRounds(ctx.stack.dbTarget, p4Eval.subleader);
       const r1 = rounds.find((r) => r.round === 1);
       const r2 = rounds.find((r) => r.round === 2);
       assert.equal(rounds.length, 2, 'reconcile must not create a third round');
-      assert.equal(r1.criteria_config_version_id, v2Row, 'resubmitted round 1 must pin V2');
-      assert.equal(r2.criteria_config_version_id, v2Row, 'mutable next round must reconcile to V2');
+      assert.equal(r1.criteria_config_version_id, activeVersionForResubmit, 'resubmitted round 1 must retain the active criteria version');
+      assert.equal(r2.criteria_config_version_id, activeVersionForResubmit, 'mutable next round must reconcile to the active criteria version');
       assert.equal(r2.status, 'NotStarted', 'reconciled next round keeps NotStarted');
-      return { actual: { rounds: rounds.length, reconciled: true }, readback: { v2: v2Row, r2Pins: r2.criteria_config_version_id } };
-    }, 'version edit + resubmit reconciles');
+      return { actual: { rounds: rounds.length, reconciled: true }, readback: { activeCriteriaVersion: activeVersionForResubmit, r2Pins: r2.criteria_config_version_id } };
+    }, 'active-period edit denied; resubmit retains the current active version');
 
     await ledger.run('race:version-edit-resubmit-concurrent', async () => {
       const activeCrit = psql(ctx.stack.dbTarget, "SELECT public.get_active_criteria_config() ->> 'version_id';")
@@ -1132,7 +1145,7 @@ export async function run(options, ctx) {
       const browserTier = await withCompetingPgLock(
         ctx.stack.dbTarget,
         'LOCK TABLE public.evaluation_rounds IN SHARE ROW EXCLUSIVE MODE;',
-        () => browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.leader, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'v2 concurrent' }, { [config.criterionId]: 0 }, 'v2 concurrent', true, { criteriaConfigVersionId: activeCrit, gradeConfigVersionId: activeGrade, renderedRules: renderedRules() }] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
+        () => browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.leader, 1, { [config.criterionIds.leader]: config.topLevelPoints }, { [config.criterionIds.leader]: 'v2 concurrent' }, { [config.criterionIds.leader]: 0 }, 'v2 concurrent', true, { criteriaConfigVersionId: activeCrit, gradeConfigVersionId: activeGrade, renderedRules: renderedRules('leader') }] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
         { label: 'version-edit/resubmit' },
       );
       assert.ok(browserTier.waiters >= 1, `version-edit/resubmit browser resubmit must genuinely overlap a competing connection: ${JSON.stringify(browserTier.activityDuring)}`);
@@ -1181,7 +1194,7 @@ export async function run(options, ctx) {
         `SELECT 1 FROM public.evaluation_periods WHERE id = '${periodP4}' FOR UPDATE;`,
         () => Promise.all([
           browserAction(pageA, { manifest, name: 'closeEvaluationPeriod', args: [periodP4] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
-          browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.manager, 1, { [config.criterionId]: config.topLevelPoints }, { [config.criterionId]: 'close race' }, { [config.criterionId]: 0 }, 'close race', true, configArgs()] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
+          browserAction(pageA, { manifest, name: 'saveEvaluationRound', args: [p4Eval.manager, 1, { [config.criterionIds.leader]: config.topLevelPoints }, { [config.criterionIds.leader]: 'close race' }, { [config.criterionIds.leader]: 0 }, 'close race', true, configArgs('manager')] }).catch((error) => ({ transportFailure: true, message: safeError(error) })),
         ]),
         { label: 'close/save' },
       );
@@ -1234,6 +1247,22 @@ export async function run(options, ctx) {
     // -------------------------------------------------------------------
     await ledger.run('scope:no-active-period-fail-closed', async () => {
       await loginAs(pageA, ctx.origin, codesMap.manager);
+      const noActiveCount = Number(psql(ctx.stack.dbTarget, "SELECT count(*) FROM public.evaluation_periods WHERE status = 'active';"));
+      assert.equal(noActiveCount, 0, 'the valid criteria edit setup must have no ACTIVE evaluation period');
+      const historicalV1Before = criteriaSnapshotReadback(ctx.stack.dbTarget, config.criteriaConfigVersionId);
+      const historicalChecksumBefore = psql(ctx.stack.dbTarget, `SELECT checksum FROM public.criteria_config_versions WHERE id='${config.criteriaConfigVersionId}';`);
+      assert.equal(readRound(ctx.stack.dbTarget, evalId.manager, 1).criteria_config_version_id, config.criteriaConfigVersionId, 'P1 approved history must still pin immutable V1');
+      const validEdit = await browserAction(pageA, {
+        manifest,
+        name: 'upsertCriterionAction',
+        args: [{ id: config.criterionId, name: 'P107T07 Criterion v2' }, config.criteriaGroupId, config.criteriaVersion],
+      });
+      assert.ok(validEdit.value && validEdit.value.success === true, `the real Manager config edit must succeed with no ACTIVE period: ${JSON.stringify(validEdit.value)}`);
+      const activeV2 = psql(ctx.stack.dbTarget, "SELECT public.get_active_criteria_config() ->> 'version_id';");
+      assert.notEqual(activeV2, config.criteriaConfigVersionId, 'valid no-active edit must activate a new immutable version');
+      assert.deepEqual(criteriaSnapshotReadback(ctx.stack.dbTarget, config.criteriaConfigVersionId), historicalV1Before, 'historical V1 snapshot rows must remain unchanged after V2 activation');
+      assert.equal(psql(ctx.stack.dbTarget, `SELECT checksum FROM public.criteria_config_versions WHERE id='${config.criteriaConfigVersionId}';`), historicalChecksumBefore, 'historical V1 checksum must remain unchanged');
+      assert.equal(readRound(ctx.stack.dbTarget, evalId.manager, 1).criteria_config_version_id, config.criteriaConfigVersionId, 'approved P1 history must continue to pin V1 after V2 activation');
       const meta = await browserAction(pageA, { manifest, name: 'getPeriodMetadataAction', args: [] });
       assert.ok(meta.value && Array.isArray(meta.value.periods), `metadata must be a real snapshot: ${JSON.stringify(meta.value).slice(0, 160)}`);
       assert.equal(meta.value.activePeriod, null, 'with no Active period the snapshot must report activePeriod null (fail-closed, never invented)');

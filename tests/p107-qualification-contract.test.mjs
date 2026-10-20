@@ -107,6 +107,27 @@ assert.match(lifecycleSource, /const files = filterPredecessorMigrations\(fs\.re
 assert.match(browserSource, /P107_LIFECYCLE_BROWSER_CASES/, 'browser lane must consume the lifecycle browser manifest');
 assert.match(browserSource, /tests\/fixtures\/p107\/lifecycle-coherence\/browser-acceptance\.mjs/, 'browser lane must delegate to the T07 lifecycle producer');
 
+// The post-migration synthetic fixture must replace the shared legacy catalog
+// with fresh, role-partitioned P108 IDs and keep direct writer payloads aligned.
+const fixtureOrgSource = read('tests/fixtures/p107/lifecycle-coherence/lib/org.mjs');
+const lifecycleBrowserSource = read('tests/fixtures/p107/lifecycle-coherence/browser-acceptance.mjs');
+assert.match(fixtureOrgSource, /save_criteria_config\(/, 'P108 fixture must use the authentic criteria-config writer');
+assert.match(fixtureOrgSource, /\['leader', 'staff', 'worker'\]/, 'P108 fixture must create all three criteria sets');
+assert.match(fixtureOrgSource, /deriveId\(ids\.seed, `p108-\$\{setKey\}-criteria-group`\)/, 'each set must use a fresh deterministic group UUID');
+assert.match(fixtureOrgSource, /deriveId\(ids\.seed, `p108-\$\{setKey\}-criterion`\)/, 'each set must use a fresh deterministic criterion UUID');
+assert.match(fixtureOrgSource, /criterionIds,/, 'fixture must return criterion IDs keyed by set');
+assert.match(lifecycleBrowserSource, /config\.criterionIds\[alias === 'worker' \? 'worker' : \['leader', 'manager'\]\.includes\(alias\) \? 'leader' : 'staff'\]/, 'role mapping must select the matching criteria set');
+assert.match(lifecycleBrowserSource, /p4Eval\.worker, 1, \{ \[config\.criterionIds\.worker\]/, 'Worker direct writes must use the worker criterion');
+assert.match(lifecycleBrowserSource, /p4Eval\.leader, 1, \{ \[config\.criterionIds\.leader\]/, 'Leader direct writes must use the leader criterion');
+assert.match(lifecycleBrowserSource, /ledger\.run\('fault:version-edit-resubmit-reconcile'[\s\S]*?p4Eval\.subleader, 1, \{ \[config\.criterionIds\.leader\][\s\S]*?renderedRules\('leader'\)/, 'the SubLeader version-edit/resubmit reconcile action must use the leader criterion set for its management scope');
+assert.match(lifecycleBrowserSource, /config\.criteriaGroupId, config\.criteriaVersion/, 'admin edit must target the new staff group');
+assert.match(lifecycleBrowserSource, /P108_PERIOD_ACTIVE must deny the real Manager config action/, 'the real Manager config action must assert the active-period denial');
+assert.match(lifecycleBrowserSource, /active denial must preserve the active criteria version/, 'active-period denial must preserve the active config version');
+assert.match(lifecycleBrowserSource, /active denial must leave the DB policy graph unchanged/, 'active-period denial must preserve the DB graph');
+assert.match(lifecycleBrowserSource, /const noActiveCount = Number\(psql\(ctx\.stack\.dbTarget, "SELECT count\(\*\) FROM public\.evaluation_periods WHERE status = 'active';"\)\)/, 'successful config edit must prove there is no ACTIVE period');
+assert.match(lifecycleBrowserSource, /validEdit\.value && validEdit\.value\.success === true/, 'valid no-active config edit must succeed through the authenticated browser action');
+assert.match(lifecycleBrowserSource, /historical V1 checksum must remain unchanged/, 'no-active edit must read back immutable historical V1');
+
 // ---- 4. CI suite manifest entry ----
 const entry = CI_SUITE_MANIFEST.find((item) => item.id === 'p107-qualification');
 assert.ok(entry, 'ci-suite-manifest must declare the p107-qualification suite');

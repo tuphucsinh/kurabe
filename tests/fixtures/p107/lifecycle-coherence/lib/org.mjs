@@ -83,19 +83,58 @@ VALUES (${sqlLiteral(ids.criterion)},'management'),(${sqlLiteral(ids.criterion)}
 `);
 }
 
-/** Post-migration: materialize the immutable active version snapshots from the live config. */
+/** Post-migration: materialize immutable snapshots from the live config. */
 export function seedBaseConfig(target, ids) {
-  // Materialize immutable snapshot version 1 from the live config.
   const grade = psqlJson(target, 'SELECT public.get_active_grade_config();');
-  const criteria = psqlJson(target, 'SELECT public.get_active_criteria_config();');
+  let criteria = psqlJson(target, 'SELECT public.get_active_criteria_config();');
   assert.ok(grade && grade.version_id, 'active grade config snapshot missing');
   assert.ok(criteria && criteria.version_id, 'active criteria config snapshot missing');
+
+  const hasSetKey = psql(target, "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='criteria_groups' AND column_name='set_key';") === '1';
+  let criteriaGroupId = ids.criteriaGroup;
+  let criterionIds = { leader: ids.criterion, staff: ids.criterion, worker: ids.criterion };
+  if (hasSetKey) {
+    const roles = ['leader', 'staff', 'worker'];
+    const groups = roles.map((setKey, index) => {
+      const groupId = deriveId(ids.seed, `p108-${setKey}-criteria-group`);
+      const criterionId = deriveId(ids.seed, `p108-${setKey}-criterion`);
+      criterionIds[setKey] = criterionId;
+      if (setKey === 'staff') criteriaGroupId = groupId;
+      return {
+        id: groupId, set_key: setKey, code: `P107-${setKey.toUpperCase()}`,
+        name: `P107T07 ${setKey} Confirmation`, short_name: 'C', sort_order: index,
+        criteria: [{
+          id: criterionId, group_id: groupId, set_key: setKey, code: 'A1',
+          name: 'P107T07 Criterion', description: 'Synthetic',
+          applies_to: setKey === 'leader' ? 'management' : setKey === 'staff' ? 'employee' : 'worker',
+          weight: 100, default_level_index: 0, sort_order: 0,
+          levels: [
+            { id: deriveId(ids.seed, `p108-${setKey}-level-top`), criterion_id: criterionId, points: LEVEL_TOP_POINTS, label: LEVEL_TOP_LABEL, description: 'Top level', sort_order: 0 },
+            { id: deriveId(ids.seed, `p108-${setKey}-level-low`), criterion_id: criterionId, points: LEVEL_LOW_POINTS, label: LEVEL_LOW_LABEL, description: 'Low level', sort_order: 1 },
+          ],
+        }],
+      };
+    });
+    criteria = psqlJson(target, `SELECT public.save_criteria_config(${sqlLiteral(JSON.stringify({ groups }))}::jsonb, ${Number(criteria.version)});`);
+    assert.ok(criteria && criteria.version_id && Array.isArray(criteria.groups), 'partitioned criteria config save failed');
+    assert.equal(criteria.groups.length, 3, 'synthetic P108 fixture must contain three sets');
+    for (const setKey of roles) {
+      const group = criteria.groups.find((candidate) => candidate.set_key === setKey);
+      assert.ok(group, `synthetic P108 ${setKey} set missing`);
+      const criterion = group.criteria?.find((candidate) => candidate.id === criterionIds[setKey]);
+      assert.ok(criterion, `synthetic P108 ${setKey} criterion missing`);
+      assert.deepEqual(criterion.audiences, [setKey === 'leader' ? 'management' : setKey === 'staff' ? 'employee' : 'worker']);
+      assert.equal(criterion.levels?.length, 2, `synthetic P108 ${setKey} levels missing`);
+    }
+  }
   return {
     gradeConfigVersionId: grade.version_id,
     gradeVersion: grade.version,
     criteriaConfigVersionId: criteria.version_id,
     criteriaVersion: criteria.version,
-    criterionId: ids.criterion,
+    criteriaGroupId,
+    criterionId: criterionIds.staff,
+    criterionIds,
     topLevelLabel: LEVEL_TOP_LABEL,
     topLevelPoints: LEVEL_TOP_POINTS,
     lowLevelLabel: LEVEL_LOW_LABEL,
