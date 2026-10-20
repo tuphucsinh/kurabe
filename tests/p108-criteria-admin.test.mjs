@@ -142,6 +142,28 @@ assert.match(modalContent, /id="criteria-code-suffix"/, 'CriteriaModal.tsx must 
 assert.match(modalContent, /id="criteria-name"/, 'CriteriaModal.tsx must have id="criteria-name"');
 assert.match(modalContent, /id=\{`criteria-level-label-\$\{idx\}`\}/, 'CriteriaModal.tsx must have criteria-level-label id');
 
+// 1.8 Criterion responsive header and badge display formatter contract
+assert.match(pageContent, /formatCriterionBadge/, 'criteria/page.tsx must define formatCriterionBadge');
+assert.match(pageContent, /data-criterion-badge/, 'criteria/page.tsx must define data-criterion-badge');
+assert.match(pageContent, /data-criterion-name/, 'criteria/page.tsx must define data-criterion-name');
+assert.match(pageContent, /data-criterion-description/, 'criteria/page.tsx must define data-criterion-description');
+assert.doesNotMatch(pageContent, /lg:flex-nowrap/, 'criteria/page.tsx must not enforce lg:flex-nowrap on criterion header');
+
+function testBadgeFormatter(code) {
+  if (!code) return '';
+  const match = code.match(/^[ABC](\d+)$/i);
+  return match ? match[1] : code;
+}
+assert.equal(testBadgeFormatter('A8'), '8', 'A8 formatted to 8');
+assert.equal(testBadgeFormatter('B10'), '10', 'B10 formatted to 10');
+assert.equal(testBadgeFormatter('C12'), '12', 'C12 formatted to 12');
+assert.equal(testBadgeFormatter('C14'), '14', 'C14 formatted to 14');
+assert.equal(testBadgeFormatter('A1'), '1', 'A1 formatted to 1');
+assert.equal(testBadgeFormatter('D4'), 'D4', 'D4 non-ABC remains D4');
+assert.equal(testBadgeFormatter('CUSTOM-01'), 'CUSTOM-01', 'Custom remains unchanged');
+assert.equal(testBadgeFormatter(null), '', 'Null code handled');
+assert.equal(testBadgeFormatter(''), '', 'Empty string handled');
+
 console.log('PASS: Static contract and boundary assertions verified.\n');
 
 // -----------------------------------------------------------------------------
@@ -799,6 +821,7 @@ if (isBrowserMode) {
 
   const caseResults = [];
   const recordedScreenshots = [];
+  const layoutMeasurements = [];
 
   async function waitCondition(predicate, { timeout = 15000, interval = 100, label = 'condition' } = {}) {
     const start = Date.now();
@@ -919,6 +942,265 @@ if (isBrowserMode) {
       else document.querySelector('button[aria-label="Đóng"]')?.click();
     })()`);
     await page.waitFor("document.querySelector('#criteria-form') === null", { timeout: 10000, label: 'modal closed' });
+  }
+
+  async function verifyCriteriaResponsiveHeadersAndBadges(page, runPsql, viewportLabel) {
+    console.log(`[Browser ${viewportLabel}] Verifying responsive criterion header, badges, group names, and overflow...`);
+    const TARGET_CONFIG = [
+      {
+        groupCode: 'A',
+        criteria: [
+          { code: 'A1', expectedSuffix: '1', isControl: true },
+          { code: 'A8', expectedSuffix: '8' },
+        ],
+      },
+      {
+        groupCode: 'B',
+        criteria: [
+          { code: 'B10', expectedSuffix: '10' },
+        ],
+      },
+      {
+        groupCode: 'C',
+        criteria: [
+          { code: 'C12', expectedSuffix: '12' },
+          { code: 'C14', expectedSuffix: '14' },
+        ],
+      },
+    ];
+
+    for (const setKey of ['leader', 'staff', 'worker']) {
+      console.log(`[Browser ${viewportLabel}] Checking criterion headers & badges for set: ${setKey}...`);
+      await page.evaluate(`document.querySelector('button[data-criteria-set-tab="${setKey}"]').click()`);
+      await page.waitFor(
+        `document.querySelector('button[data-criteria-set-tab="${setKey}"][aria-selected="true"]') !== null`,
+        { timeout: 10000, label: `set tab ${setKey} active` }
+      );
+
+      for (const groupConfig of TARGET_CONFIG) {
+        const groupId = runPsql(
+          `SELECT id FROM public.criteria_groups WHERE set_key = '${setKey}' AND code = '${groupConfig.groupCode}' LIMIT 1;`
+        ).trim();
+        assert.ok(groupId, `Group ${groupConfig.groupCode} must exist in set ${setKey}`);
+
+        await page.evaluate(`document.querySelector('button[data-criteria-group-id="${groupId}"]').click()`);
+        await page.waitFor(
+          `document.querySelector('button[data-criteria-group-id="${groupId}"][aria-selected="true"]') !== null`,
+          { timeout: 10000, label: `group ${groupConfig.groupCode} tab active in set ${setKey}` }
+        );
+
+        // Group names remain A/B/C assertion
+        const groupTabCodeText = await page.evaluate(`(() => {
+          const btn = document.querySelector('button[data-criteria-group-id="${groupId}"]');
+          return btn ? btn.innerText : '';
+        })()`);
+        assert.ok(
+          groupTabCodeText.includes(groupConfig.groupCode),
+          `Group tab must retain visible group code "${groupConfig.groupCode}" for set ${setKey} at ${viewportLabel}; got ${JSON.stringify(groupTabCodeText)}`
+        );
+
+        const groupHeaderTitle = await page.evaluate(`(() => {
+          const header = document.querySelector('div[data-criteria-group-id="${groupId}"] h2');
+          return header ? header.innerText : '';
+        })()`);
+        assert.ok(
+          groupHeaderTitle.includes(`Nhóm ${groupConfig.groupCode}`),
+          `Active group header must retain group name "Nhóm ${groupConfig.groupCode}" for set ${setKey} at ${viewportLabel}`
+        );
+
+        for (const crit of groupConfig.criteria) {
+          const critId = runPsql(
+            `SELECT id FROM public.criteria WHERE set_key = '${setKey}' AND group_id = '${groupId}' AND code = '${crit.code}' LIMIT 1;`
+          ).trim();
+          assert.ok(critId, `Criterion ${crit.code} must exist in DB for set ${setKey}`);
+
+          await page.waitFor(
+            `document.querySelector('[data-criterion-id="${critId}"]') !== null`,
+            { timeout: 10000, label: `criterion ${crit.code} card rendered` }
+          );
+
+          const cardStats = await page.evaluate(`(() => {
+            const card = document.querySelector('[data-criterion-id="${critId}"]');
+            if (!card) return null;
+            const header = card.firstElementChild;
+            const textGroup = header?.children?.[0];
+            const actions = header?.children?.[1];
+            const badge = card.querySelector('[data-criterion-badge]') || card.querySelector('span.font-black');
+            const title = card.querySelector('[data-criterion-name]');
+            const desc = card.querySelector('[data-criterion-description]') || card.querySelector('span.text-ink-muted\\/80');
+            const cardRect = card.getBoundingClientRect();
+            const headerStyle = header ? getComputedStyle(header) : null;
+            const headerPadding = headerStyle
+              ? Number.parseFloat(headerStyle.paddingLeft) + Number.parseFloat(headerStyle.paddingRight)
+              : 0;
+            const headerInnerWidth = header ? header.clientWidth - headerPadding : 0;
+            const columnGap = headerStyle ? Number.parseFloat(headerStyle.columnGap) || 0 : 0;
+            const actionsRect = actions ? actions.getBoundingClientRect() : null;
+            const textGroupRect = textGroup ? textGroup.getBoundingClientRect() : null;
+            const actionsOnSameRow = Boolean(actionsRect && textGroupRect
+              && actionsRect.top < textGroupRect.bottom - 1
+              && actionsRect.bottom > textGroupRect.top + 1);
+            const availableTextWidth = actionsOnSameRow
+              ? headerInnerWidth - actionsRect.width - columnGap
+              : headerInnerWidth;
+            const titleRect = title ? title.getBoundingClientRect() : null;
+            const titleStyle = title ? getComputedStyle(title) : null;
+            const titleLineHeight = titleStyle ? (Number.parseFloat(titleStyle.lineHeight) || Number.parseFloat(titleStyle.fontSize) * 1.2) : 0;
+            const descRect = desc ? desc.getBoundingClientRect() : null;
+            const descStyle = desc ? getComputedStyle(desc) : null;
+            const lineCharacterCounts = new Map();
+            if (desc) {
+              const walker = document.createTreeWalker(desc, NodeFilter.SHOW_TEXT);
+              const range = document.createRange();
+              let textNode;
+              while ((textNode = walker.nextNode())) {
+                for (let offset = 0; offset < textNode.textContent.length;) {
+                  const codePoint = textNode.textContent.codePointAt(offset);
+                  const charLength = codePoint > 0xffff ? 2 : 1;
+                  range.setStart(textNode, offset);
+                  range.setEnd(textNode, offset + charLength);
+                  const charRect = range.getBoundingClientRect();
+                  if (charRect.width > 0 && charRect.height > 0) {
+                    const lineTop = Math.round(charRect.top * 2) / 2;
+                    lineCharacterCounts.set(lineTop, (lineCharacterCounts.get(lineTop) || 0) + 1);
+                  }
+                  offset += charLength;
+                }
+              }
+            }
+            const descVisualLineCounts = [...lineCharacterCounts.values()];
+            return {
+              badgeText: badge ? badge.textContent.trim() : '',
+              titleText: title ? title.textContent.trim() : '',
+              titleWidth: titleRect ? titleRect.width : 0,
+              titleLines: titleRect && titleLineHeight > 0 ? Math.round(titleRect.height / titleLineHeight) : 0,
+              hasDesc: Boolean(desc),
+              descText: desc ? desc.textContent.trim() : '',
+              cardWidth: cardRect.width,
+              descWidth: descRect ? descRect.width : 0,
+              headerInnerWidth,
+              actionsWidth: actionsRect ? actionsRect.width : 0,
+              columnGap,
+              actionsOnSameRow,
+              availableTextWidth,
+              textGroupWidth: textGroupRect ? textGroupRect.width : 0,
+              descWritingMode: descStyle ? descStyle.writingMode : '',
+              descVisualLineCount: descVisualLineCounts.length,
+              descMaxCharsPerVisualLine: Math.max(0, ...descVisualLineCounts),
+              cardScrollWidth: card.scrollWidth,
+              cardClientWidth: card.clientWidth,
+              pageScrollWidth: document.documentElement.scrollWidth,
+              pageClientWidth: document.documentElement.clientWidth,
+            };
+          })()`);
+
+          assert.ok(cardStats, `Card for criterion ${crit.code} in set ${setKey} must be found in DOM`);
+
+          // 1. Visible numeric label assertion
+          assert.equal(
+            cardStats.badgeText,
+            crit.expectedSuffix,
+            `Criterion ${crit.code} badge in set ${setKey} at ${viewportLabel} must display numeric suffix "${crit.expectedSuffix}", got "${cardStats.badgeText}"`
+          );
+          assert.notEqual(
+            cardStats.badgeText,
+            crit.code,
+            `Criterion ${crit.code} badge must not display canonical code "${crit.code}"`
+          );
+
+          if (!crit.isControl) {
+            assert.ok(
+              cardStats.titleText.length >= 100,
+              `Criterion ${crit.code} must render the long canonical Vietnamese title in set ${setKey}`
+            );
+            assert.ok(
+              cardStats.titleWidth > 160 && cardStats.titleLines >= 2,
+              `Criterion ${crit.code} title must wrap as readable text, not a narrow vertical column (${cardStats.titleWidth}px, ${cardStats.titleLines} lines) at ${viewportLabel}`
+            );
+            const containsJapanese = /[\u3040-\u30ff\u3400-\u9fff]/u.test(cardStats.descText);
+            assert.ok(
+              cardStats.descText.length >= 60 && containsJapanese,
+              `Criterion ${crit.code} must render the long canonical Japanese description in set ${setKey} (length=${cardStats.descText.length}, containsJapanese=${containsJapanese})`
+            );
+          }
+
+          // 2. Description must use the actual available text column after
+          // card padding, action controls, and the rendered flex gap.
+          assert.ok(
+            cardStats.hasDesc,
+            `Criterion ${crit.code} must have description element in set ${setKey}`
+          );
+          assert.ok(
+            Math.abs(cardStats.textGroupWidth - cardStats.availableTextWidth) <= 2,
+            `Criterion ${crit.code} text column must fill measured available width at ${viewportLabel}: ${JSON.stringify(cardStats)}`
+          );
+          assert.ok(
+            Math.abs(cardStats.descWidth - cardStats.textGroupWidth) <= 2,
+            `Criterion ${crit.code} description must use the full text column at ${viewportLabel}: ${JSON.stringify(cardStats)}`
+          );
+
+          if (!crit.isControl) {
+            assert.equal(cardStats.descWritingMode, 'horizontal-tb', `Criterion ${crit.code} Japanese description must use horizontal writing at ${viewportLabel}`);
+            assert.ok(
+              cardStats.descVisualLineCount > 1 && cardStats.descMaxCharsPerVisualLine > 1,
+              `Criterion ${crit.code} Japanese text must wrap across lines, not stack vertically at ${viewportLabel}: ${JSON.stringify(cardStats)}`
+            );
+          }
+
+          layoutMeasurements.push({
+            viewport: viewportLabel,
+            setKey,
+            code: crit.code,
+            cardWidth: cardStats.cardWidth,
+            headerInnerWidth: cardStats.headerInnerWidth,
+            actionsWidth: cardStats.actionsWidth,
+            columnGap: cardStats.columnGap,
+            actionsOnSameRow: cardStats.actionsOnSameRow,
+            availableTextWidth: cardStats.availableTextWidth,
+            textGroupWidth: cardStats.textGroupWidth,
+            descWidth: cardStats.descWidth,
+            descWritingMode: cardStats.descWritingMode,
+            descVisualLineCount: cardStats.descVisualLineCount,
+            descMaxCharsPerVisualLine: cardStats.descMaxCharsPerVisualLine,
+            cardScrollWidth: cardStats.cardScrollWidth,
+            cardClientWidth: cardStats.cardClientWidth,
+            pageScrollWidth: cardStats.pageScrollWidth,
+            pageClientWidth: cardStats.pageClientWidth,
+          });
+
+          // 3. Horizontal overflow assertion (cards and page must not overflow)
+          assert.ok(
+            cardStats.cardScrollWidth <= cardStats.cardClientWidth + 1,
+            `Criterion ${crit.code} card at ${viewportLabel} must not overflow horizontally (scrollWidth ${cardStats.cardScrollWidth} <= clientWidth ${cardStats.cardClientWidth})`
+          );
+          assert.ok(
+            cardStats.pageScrollWidth <= cardStats.pageClientWidth + 1,
+            `Page at ${viewportLabel} must not overflow horizontally (scrollWidth ${cardStats.pageScrollWidth} <= clientWidth ${cardStats.pageClientWidth})`
+          );
+
+          if (setKey === 'leader' && !crit.isControl) {
+            const targetShot = await page.screenshot(`criteria-${crit.code}-${viewportLabel}`, { dir: evidenceDir });
+            recordedScreenshots.push({
+              label: `criteria-${crit.code}-${viewportLabel}`,
+              path: targetShot.path,
+              sha256: targetShot.sha256,
+              criterion: crit.code,
+              setKey,
+              viewport: { width: viewportLabel === '390' ? 390 : 1440, height: viewportLabel === '390' ? 844 : 900, mobile: viewportLabel === '390' },
+            });
+          }
+        }
+      }
+    }
+
+    // Reset view to Leader set and Group A
+    const leaderGroupAId = runPsql("SELECT id FROM public.criteria_groups WHERE set_key = 'leader' AND code = 'A' LIMIT 1;").trim();
+    await page.evaluate("document.querySelector('button[data-criteria-set-tab=\"leader\"]').click()");
+    await page.waitFor("document.querySelector('button[data-criteria-set-tab=\"leader\"][aria-selected=\"true\"]') !== null", { timeout: 10000 });
+    if (leaderGroupAId) {
+      await page.evaluate(`document.querySelector('button[data-criteria-group-id="${leaderGroupAId}"]')?.click()`);
+      await page.waitFor(`document.querySelector('button[data-criteria-group-id="${leaderGroupAId}"][aria-selected=\"true\"]') !== null`, { timeout: 10000 });
+    }
   }
 
   let browser;
@@ -1069,6 +1351,45 @@ if (isBrowserMode) {
     if (importRes.status !== 0) throw new Error(`import script failed: ${importRes.stderr || importRes.stdout}`);
     console.log('[Browser] Criteria import successfully applied.');
 
+    // Use real multilingual labels from the canonical manifest only as fixture content
+    // in this disposable local database; no manifest or production data is modified.
+    const responsiveCodes = new Set(['A8', 'B10', 'C12', 'C14']);
+    const responsiveSets = new Set(['leader', 'staff', 'worker']);
+    const canonicalManifest = JSON.parse(fs.readFileSync(
+      path.join(projectRoot, 'db/seed/p108-criteria-manifest.json'),
+      'utf8'
+    ));
+    const responsiveRecords = canonicalManifest.groups.flatMap((group) =>
+      group.criteria
+        .filter((criterion) => responsiveCodes.has(criterion.code) && responsiveSets.has(group.set_key))
+        .map((criterion) => ({ ...criterion, set_key: group.set_key, group_code: group.code }))
+    );
+    assert.equal(responsiveRecords.length, 12, 'Canonical manifest must supply four target criteria for each of three sets');
+    const sqlLiteral = (value) => `'${String(value).replace(/'/g, "''")}'`;
+    const responsiveConfig = JSON.parse(runPsql('SELECT public.get_active_criteria_config()::text;'));
+    for (const criterion of responsiveRecords) {
+      const group = responsiveConfig.groups.find((item) => item.set_key === criterion.set_key && item.code === criterion.group_code);
+      assert.ok(group, `Versioned fixture must contain group ${criterion.set_key}/${criterion.group_code}`);
+      const versionedCriterion = group.criteria.find((item) => item.code === criterion.code);
+      assert.ok(versionedCriterion, `Versioned fixture must contain criterion ${criterion.set_key}/${criterion.code}`);
+      versionedCriterion.name = criterion.name;
+      versionedCriterion.description = criterion.description;
+    }
+    const previousVersion = responsiveConfig.version;
+    const fixtureVersion = Number(runPsql(`
+      SELECT (public.save_criteria_config(${sqlLiteral(JSON.stringify(responsiveConfig))}::jsonb, ${previousVersion})->>'version')::integer;
+    `));
+    assert.equal(fixtureVersion, previousVersion + 1, 'Canonical fixture update must create exactly one active criteria version');
+    const fixtureReadback = JSON.parse(runPsql('SELECT public.get_active_criteria_config()::text;'));
+    for (const criterion of responsiveRecords) {
+      const group = fixtureReadback.groups.find((item) => item.set_key === criterion.set_key && item.code === criterion.group_code);
+      const versionedCriterion = group?.criteria.find((item) => item.code === criterion.code);
+      assert.ok(versionedCriterion, `Versioned fixture readback must include ${criterion.set_key}/${criterion.code}`);
+      assert.equal(versionedCriterion.name, criterion.name, `Versioned fixture must use canonical Vietnamese title ${criterion.code}`);
+      assert.equal(versionedCriterion.description, criterion.description, `Versioned fixture must use canonical Japanese description ${criterion.code}`);
+    }
+    console.log(`[Browser] Loaded/read back real VI/JA target text through save_criteria_config in disposable local version ${fixtureVersion}.`);
+
     // 3. Test 390x844 viewport (Mobile)
     console.log('[Browser] Testing viewport 390x844 (Mobile)...');
     await page.setViewport(390, 844, { mobile: true });
@@ -1086,6 +1407,9 @@ if (isBrowserMode) {
 
     await verifySetTabsIsolation(page, runPsql, '390');
     caseResults.push({ name: 'three-set-tabs-isolation-390', status: 'PASS' });
+
+    await verifyCriteriaResponsiveHeadersAndBadges(page, runPsql, '390');
+    caseResults.push({ name: 'criterion-responsive-header-and-badges-390', status: 'PASS' });
 
     const shot390 = await page.screenshot('criteria-admin-390', { dir: evidenceDir });
     console.log(`[Browser] Mobile screenshot captured: ${shot390.path}`);
@@ -1116,6 +1440,9 @@ if (isBrowserMode) {
 
     await verifySetTabsIsolation(page, runPsql, '1440');
     caseResults.push({ name: 'three-set-tabs-isolation-1440', status: 'PASS' });
+
+    await verifyCriteriaResponsiveHeadersAndBadges(page, runPsql, '1440');
+    caseResults.push({ name: 'criterion-responsive-header-and-badges-1440', status: 'PASS' });
 
     const shot1440 = await page.screenshot('criteria-admin-1440', { dir: evidenceDir });
     console.log(`[Browser] Desktop screenshot captured: ${shot1440.path}`);
@@ -1439,11 +1766,12 @@ if (isBrowserMode) {
     // Write evidence JSON summary (retained after runtimeRoot deleted)
     const evidenceFile = path.join(evidenceDir, 'evidence.json');
     fs.writeFileSync(evidenceFile, JSON.stringify({
-      task: 'P108M1T06',
+      task: 'P108M1T12',
       pid: process.pid,
       timestamp: new Date().toISOString(),
       evidenceDir,
       screenshots: recordedScreenshots,
+      layoutMeasurements,
       cases: caseResults,
     }, null, 2));
 

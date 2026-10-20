@@ -41,6 +41,12 @@ const SET_TABS = [
   { key: 'worker' as const, label: 'Công nhân', sublabel: 'Worker', shortLabel: 'CN' },
 ] as const;
 
+function formatCriterionBadge(code?: string | null): string {
+  if (!code) return '';
+  const match = code.match(/^[ABC](\d+)$/i);
+  return match ? match[1] : code;
+}
+
 export default function CriteriaPage() {
   const router = useRouter();
   const confirm = useConfirm();
@@ -474,14 +480,20 @@ export default function CriteriaPage() {
                     className="bg-surface-raised rounded-2xl border border-outline-soft overflow-hidden shadow-sm hover:border-brand/20 transition-all duration-300"
                   >
                     <div className="px-4 sm:px-6 lg:px-4 py-2.5 lg:py-2 bg-surface border-b border-outline-soft flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                      <div className="flex flex-wrap lg:flex-nowrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
-                        <span className="text-xs font-black bg-surface-raised text-brand px-2 py-0.5 rounded border border-brand/20 shrink-0">
-                          {criterion.code || criterion.id}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
+                        <span
+                          data-criterion-badge
+                          className="text-xs font-black bg-surface-raised text-brand px-2 py-0.5 rounded border border-brand/20 shrink-0"
+                        >
+                          {formatCriterionBadge(criterion.code || criterion.id)}
                         </span>
-                        <span className="font-bold text-ink shrink-0 lg:text-sm">{criterion.name}</span>
+                        <span data-criterion-name className="font-bold text-ink lg:text-sm break-words">{criterion.name}</span>
                         {criterion.description && (
-                          <span className="text-sm lg:text-xs font-normal text-ink-muted/80 block w-full md:inline md:w-auto lg:block lg:flex-1 lg:min-w-0 lg:w-auto">
-                            <span className="hidden md:inline">— </span>{criterion.description}
+                          <span
+                            data-criterion-description
+                            className="text-sm lg:text-xs font-normal text-ink-muted/80 block w-full break-words"
+                          >
+                            {criterion.description}
                           </span>
                         )}
                       </div>
