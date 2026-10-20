@@ -345,6 +345,7 @@ export async function run(context = {}) {
       candidate: identity || { baseSha: null, candidateSha: process.env.KURABE_CONFIRMATION_CANDIDATE_SHA || 'UNKNOWN' },
       cleanup: { ownedDisposableRuntimeOnly: true, residue: 'UNKNOWN', productionWrites: 0, productionMigrations: 0 },
     };
+    console.error(`P107_QUALIFICATION_FAILURE ${failure.firstFailure}`);
     writeEvidence(detailPath, failure);
     return {
       real: false,

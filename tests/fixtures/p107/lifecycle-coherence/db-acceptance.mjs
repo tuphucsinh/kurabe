@@ -23,7 +23,7 @@ import { runBootstrap } from '../../../../scripts/db-bootstrap.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(here, '../../../..');
-const MIGRATION = 'supabase/migrations/20261008000300_p107_lifecycle_coherence.sql';
+export const MIGRATION = 'supabase/migrations/20261008000300_p107_lifecycle_coherence.sql';
 const RETURN_RPC = 'return_evaluation_round_transaction(uuid,integer,uuid,text)';
 const SAVE_RPC = 'save_evaluation_round_transaction_active_only(uuid,integer,uuid,jsonb,jsonb,text,numeric,text,boolean,timestamptz,integer,uuid,text,text,boolean,uuid,uuid)';
 const FUNCS = "'return_evaluation_round_transaction','save_evaluation_round_transaction_active_only'";
@@ -79,13 +79,27 @@ INSERT INTO public.criterion_audiences(criterion_id,audience)
 VALUES ('00000000-0000-4000-8000-000000000211','employee'),('00000000-0000-4000-8000-000000000211','worker'),('00000000-0000-4000-8000-000000000211','management');
 `);
 }
-function applyForwardMigrations(port, db, exclude) {
+export function filterPredecessorMigrations(files, candidate = path.basename(MIGRATION)) {
+  const candidateName = path.basename(candidate);
+  const candidateVersion = candidateName.split('_')[0];
+  return files
+    .filter((n) => n.endsWith('.sql'))
+    .sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
+    .filter((file) => {
+      const name = path.basename(file);
+      const version = name.split('_')[0];
+      if (version < '202609') return false;
+      if (candidateName && (name >= candidateName || version >= candidateVersion)) return false;
+      return true;
+    });
+}
+
+export function applyForwardMigrations(port, db, candidate = path.basename(MIGRATION)) {
   const dir = path.join(projectRoot, 'supabase/migrations');
+  const files = filterPredecessorMigrations(fs.readdirSync(dir), candidate);
   let count = 0;
-  for (const name of fs.readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) {
+  for (const name of files) {
     const version = name.split('_')[0];
-    if (version < '202609') continue;
-    if (exclude && name === exclude) continue;
     const rr = command('psql', [...psqlArgs(port, db), '--file', path.join(dir, name)], { env: psqlEnv() });
     assert.equal(rr.status, 0, `migration ${name} failed: ${String(rr.stderr).slice(0, 400)}`);
     psql(port, db, `INSERT INTO supabase_migrations.schema_migrations(version,name) VALUES ('${version}','${name}') ON CONFLICT (version) DO NOTHING;`);

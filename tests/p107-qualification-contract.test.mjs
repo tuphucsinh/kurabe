@@ -75,6 +75,34 @@ assert.match(integrationSource, /P107_PRODUCER_CASES/, 'integration lane must co
 assert.match(integrationSource, /P107_HTTP_CASES/, 'integration lane must consume the HTTP probe case manifest');
 assert.match(integrationSource, /await fetch\(/, 'integration lane must exercise real local HTTP');
 assert.match(integrationSource, /validateRuntimeEnvironment/, 'integration lane must bind to the real runtime env');
+assert.match(integrationSource, /console\.error\(`P107_QUALIFICATION_FAILURE \$\{failure\.firstFailure\}`\)/, 'imported qualification failures must emit their sanitized reason');
+assert.match(integrationSource, /firstFailure: safeError\(error\)/, 'failure diagnostics must reuse the sanitizer');
+
+// The historical P107 rollback producer must apply only predecessors before its
+// excluded candidate, not a future migration that depends on that candidate.
+const lifecycleSource = read('tests/fixtures/p107/lifecycle-coherence/db-acceptance.mjs');
+const selectorStart = lifecycleSource.indexOf('export function filterPredecessorMigrations(');
+const selectorEnd = lifecycleSource.indexOf('export function applyForwardMigrations(', selectorStart);
+assert.ok(selectorStart >= 0 && selectorEnd > selectorStart, 'predecessor selector must be directly testable without starting a database');
+const selectorSource = lifecycleSource.slice(selectorStart, selectorEnd).replace(/^export /, '');
+const selectPredecessors = new Function('path', `${selectorSource}\nreturn filterPredecessorMigrations;`)(path);
+const lifecycleCandidate = '20261008000300_p107_lifecycle_coherence.sql';
+const predecessorFiles = [
+  '20261019000200_grade_config_digest_resolution.sql',
+  lifecycleCandidate,
+  '20261008000100_p107_read_authority.sql',
+  '20260815180000_add_users_gender.sql',
+  '20261017093100_p108_criteria_sets.sql',
+  '20261008000200_p107_roster_personnel.sql',
+  'README.md',
+  '20260907000500_grade_config_version.sql',
+];
+assert.deepEqual(selectPredecessors(predecessorFiles, lifecycleCandidate), [
+  '20260907000500_grade_config_version.sql',
+  '20261008000100_p107_read_authority.sql',
+  '20261008000200_p107_roster_personnel.sql',
+], 'all true in-range predecessors must remain; candidate and later P108/T11 must wait');
+assert.match(lifecycleSource, /const files = filterPredecessorMigrations\(fs\.readdirSync\(dir\), candidate\)/, 'actual replay must use the tested selector');
 // The browser lane consumes the self-contained lifecycle producer.
 assert.match(browserSource, /P107_LIFECYCLE_BROWSER_CASES/, 'browser lane must consume the lifecycle browser manifest');
 assert.match(browserSource, /tests\/fixtures\/p107\/lifecycle-coherence\/browser-acceptance\.mjs/, 'browser lane must delegate to the T07 lifecycle producer');
