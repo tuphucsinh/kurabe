@@ -10,7 +10,7 @@
 - P103: **13/13 DONE**
 - CI repair `t_7c812262`: **DONE**
 - F06: **CLOSED**
-- Active preparation: **P108 — 12 stable task IDs (P108M1T01–T11, P108M2T01); task status follows this WBS and `.state/agent-state.json`. Existing T11 local/disposable grade-band ACL preparation is owner-authorized; protected production cutover remains separately gated. No task creation or reopening.** P107 released 2026-10-10 (`.ai/DECISIONS_LOG.md` rows 57–61); P104–P107 tasks remain historical.
+- Active preparation: **P108 — original 12 stable task IDs (P108M1T01–T11, P108M2T01) retained; one owner-directed P108LIVEF01 fix task is registered for the existing v1.3 F01 blocker only. No other task creation/reopening or plan revision.** Task status follows this WBS and `.state/agent-state.json`. P107 released 2026-10-10 (`.ai/DECISIONS_LOG.md` rows 57–61); P104–P107 tasks remain historical.
 - P104 integrated candidate: `9a8c988be603507142a4a8afe854deec108560a0`; remote CI run `35193543798` passed.
 - `P105: REGISTERED` — T01 CI hygiene (CONTROLLED), T02 dead-code removal (STANDARD), T03 perf rerun (STANDARD); plan reviewed `PASS` by agy/gemini-3.1-pro-high (evidence `/home/pi5/hermes-artifacts/kurabe-p105-plan/review-attempt1.log`).
 - Production writes/migrations allowed in this phase: `0/0`
@@ -728,7 +728,7 @@ product/policy change; production writes/migrations 0/0.
 
 ## P108 — three independent criteria sets (M1 build, M2 trial-data track)
 
-`WBS_STATUS=OWNER_AUTHORIZED_T11_LOCAL_ACL_AND_RPC_DIGEST_AMENDMENT`. Plan authority: `.ai/MASTER_PLAN.md` § P108 at `45d9562` (12 stable task IDs/DAG retained). Current T01–T10 statuses remain governed by their canonical WBS/runtime records; completed tasks are not reopened. Anh authorizes only the existing T11 local/disposable grade-band ACL work plus the minimum `save_grade_config` pgcrypto function-resolution fix, its supplemental migration, and directly related integration tests; no new task or global reviewer-selector change. The existing plan-review PASS is not rerun; the changed implementation requires a fresh read-only AGY `gemini-3.8-flash-high` review of the exact final candidate. T11 local task state is registered only after canonical planning readback under `control.lock`; checkboxes stay `[ ]` until exact verified work is canonical. M2T01/D1 remains a hard precondition for the protected P108.5 production continuation, alongside T02/D2, signed-manifest integrity and per-step owner approvals. T01 production facts remain UNKNOWN; signed-manifest checks remain release gates, not synthetic PASS. No push/deploy/Vercel changes, production reads/writes/migrations/import/deletion, WAF change, real personnel test data or production AI calls. This local scope overrides stale P107 runtime metadata; no old active process/worktree was observed during activation preflight.
+`WBS_STATUS=OWNER_AUTHORIZED_T11_LOCAL_ACL_AND_RPC_DIGEST_AMENDMENT + P108LIVEF01_ONLY`. Original PLAN-v1.3 and original P108 DAG remain unchanged. Direct owner instruction authorizes exactly one P108LIVEF01 code-fix task for the existing F01 partial-draft blocker; no other task creation/reopening, v1.4, or replan. Existing plan-review PASS is not rerun. T01–T12 history remains unchanged. T11's former local-only restrictions do not expand this new task: P108LIVEF01 is limited to the listed evaluation-state/save paths and existing focused tests. Task state is registered only after canonical task-record readback under `control.lock`; checkboxes stay `[ ]` until exact verified work is canonical. No schema/migration/trigger/auth/cleanup-template changes or real employee data mutation. P2–P6 and approved cleanup template remain governed by PLAN-v1.3. Production push/deploy is not granted by this record; it remains separately owner-gated by the current direct approval boundary. No global reviewer-selector change.
 
 ### Shared execution envelope — applies to every P108 task
 
@@ -1161,6 +1161,34 @@ DoD:
 - `node tests/p108-criteria-admin.test.mjs` and `node tests/p108-criteria-admin.test.mjs --browser` pass; browser assertions cover all three sets, target/control records at 390×844 and 1440×900, display labels, adequate description width, and no horizontal overflow.
 - `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, and `node scripts/scan-source-secrets.mjs` pass on the exact candidate.
 - Mika verifies only the declared owned paths changed, canonical codes remain unchanged in data/API behavior, and candidate/base identity is exact. No independent fresh review is required for STANDARD.
+
+### [ ] [#P108LIVEF01] Fix P2.F01 partial-draft state loss
+
+```yaml
+task:
+  id: P108LIVEF01
+  tier: CONTROLLED
+  depends: [P108M1T07, P108M1T10, P108M1T11]
+  owns:
+    - src/hooks/use-evaluation-page-state.ts
+    - src/hooks/use-db.ts
+    - src/app/evaluations/[id]/EvaluationPageClient.tsx
+    - src/actions/evaluation.ts  # edit only if reproduced evidence proves a server-side defect
+    - tests/evaluation-default-selection-regression.test.mjs
+    - tests/integration/p108-evaluation-flow.mjs
+  locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
+```
+
+Goal: identify and fix the proven cause of selected criteria disappearing during P2.F01 draft save, preserving explicit score/index semantics and preventing stale first-open/refetch state from overwriting edits.
+Current context: exact owner-supplied production failure is UI 1/33 before Save, 0/33 afterward; the authenticated readback remained Draft with empty scores/notes/comment and no responses. The current source candidates (hydration overwrite, async invalidation, first-open autosave, server/RPC) are hypotheses only. PLAN-v1.3 remains authoritative; reuse the existing four synthetic production accounts and the existing F01 evaluation, with no additional live fixtures.
+Changes: reproduce the failure and trace selected count through SET_SCORE, pre-save state, exact server-action payload, database readback, and reload; establish root cause before the smallest code change; add the regression to the existing tests only. Do not make a new test bundle.
+Constraints: local qualification must use authentic application/auth/database paths and synthetic disposable fixtures, with no fake auth/API adapters. No schema/migration/trigger/auth/workflow/criteria/cleanup-template change; no direct production DB/API writes; no submission except exact PLAN-v1.3 cases; no real employee data. `src/actions/evaluation.ts` is read-only unless a reproducible server-side defect is proven. Preserve first failure and all user-owned work. Production push/deploy is separately owner-gated; this task record does not grant it.
+DoD:
+- Focused local regression reproduces the old failure on the baseline and passes on the fix; evidence records all five state boundaries and exact candidate identity.
+- On local authenticated disposable runtime, one partial selection persists through Save and reload; cover multiple criteria, explicit zero, negative and N/A indexes, first-open/refetch race, and incomplete-submit rejection with unchanged Draft.
+- `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build` without `.env.local`, `node scripts/scan-source-secrets.mjs`, and `git diff --check` pass on the exact candidate; preserve real exit status and evidence.
+- Mika independently verifies full diff, exact owns, no unintended DB/schema/data change, and candidate/base identity. Fresh independent reviewer requested by anh must PASS on that exact candidate before integration.
+- Production deployment/retest requires a separate direct owner approval; after that approval, use only the existing F01 test evaluation and require UI selection, server payload, DB score/index, and reloaded UI to agree. Do not mark F01 or the live-test phase PASS before those readbacks.
 
 ### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
 
