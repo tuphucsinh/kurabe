@@ -1140,7 +1140,7 @@ DoD for local readiness:
 
 STOP before production for any missing owner approval, unknown ACL/PUBLIC/live schema/ledger/PostgreSQL/catalog, non-exact restore, active period, unresolved D1, absent/changed signed manifest, T02/D2 decision drift, WAF not owner-approved, or any readback mismatch. Never apply the local revoke/migration to production without the explicit step approval; never push, deploy, delete/import/create a period or change WAF in this local task run. If a production change is ever separately approved, stop at that stage and follow its recorded rollback/recovery row.
 
-### [ ] [#P108M1T12] Criteria page responsive layout and display-only criterion labels
+### [x] [#P108M1T12] Criteria page responsive layout and display-only criterion labels
 
 ```yaml
 task:
