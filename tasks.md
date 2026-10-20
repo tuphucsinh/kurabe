@@ -1140,6 +1140,28 @@ DoD for local readiness:
 
 STOP before production for any missing owner approval, unknown ACL/PUBLIC/live schema/ledger/PostgreSQL/catalog, non-exact restore, active period, unresolved D1, absent/changed signed manifest, T02/D2 decision drift, WAF not owner-approved, or any readback mismatch. Never apply the local revoke/migration to production without the explicit step approval; never push, deploy, delete/import/create a period or change WAF in this local task run. If a production change is ever separately approved, stop at that stage and follow its recorded rollback/recovery row.
 
+### [ ] [#P108M1T12] Criteria page responsive layout and display-only criterion labels
+
+```yaml
+task:
+  id: P108M1T12
+  tier: STANDARD
+  depends: [P108M1T11]
+  owns:
+    - src/app/criteria/page.tsx
+    - tests/p108-criteria-admin.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT, MACHINE_EXCLUSIVE]
+```
+
+Goal: fix the narrow `/criteria` header layout defect for long VI/JA criterion text and display only the numeric portion of A/B/C criterion codes, preserving all canonical values and other application behavior.
+Current context: canonical base `beec879216278717834b2c95a199f2729f74f4b2`; header at `src/app/criteria/page.tsx:476-485` currently combines `lg:flex-nowrap`, `shrink-0` on `criterion.name`, and a flexing description. Existing browser harness in `tests/p108-criteria-admin.test.mjs --browser` uses the actual Next app with disposable local services and checks Leader/Staff/Worker at mobile/desktop widths.
+Changes: remove the large-screen forced no-wrap/unsplittable title constraint; keep the description at a usable full row width with normal VI/JA wrapping; add a page-local display-only formatter for `A8 → 8`, `B10 → 10`, etc. Extend the existing browser coverage for A8, B10, C12, C14 and normal control items across all three sets and both viewports.
+Constraints: no canonical code, UUID, DB, manifest, export/API, filtering/search, or scoring changes; retain visible A/B/C group names; no auth, Supabase, migration, seed, WAF, push, or deploy changes; leave all pre-existing dirty worktrees untouched.
+DoD:
+- `node tests/p108-criteria-admin.test.mjs` and `node tests/p108-criteria-admin.test.mjs --browser` pass; browser assertions cover all three sets, target/control records at 390×844 and 1440×900, display labels, adequate description width, and no horizontal overflow.
+- `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, and `node scripts/scan-source-secrets.mjs` pass on the exact candidate.
+- Mika verifies only the declared owned paths changed, canonical codes remain unchanged in data/API behavior, and candidate/base identity is exact. No independent fresh review is required for STANDARD.
+
 ### [ ] [#P108M2T01] Trial-evaluation disposition (owner-gated track)
 
 ```yaml
