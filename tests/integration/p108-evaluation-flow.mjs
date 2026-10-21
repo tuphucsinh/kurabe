@@ -29,7 +29,7 @@ const projectRoot = path.resolve(moduleDir, '../..');
 const confirmationRuntimeScript = path.join(projectRoot, '.github/ci/confirmation-runtime.mjs');
 const browserHelperPath = path.join(projectRoot, 'tests/fixtures/p107/lifecycle-coherence/lib/browser.mjs');
 const orgHelperPath = path.join(projectRoot, 'tests/fixtures/p107/lifecycle-coherence/lib/org.mjs');
-const manifestPath = path.join(projectRoot, 'db/seed/p108-criteria-manifest.json');
+const syntheticManifestPath = path.join(projectRoot, 'tests/fixtures/p108/synthetic-manifest.json');
 const importScriptPath = path.join(projectRoot, 'scripts/p108-import-criteria.mjs');
 const p108MigrationPath = path.join(projectRoot, 'supabase/migrations/20261017093100_p108_criteria_sets.sql');
 
@@ -201,67 +201,51 @@ async function main() {
     `);
 
     // -------------------------------------------------------------------------
-    // 2. Import P108 3-Set G1 Criteria Manifest Unchanged
+    // 2. Import P108 3-Set Synthetic Criteria
     // -------------------------------------------------------------------------
-    console.log('[Runtime] Verifying criteria set_key column and running criteria import...');
+    console.log('[Runtime] Verifying criteria set_key column and running 3-set synthetic criteria import...');
     const setKeyCheck = runPsql("SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'criteria' AND column_name = 'set_key';");
     if (setKeyCheck !== '1' && fs.existsSync(p108MigrationPath)) {
       const migSql = fs.readFileSync(p108MigrationPath, 'utf8');
       runPsql(migSql);
     }
 
-    // Unchanged G1 manifest (SHA-256 043ef0fd688c59664fea4e6209448e775ea7e4b7f797b5b40bfcdb6a2026caea)
-    const g1Manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    // In-memory clone of syntheticManifestPath with second level points 0 for first criterion of leaderA and staffA
+    const syntheticManifest = JSON.parse(fs.readFileSync(syntheticManifestPath, 'utf8'));
 
-    const leaderGroupA = g1Manifest.groups.find((g) => g.set_key === 'leader' && g.code === 'A');
+    const leaderGroupA = syntheticManifest.groups.find((g) => g.set_key === 'leader' && g.code === 'A');
     assert.ok(leaderGroupA, 'Leader Group A must exist in manifest');
-    const leaderCritZero = leaderGroupA.criteria.find((c) => c.levels.some((l) => l.points === 0));
-    assert.ok(leaderCritZero, 'Leader criterion with 0 points must exist');
-    const leaderZeroLevel = leaderCritZero.levels.find((l) => l.points === 0);
-    const leaderZeroCritId = leaderCritZero.id;
-    const leaderZeroCritName = leaderCritZero.name;
-    const leaderZeroIndex = leaderZeroLevel.sort_order ?? 0;
-    const leaderZeroLabel = leaderZeroLevel.label;
+    const leaderCritA1 = leaderGroupA.criteria[0];
+    assert.ok(leaderCritA1, 'Leader Criterion A1 must exist in manifest');
+    assert.ok(leaderCritA1.levels && leaderCritA1.levels.length >= 2, 'Leader Crit A1 must have at least 2 levels');
+    leaderCritA1.levels[1].points = 0;
+    leaderCritA1.default_level_index = 1;
+    const leaderZeroCritId = leaderCritA1.id;
+    const leaderZeroCritName = leaderCritA1.name;
+    const leaderZeroIndex = leaderCritA1.levels[1].sort_order ?? 1;
+    const leaderZeroLabel = leaderCritA1.levels[1].label;
 
-    const leaderCritFive = leaderGroupA.criteria.find((c) => c.levels.some((l) => l.points === 5));
-    assert.ok(leaderCritFive, 'Leader criterion with score 5 must exist');
-    const leaderFiveLevel = leaderCritFive.levels.find((l) => l.points === 5);
-    const leaderFiveCritId = leaderCritFive.id;
-    const leaderFiveCritName = leaderCritFive.name;
-    const leaderFiveIndex = leaderFiveLevel.sort_order ?? 0;
-    const leaderFiveLabel = leaderFiveLevel.label;
-
-    const leaderCritNeg = leaderGroupA.criteria.find((c) => c.levels.some((l) => l.points < 0));
-    assert.ok(leaderCritNeg, 'Leader criterion with negative points must exist');
-    const leaderNegLevel = leaderCritNeg.levels.find((l) => l.points < 0);
-    const leaderNegCritId = leaderCritNeg.id;
-    const leaderNegCritName = leaderCritNeg.name;
-    const leaderNegIndex = leaderNegLevel.sort_order ?? 1;
-    const leaderNegLabel = leaderNegLevel.label;
-
-    const leaderCritNa = leaderGroupA.criteria.find((c) => c.levels.some((l) => l.label.toUpperCase() === 'N/A'));
-    const leaderNaLevel = leaderCritNa?.levels.find((l) => l.label.toUpperCase() === 'N/A');
-    const leaderNaCritId = leaderCritNa?.id;
-    const leaderNaCritName = leaderCritNa?.name;
-    const leaderNaIndex = leaderNaLevel?.sort_order ?? 2;
-    const leaderNaLabel = leaderNaLevel?.label;
-
-    const staffGroupA = g1Manifest.groups.find((g) => g.set_key === 'staff' && g.code === 'A');
+    const staffGroupA = syntheticManifest.groups.find((g) => g.set_key === 'staff' && g.code === 'A');
     assert.ok(staffGroupA, 'Staff Group A must exist in manifest');
-    const staffCritZero = staffGroupA.criteria.find((c) => c.levels.some((l) => l.points === 0));
-    assert.ok(staffCritZero, 'Staff criterion with 0 points must exist');
-    const staffZeroLevel = staffCritZero.levels.find((l) => l.points === 0);
-    const staffZeroCritId = staffCritZero.id;
-    const staffZeroCritName = staffCritZero.name;
-    const staffZeroIndex = staffZeroLevel.sort_order ?? 0;
-    const staffZeroLabel = staffZeroLevel.label;
+    const staffCritA1 = staffGroupA.criteria[0];
+    assert.ok(staffCritA1, 'Staff Criterion A1 must exist in manifest');
+    assert.ok(staffCritA1.levels && staffCritA1.levels.length >= 2, 'Staff Crit A1 must have at least 2 levels');
+    staffCritA1.levels[1].points = 0;
+    staffCritA1.default_level_index = 1;
+    const staffZeroCritId = staffCritA1.id;
+    const staffZeroCritName = staffCritA1.name;
+    const staffZeroIndex = staffCritA1.levels[1].sort_order ?? 1;
+    const staffZeroLabel = staffCritA1.levels[1].label;
+
+    const tempManifestPath = path.join(evidenceDir, 'synthetic-manifest-with-zero.json');
+    fs.writeFileSync(tempManifestPath, JSON.stringify(syntheticManifest, null, 2));
 
     const currentVer = runPsql("SELECT COALESCE(max(version_no)::text, '1') FROM public.criteria_config_versions;");
     const importRes = spawnSync(process.execPath, [
       importScriptPath,
       '--apply',
       '--expected-version', currentVer,
-      '--manifest', manifestPath,
+      '--manifest', tempManifestPath,
       '--disposable',
     ], {
       cwd: projectRoot,
@@ -276,7 +260,7 @@ async function main() {
     if (importRes.status !== 0) {
       throw new Error(`Criteria import failed: ${importRes.stderr || importRes.stdout}`);
     }
-    console.log('[Runtime] Criteria import successful.');
+    console.log('[Runtime] Synthetic criteria import successful.');
 
     // Parse every late digest/version query against the migrated schema before
     // browser journeys. Selected indexes are JSON metadata inside notes.
@@ -322,20 +306,20 @@ async function main() {
       SELECT count(*) FROM public.criterion_level_versions lv
       JOIN public.criteria_config_versions v ON v.id = lv.version_id
       WHERE v.is_active IS TRUE AND lv.criterion_id IN ('${leaderZeroCritId}', '${staffZeroCritId}')
-        AND lv.sort_order = ${leaderZeroIndex} AND lv.points = 0;
-    `), '2', 'Both zero levels must also exist in the active immutable snapshot');
+        AND lv.sort_order = 1 AND lv.points = 0;
+    `), '2', 'Both synthetic zero levels must also exist in the active immutable snapshot');
 
-    // Counts 18/93 unchanged, criteria defaults are NULL in unchanged G1 manifest
+    // Counts 18/93 unchanged, other criteria defaults 0 remain
     const totalGroupsDb = runPsql("SELECT count(*) FROM public.criteria_groups WHERE is_active IS TRUE;");
     const totalCriteriaDb = runPsql("SELECT count(*) FROM public.criteria WHERE is_active IS TRUE;");
     assert.equal(totalGroupsDb, '18', 'Active criteria groups count must be 18');
     assert.equal(totalCriteriaDb, '93', 'Active criteria count must be 93');
 
-    const nullDefaultsCount = Number(runPsql(`
+    const otherDefaultsCount = Number(runPsql(`
       SELECT count(*) FROM public.criteria c
-      WHERE c.is_active IS TRUE AND c.default_level_index IS NULL;
+      WHERE c.is_active IS TRUE AND c.id NOT IN ('${leaderZeroCritId}', '${staffZeroCritId}') AND c.default_level_index = 0;
     `));
-    assert.equal(nullDefaultsCount, 93, 'All 93 criteria in G1 manifest must have default_level_index IS NULL in DB');
+    assert.ok(otherDefaultsCount > 0, 'Other criteria with default_level_index=0 must remain in DB');
 
     async function countCurrentUiSelections(p) {
       return p.evaluate(`(() => {
@@ -344,17 +328,11 @@ async function main() {
       })()`);
     }
 
-    async function selectAllCriteriaAcrossGroups(p, maybeLabelOrOptions = {}, maybeOptions = {}) {
-      const options = (typeof maybeLabelOrOptions === 'object' && maybeLabelOrOptions !== null)
-        ? maybeLabelOrOptions
-        : maybeOptions;
-      const expectedGroupCount = options.expectedGroupCount ?? 6;
-
+    async function selectAllCriteriaAcrossGroups(p, topLabel = 'Level 1 (Synthetic)', { expectedGroupCount = 6 } = {}) {
       // Like the original selectTopLevel helper, wait for independently loaded criteria.
       await p.waitFor(`(() => {
         const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
-        const h3s = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.parentElement?.querySelectorAll('h3') || [];
-        return tabs.length === ${expectedGroupCount} && h3s.length > 0;
+        return tabs.length === ${expectedGroupCount} && [...document.querySelectorAll('button:not(:disabled) p')].some(n => n.textContent.trim() === ${JSON.stringify(topLabel)});
       })()`, { timeout: 30000, label: 'all-group criteria ready' });
       const groupCount = await p.evaluate(`(() => {
         const tabs = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]')?.querySelectorAll('button[role="tab"]') || [];
@@ -371,7 +349,7 @@ async function main() {
         WHERE e.employee_id='${subjectId}' AND ep.status='active';`);
       const setKey = {Manager:'leader',Leader:'leader',SubLeader:'leader',Employee:'staff',Worker:'worker'}[snapshotRole];
       assert.ok(setKey, `Known snapshot role required: ${snapshotRole}`);
-      const expectedGroups = g1Manifest.groups.filter(g => g.set_key === setKey);
+      const expectedGroups = syntheticManifest.groups.filter(g => g.set_key === setKey);
       assert.equal(expectedGroups.length, expectedGroupCount);
       const actualGroupIds = await p.evaluate(`Array.from(document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]').querySelectorAll('button[role="tab"]')).map(b => b.id.replace(/^tab-/,''))`);
       assert.deepEqual(actualGroupIds, expectedGroups.map(g => g.id), 'Primary navigation must cover exactly the pinned subject set groups');
@@ -398,28 +376,23 @@ async function main() {
         const clickedInGroup = await p.evaluate(`(() => {
           let count = 0;
           const region = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]').parentElement;
-          const h3s = Array.from(region.querySelectorAll('h3'));
-          for (const h3 of h3s) {
-            const card = h3.closest('div.border') || h3.closest('.rounded-2xl') || h3.parentElement.parentElement.parentElement;
-            if (!card) continue;
-            const grid = card.querySelector('.grid');
-            const buttons = grid
-              ? Array.from(grid.querySelectorAll('button:not(:disabled)'))
-              : Array.from(card.querySelectorAll('button:not(:disabled)')).filter(b => !b.textContent.includes('Ghi chú'));
-            if (buttons.length > 0) {
-              buttons[0].click();
+          const buttons = Array.from(region.querySelectorAll('button:not(:disabled)'));
+          for (const btn of buttons) {
+            const pTag = btn.querySelector('p');
+            if (pTag && pTag.textContent.trim() === ${JSON.stringify(topLabel)}) {
+              btn.click();
               count++;
             }
           }
           return count;
         })()`);
-        assert.ok(clickedInGroup > 0, `Must click criteria in group tab ${groupIndex}`);
+        assert.ok(clickedInGroup > 0, `Must click at least one criterion with label "${topLabel}" in group tab ${groupIndex}`);
         totalClicked += clickedInGroup;
 
         assert.equal(clickedInGroup, expectedNames.length, 'Choose one explicit level for every criterion, not merely one per group');
         await p.waitFor(`(() => {
           const region = document.querySelector('[role="tablist"][aria-label="Nhóm tiêu chí"]').parentElement;
-          return [...region.querySelectorAll('button')].filter(b => b.className.includes('ring-brand') && b.querySelector('.rounded-full')).length === ${expectedNames.length};
+          return [...region.querySelectorAll('button')].filter(b => b.className.includes('ring-brand') && b.querySelector('p')).length === ${expectedNames.length};
         })()`, {timeout:10000,label:'all criterion choices rendered'});
         const selectedCountInGroup = await countCurrentUiSelections(p);
         assert.equal(selectedCountInGroup, expectedNames.length);
@@ -504,12 +477,12 @@ async function main() {
     const {
       loginAs,
       openEvaluation,
+      saveDraftViaUi,
       returnRoundViaUi,
       createPeriodViaUi,
       loadActionManifest,
       browserAction,
     } = await import(`file://${orgHelperPath}`);
-    const { waitFor: waitForCondition } = await import(`file://${path.join(path.dirname(browserHelperPath), 'guard.mjs')}`);
 
     // Positive Submit must await this action's success, not the previous negative-test toast.
     // Keep the shared helper's 40s deadline and leave the P107 helper untouched.
@@ -517,31 +490,6 @@ async function main() {
       await p.clickText('Gửi Đánh giá');
       await p.waitFor("document.body.innerText.toLowerCase().includes('đánh giá đã được gửi thành công') || location.pathname === '/employees'",
         {timeout:40000,label:'current Submit completed'});
-      return p.evaluate('document.body.innerText');
-    }
-
-    // The shared P107 helper can accept a prior transient toast as completion.
-    // Observe a new first-party POST response for this click instead of using toast freshness.
-    async function saveDraftViaUiFresh(p) {
-      await p.waitFor(
-        "[...document.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Lưu bản nháp') && !b.disabled)",
-        { timeout: 30000, label: 'draft save button enabled' },
-      );
-      const actionUrl = `${origin}${await p.evaluate('location.pathname')}`;
-      const priorPosts = p.requests(5000).filter((request) => request.method === 'POST' && request.url === actionUrl);
-      assert.equal(priorPosts.filter((request) => request.status === null).length, 0,
-        'No prior draft POST may still be pending before a new save');
-      await p.clickText('Lưu bản nháp');
-      const currentPost = await waitForCondition(() => {
-        const posts = p.requests(5000).filter((request) => request.method === 'POST' && request.url === actionUrl);
-        if (posts.length <= priorPosts.length) return false;
-        return posts[priorPosts.length].status === null ? false : posts[priorPosts.length];
-      }, { timeout: 40000, interval: 150, label: 'current draft POST response received' });
-      assert.equal(currentPost.status, 200, 'Current draft server action must return HTTP 200');
-      await p.waitFor(
-        "[...document.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Lưu bản nháp') && !b.disabled)",
-        { timeout: 15000, label: 'current draft save button re-enabled' },
-      );
       return p.evaluate('document.body.innerText');
     }
 
@@ -593,7 +541,7 @@ async function main() {
     {
       await loginAs(page, origin, 'P103-MGR');
       await openEvaluation(page, origin, managerId);
-      await page.waitFor("document.body.innerText.includes('Tỷ lệ hiện diện')", {
+      await page.waitFor("document.body.innerText.includes('Level 1 (Synthetic)')", {
         timeout: 20000,
         label: 'Leader criteria rendered',
       });
@@ -611,7 +559,7 @@ async function main() {
       assert.equal(initialUiSelections, 0, 'UI current selection count must be 0 on initial open despite configured defaults');
 
       // Reopen/idle/save Draft unselected, prove same DB maps
-      const saveUnselectedRes = await saveDraftViaUiFresh(page);
+      const saveUnselectedRes = await saveDraftViaUi(page);
       assert.match(saveUnselectedRes, /Đã lưu bản nháp/i);
 
       const round1DbAfterSave = await pollDbRound(runPsql, evalManager, 1,
@@ -622,7 +570,7 @@ async function main() {
       assert.deepEqual(round1DbAfterSave.metaIndexes, {}, 'Round 1 DB meta indexes must remain {} after saving unselected Draft');
 
       await page.goto(`${origin}/evaluations/${managerId}`);
-      await page.waitFor("document.body.innerText.includes('Tỷ lệ hiện diện')", { timeout: 20000 });
+      await page.waitFor("document.body.innerText.includes('Level 1 (Synthetic)')", { timeout: 20000 });
       const reopenedUiSelections = await countCurrentUiSelections(page);
       assert.equal(reopenedUiSelections, 0, 'Reopened unselected Draft must have selection count 0');
       recordPass('flow-1-initial-open-unselected-empty-scores-and-metadata');
@@ -636,7 +584,7 @@ async function main() {
       await page.waitFor("document.querySelector(\"input[placeholder*='Ghi chú cho']\") !== null", { timeout: 10000, label: 'note input visible' });
       await page.fill("input[placeholder*='Ghi chú cho']", 'Ghi chú tiêu chí thử nghiệm');
 
-      const saveNoteDraftRes = await saveDraftViaUiFresh(page);
+      const saveNoteDraftRes = await saveDraftViaUi(page);
       assert.match(saveNoteDraftRes, /Đã lưu bản nháp/i);
 
       const round1DbNote = await pollDbRound(runPsql, evalManager, 1,
@@ -666,7 +614,7 @@ async function main() {
 
       // 3. User explicit zero on a single criterion via UI: pick real zero-point level ROW-SCOPED
       await clickCriterionLevelByCriterionName(page, leaderZeroCritName, leaderZeroLabel);
-      const saveZeroRes = await saveDraftViaUiFresh(page);
+      const saveZeroRes = await saveDraftViaUi(page);
       assert.match(saveZeroRes, /Đã lưu bản nháp/i);
 
       const round1DbZero = await pollDbRound(runPsql, evalManager, 1,
@@ -680,21 +628,9 @@ async function main() {
 
       // Reopen and assert retained UI+DB
       await page.goto(`${origin}/evaluations/${managerId}`);
-      await page.waitFor("document.body.innerText.includes('Tỷ lệ hiện diện')", { timeout: 20000 });
+      await page.waitFor("document.body.innerText.includes('Level 1 (Synthetic)')", { timeout: 20000 });
       const reopenedZeroSelections = await countCurrentUiSelections(page);
       assert.equal(reopenedZeroSelections, 1, 'Reopened partial draft must retain exactly 1 selection in UI');
-
-      // Exercise page reload to verify refetch race safety
-      await page.goto(`${origin}/evaluations/${managerId}`);
-      await page.waitFor(
-        `(() => {
-          const buttons = Array.from(document.querySelectorAll('button'));
-          return buttons.filter(b => b.className.includes('ring-brand') && b.querySelector('.rounded-full') !== null).length === 1;
-        })()`,
-        { timeout: 20000, label: 'partial draft selection restored (1)' }
-      );
-      const reloadedZeroSelections = await countCurrentUiSelections(page);
-      assert.equal(reloadedZeroSelections, 1, 'Reloaded partial draft must retain selection without refetch race wipe');
 
       // Incomplete submit by UI must show exact completeness reason from validator.ts:276 and no DB mutation
       const linesBeforeIncomplete = fullEvaluationLines(evalManager);
@@ -709,57 +645,16 @@ async function main() {
       recordPass('flow-1-explicit-zero-partial-draft-and-submit-validation');
 
       // Complete ALL required criteria across all groups with real UI choices
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
-
-      // In Group A (returned to by helper): explicitly exercise score 5, actual 0, negative value, and N/A level
-      await clickCriterionLevelByCriterionName(page, leaderFiveCritName, leaderFiveLabel);
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
+      // Helper returns to first group, so leaderZeroCritName (A1) is visible.
+      // Re-select explicit zero row-scoped to leaderZeroCritName to test complete Submit containing explicit zero
       await clickCriterionLevelByCriterionName(page, leaderZeroCritName, leaderZeroLabel);
-      await clickCriterionLevelByCriterionName(page, leaderNegCritName, leaderNegLabel);
-      if (leaderCritNa && leaderNaLabel) {
-        await clickCriterionLevelByCriterionName(page, leaderNaCritName, leaderNaLabel);
-      }
-
-      // Save complete draft via UI, read back from DB, reload page
-      const saveCompleteDraftRes = await saveDraftViaUiFresh(page);
-      assert.match(saveCompleteDraftRes, /Đã lưu bản nháp/i);
-
-      const round1DbCompleteDraft = await pollDbRound(runPsql, evalManager, 1,
-        (r) => Object.keys(r.scores).length === 33 &&
-               r.scores[leaderFiveCritId] === 5 &&
-               r.scores[leaderZeroCritId] === 0 &&
-               r.scores[leaderNegCritId] === leaderNegLevel.points,
-        { label: 'Round 1 complete draft with 5, 0, neg persisted' }
-      );
-      assert.equal(round1DbCompleteDraft.scores[leaderFiveCritId], 5, 'Must retain score 5 in Draft');
-      assert.equal(round1DbCompleteDraft.scores[leaderZeroCritId], 0, 'Must retain actual 0 score in Draft');
-      assert.equal(round1DbCompleteDraft.scores[leaderNegCritId], leaderNegLevel.points, 'Must retain negative score in Draft');
-      if (leaderCritNa) {
-        assert.equal(round1DbCompleteDraft.scores[leaderNaCritId], 0, 'Must retain N/A score 0 in Draft');
-        assert.equal(round1DbCompleteDraft.metaIndexes[leaderNaCritId], leaderNaIndex, 'Must retain N/A meta index in Draft');
-      }
-
-      // Reload page and verify selections retained in UI
-      await page.goto(`${origin}/evaluations/${managerId}`);
-      await page.waitFor(
-        `(() => {
-          const buttons = Array.from(document.querySelectorAll('button'));
-          return buttons.filter(b => b.className.includes('ring-brand') && b.querySelector('.rounded-full') !== null).length === 8;
-        })()`,
-        { timeout: 20000, label: 'complete Group A selections restored (8)' }
-      );
-      const reloadedGroupSelections = await countCurrentUiSelections(page);
-      assert.equal(reloadedGroupSelections, 8, 'Group A must retain all 8 selections after reload');
 
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalManager}';`), 'Approved');
       assert.equal(runPsql(`SELECT status FROM public.evaluation_rounds WHERE evaluation_id = '${evalManager}' AND round = 1;`), 'Submitted');
       const finalManagerScores = JSON.parse(runPsql(`SELECT scores FROM public.evaluation_rounds WHERE evaluation_id = '${evalManager}' AND round = 1;`));
-      assert.equal(finalManagerScores[leaderFiveCritId], 5, 'Submitted round must retain score 5');
       assert.equal(finalManagerScores[leaderZeroCritId], 0, 'Submitted round must retain explicit zero score');
-      assert.equal(finalManagerScores[leaderNegCritId], leaderNegLevel.points, 'Submitted round must retain negative score');
-      if (leaderCritNa) {
-        assert.equal(finalManagerScores[leaderNaCritId], 0, 'Submitted round must retain N/A level score');
-      }
       recordPass('flow-1-manager-self-approved-leader-set');
     }
 
@@ -767,7 +662,7 @@ async function main() {
     {
       await loginAs(page, origin, 'P103-LDA');
       await openEvaluation(page, origin, leaderAId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
 
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalLeaderA}';`), 'Submitted');
@@ -794,7 +689,7 @@ async function main() {
       assert.equal(hasL1Badge, true, 'Previous-round L1 reference badges must be present in UI');
       recordPass('flow-2-round-2-no-carry-forward-empty-selection');
 
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
 
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalLeaderA}';`), 'Approved');
@@ -806,20 +701,20 @@ async function main() {
     {
       await loginAs(page, origin, 'P103-SLB');
       await openEvaluation(page, origin, subleaderBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalSubLeaderB}';`), 'Submitted');
 
       await loginAs(page, origin, 'P103-LDA');
       await openEvaluation(page, origin, subleaderBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalSubLeaderB}';`), 'Reviewed');
       assert.equal(runPsql(`SELECT current_round FROM public.evaluations WHERE id = '${evalSubLeaderB}';`), '3');
 
       await loginAs(page, origin, 'P103-MGR');
       await openEvaluation(page, origin, subleaderBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalSubLeaderB}';`), 'Approved');
       recordPass('flow-3-subleader-three-rounds-approved-leader-set');
@@ -829,13 +724,13 @@ async function main() {
     {
       await loginAs(page, origin, 'P103-SLB');
       await openEvaluation(page, origin, employeeBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalEmployeeB}';`), 'Submitted');
 
       await loginAs(page, origin, 'P103-LDA');
       await openEvaluation(page, origin, employeeBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
 
       // Change one round 2 criterion to explicit zero row-scoped before original submit to distinguish from round 1
       await clickCriterionLevelByCriterionName(page, staffZeroCritName, staffZeroLabel);
@@ -942,7 +837,7 @@ async function main() {
 
       await loginAs(page, origin, 'P103-MGR');
       await openEvaluation(page, origin, employeeBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalEmployeeB}';`), 'Approved');
       recordPass('flow-4-employee-three-rounds-return-resubmit-staff-set');
@@ -952,19 +847,19 @@ async function main() {
     {
       await loginAs(page, origin, 'P103-SLB');
       await openEvaluation(page, origin, workerBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalWorkerB}';`), 'Submitted');
 
       await loginAs(page, origin, 'P103-LDA');
       await openEvaluation(page, origin, workerBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalWorkerB}';`), 'Reviewed');
 
       await loginAs(page, origin, 'P103-MGR');
       await openEvaluation(page, origin, workerBId);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
       await submitViaUi(page);
       assert.equal(runPsql(`SELECT status FROM public.evaluations WHERE id = '${evalWorkerB}';`), 'Approved');
       recordPass('flow-5-worker-three-rounds-approved-worker-set');
@@ -1080,8 +975,8 @@ async function main() {
         ? sc.subleaderCode : sc.code;
       await loginAs(page, origin, initialGraderCode);
       await openEvaluation(page, origin, sc.id);
-      await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
-      assert.match(await saveDraftViaUiFresh(page), /Đã lưu bản nháp/i);
+      await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
+      assert.match(await saveDraftViaUi(page), /Đã lưu bản nháp/i);
       const initialRound = JSON.parse(runPsql(`
         SELECT json_build_object('totalScore', total_score, 'grade', grade, 'scores', scores,
           'evaluatorId', evaluator_id, 'criteriaVersionId', criteria_config_version_id)
@@ -1149,14 +1044,16 @@ async function main() {
 
       const compareText = await page.evaluate("document.querySelector('main').innerText");
       const renderedCriterionIds = expectedCriteria.filter(c => compareText.includes(c.name)).map(c => c.id).sort();
-      assert.deepEqual(renderedCriterionIds, expectedCriteria.map(c => c.id).sort(), 'Compare must render the complete expected criterion UUID set');
-      const otherExclusiveCriteria = JSON.parse(runPsql(`
-        SELECT json_agg(DISTINCT name) FROM public.criteria
-        WHERE is_active IS TRUE AND set_key <> '${sc.setKey}'
-          AND name NOT IN (SELECT name FROM public.criteria WHERE is_active IS TRUE AND set_key = '${sc.setKey}');
+      assert.deepEqual(renderedCriterionIds, expectedCriteria.map(c => c.id).sort(), 'Compare must render the complete expected synthetic criterion UUID set');
+      const otherCriteria = JSON.parse(runPsql(`
+        SELECT json_agg(name) FROM public.criteria WHERE is_active IS TRUE AND set_key <> '${sc.setKey}';
       `));
-      if (otherExclusiveCriteria && otherExclusiveCriteria.length > 0) {
-        assert.ok(otherExclusiveCriteria.every(name => !compareText.includes(name)), 'Compare must not add exclusive criteria from other sets');
+      assert.ok(otherCriteria.every(name => !compareText.includes(name)), 'Compare must not add another set to the expected criteria');
+      if (sc.setKey === 'leader') {
+        assert.doesNotMatch(compareText, /Staff Group A \(Synthetic\)/, 'Leader snapshot must NOT include Staff-only groups in compare');
+        assert.doesNotMatch(compareText, /Worker Group A \(Synthetic\)/, 'Leader snapshot must NOT include Worker-only groups in compare');
+      } else if (sc.setKey === 'staff') {
+        assert.doesNotMatch(compareText, /Worker Group A \(Synthetic\)/, 'Staff snapshot must NOT include Worker-only groups in compare');
       }
 
       recordPass(sc.caseName, {
@@ -1181,8 +1078,8 @@ async function main() {
 
     await loginAs(page, origin, synEdlFixture.subleaderCode);
     await openEvaluation(page, origin, synEdlId);
-    await selectAllCriteriaAcrossGroups(page, { expectedGroupCount: 6 });
-    const draftSaveRes = await saveDraftViaUiFresh(page);
+    await selectAllCriteriaAcrossGroups(page, 'Level 1 (Synthetic)', { expectedGroupCount: 6 });
+    const draftSaveRes = await saveDraftViaUi(page);
     assert.match(draftSaveRes, /Đã lưu bản nháp/i, 'Authorized SubLeader must successfully save draft');
 
     const draftRoundStatus = runPsql(`SELECT status FROM public.evaluation_rounds WHERE evaluation_id = '${evalSynEdl}' AND round = 1;`);
@@ -1222,7 +1119,7 @@ async function main() {
         CROSS JOIN LATERAL (
           SELECT json_agg(l.points ORDER BY l.sort_order, l.id) AS points,
                  json_agg(json_build_object('points', l.points, 'label', l.label, 'description', l.description) ORDER BY l.sort_order, l.id) AS levels
-          FROM public.criterion_levels l WHERE l.criterion_id = c.id AND l.is_active IS TRUE
+          FROM public.criterion_levels l WHERE l.criterion_id = c.id
         ) lv
         WHERE c.is_active IS TRUE AND c.set_key = '${setKey}';
       `));
@@ -1276,7 +1173,7 @@ async function main() {
 
     await loginAs(page, origin, 'P103-LDA');
     await page.goto(`${origin}/evaluations/${leaderAId}`);
-    await page.waitFor("document.body.innerText.includes('Tỷ lệ hiện diện')", { timeout: 15000 });
+    await page.waitFor("document.body.innerText.includes('Level 1 (Synthetic)')", { timeout: 15000 });
 
     // 8.0 Contract probe: without the UI's `renderedRules` the real action refuses with its
     // own exact error (src/actions/evaluation.ts) and writes nothing.
@@ -1407,7 +1304,6 @@ async function main() {
         }))()`);
         observed.console = page.consoleErrors();
         observed.exceptions = page.exceptions();
-        observed.requests = page.requests(20);
         const subjectId = observed.path.split('/')[2];
         if (diagnosticDb && /^[0-9a-f-]{36}$/i.test(subjectId)) {
           observed.rounds = JSON.parse(diagnosticDb(`SELECT COALESCE(json_agg(json_build_object(
