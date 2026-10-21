@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   User,
   Evaluation,
@@ -32,7 +32,7 @@ export interface EvaluationState {
 }
 
 export type EvaluationAction =
-  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState> }
+  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState>; preserveUserEdits?: boolean }
   | { type: 'SET_SCORE'; criterionId: string; points: number; levelIndex: number }
   | { type: 'SET_NOTE'; criterionId: string; note: string }
   | { type: 'SET_COMMENT'; comment: string };
@@ -42,6 +42,116 @@ export interface EvaluationInitMetadata {
   round: RoundNumber | null;
   initialized: boolean;
   firstOpenEligible: boolean;
+}
+
+export interface SaveSnapshot {
+  evaluationId: string;
+  round: number;
+  contextGeneration: number;
+  editRevision: number;
+}
+
+export interface SaveAcknowledgeContext {
+  evaluationId?: string | null;
+  round?: number | null;
+  contextGeneration: number;
+  editRevision: number;
+  isDirty?: boolean;
+}
+
+export function canAcknowledgeSave(
+  context: SaveAcknowledgeContext,
+  snapshot: SaveSnapshot
+): boolean {
+  if (!context.evaluationId || context.round == null) return false;
+  return (
+    context.evaluationId === snapshot.evaluationId &&
+    context.round === snapshot.round &&
+    context.contextGeneration === snapshot.contextGeneration &&
+    context.editRevision === snapshot.editRevision
+  );
+}
+
+export function applySaveAcknowledgement(
+  current: SaveAcknowledgeContext,
+  snapshot: SaveSnapshot,
+  saveSucceeded: boolean
+): { isDirty: boolean; acknowledged: boolean } {
+  const currentDirty = current.isDirty ?? true;
+  if (!saveSucceeded) {
+    return { isDirty: currentDirty, acknowledged: false };
+  }
+  if (canAcknowledgeSave(current, snapshot)) {
+    return { isDirty: false, acknowledged: true };
+  }
+  return { isDirty: currentDirty, acknowledged: false };
+}
+
+export interface HydrationContext {
+  roundKey: string;
+  lastInitializedKey: string | null;
+  isDirty: boolean;
+  incomingUpdatedAt?: string | null;
+  lastHydratedUpdatedAt?: string | null;
+  incomingSeq?: number;
+  lastHydratedSeq?: number;
+}
+
+export interface HydrationDecision {
+  shouldHydrate: boolean;
+  preserveUserEdits: boolean;
+  reason?: 'STALE_OLDER_RESPONSE' | 'PRESERVE_ACTIVE_DIRTY' | 'FULL_HYDRATION';
+}
+
+export function resolveHydrationDecision(ctx: HydrationContext): HydrationDecision {
+  const isSameRound = Boolean(ctx.lastInitializedKey && ctx.roundKey && ctx.lastInitializedKey === ctx.roundKey);
+
+  // Stale in-flight refetch check (sequence)
+  if (ctx.incomingSeq != null && ctx.lastHydratedSeq != null && ctx.incomingSeq < ctx.lastHydratedSeq) {
+    return { shouldHydrate: false, preserveUserEdits: false, reason: 'STALE_OLDER_RESPONSE' };
+  }
+
+  // Stale in-flight refetch check (timestamp)
+  if (
+    isSameRound &&
+    ctx.incomingUpdatedAt &&
+    ctx.lastHydratedUpdatedAt &&
+    ctx.incomingUpdatedAt < ctx.lastHydratedUpdatedAt
+  ) {
+    return { shouldHydrate: false, preserveUserEdits: false, reason: 'STALE_OLDER_RESPONSE' };
+  }
+
+  // Same-round dirty protection
+  if (isSameRound && ctx.isDirty) {
+    return { shouldHydrate: true, preserveUserEdits: true, reason: 'PRESERVE_ACTIVE_DIRTY' };
+  }
+
+  return { shouldHydrate: true, preserveUserEdits: false, reason: 'FULL_HYDRATION' };
+}
+
+export interface RefetchSequencer {
+  nextSequence: () => number;
+  canApplyResponse: (seq: number) => boolean;
+  getLatestAppliedSeq: () => number;
+}
+
+export function createRefetchSequencer(): RefetchSequencer {
+  let currentSeq = 0;
+  let latestAppliedSeq = 0;
+  return {
+    nextSequence: () => {
+      currentSeq += 1;
+      return currentSeq;
+    },
+    canApplyResponse: (seq: number) => {
+      if (seq < latestAppliedSeq) {
+        return false;
+      }
+      latestAppliedSeq = seq;
+      return true;
+    },
+    getLatestAppliedSeq: () => latestAppliedSeq,
+  };
 }
 
 const initialState: EvaluationState = {
@@ -58,7 +168,15 @@ const initialState: EvaluationState = {
 export function evaluationReducer(state: EvaluationState, action: EvaluationAction): EvaluationState {
   switch (action.type) {
     case 'SET_INITIAL_DATA':
-      return { ...state, ...action.payload };
+      if (!action.preserveUserEdits) return { ...state, ...action.payload };
+      return {
+        ...state,
+        ...action.payload,
+        scores: state.scores,
+        selectedLevelIndexes: state.selectedLevelIndexes,
+        notes: state.notes,
+        comment: state.comment,
+      };
     case 'SET_SCORE':
       return {
         ...state,
@@ -161,13 +279,37 @@ export function useEvaluationPageState({
   });
 
   const userEditedRef = useRef(false);
+  const editRevisionRef = useRef(0);
   const lastInitializedKeyRef = useRef<string | null>(null);
+  const lastHydratedUpdatedAtRef = useRef<string | null>(null);
   const criteriaGenRef = useRef(0);
   const historyGenRef = useRef(0);
+  const latestContextRef = useRef<{
+    evaluationId: string | null;
+    round: number | null;
+    contextGeneration: number;
+  }>({
+    evaluationId: evaluation?.id ?? null,
+    round: (targetRound?.round ?? targetRoundNumber) ?? null,
+    contextGeneration: 0,
+  });
+  useLayoutEffect(() => {
+    const current = latestContextRef.current;
+    const nextEvaluationId = evaluation?.id ?? null;
+    const nextRound = (targetRound?.round ?? targetRoundNumber) ?? null;
+    const contextChanged =
+      current.evaluationId !== nextEvaluationId || current.round !== nextRound;
+    latestContextRef.current = {
+      evaluationId: nextEvaluationId,
+      round: nextRound,
+      contextGeneration: current.contextGeneration + (contextChanged ? 1 : 0),
+    };
+  }, [evaluation?.id, targetRound?.round, targetRoundNumber]);
 
   const wrappedDispatch = useCallback((action: EvaluationAction) => {
     if (action.type === 'SET_SCORE' || action.type === 'SET_NOTE' || action.type === 'SET_COMMENT') {
       userEditedRef.current = true;
+      editRevisionRef.current += 1;
     }
     dispatch(action);
   }, []);
@@ -211,6 +353,46 @@ export function useEvaluationPageState({
         initialSelectedLevelIndexes = { ...(targetRound.selectedLevelIndexes || {}) };
         initialNotes = { ...(targetRound.notes || {}) };
         initialComment = targetRound.comment || '';
+      }
+
+      const roundKey = targetRound
+        ? `${evaluation.id}:${targetRound.round}`
+        : (targetRoundNum ? `${evaluation.id}:${targetRoundNum}` : '');
+
+      const isSameRound = lastInitializedKeyRef.current === roundKey;
+
+      const hydrationDecision = resolveHydrationDecision({
+        roundKey,
+        lastInitializedKey: lastInitializedKeyRef.current,
+        isDirty: userEditedRef.current,
+        incomingUpdatedAt: evaluation.updatedAt,
+        lastHydratedUpdatedAt: lastHydratedUpdatedAtRef.current,
+      });
+
+      if (!hydrationDecision.shouldHydrate) {
+        return;
+      }
+
+      if (isSameRound && userEditedRef.current) {
+        // Prevent stale refetch/hydration from overwriting user edits on the active round
+        dispatch({
+          type: 'SET_INITIAL_DATA',
+          preserveUserEdits: true,
+          payload: {
+            employee,
+            evaluation,
+            currentRoundData: targetRound,
+            allPreviousRounds: prevRounds,
+          }
+        });
+        return;
+      }
+
+      lastInitializedKeyRef.current = roundKey;
+      lastHydratedUpdatedAtRef.current = evaluation.updatedAt || null;
+      userEditedRef.current = false;
+      if (!isSameRound) {
+        editRevisionRef.current = 0;
       }
 
       dispatch({
@@ -417,6 +599,30 @@ export function useEvaluationPageState({
     }));
   }, [criteriaGroups]);
 
+  const getSaveSnapshot = useCallback((): SaveSnapshot => {
+    const latest = latestContextRef.current;
+    return {
+      evaluationId: latest.evaluationId ?? '',
+      round: (latest.round ?? 0) as RoundNumber,
+      contextGeneration: latest.contextGeneration,
+      editRevision: editRevisionRef.current,
+    };
+  }, []);
+
+  const acknowledgeSave = useCallback((snapshot: SaveSnapshot, saveSucceeded = true): boolean => {
+    const latest = latestContextRef.current;
+    const currentContext = {
+      evaluationId: latest.evaluationId ?? null,
+      round: latest.round ?? null,
+      contextGeneration: latest.contextGeneration,
+      editRevision: editRevisionRef.current,
+      isDirty: userEditedRef.current,
+    };
+    const result = applySaveAcknowledgement(currentContext, snapshot, saveSucceeded);
+    userEditedRef.current = result.isDirty;
+    return result.acknowledged;
+  }, []);
+
   return {
     state,
     dispatch: wrappedDispatch,
@@ -436,6 +642,10 @@ export function useEvaluationPageState({
     firstOpenEligible: initMetadata.firstOpenEligible,
     userEditedRef,
     isUserEdited: () => userEditedRef.current,
+    editRevisionRef,
+    latestContextRef,
+    getSaveSnapshot,
+    acknowledgeSave,
     criteriaConfigVersionId,
     gradeConfigVersionId,
     renderedCriteriaRules,

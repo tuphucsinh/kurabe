@@ -136,6 +136,8 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     isMounted,
     initMetadata,
     userEditedRef,
+    getSaveSnapshot,
+    acknowledgeSave,
     criteriaConfigVersionId,
     gradeConfigVersionId,
     renderedCriteriaRules,
@@ -376,6 +378,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
   const handleSave = async (isSubmit: boolean) => {
     if (!evaluation || !accessState.editableRound || !user?.id) return;
 
+    const saveSnapshot = getSaveSnapshot();
     setIsSaving(true);
     try {
       const res = await saveEvaluationRound(
@@ -394,6 +397,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
       );
 
       if (res.success) {
+        acknowledgeSave(saveSnapshot, true);
         await Promise.all([
           invalidateRequesterQueries(queryClient, 'evaluation-page-data', userRef.current),
           invalidateRequesterQueries(queryClient, 'evaluation-compare-page-data', userRef.current),
@@ -408,9 +412,11 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
           showDraftSaved();
         }
       } else {
+        acknowledgeSave(saveSnapshot, false);
         toast(`Lỗi: ${res.error}`, 'error');
       }
     } catch (err) {
+      acknowledgeSave(saveSnapshot, false);
       console.error(err);
       toast('Đã xảy ra lỗi khi xử lý đánh giá.', 'error');
     } finally {

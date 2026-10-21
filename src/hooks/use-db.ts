@@ -90,8 +90,8 @@ export const invalidateRequesterQueries = (
   family: string,
   requester?: User | null,
 ) => {
-  if (requester?.id == null) return;
-  queryClient.invalidateQueries({
+  if (requester?.id == null) return Promise.resolve();
+  return queryClient.invalidateQueries({
     predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => queryKey[0] === family && hasRequesterScope(queryKey, requester),
   });
 };
