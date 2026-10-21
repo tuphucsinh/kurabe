@@ -32,7 +32,7 @@ export interface EvaluationState {
 }
 
 export type EvaluationAction =
-  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState> }
+  | { type: 'SET_INITIAL_DATA'; payload: Partial<EvaluationState>; preserveUserEdits?: boolean }
   | { type: 'SET_SCORE'; criterionId: string; points: number; levelIndex: number }
   | { type: 'SET_NOTE'; criterionId: string; note: string }
   | { type: 'SET_COMMENT'; comment: string };
@@ -58,7 +58,15 @@ const initialState: EvaluationState = {
 export function evaluationReducer(state: EvaluationState, action: EvaluationAction): EvaluationState {
   switch (action.type) {
     case 'SET_INITIAL_DATA':
-      return { ...state, ...action.payload };
+      if (!action.preserveUserEdits) return { ...state, ...action.payload };
+      return {
+        ...state,
+        ...action.payload,
+        scores: state.scores,
+        selectedLevelIndexes: state.selectedLevelIndexes,
+        notes: state.notes,
+        comment: state.comment,
+      };
     case 'SET_SCORE':
       return {
         ...state,
@@ -212,6 +220,29 @@ export function useEvaluationPageState({
         initialNotes = { ...(targetRound.notes || {}) };
         initialComment = targetRound.comment || '';
       }
+
+      const roundKey = targetRound
+        ? `${evaluation.id}:${targetRound.round}`
+        : (targetRoundNum ? `${evaluation.id}:${targetRoundNum}` : '');
+
+      const isSameRound = lastInitializedKeyRef.current === roundKey;
+      if (isSameRound && userEditedRef.current) {
+        // Prevent stale refetch/hydration from overwriting user edits on the active round
+        dispatch({
+          type: 'SET_INITIAL_DATA',
+          preserveUserEdits: true,
+          payload: {
+            employee,
+            evaluation,
+            currentRoundData: targetRound,
+            allPreviousRounds: prevRounds,
+          }
+        });
+        return;
+      }
+
+      lastInitializedKeyRef.current = roundKey;
+      userEditedRef.current = false;
 
       dispatch({
         type: 'SET_INITIAL_DATA',

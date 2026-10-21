@@ -106,6 +106,228 @@ const reopenedZeroState = evaluationReducer(initialState, {
 assert.equal(reopenedZeroState.scores['crit-zero'], 0, 'Reopening zero score round must preserve score 0');
 assert.equal(reopenedZeroState.selectedLevelIndexes['crit-zero'], 1, 'Reopening zero score round must preserve level index');
 
+// Test E: Single selection (1/33) partial draft preserved across background refetch
+const singleScoredState = evaluationReducer(emptyInitState, {
+  type: 'SET_SCORE',
+  criterionId: 'crit-leader-1',
+  points: 10,
+  levelIndex: 0,
+});
+assert.equal(singleScoredState.scores['crit-leader-1'], 10, 'Single scored criterion must be 10');
+assert.equal(singleScoredState.selectedLevelIndexes['crit-leader-1'], 0, 'Single scored level index must be 0');
+
+// Same-round refetch carrying round context preserves active edits only when the hook marks them dirty.
+const singleScoredStateWithContext = {
+  ...singleScoredState,
+  evaluation: { id: 'eval-1' },
+  currentRoundData: { round: 1 },
+};
+
+const guardedRefetchState = evaluationReducer(singleScoredStateWithContext, {
+  type: 'SET_INITIAL_DATA',
+  preserveUserEdits: true,
+  payload: {
+    employee: { id: 'emp-1' },
+    evaluation: { id: 'eval-1' },
+    currentRoundData: { round: 1 },
+    allPreviousRounds: [],
+    scores: {},
+    selectedLevelIndexes: {},
+  },
+});
+assert.equal(guardedRefetchState.scores['crit-leader-1'], 10, 'Guarded refetch must preserve user score');
+assert.equal(guardedRefetchState.selectedLevelIndexes['crit-leader-1'], 0, 'Guarded refetch must preserve user level index');
+
+const refreshedSavedState = evaluationReducer(singleScoredStateWithContext, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    evaluation: { id: 'eval-1' },
+    currentRoundData: { round: 1 },
+    scores: { 'crit-leader-1': 5 },
+    selectedLevelIndexes: { 'crit-leader-1': 1 },
+  },
+});
+assert.equal(refreshedSavedState.scores['crit-leader-1'], 5, 'Unmarked same-round hydration must accept refreshed persisted scores');
+assert.equal(refreshedSavedState.selectedLevelIndexes['crit-leader-1'], 1, 'Unmarked same-round hydration must accept refreshed persisted level index');
+
+// 3. Genuine round switch (Round 1 -> Round 2) hydrates Round 2 data cleanly without leaking Round 1 edits
+const roundSwitchState = evaluationReducer(singleScoredStateWithContext, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    employee: { id: 'emp-1' },
+    evaluation: { id: 'eval-1' },
+    currentRoundData: { round: 2 },
+    allPreviousRounds: [],
+    scores: {},
+    selectedLevelIndexes: {},
+    notes: {},
+    comment: '',
+  },
+});
+assert.deepEqual(roundSwitchState.scores, {}, 'Genuine round switch must hydrate round 2 saved data (empty scores)');
+assert.deepEqual(roundSwitchState.selectedLevelIndexes, {}, 'Genuine round switch must hydrate round 2 saved level indexes');
+assert.equal(roundSwitchState.currentRoundData.round, 2, 'Current round must advance to round 2');
+
+// 4. Genuine evaluation switch (eval-1 -> eval-2) hydrates eval-2 data cleanly
+const evalSwitchState = evaluationReducer(singleScoredStateWithContext, {
+  type: 'SET_INITIAL_DATA',
+  payload: {
+    employee: { id: 'emp-2' },
+    evaluation: { id: 'eval-2' },
+    currentRoundData: { round: 1 },
+    allPreviousRounds: [],
+    scores: {},
+    selectedLevelIndexes: {},
+    notes: {},
+    comment: '',
+  },
+});
+assert.deepEqual(evalSwitchState.scores, {}, 'Genuine evaluation switch must hydrate new evaluation saved data');
+assert.equal(evalSwitchState.evaluation.id, 'eval-2', 'Evaluation must switch to eval-2');
+
+// Test F: Multi-criterion partial draft (explicit zero, positive, negative points) preserved across refetch
+let multiScoredState = evaluationReducer(emptyInitState, {
+  type: 'SET_SCORE',
+  criterionId: 'crit-pos',
+  points: 10,
+  levelIndex: 0,
+});
+multiScoredState = evaluationReducer(multiScoredState, {
+  type: 'SET_SCORE',
+  criterionId: 'crit-zero',
+  points: 0,
+  levelIndex: 1,
+});
+multiScoredState = evaluationReducer(multiScoredState, {
+  type: 'SET_SCORE',
+  criterionId: 'crit-neg',
+  points: -2,
+  levelIndex: 2,
+});
+multiScoredState = evaluationReducer(multiScoredState, {
+  type: 'SET_NOTE',
+  criterionId: 'crit-pos',
+  note: 'Ghi chú tiêu chí dương',
+});
+multiScoredState = evaluationReducer(multiScoredState, {
+  type: 'SET_COMMENT',
+  comment: 'Nhận xét nháp đa tiêu chí',
+});
+
+// Multi-criterion draft: the hook-marked stale payload must NOT wipe edits
+const multiRefetchState = evaluationReducer(
+  {
+    ...multiScoredState,
+    evaluation: { id: 'eval-1' },
+    currentRoundData: { round: 1 },
+  },
+  {
+    type: 'SET_INITIAL_DATA',
+    preserveUserEdits: true,
+    payload: {
+      employee: { id: 'emp-1' },
+      evaluation: { id: 'eval-1' },
+      currentRoundData: { round: 1 },
+      allPreviousRounds: [],
+      scores: {},
+      selectedLevelIndexes: {},
+      notes: {},
+      comment: '',
+    },
+  }
+);
+assert.equal(multiRefetchState.scores['crit-pos'], 10, 'Positive score preserved across refetch');
+assert.equal(multiRefetchState.scores['crit-zero'], 0, 'Zero score preserved across refetch');
+assert.equal(multiRefetchState.scores['crit-neg'], -2, 'Negative score preserved across refetch');
+assert.equal(multiRefetchState.selectedLevelIndexes['crit-pos'], 0, 'Positive level index preserved across refetch');
+assert.equal(multiRefetchState.selectedLevelIndexes['crit-zero'], 1, 'Zero level index preserved across refetch');
+assert.equal(multiRefetchState.selectedLevelIndexes['crit-neg'], 2, 'Negative level index preserved across refetch');
+assert.equal(multiRefetchState.notes['crit-pos'], 'Ghi chú tiêu chí dương', 'User note preserved across refetch');
+assert.equal(multiRefetchState.comment, 'Nhận xét nháp đa tiêu chí', 'User comment preserved across refetch');
+
+// Test seam limitation note:
+// This regression directly exercises the production reducer seam: same-round preservation, explicit 0, negative points,
+// index 0 semantics, and genuine round/evaluation switches.
+// Honest limitation: This focused unit seam does not include an interactive browser runtime
+// or live network interceptor, and therefore proves the reducer loss/preservation mechanism
+// rather than proving the exact asynchronous trigger sequence in the production UI.
+assert.match(
+  hookSource,
+  /if\s*\(isSameRound\s*&&\s*userEditedRef\.current\)\s*\{[\s\S]*?preserveUserEdits:\s*true/,
+  'same-round edited hook branch must mark its hydration action to preserve user edits'
+);
+assert.match(
+  hookSource,
+  /userEditedRef\.current\s*=\s*true/,
+  'score/note/comment dispatch must mark the active round as edited'
+);
+
+// Test G: Evaluation payload validation for partial draft vs incomplete submit
+const valSource = fs.readFileSync('src/lib/evaluation-round-validation.ts', 'utf8');
+const valTranspiled = ts.transpileModule(valSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const valModule = { exports: {} };
+new Function('exports', 'require', 'module', valTranspiled)(valModule.exports, () => ({}), valModule);
+const { validateEvaluationRoundPayload } = valModule.exports;
+assert.equal(typeof validateEvaluationRoundPayload, 'function');
+
+const sampleRules = [
+  { id: 'crit-1', allowedPoints: [10, 5, 0] },
+  { id: 'crit-2', allowedPoints: [10, 5, 0] },
+  { id: 'crit-3', allowedPoints: [10, 0, -2] },
+];
+
+// G.1: Partial draft save (isSubmit: false) is valid with 1/3 score
+const partialDraftRes = validateEvaluationRoundPayload(
+  {
+    scores: { 'crit-1': 10 },
+    selectedLevelIndexes: { 'crit-1': 0 },
+    notes: {},
+    comment: '',
+    isSubmit: false,
+  },
+  sampleRules,
+  { isSubmitOverride: false }
+);
+assert.equal(partialDraftRes.ok, true, 'Partial draft save (1/3 scored) must be valid');
+assert.deepEqual(partialDraftRes.data.scores, { 'crit-1': 10 }, 'Canonical partial scores must retain the 1 scored criterion');
+
+// G.2: Partial draft save with multi-criteria (explicit zero & negative) is valid
+const multiPartialDraftRes = validateEvaluationRoundPayload(
+  {
+    scores: { 'crit-1': 10, 'crit-3': -2 },
+    selectedLevelIndexes: { 'crit-1': 0, 'crit-3': 2 },
+    notes: { 'crit-1': 'Note' },
+    comment: 'Draft comment',
+    isSubmit: false,
+  },
+  sampleRules,
+  { isSubmitOverride: false }
+);
+assert.equal(multiPartialDraftRes.ok, true, 'Multi-criteria partial draft save must be valid');
+assert.equal(multiPartialDraftRes.data.scores['crit-3'], -2, 'Negative score allowed in partial draft');
+
+// G.3: Incomplete submit (isSubmit: true) must fail closed with exact completeness error
+const incompleteSubmitRes = validateEvaluationRoundPayload(
+  {
+    scores: { 'crit-1': 10 },
+    selectedLevelIndexes: { 'crit-1': 0 },
+    notes: {},
+    comment: '',
+    isSubmit: true,
+  },
+  sampleRules,
+  { isSubmitOverride: true }
+);
+assert.equal(incompleteSubmitRes.ok, false, 'Incomplete submit must be rejected');
+assert.equal(
+  incompleteSubmitRes.error,
+  'Vui lòng hoàn thành đánh giá cho tất cả các tiêu chí trước khi gửi.',
+  'Incomplete submit must return exact completeness error'
+);
+
+
 // 2. Shared pure static frame contracts
 const staticFrameSource = fs.readFileSync('src/components/evaluation/EvaluationStaticFrame.tsx', 'utf8');
 
