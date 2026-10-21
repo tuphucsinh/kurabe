@@ -1231,6 +1231,31 @@ The WBS `depends` for existing T11 gates only its local ACL/readiness stage. M2T
 
 T06–T09 run serially on Pi5 (one Runner). Their `owns` are disjoint except `EvaluationPageClient.tsx`, handed from T07 to T09 through the T07 → T09 dependency.
 
+### [ ] [#P109M1T01] Separate Chat Widget and admin AI providers
+
+```yaml
+task:
+  id: P109M1T01
+  tier: STANDARD
+  depends: []
+  owns:
+    - src/lib/ai.ts
+    - src/actions/chat.ts
+    - src/lib/ai-limit.ts
+    - tests/ai-provider-separation.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT, PROVIDER_API]
+```
+
+Goal: separate Chat Widget (OpenRouter) from administrative AI (OpenAI API), retaining existing UI, auth/authorization, chat history, screenshot capture, Telegram reporting, and administrative quota; remove only the Chat Widget's 15/2h app quota.
+Changes: use only `OPENROUTER_API_KEY` / exact requested OpenRouter model for chat text, vision, and Developer error summaries; use only `OPENAI_API_KEY` / `gpt-6-luna` with the supported OpenAI protocol for all administrative AI. No paid fallback, no DB/schema/business-policy change, no secret bytes in code/logs, no new framework.
+Constraints: synthetic prompts/images only for real provider tests; obey provider terms and do not bypass model access/rate/privacy limits. If exact model access or data-processing terms deny use by this web application, preserve that evidence and do not deploy the affected provider path.
+DoD:
+- focused regressions prove separate keys/models/endpoints, no Chat quota reservation/refund/consume, unchanged admin quota, auth, payload bounds, vision wiring, and explicit provider failures/no fallback;
+- actual text + vision provider requests with synthetic data; actual admin Responses API request; any provider rejection remains a blocker, not PASS;
+- `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` without `.env.local`, secret scan, and `git diff --check` pass on exact candidate;
+- Mika independently verifies owns/diff/candidate and one fresh read-only review of the exact candidate; no iterative reviewer loop;
+- no push/deploy unless all required provider and privacy gates pass.
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
