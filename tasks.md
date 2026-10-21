@@ -1247,7 +1247,7 @@ task:
 ```
 
 Goal: separate Chat Widget (OpenRouter) from administrative AI (OpenAI API), retaining existing UI, auth/authorization, chat history, screenshot capture, Telegram reporting, and administrative quota; remove only the Chat Widget's 15/2h app quota.
-Changes: use only `OPENROUTER_API_KEY` / exact requested OpenRouter model for chat text, vision, and Developer error summaries; use only `OPENAI_API_KEY` / `gpt-6-luna` with the supported OpenAI protocol for all administrative AI. No paid fallback, no DB/schema/business-policy change, no secret bytes in code/logs, no new framework.
+Changes: Chat text, screenshot vision, and Developer error summaries use only `OPENROUTER_API_KEY`, model `thinkingmachines/inkling-small:free`, base `https://openrouter.ai/api/v1`; all administrative AI uses only `OPENAI_API_KEY`, model `gpt-6-luna`, base `https://api.openai.com/v1`, using Responses API. No shared provider/key/model, no paid fallback, no DB/schema/business-policy change, no secret bytes in code/logs, no new framework.
 Constraints: synthetic prompts/images only for real provider tests; obey provider terms and do not bypass model access/rate/privacy limits. If exact model access or data-processing terms deny use by this web application, preserve that evidence and do not deploy the affected provider path.
 DoD:
 - focused regressions prove separate keys/models/endpoints, no Chat quota reservation/refund/consume, unchanged admin quota, auth, payload bounds, vision wiring, and explicit provider failures/no fallback;
