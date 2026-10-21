@@ -779,12 +779,14 @@ const makeHandleSave = new Function(
   userEditedRef.current = false;
   let returnedStateA = evaluationReducer(initialState, { type: 'SET_SCORE', criterionId: 'crit-A-new', points: 0, levelIndex: 2 });
   returnedStateA = evaluationReducer(returnedStateA, { type: 'SET_NOTE', criterionId: 'crit-A-new', note: 'New A note' });
+  returnedStateA = evaluationReducer(returnedStateA, { type: 'SET_COMMENT', comment: 'New A comment' });
   editRevisionRef.current = 2;
   userEditedRef.current = true;
   currentStateA = returnedStateA;
 
   const returnedScoresBefore = JSON.stringify(returnedStateA.scores);
   const returnedNotesBefore = JSON.stringify(returnedStateA.notes);
+  const returnedCommentBefore = returnedStateA.comment;
   assert.equal(saveSnapshotA.evaluationId, 'eval-A', 'Pending save snapshot must remain bound to original A');
   assert.equal(saveSnapshotA.round, 1, 'Pending save snapshot must remain bound to original A round');
   assert.equal(editRevisionRef.current, saveSnapshotA.editRevision, 'A→B→A test must collide on edit revision');
@@ -799,6 +801,7 @@ const makeHandleSave = new Function(
   assert.equal(returnedHydrationDecision?.preserveUserEdits, true, 'Stale Save A acknowledgement must leave the returned A context dirty for hydration');
   assert.equal(JSON.stringify(currentStateA.scores), returnedScoresBefore, 'New A scores must survive the stale-save-triggered refetch');
   assert.equal(JSON.stringify(currentStateA.notes), returnedNotesBefore, 'New A notes must survive the stale-save-triggered refetch');
+  assert.equal(currentStateA.comment, returnedCommentBefore, 'New A comment must survive the stale-save-triggered refetch');
   assert.equal(JSON.stringify(currentStateA.selectedLevelIndexes), JSON.stringify(returnedStateA.selectedLevelIndexes), 'New A level indexes must survive the stale-save-triggered refetch');
   assert.equal(stateB.scores['crit-B'], 5, 'B local score must survive the A→B→A transition');
 }
