@@ -1259,6 +1259,28 @@ DoD:
 - Mika independently verifies the exact candidate and one fresh read-only review after the base refresh; no iterative reviewer loop;
 - push/deploy only the P109-only canonical candidate after all gates pass; preserve the P108 commit and protected user-owned files.
 
+### [ ] [#P109M1T02] Replace Chat Widget loading copy
+
+```yaml
+task:
+  id: P109M1T02
+  tier: CONTROLLED
+  depends: []
+  owns:
+    - src/components/chat/ChatWidget.tsx
+  locks: [KURABE_SOURCE_CONTRACT, REMOTE_MAIN, VERCEL_PRODUCTION]
+```
+
+Goal: Change only the Chat Widget's assistant-waiting text to `Thinking...`.
+Changes: Replace `Em đang xem giúp chị...` with `Thinking...`; preserve spinner, styling, reporting text, and all component logic.
+Constraints: No P108, DB, scoring, provider/API/key, quota, employee-data, or unrelated changes. Existing production app smoke stays UNVERIFIED. If no authorized app session is available, report `UI_LIVE=UNVERIFIED` and leave task/reservation open.
+DoD:
+- Exact candidate diff changes only the owned string in `src/components/chat/ChatWidget.tsx`; `Em đang gửi báo lỗi...` remains unchanged.
+- `npm run typecheck`, relevant static/regression checks, and exact-candidate secret/diff checks pass.
+- One fresh independent read-only review passes on exact candidate SHA/tree/diff; provider `openai-api`, model `gpt-6-luna`; no Codex OAuth.
+- Push the verified commit to `main`, deploy through the existing Vercel production workflow, and verify `lykiv.vercel.app` source SHA plus production bundle string.
+- Verify live loading-state rendering when an authorized app session exists; otherwise `UI_LIVE=UNVERIFIED`, no auth bypass, and task remains blocked.
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
