@@ -165,7 +165,7 @@ export default function ChatWidget() {
             {(loading || sendingShot || reporting) && (
               <div className="flex justify-start">
                 <div className="px-3 py-2 rounded-2xl text-sm bg-white border border-outline-variant flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-outline" /> {reporting ? 'Em đang gửi báo lỗi...' : 'Em đang xem giúp chị...'}
+                  <Loader2 size={14} className="animate-spin text-outline" /> {reporting ? 'Em đang gửi báo lỗi...' : 'Thinking...'}
                 </div>
               </div>
             )}
