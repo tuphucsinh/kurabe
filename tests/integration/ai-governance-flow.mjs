@@ -26,8 +26,9 @@ export async function run() {
     assert.match(governance, /DEFAULT_AI_ALLOWED_HOSTS/);
     assert.match(governance, /host_not_allowed/);
     assert.match(governance, /http_not_permitted_without_dev_exception/);
-    assert.match(ai, /AI_HTTP_DEV_EXCEPTION/);
-    assert.match(ai, /validateAIProvider\(rawBaseUrl/);
+    assert.match(ai, /DEFAULT_AI_ALLOWED_HOSTS/);
+    assert.match(ai, /const OPENAI_BASE_URL = 'https:\/\/api\.openai\.com\/v1'/);
+    assert.match(ai, /validateAIProvider\(OPENAI_BASE_URL/);
   });
   check('all AI transports reject redirects and non-2xx payloads', () => {
     assert.equal((ai.match(/redirect: 'error'/g) || []).length, 2);
@@ -41,19 +42,22 @@ export async function run() {
       assert.doesNotMatch(guard[1], /res\.json|res\.text|res\.arrayBuffer/);
     }
   });
-  check('configuration failure precedes chat quota reservation', () => {
-    assert.match(ai, /isAIConfigured\(\): boolean[\s\S]*validateAIProvider\(rawBaseUrl/);
+  check('fixed OpenAI configuration is checked and chat has no app quota', () => {
+    assert.match(ai, /isAIConfigured\(\): boolean[\s\S]*validateAIProvider\(OPENAI_BASE_URL/);
     const prepareStart = chat.indexOf('async function prepareChatContext(');
     const actionStart = chat.indexOf('export async function chatAskAction(');
     const prepare = chat.slice(prepareStart, actionStart);
     assert.ok(prepare.indexOf('if (!isAIConfigured())') >= 0);
-    assert.ok(prepare.indexOf('if (!isAIConfigured())') < prepare.indexOf('reserveChatQuota('));
+    assert.doesNotMatch(chat, /reserveChatQuota|consumeChatQuota|refundChatQuota|15 lượt hỏi trong 2 giờ/);
+    assert.match(chat, /callAI\(prompt/);
+    assert.match(ai, /const OPENAI_MODEL = 'gpt-6-luna'/);
+    assert.match(ai, /const OPENAI_BASE_URL = 'https:\/\/api\.openai\.com\/v1'/);
   });
   check('unsupported incomplete and refused output is fail-soft across text and vision', () => {
     assert.match(ai, /function isUsableAIOutput\(/);
     assert.match(ai, /finishReason: 'refused'/);
     assert.match(ai, /d\.status === 'incomplete'/);
-    assert.equal((ai.match(/parseChatCompletionsOutput\(data\)/g) || []).length, 2);
+    assert.equal((ai.match(/parseResponsesOutput\(data\)/g) || []).length, 2);
     assert.equal((ai.match(/const second = await attempt\(/g) || []).length, 2);
     assert.doesNotMatch(ai, /console\.(?:log|error)\([^;]*(?:res\.json|res\.text|response\.body|rawBody|data)/s);
   });

@@ -5,13 +5,11 @@ import { normalizeAIAction } from '@/lib/ai-governance';
 
 const AI_LIMIT_PER_HOUR = 30; // 30 lượt / giờ cho các tác vụ AI quản trị
 const AI_WINDOW_MS = 60 * 60 * 1000; // 1 giờ
-const CHAT_LIMIT = 15; // 15 lượt / 2 giờ cho chat widget
-const CHAT_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 giờ
 const QUOTA_RETENTION_DAYS = 30; // dọn dữ liệu usage cũ hơn 30 ngày
 const RESERVE_MAX_ATTEMPTS = 2; // bounded retry: tối đa 2 lần gọi RPC với cùng request_id
 const RESERVE_TIMEOUT_MS = 10_000; // mỗi lần gọi RPC tối đa 10s
 
-type QuotaKind = 'ai' | 'chat';
+type QuotaKind = 'ai';
 
 interface QuotaRpcRow {
   allowed?: boolean;
@@ -163,60 +161,5 @@ export async function refundAiQuota(
     p_request_id: requestId,
   });
   if (!row) return { ok: false, error: AI_BUSY_MESSAGE };
-  return { ok: row.refunded === true, error: row.error ?? undefined };
-}
-
-/**
- * Atomic chat quota reservation (15 lượt / 2 giờ). Trả request_id để caller
- * consume/refund theo kết quả provider.
- */
-export async function reserveChatQuota(
-  userId: string
-): Promise<{ allowed: boolean; error?: string; requestId?: string }> {
-  const requestId = makeRequestId('chat', 'chat');
-  const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_reserve', {
-    p_kind: 'chat',
-    p_user_id: userId,
-    p_request_id: requestId,
-    p_window_seconds: Math.max(1, Math.round(CHAT_WINDOW_MS / 1000)),
-    p_max_requests: CHAT_LIMIT,
-    p_retention_days: QUOTA_RETENTION_DAYS,
-  });
-
-  if (!row) return { allowed: false, error: 'QUOTA_UNAVAILABLE' };
-  if (row.allowed !== true) return { allowed: false, error: row.error ?? 'LIMIT_REACHED' };
-  return { allowed: true, requestId };
-}
-
-/**
- * Consume reservation sau khi provider trả kết quả (terminal — không refund được).
- */
-export async function consumeChatQuota(
-  userId: string,
-  requestId: string
-): Promise<{ ok: boolean; error?: string }> {
-  const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_consume', {
-    p_kind: 'chat',
-    p_user_id: userId,
-    p_request_id: requestId,
-  });
-  if (!row) return { ok: false, error: 'QUOTA_UNAVAILABLE' };
-  return { ok: row.consumed === true, error: row.error ?? undefined };
-}
-
-/**
- * Refund reservation khi provider timeout/cancel trước khi có output
- * (chỉ hợp lệ khi slot còn ở trạng thái reserved).
- */
-export async function refundChatQuota(
-  userId: string,
-  requestId: string
-): Promise<{ ok: boolean; error?: string }> {
-  const row = await callQuotaRpc<QuotaRpcRow>('ai_quota_refund', {
-    p_kind: 'chat',
-    p_user_id: userId,
-    p_request_id: requestId,
-  });
-  if (!row) return { ok: false, error: 'QUOTA_UNAVAILABLE' };
   return { ok: row.refunded === true, error: row.error ?? undefined };
 }

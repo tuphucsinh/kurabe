@@ -19,7 +19,6 @@ import {
   MAX_AI_REPORT_HISTORY_CHARS,
 } from '@/lib/ai-governance';
 import { User } from '@/types';
-import { reserveChatQuota, consumeChatQuota, refundChatQuota } from '@/lib/ai-limit';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -362,20 +361,17 @@ interface ChatAskInputBase {
 }
 
 interface ChatPrepared {
-  userId: string;
   role: string;
   addr: string;
   Addr: string;
   user: User | null;
   question: string;
   prompt: string;
-  /** Request identity của reservation quota — dùng cho consume/refund sau provider call. */
-  requestId: string;
 }
 
 /**
  * Phần chung của chatAskAction / chatAskWithScreenshotAction (D4 — gom ~90% logic trùng):
- * auth → validate câu hỏi → rate limit (non-Manager) → AI configured → page context → build prompt.
+ * auth → validate câu hỏi → AI configured → page context → build prompt.
  */
 async function prepareChatContext(
   input: ChatAskInputBase,
@@ -441,26 +437,7 @@ async function prepareChatContext(
     ? `${statusPriorityInstruction}\n\n${basePrompt}`
     : basePrompt;
 
-  // Reserve only after all pre-provider context work succeeds. A context/DB
-  // failure therefore cannot burn a quota slot that was never sent to AI.
-  const reservation = await reserveChatQuota(userId);
-  if (!reservation.allowed) {
-    console.error('chat quota reserve denied:', reservation.error);
-    return {
-      ok: false,
-      error:
-        reservation.error === 'LIMIT_REACHED'
-          ? `${Addr} đã dùng hết 15 lượt hỏi trong 2 giờ. Vui lòng quay lại sau nhé.`
-          : `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.`,
-    };
-  }
-  const requestId = reservation.requestId;
-  if (!requestId) {
-    console.error('chat quota reserve returned no request id');
-    return { ok: false, error: `Hệ thống tạm thời bận, ${addr} vui lòng thử lại sau nhé.` };
-  }
-
-  return { ok: true, data: { userId, role, addr, Addr, user: auth.user, question, prompt, requestId } };
+  return { ok: true, data: { role, addr, Addr, user: auth.user, question, prompt } };
 }
 
 export async function chatAskAction(input: {
@@ -470,7 +447,7 @@ export async function chatAskAction(input: {
 }): Promise<{ reply?: string; error?: string }> {
   const prepared = await prepareChatContext(input, { maxQuestionLength: 500 });
   if (!prepared.ok) return { error: prepared.error };
-  const { role, addr, user, prompt, userId, requestId } = prepared.data;
+  const { role, addr, user, prompt } = prepared.data;
 
   const reply = await callAI(prompt, {
     system: buildSystem(role, user?.gender),
@@ -478,14 +455,8 @@ export async function chatAskAction(input: {
     temperature: 0.4,
   });
   if (!reply) {
-    // Provider timeout/cancel/failure trước khi có output → hoàn lại slot
-    const refund = await refundChatQuota(userId, requestId);
-    if (!refund.ok) console.error('chat quota refund failed:', refund.error);
     return { error: `Em chưa trả lời được lúc này, ${addr} thử lại sau nhé.` };
   }
-  // Có output → consume terminal (không refund được nữa)
-  const consumed = await consumeChatQuota(userId, requestId);
-  if (!consumed.ok) console.error('chat quota consume failed:', consumed.error);
   return { reply };
 }
 
@@ -495,7 +466,7 @@ export async function chatAskWithScreenshotAction(input: {
   history?: { role: 'user' | 'assistant'; text: string }[];
   imageBase64: string;
 }): Promise<{ reply?: string; error?: string }> {
-  // server-side size cap: độ dài chuỗi base64 ≤ 900KB (Reviewer R2+R3) — check trước khi tốn quota
+  // Server-side payload cap applies before sending image data to the provider.
   if (!input.imageBase64 || input.imageBase64.length > MAX_AI_IMAGE_BASE64_CHARS) {
     const addr = 'anh/chị';
     return { error: `Ảnh quá lớn hoặc không hợp lệ. ${capitalize(addr)} thử lại với ảnh nhỏ hơn ạ.` };
@@ -503,19 +474,13 @@ export async function chatAskWithScreenshotAction(input: {
 
   const prepared = await prepareChatContext(input);
   if (!prepared.ok) return { error: prepared.error };
-  const { role, addr, Addr, user, prompt, userId, requestId } = prepared.data;
+  const { role, addr, Addr, user, prompt } = prepared.data;
 
   const system = buildSystem(role, user?.gender) + `\n${Addr} vừa gửi ẢNH MÀN HÌNH kèm câu hỏi. Hãy phân tích ảnh kết hợp câu hỏi và trả lời cụ thể.`;
   const reply = await callAIVision(`${prompt}\n\nẢnh màn hình đính kèm.`, input.imageBase64, { maxTokens: 800, system });
   if (!reply) {
-    // Provider timeout/cancel/failure trước khi có output → hoàn lại slot
-    const refund = await refundChatQuota(userId, requestId);
-    if (!refund.ok) console.error('chat quota refund failed:', refund.error);
     return { error: `Em chưa phân tích được ảnh lúc này, ${addr} thử lại sau nhé.` };
   }
-  // Có output → consume terminal (không refund được nữa)
-  const consumed = await consumeChatQuota(userId, requestId);
-  if (!consumed.ok) console.error('chat quota consume failed:', consumed.error);
   return { reply };
 }
 
@@ -561,7 +526,7 @@ export async function chatReportErrorAction(input: {
     const historyRaw = sanitizedHistory.map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n');
     const historyText = boundAIText(historyRaw, MAX_AI_REPORT_HISTORY_CHARS);
 
-    // Tóm tắt AI (gpt-5.6-luna) — ngữ cảnh lỗi gọn; fallback: 6 lượt gần nhất
+    // Summarize with the shared OpenAI model; keep the last-six-turn fallback.
     let contextSummary = historyText.split('\n').slice(-6).join('\n');
     try {
       if (isAIConfigured()) {

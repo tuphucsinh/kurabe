@@ -43,12 +43,17 @@ assert.match(governance, /reason: 'http_not_permitted_without_dev_exception'/);
 assert.match(governance, /!devExceptionAllowed \|\| !isApprovedLocalDevHost\(hostname\)/);
 assert.match(ai, /if \(!providerCheck\.allowed\) \{/);
 
-// Configuration must be rejected before chat quota reservation. The check also
-// validates the provider URL/allowlist, not merely the presence of a key.
-assert.match(ai, /export function isAIConfigured\(\): boolean \{[\s\S]*validateAIProvider\(rawBaseUrl, process\.env\.AI_ALLOWED_HOSTS, devException\)\.allowed/);
+// One fixed OpenAI endpoint/model/key serves chat and admin. Chat has no app quota.
+assert.match(ai, /export function isAIConfigured\(\): boolean \{[\s\S]*validateAIProvider\(OPENAI_BASE_URL, DEFAULT_AI_ALLOWED_HOSTS\.join\(','\)\)\.allowed/);
+assert.match(ai, /const OPENAI_MODEL = 'gpt-6-luna'/);
+assert.match(ai, /const OPENAI_BASE_URL = 'https:\/\/api\.openai\.com\/v1'/);
+assert.doesNotMatch(ai, /\bOPENROUTER\b|openrouter\.ai|\bAI_API_KEY\b|\bAI_BASE_URL\b|\bAI_VISION_MODEL\b/);
 const prepare = chat.slice(chat.indexOf('async function prepareChatContext('), chat.indexOf('export async function chatAskAction('));
 assert.ok(prepare.indexOf('if (!isAIConfigured())') >= 0, 'chat preparation must check configuration');
-assert.ok(prepare.indexOf('if (!isAIConfigured())') < prepare.indexOf('reserveChatQuota('), 'configuration failure must occur before quota reservation');
+assert.doesNotMatch(chat, /reserveChatQuota|consumeChatQuota|refundChatQuota|15 lượt hỏi trong 2 giờ/);
+assert.match(chat, /callAI\(prompt/);
+assert.match(chat, /callAIVision\(/);
+assert.match(chat, /https:\/\/api\.telegram\.org\/bot/);
 
 // Blank, unsupported, incomplete, and refused outputs are never returned as
 // assistant payloads. Text and vision share the same chat response parser.
@@ -56,9 +61,11 @@ assert.match(ai, /function isUsableAIOutput\(/);
 assert.match(ai, /result\.finishReason === null \|\| result\.finishReason === 'stop' \|\| result\.finishReason === 'completed'/);
 assert.match(ai, /finishReason: 'refused'/);
 assert.match(ai, /d\.status === 'incomplete'/);
-assert.equal(count(ai, /return parseChatCompletionsOutput\(data\);/g), 1, 'vision must use the governed chat parser');
-assert.equal(count(ai, /parseChatCompletionsOutput\(data\)/g), 2, 'text and vision must both use governed chat parsing');
-assert.match(ai, /typeof text === 'string' && text\.trim\(\) \? text\.trim\(\) : null/);
+assert.equal(count(ai, /return parseResponsesOutput\(data\);/g), 2, 'text and vision must use the governed Responses parser');
+assert.equal(count(ai, /fetch\(`\$\{baseUrl\}\/responses`/g), 2, 'text and vision must use OpenAI Responses API');
+assert.equal(count(ai, /\{ type: 'input_image', image_url: dataUrl \}/g), 1, 'vision image must use Responses input_image');
+assert.equal(count(ai, /max_output_tokens: maxTokens/g), 2, 'text and vision use Responses output token field');
+assert.match(ai, /typeof d\.output_text === 'string'/);
 
 // Timeout/retry remains bounded and response bodies are never logged.
 assert.match(ai, /setTimeout\(\(\) => controller\.abort\(\), 45000\)/);
@@ -66,4 +73,4 @@ assert.match(ai, /setTimeout\(\(\) => controller\.abort\(\), 60000\)/);
 assert.equal(count(ai, /const second = await attempt\(/g), 2, 'each transport has at most one retry');
 assert.doesNotMatch(ai, /console\.(?:log|error)\([^;]*(?:res\.json|res\.text|response\.body|rawBody|data)/s, 'response bodies must not be logged');
 
-console.log('AI egress boundary contract PASS redirects=301,302,303,307,308 transports=2');
+console.log('AI egress boundary contract PASS provider=openai-api model=gpt-6-luna chat-quota=none transports=2');

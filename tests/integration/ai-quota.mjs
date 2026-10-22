@@ -220,12 +220,10 @@ function assertSourceContract() {
   assert.match(rollback, /P100_ROLLBACK_PREFLIGHT_FAILED/);
   assert.match(rollback, /DROP FUNCTION IF EXISTS public\.ai_quota_reserve/);
   assert.match(aiLimit, /AbortSignal\.timeout/);
-  assert.match(aiLimit, /reserveChatQuota/);
-  assert.match(aiLimit, /consumeChatQuota/);
-  assert.match(aiLimit, /refundChatQuota/);
-  assert.match(chat, /reserveChatQuota/);
-  assert.match(chat, /consumeChatQuota/);
-  assert.match(chat, /refundChatQuota/);
+  assert.match(aiLimit, /export async function reserveAiQuota/);
+  assert.match(aiLimit, /export async function refundAiQuota/);
+  assert.doesNotMatch(aiLimit, /reserveChatQuota|consumeChatQuota|refundChatQuota|CHAT_LIMIT|CHAT_WINDOW_MS/);
+  assert.doesNotMatch(chat, /reserveChatQuota|consumeChatQuota|refundChatQuota/);
   assert.doesNotMatch(chat, /\.from\(['"]chat_usage['"]\)/);
 }
 
