@@ -1231,30 +1231,33 @@ The WBS `depends` for existing T11 gates only its local ACL/readiness stage. M2T
 
 T06–T09 run serially on Pi5 (one Runner). Their `owns` are disjoint except `EvaluationPageClient.tsx`, handed from T07 to T09 through the T07 → T09 dependency.
 
-### [ ] [#P109M1T01] Separate Chat Widget and admin AI providers
+### [ ] [#P109M1T01] Keep Chat Widget and admin AI on OpenAI Responses; fix Vision MIME
 
 ```yaml
 task:
   id: P109M1T01
-  tier: STANDARD
+  tier: CONTROLLED
   depends: []
   owns:
     - src/lib/ai.ts
     - src/actions/chat.ts
     - src/lib/ai-limit.ts
-    - tests/ai-provider-separation.test.mjs
-  locks: [KURABE_SOURCE_CONTRACT, PROVIDER_API]
+    - tests/ai-egress-boundary.test.mjs
+    - tests/ai-responses-transport.test.mjs
+    - tests/integration/ai-governance-flow.mjs
+    - tests/integration/ai-quota.mjs
+  locks: [KURABE_SOURCE_CONTRACT, PROVIDER_API, REMOTE_MAIN, VERCEL_PRODUCTION]
 ```
 
-Goal: separate Chat Widget (OpenRouter) from administrative AI (OpenAI API), retaining existing UI, auth/authorization, chat history, screenshot capture, Telegram reporting, and administrative quota; remove only the Chat Widget's 15/2h app quota.
-Changes: Chat text, screenshot vision, and Developer error summaries use only `OPENROUTER_API_KEY`, model `thinkingmachines/inkling-small:free`, base `https://openrouter.ai/api/v1`; all administrative AI uses only `OPENAI_API_KEY`, model `gpt-6-luna`, base `https://api.openai.com/v1`, using Responses API. No shared provider/key/model, no paid fallback, no DB/schema/business-policy change, no secret bytes in code/logs, no new framework.
-Constraints: synthetic prompts/images only for real provider tests; obey provider terms and do not bypass model access/rate/privacy limits. If exact model access or data-processing terms deny use by this web application, preserve that evidence and do not deploy the affected provider path.
+Goal: keep Chat Widget and administrative AI on the owner-selected OpenAI Responses API `gpt-6-luna` route; correct PNG Vision MIME construction while preserving UI, auth/authorization, chat history, screenshot capture, Telegram reporting, and administrative quota; remove only the Chat Widget's 15/2h application quota.
+Changes: Chat text, screenshot vision, Developer error summaries, and administrative AI use the server-side `OPENAI_API_KEY`, model `gpt-6-luna`, base `https://api.openai.com/v1`, using Responses API. No provider/model fallback, no DB/schema/scoring/permission/P108/employee-data change, no secret bytes in code/logs, no new framework.
+Constraints: keep model/provider unchanged; synthetic prompts/images only for real provider tests; no production Telegram messages or real employee data; never log/commit the API key.
 DoD:
-- focused regressions prove separate keys/models/endpoints, no Chat quota reservation/refund/consume, unchanged admin quota, auth, payload bounds, vision wiring, and explicit provider failures/no fallback;
-- actual text + vision provider requests with synthetic data; actual admin Responses API request; any provider rejection remains a blocker, not PASS;
+- focused regressions prove Chat Widget quota removal, retained admin quota, auth, payload bounds, Responses Vision string `image_url`, MIME handling, refusal behavior, and explicit provider failures/no fallback;
+- actual text + vision provider requests and actual `callAIVision` execution with synthetic data; any provider rejection remains a blocker, not PASS;
 - `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` without `.env.local`, secret scan, and `git diff --check` pass on exact candidate;
-- Mika independently verifies owns/diff/candidate and one fresh read-only review of the exact candidate; no iterative reviewer loop;
-- no push/deploy unless all required provider and privacy gates pass.
+- Mika independently verifies the exact candidate and one fresh read-only review after the base refresh; no iterative reviewer loop;
+- push/deploy only the P109-only canonical candidate after all gates pass; preserve the P108 commit and protected user-owned files.
 
 ## Closed / historical record
 
