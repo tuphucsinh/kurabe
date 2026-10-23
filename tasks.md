@@ -1162,7 +1162,9 @@ DoD:
 - `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, and `node scripts/scan-source-secrets.mjs` pass on the exact candidate.
 - Mika verifies only the declared owned paths changed, canonical codes remain unchanged in data/API behavior, and candidate/base identity is exact. No independent fresh review is required for STANDARD.
 
-### [ ] [#P108LIVEF01] Fix P2.F01 partial-draft state loss
+### [x] [#P108LIVEF01] Fix P2.F01 partial-draft state loss
+
+Closure 2026-10-23: fix commits `acc8995`, `4d4f91a`, `f7d7b20` are ancestors of `main`; `.state/SYSTEM_ALERT.md` RESOLVED; live F01 Save Draft round-trip PASS at 2026-10-21T09:08:52Z (score 4, A1 index 1). `failure_count=2` and all failure evidence retained as history. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/closure-20261023/closure.json`.
 
 ```yaml
 task:
@@ -1231,7 +1233,9 @@ The WBS `depends` for existing T11 gates only its local ACL/readiness stage. M2T
 
 T06–T09 run serially on Pi5 (one Runner). Their `owns` are disjoint except `EvaluationPageClient.tsx`, handed from T07 to T09 through the T07 → T09 dependency.
 
-### [ ] [#P109M1T01] Keep Chat Widget and admin AI on OpenAI Responses; fix Vision MIME
+### [x] [#P109M1T01] Keep Chat Widget and admin AI on OpenAI Responses; fix Vision MIME
+
+Closure 2026-10-23: canonical candidate `68d9738` (fresh review PASS); production deployed on `lykiv.vercel.app` (`dpl_BwMdSj86zrQa3hv48MhRgtZTfQbP`, source `dcdbed0`, CI success). `UI_LIVE=UNVERIFIED` explicitly accepted by owner; no auth bypass or test data. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/closure-20261023/closure.json`.
 
 ```yaml
 task:
@@ -1259,7 +1263,9 @@ DoD:
 - Mika independently verifies the exact candidate and one fresh read-only review after the base refresh; no iterative reviewer loop;
 - push/deploy only the P109-only canonical candidate after all gates pass; preserve the P108 commit and protected user-owned files.
 
-### [ ] [#P109M1T02] Replace Chat Widget loading copy
+### [x] [#P109M1T02] Replace Chat Widget loading copy
+
+Closure 2026-10-23: canonical candidate `dcdbed0` (fresh review PASS); deployed as above. `UI_LIVE=UNVERIFIED` explicitly accepted by owner. Evidence as P109M1T01.
 
 ```yaml
 task:
