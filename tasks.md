@@ -1287,6 +1287,70 @@ DoD:
 - Push the verified commit to `main`, deploy through the existing Vercel production workflow, and verify `lykiv.vercel.app` source SHA plus production bundle string.
 - Verify live loading-state rendering when an authorized app session exists; otherwise `UI_LIVE=UNVERIFIED`, no auth bypass, and task remains blocked.
 
+### [ ] [#P109M1T03] Chat Widget: no stuck state on server-action failure
+
+```yaml
+task:
+  id: P109M1T03
+  tier: CONTROLLED
+  depends: []
+  owns:
+    - src/components/chat/ChatWidget.tsx
+    - tests/chat-widget-resilience.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: a rejected Chat Widget server action must never leave the widget stuck on `Thinking...`/reporting or with a disabled input.
+Current context: `src/components/chat/ChatWidget.tsx` `send` (:69-96) and `submitManualReport` (:59-67) set `loading`/`reporting` then `await` actions with no try/catch/finally; `openWidget` (:48-57) sets `greeted=true` before `await chatGreetingAction`, so a rejection is unhandled and the greeting never retries. `autoCaptureAndSend` already has a catch.
+Changes: wrap `send` and `submitManualReport` so flags always reset (finally) and a short error assistant message is shown on rejection; do NOT auto-resend a developer report when an action rejects. `openWidget`: catch rejection and reset `greeted=false` so the next open retries once; a successful greeting must not duplicate. Keep `[CẦN_DEV]`/`[CẦN_ẢNH]` flow, role gate, copy (`Thinking...`, `Em đang gửi báo lỗi...`), styling and all other logic unchanged.
+Constraints: only owned files; no new dependency or test framework (no jsdom/testing-library); no backend change; no push/deploy.
+DoD:
+- new focused test executes the real handler logic (e.g. transpile the TSX with the repo `typescript` and drive the extracted handlers with fake setters/actions) for: ask resolve + reject, report resolve + reject, greeting reject-then-resolve (retry once, no duplicate), `[CẦN_ẢNH]`/`[CẦN_DEV]` still routed; it FAILS on baseline and PASSES on the fix.
+- `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build` without `.env.local`, `node scripts/scan-source-secrets.mjs`, `git diff --check` pass on the exact candidate; edits stay inside owns.
+- Mika verifies diff/owns/BASE_SHA; one fresh read-only review PASS on the exact candidate. Local canonical commit only; push/deploy needs separate owner approval.
+
+### [ ] [#P109M1T04] Developer error report: record first, honest receipt
+
+```yaml
+task:
+  id: P109M1T04
+  tier: CONTROLLED
+  depends: [P109M1T03]
+  owns:
+    - src/actions/chat.ts
+    - tests/chat-report-reliability.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: `chatReportErrorAction` must durably record the report before any slow/external call and give the user a truthful receipt.
+Current context: `src/actions/chat.ts` ~:487-610. AI summary (`callAI`, up to 2x45s) runs before the `chat_reports` insert; the insert result's `error` is ignored (Supabase returns `{error}` instead of throwing); a Telegram/webhook failure returns "chưa gửi được" although the row exists, and the next day's limit text says "đã gửi rồi"; `parse_mode: 'Markdown'` can make Telegram reject user text containing `_ * [`; missing Telegram env returns an error before recording. `kurabe-report-monitor.cjs` exists but no schedule was found (UNKNOWN), so DB-only receipt must not claim the Developer received it.
+Changes: keep auth, prompt-injection check, bounds and the 1-report/day limit (a failing count query must not be treated as zero silently). Insert into `chat_reports` FIRST (check both `error` and `data?.id`); on insert failure return an honest error and send nothing. Then best-effort, each independently bounded: AI summary (keep the OpenAI summary but cap at ~6s via Promise.race, fallback = existing sanitized last-6-turn text), webhook (~5s), Telegram (~8s, plain text: remove `parse_mode`). Receipt text: insert OK + Telegram OK -> recorded and sent to Developer; insert OK + Telegram/env/webhook fail -> "đã ghi nhận trong hệ thống" without claiming Developer received it; log failures without token/PII.
+Constraints: no migration, no new table/queue/cron; do not change quota or auth; never log secrets; no real Telegram call in tests (mock `fetch`/Supabase).
+DoD:
+- focused mock test covering: insert OK+Telegram OK; insert OK+Telegram 400/timeout; insert returns `{error}` (no success claim, no send); AI slow/unavailable (insert unaffected, summary capped); webhook fail/absent; text with `_ * [` sent without parse_mode; daily limit unchanged; it FAILS on baseline and PASSES on the fix.
+- same root gates as P109M1T03 on the exact candidate; fresh read-only review PASS; local commit only.
+
+### [ ] [#P109M1T05] OpenAI Responses: do not retry permanent errors
+
+```yaml
+task:
+  id: P109M1T05
+  tier: CONTROLLED
+  depends: [P109M1T04]
+  owns:
+    - src/lib/ai.ts
+    - tests/ai-responses-transport.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Goal: stop wasting calls (and cost) on permanent provider errors without changing provider, model, endpoint or payloads.
+Current context: `src/lib/ai.ts` `callOpenAIResponses` (:99-163) and `callAIVision` (:199-258): any non-OK or exception makes `attempt` return null and the second attempt always runs. `tests/ai-responses-transport.test.mjs:34-35` pins exactly two `attempt(` call sites.
+Changes: make `attempt` report whether a failure is retryable. HTTP 4xx (including 429): no retry. HTTP 5xx: one retry. Network error/timeout: no retry. HTTP 200 paths (truncated/`length`/unusable output) keep the current single bounded retry. Apply identically to text and vision. Update the existing source-contract assertions deliberately (do not delete the test).
+Constraints: keep `/responses`, `gpt-6-luna`, `OPENAI_BASE_URL`, key handling, vision `image_url` string and PNG/JPEG MIME logic, `redirect: 'error'`, AI quota and all callers unchanged; no provider call with real cost; no Retry-After/backoff/benchmark work.
+DoD:
+- mock-`fetch` behavioral test counts requests: 200 usable=1, 400/401/403/429=1, 503 then 200=2, 503 twice=2, network error=1, truncated then usable=2, truncated twice=2; Vision PNG/JPEG MIME preserved; FAILS on baseline, PASSES on fix.
+- same root gates; fresh read-only review PASS; local commit only.
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
