@@ -177,8 +177,14 @@ export async function upsertUsersAction(
 
     const existingIdSet = new Set((existing || []).map((row) => row.id));
     const missingSubleaderCodes: string[] = [];
+    const duplicateCodes: string[] = [];
+    const seenCodes = new Set<string>();
     const prepared = users.map((user, rowIndex) => {
       const code = (user.employeeCode ?? '').trim().toLowerCase();
+      if (code) {
+        if (seenCodes.has(code)) duplicateCodes.push(user.employeeCode?.trim() || `(dòng ${rowIndex + 1})`);
+        else seenCodes.add(code);
+      }
       const matchedId = code ? codeToId.get(code) : undefined;
       const id = matchedId ?? user.id ?? crypto.randomUUID();
       const isNew = matchedId ? false : !existingIdSet.has(id);
@@ -200,6 +206,13 @@ export async function upsertUsersAction(
         payload: buildPersonnelUserPayload(effectiveUser, id, isNew),
       };
     });
+
+    if (duplicateCodes.length > 0) {
+      return {
+        success: false,
+        error: `Mã NV bị trùng trong cùng file import: ${duplicateCodes.join(', ')}. Sửa file để mỗi mã chỉ xuất hiện một lần. Chưa có dữ liệu nào được ghi.`,
+      };
+    }
 
     if (missingSubleaderCodes.length > 0) {
       return {

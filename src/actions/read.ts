@@ -129,6 +129,10 @@ export async function getEvaluationResultProjectionAction(
 ): Promise<EvaluationResultProjection | null> {
   const auth = await requireAuth();
   if (auth.error !== null || !auth.user) return null;
+  // P110M4T01: whitelist trước khi vào sanitizer (giá trị lạ sẽ throw mờ; trả về typed null như đường reports).
+  if ((['all', 'leader', 'staff', 'worker'] as SetFilterOption[]).indexOf(selectedSet) === -1) {
+    return null;
+  }
   const raw = await getEvaluationResultProjection(periodId, auth.user);
   if (!raw) return null;
   return sanitizeEvaluationResultProjectionForView(raw, selectedSet);
@@ -800,7 +804,7 @@ export async function getAuditLogsAction(opts?: {
       .from('audit_logs')
       .select('id, actor_name, action, entity, entity_id, created_at')
       .order('created_at', { ascending: false })
-      .limit(opts?.limit ?? 50);
+      .limit(Math.min(Math.max(1, opts?.limit ?? 50), 500));
 
     if (error) {
       console.error('getAuditLogsAction error:', error.message);

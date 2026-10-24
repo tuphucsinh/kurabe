@@ -72,13 +72,17 @@ export async function getPeriodSummary(periodId: string): Promise<{
 
   if (!periodId) return {};
 
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('ai_summaries')
     .select(
       'summary, created_at, coverage_status, coverage_total_items, coverage_fitted_items, coverage_dropped_items, coverage_truncated, coverage_fields, source_revision, source_generated_at'
     )
     .eq('period_id', periodId)
     .maybeSingle();
+
+  // P110M4T01: lỗi DB phải surface (client AiSummaryCard đã try/catch) — không còn
+  // báo "không có tóm tắt" khi thực tế là DB lỗi.
+  if (error) throw new Error('Lỗi tải tóm tắt đánh giá. Vui lòng thử lại.');
 
   if (!data) return {};
 

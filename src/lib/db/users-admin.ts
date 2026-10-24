@@ -224,7 +224,7 @@ export async function getUsersAdmin(
     }
   }
 
-  let orderedQuery = query.order('name');
+  let orderedQuery = query.order('name').order('id', { ascending: true });
 
   if (options?.limit) {
     orderedQuery = orderedQuery.limit(options.limit);

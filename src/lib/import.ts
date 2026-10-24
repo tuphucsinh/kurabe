@@ -184,6 +184,7 @@ export async function parseEmployeeExcel(
       }
     });
 
+    result.successCount = result.data.length;
     return result;
   } catch (error: unknown) {
     const err = error as Error;

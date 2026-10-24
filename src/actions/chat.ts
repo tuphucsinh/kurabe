@@ -316,7 +316,7 @@ async function buildPageContext(pathname: string, role: string, user: User): Pro
     // /criteria
     if (pathname.startsWith('/criteria')) {
       const groups = await getAllCriteriaGroups();
-      return `\nNgữ cảnh trang Tiêu chuẩn: ${groups.length} nhóm tiêu chí (${groups.map((g) => g.id).join(', ')}).`;
+      return `\nNgữ cảnh trang Tiêu chuẩn: ${groups.length} nhóm tiêu chí (${groups.map((g) => `${g.code} – ${g.name}`).join(', ')}).`;
     }
   } catch {
     // fail-soft

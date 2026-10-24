@@ -212,6 +212,19 @@ function reset() {
   assert.equal(S.rpcCalls.length, 1);
 }
 
+// --- 7a. P3-1: duplicate codes within the SAME file fail before any write ---
+{
+  reset();
+  S.rosterRows = [{ id: 'sl-1', employee_code: 'SLD1', role: 'SubLeader', team_id: 'T1', is_active: true }];
+  const res = await upsertUsersAction([
+    { id: 'u-a', employeeCode: 'DUP01', name: 'Bản một', role: 'Employee', teamId: 'T1' },
+    { id: 'u-b', employeeCode: 'DUP01', name: 'Bản hai', role: 'Employee', teamId: 'T1' },
+  ]);
+  assert.equal(res.success, false, 'duplicate code in one file must fail the batch');
+  assert.match(res.error || '', /DUP01/, 'error names the duplicated code');
+  assert.equal(S.rpcCalls.length, 0, 'no write may happen');
+}
+
 // --- 7. Case-insensitive code matching (client lowercased both sides) ---
 {
   reset();

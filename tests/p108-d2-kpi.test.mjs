@@ -1353,7 +1353,9 @@ assert.deepEqual(b2Staff.setKpis,[]);
 assert.equal(b2Staff.stats.sampleCount,0);
 assert.equal(b2Staff.excludedKpis.totalExcluded,1);
 await assert.rejects(getReportAggregation(unitPeriod,'all','Staff'),/INVALID_KPI_SET_FILTER/);
-await assert.rejects(getEvaluationResultProjectionAction(unitPeriod,'unknown'),/INVALID_KPI_SET_FILTER/);
+// P110M4T01: hành vi mới có chủ đích — bộ lọc lạ trả typed null (như thiếu auth),
+// không còn throw mờ INVALID_KPI_SET_FILTER ra digest.
+assert.equal(await getEvaluationResultProjectionAction(unitPeriod,'unknown'), null, 'unknown set filter must resolve to typed null');
 console.log('  PASS: no global80 /92.5 /50%; explicit leader scope has10 and0, excluded staff scope is null/empty.');
 
 console.log('19. Empty, invalid Approved, missing loaded catalog, incompatible criteria/grade basis and uncapped grade rate...');

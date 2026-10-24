@@ -14,7 +14,9 @@ import type { Candidate } from './team-validation';
 export async function loadTeamLeaderIds(
   db: SupabaseClient<Database> = supabaseAdmin
 ): Promise<Record<string, string | null>> {
-  const { data } = await db.from('teams').select('id, leader_id').eq('is_active', true).order('id', { ascending: true });
+  const { data, error } = await db.from('teams').select('id, leader_id').eq('is_active', true).order('id', { ascending: true });
+  // P110M4T01: lỗi DB phải surface lên thay vì map rỗng → "Không tìm thấy Leader".
+  if (error) throw new Error(`Lỗi đọc danh sách nhóm để xác định người đánh giá: ${error.message}`);
   const map: Record<string, string | null> = {};
   for (const t of data || []) {
     map[t.id] = t.leader_id ?? null;
@@ -49,11 +51,12 @@ export async function resolveEvaluatorFromDb(
   if (selector === 'SubLeader') {
     let subleaderId = subject.subleaderId;
     if (subleaderId === undefined) {
-      const { data: user } = await supabaseAdmin
+      const { data: user, error: subleaderError } = await supabaseAdmin
         .from('users')
         .select('subleader_id')
         .eq('id', subject.id)
         .maybeSingle();
+      if (subleaderError) throw new Error(`Lỗi đọc SubLeader của nhân viên: ${subleaderError.message}`);
       subleaderId = user?.subleader_id;
     }
 
