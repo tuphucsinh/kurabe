@@ -46,7 +46,7 @@ export default function TeamDetailPage() {
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
-  const [, setIsSaving] = useState(false);
+
 
   const isManager = user?.role === 'Manager';
 
@@ -150,7 +150,7 @@ export default function TeamDetailPage() {
       toast('Bạn không có quyền lưu thay đổi nhân viên.', 'error');
       return;
     }
-    setIsSaving(true);
+
     try {
       const payload = editingEmployee
         ? ({ ...editingEmployee, ...employee, teamId } as User)
@@ -168,7 +168,7 @@ export default function TeamDetailPage() {
     } catch (err) {
       toast(err instanceof Error ? err.message : (editingEmployee ? 'Lỗi khi cập nhật nhân viên.' : 'Lỗi khi thêm nhân viên.'), 'error');
     } finally {
-      setIsSaving(false);
+
     }
   };
 

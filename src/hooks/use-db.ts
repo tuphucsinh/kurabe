@@ -25,7 +25,7 @@ import {
   getActivePeriodAction,
   getAllCriteriaGroupsAction,
 } from '@/actions/read';
-import { UsersBatchOptions } from '@/lib/db/users-admin';
+import type { UsersBatchOptions } from '@/lib/db/users-admin';
 
 import { deleteUserAction, upsertUserAction, upsertUsersAction } from '@/actions/users';
 import { deleteTeamAction, upsertTeamAction } from '@/actions/teams';
@@ -183,6 +183,12 @@ export const useUpsertUser = () => {
       invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'evaluations', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
+      // P110M4T02: các family chi tiết cũng phải hết hạn — modal nhóm/chi tiết
+      // đang mở không được hiển thị danh sách thành viên cũ.
+      invalidateRequesterQueries(queryClient, 'team', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team-users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'users-batch', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'user', requesterRef.current);
     },
   });
 };
@@ -204,6 +210,12 @@ export const useBatchUpsertUsers = () => {
       invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'evaluations', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
+      // P110M4T02: các family chi tiết cũng phải hết hạn — modal nhóm/chi tiết
+      // đang mở không được hiển thị danh sách thành viên cũ.
+      invalidateRequesterQueries(queryClient, 'team', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team-users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'users-batch', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'user', requesterRef.current);
     },
   });
 };
@@ -220,6 +232,10 @@ export const useDeleteUser = () => {
     onSuccess: () => {
       invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'employees-page-data', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team-users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'users-batch', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'user', requesterRef.current);
     },
   });
 };
@@ -270,6 +286,8 @@ export const useUpsertTeam = () => {
     onSuccess: () => {
       invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team-users', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'teams-page-data', requesterRef.current);
     },
   });
@@ -287,6 +305,8 @@ export const useDeleteTeam = () => {
     onSuccess: () => {
       invalidateRequesterQueries(queryClient, 'teams', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'users', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team', requesterRef.current);
+      invalidateRequesterQueries(queryClient, 'team-users', requesterRef.current);
       invalidateRequesterQueries(queryClient, 'teams-page-data', requesterRef.current);
     },
   });
@@ -336,7 +356,7 @@ export const useEvaluationSummaries = (periodId?: string, user?: User | null) =>
 export const useEvaluationSummariesBatch = (employeeIds: string[], periodId?: string, user?: User | null) => {
   const { viewerScope, scopeEpoch } = useScopeQueryOptions(user);
   return useQuery({
-    queryKey: scopedKey('evaluations', ['summary-batch', periodId, employeeIds.join(',')], user, viewerScope, scopeEpoch),
+    queryKey: scopedKey('evaluations', ['summary-batch', periodId, [...employeeIds].sort().join(',')], user, viewerScope, scopeEpoch),
     queryFn: () => getEvaluationSummariesBatchAction(employeeIds, periodId),
     staleTime: 2 * 60 * 1000,
     enabled: user != null && viewerScope != null && !!periodId && employeeIds.length > 0,

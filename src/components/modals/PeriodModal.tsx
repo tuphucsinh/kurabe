@@ -68,7 +68,7 @@ export function PeriodModal({ isOpen, onClose, onSuccess }: PeriodModalProps) {
                 type="number"
                 required
                 value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
+                onChange={(e) => { const parsed = parseInt(e.target.value, 10); setYear(Number.isNaN(parsed) ? 0 : parsed); }}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-outline-soft focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all text-ink bg-surface-raised"
               />
             </div>

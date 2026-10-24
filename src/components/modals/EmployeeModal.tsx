@@ -69,7 +69,9 @@ function EmployeeModalContent({
   const defaultRole = employee?.role && allowedRoles.includes(employee.role) ? employee.role : (allowedRoles[0] || 'Employee');
   const initialTeamId = employee?.teamId || restrictToTeamId || '';
 
-  const [formData, setFormData] = useState<Partial<User>>({
+  // Lazy initializer: default joinDate dùng new Date() — chỉ được chạy một lần
+  // đầu, không phải mỗi render (react-compiler impure-call rule).
+  const [formData, setFormData] = useState<Partial<User>>(() => ({
     name: employee?.name || '',
     employeeCode: employee?.employeeCode || '',
     gender: employee?.gender || 'Nữ',
@@ -77,8 +79,8 @@ function EmployeeModalContent({
     teamId: initialTeamId,
     subleaderId: employee?.subleaderId || '',
     description: employee?.description || '',
-    joinDate: employee?.joinDate || new Date().toISOString().split('T')[0],
-  });
+    joinDate: employee?.joinDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
+  }));
 
   // Query authorized team members for candidate SubLeaders:
   const { data: teamUsers = [], isLoading: isTeamUsersLoading } = useTeamUsers(formData.teamId || '');

@@ -121,6 +121,9 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
 
   const [activeGroupId, setActiveGroupId] = useState('A');
   const [isSaving, setIsSaving] = useState(false);
+  // P110M4T02: sau submit thành công, giữ nút khóa tới khi redirect xong để chống
+  // double-submit trong cửa sổ 900ms (toast lỗi mâu thuẫn với kết quả thật).
+  const [submitRedirectPending, setSubmitRedirectPending] = useState(false);
   const { toast } = useToast();
 
   const autosaveAttemptedKeys = useRef<Set<string>>(new Set());
@@ -457,6 +460,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
         ]);
         if (isSubmit) {
           showSubmitSuccess();
+          setSubmitRedirectPending(true);
           redirectTimer.current = window.setTimeout(() => {
             router.push('/employees');
           }, 900);
@@ -656,7 +660,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
                   {accessState.editableRound !== null && accessState.editableRound > 1 && (
                     <button
                       onClick={() => setReturnDialogOpen(true)}
-                      disabled={isSaving}
+                      disabled={isSaving || submitRedirectPending}
                       className="px-4 py-2 max-md:basis-full max-md:flex-none max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-rose-600 border border-rose-200 hover:border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                     >
                       <Undo2 size={15} className="shrink-0" />
@@ -665,14 +669,14 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
                   )}
                   <button
                     onClick={() => handleSave(false)}
-                    disabled={isSaving}
+                    disabled={isSaving || submitRedirectPending}
                     className="px-4 py-2 max-md:flex-1 max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-ink border border-outline-soft rounded-xl font-bold hover:bg-surface-muted hover:border-outline transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                   >
                     Lưu bản nháp
                   </button>
                   <button
                     onClick={() => handleSave(true)}
-                    disabled={isSaving}
+                    disabled={isSaving || submitRedirectPending}
                     className="px-5 py-2 max-md:flex-1 max-md:min-h-[44px] max-md:px-4 bg-brand text-white rounded-xl font-bold shadow-sm hover:bg-brand-mid active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:hover:scale-100 text-sm max-md:text-xs whitespace-nowrap"
                   >
                     <CheckCircle2 size={15} className="shrink-0" />
@@ -684,7 +688,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
                   {user?.role === 'Manager' && evaluation?.employeeId === user.id && evaluation?.status === 'Approved' && (
                     <button
                       onClick={() => setReturnDialogOpen(true)}
-                      disabled={isSaving}
+                      disabled={isSaving || submitRedirectPending}
                       className="px-4 py-2 max-md:basis-full max-md:flex-none max-md:min-h-[44px] max-md:px-3.5 bg-surface-raised text-rose-600 border border-rose-200 hover:border-rose-300 rounded-xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm max-md:text-xs whitespace-nowrap active:scale-[0.98] shadow-2xs"
                     >
                       <Undo2 size={15} className="shrink-0" />

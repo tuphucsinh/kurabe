@@ -56,6 +56,10 @@ export default function PeriodActions() {
       } else {
         toast(result.error || 'Lỗi đóng kỳ', 'error');
       }
+    } catch (err) {
+      // P110M4T02: server-action từ chối/mất kết nối phải hiện lỗi, không im lặng.
+      console.error('closeEvaluationPeriod error:', err);
+      toast('Lỗi kết nối khi đóng kỳ đánh giá. Vui lòng thử lại.', 'error');
     } finally {
       setIsClosing(false);
     }
@@ -89,6 +93,9 @@ export default function PeriodActions() {
       } else {
         toast(result.error || 'Không thể xóa kỳ.', 'error');
       }
+    } catch (err) {
+      console.error('deleteEvaluationPeriod error:', err);
+      toast('Lỗi kết nối khi xóa kỳ đánh giá. Vui lòng thử lại.', 'error');
     } finally {
       setIsDeleting(false);
     }

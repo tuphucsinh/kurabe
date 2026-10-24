@@ -11,18 +11,22 @@ export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError('');
-    
+    setIsSubmitting(true);
     try {
       const user = await login(employeeCode, password);
       // Redirect thẳng theo role (loginAction đã trả user) — khỏi vòng '/' → middleware → /dashboard (bớt 1-2 hop 307 trên Vercel)
       router.replace(isIndividualRole(user.role) ? `/evaluations/${user.id}` : '/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Mã nhân viên không hợp lệ hoặc không tồn tại.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,9 +90,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 mt-6"
+              disabled={isSubmitting}
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 mt-6 disabled:opacity-60"
             >
-              Đăng nhập
+              {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
           </form>
         </div>

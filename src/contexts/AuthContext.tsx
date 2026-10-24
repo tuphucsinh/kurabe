@@ -72,6 +72,7 @@ const scopeFingerprint = (user: User | null, viewerScope: ViewerScope | null): s
 // provider metadata and invalidates exactly these scoped keys (never a global
 // cache), then lets the server props re-render via router.refresh().
 const PERIOD_SCOPED_QUERY_FAMILIES = new Set([
+  'criteria-edit-state',
   'periods',
   'active-period',
   'evaluations',

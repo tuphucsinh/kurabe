@@ -93,6 +93,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   const isLeader = effectiveViewer?.role === 'Leader';
 
   // Transient setup token handoff for Manager (in-memory only, no URL or storage)
+  const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null);
   const [tokenHandoff, setTokenHandoff] = useState<{
     employeeName: string;
     token: string;
@@ -546,6 +547,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
   };
 
   const handleResetPassword = async (id: string, name: string) => {
+    if (resettingPasswordId) return;
     if (!isManager) {
       toast('Chỉ Quản lý mới có quyền đặt lại mật khẩu.', 'error');
       return;
@@ -560,6 +562,8 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
 
     if (!confirmed) return;
 
+    setResettingPasswordId(id);
+    try {
     const result = await resetPassword(id);
     if (result.success) {
       setTokenHandoff({
@@ -571,6 +575,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       toast(`Đã tạo mã thiết lập mật khẩu cho ${name}. Vui lòng chuyển mã cho nhân viên.`, 'success');
     } else {
       toast(result.error || 'Lỗi khi đặt lại mật khẩu.', 'error');
+    }
+    } finally {
+      setResettingPasswordId(null);
     }
   };
 
@@ -859,6 +866,7 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
             <button
               type="button"
               onClick={() => handleResetPassword(item.id, item.name)}
+              disabled={resettingPasswordId === item.id}
               className="p-2 text-ink-muted hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
               title="Đặt lại mật khẩu (tạo mã thiết lập)"
             >

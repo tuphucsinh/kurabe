@@ -277,6 +277,10 @@ export default function CriteriaPage() {
     );
   }
 
+  // P110M4T02: không render khung tiêu chuẩn một frame trước khi redirect —
+  // tránh flash nội dung không dành cho role này (hooks vẫn chạy đều phía trên).
+  if (isIndividualRole(user?.role)) return null;
+
   return (
     <LazyMotion features={domAnimation}>
       <m.div className="px-4 sm:px-6 md:px-10 lg:px-12 py-6 md:py-8 lg:py-5 space-y-6 md:space-y-8 lg:space-y-4 animate-in fade-in duration-500 w-full max-w-[1600px] mx-auto">
