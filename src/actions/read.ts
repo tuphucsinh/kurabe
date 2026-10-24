@@ -364,7 +364,8 @@ export type TeamsPageData = {
  * Đọc dữ liệu tổng hợp cho trang /teams trong 1 server action duy nhất:
  * - users (danh sách người dùng theo quyền viewer)
  * - teams (danh sách nhóm theo quyền viewer)
- * - evaluations (danh sách đánh giá theo kỳ hiện tại nếu periodId được cung cấp)
+ * - evaluations (danh sách evaluation summaries theo kỳ nếu periodId được cung cấp —
+ *   P110M1T05: projection nhẹ, không có scores/notes/comment của full rounds)
  *
  * Bắt buộc requireAuth() duy nhất 1 lần.
  * Trả về discriminated per-part error contract:
@@ -397,7 +398,9 @@ export async function getTeamsPageDataAction(
     const [usersRes, teamsRes, evalsRes] = await Promise.allSettled([
       getUsersAdmin(auth.user),
       getTeamsAdmin(auth.user),
-      getEvaluationsByPeriodAdmin(periodId, auth.user),
+      // P110M1T05: /teams chỉ cần trạng thái Approved + tiến độ theo nhóm —
+      // dùng summary projection thay vì full scores/notes/comment payloads.
+      getEvaluationSummariesByPeriodAdmin(periodId, auth.user),
     ]);
 
     if (usersRes.status === 'fulfilled') {
