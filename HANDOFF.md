@@ -6,7 +6,7 @@
 **P110 scope:** import dd/mm/yyyy day-first; result-message Approved-only + modal saving reset; compare null-vs-0; evaluation unsaved-changes guard; /teams summary projection; AuthContext bootstrap-once + identity-bound scope requests.
 **Gates @ `8fa0618`:** tests 92/92 PASS, lint 0 error/60 warnings (baseline), typecheck, secret scan, diff-check, synthetic-env isolated build, fresh strict review **VERDICT: PASS** (diff `a7dffe6..8fa0618`).
 **Evidence:** `/home/pi5/hermes-artifacts/kurabe-p110/` (per-task focused logs + `gates-final/`). Candidate worktree removed after build.
-**Release boundary:** local only — P109 C01/R01/A01 + P110 remain UNPUSHED; T01/T02 UI_LIVE still owner-accepted UNVERIFIED. No production writes, real AI/Telegram calls, or migrations.
+**Release boundary:** P110 RELEASED 2026-10-24 (owner-approved): pushed `a7dffe6..b791479`; Vercel production Ready (`kurabe-qzdmv9bv1`, aliases kurabe-tuphucsinhs-projects/lykiv.vercel.app); CI rerun success (lần đầu browser-lane flake, đã đối chiếu không phải regression). P109 C01/R01/A01 đã lên cùng đợt push.
 **Open / Need approval:** push/deploy riêng; P108M2T01 trial-data disposition; browser smoke P110 (cần local stack) nếu muốn evidence bổ sung.
 **Preserved:** anh-owned `.ai/DECISIONS_LOG.md` (modified, hash `f66ab7bb…`) + `TCDG2026.xls` (untracked, hash `3e3cfd7e…`) byte-identical through P110.
 **Next:** owner decision on release, or separately scoped residual work (backlog kế hoạch §E: export N+1, chat double-query, count/insert race, AI 200-parse retry…).

@@ -1436,6 +1436,10 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### P110 release (owner-approved 2026-10-24)
+
+Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
+
 ### P110 candidate gates (tại `8fa0618`, kèm control pin `8fa0618`)
 
 `npm test` 92/92 PASS (86 baseline + 6 focused mới); `npm run lint` 0 error/60 warning (đúng baseline); typecheck PASS; secret scan PASS 302 files; `git diff --check` sạch; synthetic-env isolated build PASS (worktree P110-candidate, node_modules vật lý, .env.local synthetic mode 600, đã dọn). Fresh strict read-only review trên diff `a7dffe6..8fa0618`: **VERDICT: PASS** (scope khớp owns, không regression tìm thấy, 3 test cũ cập nhật có chủ đích giữ intent). Browser smoke NOT_RUN (không có local stack chạy; bù bằng unit/source-contract + review). Không push/deploy/production/migration; không dữ liệu production.
