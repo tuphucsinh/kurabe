@@ -1463,6 +1463,25 @@ Lần CI stall kế tiếp: step log sẽ hiện live phase/case + durations, ar
 
 Push FF `3d7bf1f..40f46d2`; CI run **40086230532 success 7m41s** (tests 93/93, qualification `cases=115` PASS, build PASS, production-smoke 5 cases real-DB PASS, artifact upload đúng luật skip khi pass). Diagnostics mới xuất hiện đúng thiết kế trong log thật: 4 marker `[p107-browser +Ns]` (URL tự đỏ), 65/65 `[caseledger] PASS <case> <ms>`. Vercel production `kurabe-crol5ycjb` **READY** từ commit `40f46d28ee`; `lykiv.vercel.app` resolve đúng deployment đó; smoke `lykiv`/login 200, `/` 307, main-alias login 200.
 
+### [x] [#P110M3T01] Hiển thị warning seed mật khẩu mặc định (P2 audit E2E)
+
+Closure: local canonical (commit sau mục này); focused test FAIL-on-baseline → PASS-on-fix (behavioral trên hook thật + source contract 2 call site); typecheck PASS, lint 0 error (2 warning cũ baseline), full suite **94/94**, diff-check sạch. STANDARD — Mika verify; không push.
+
+Nguồn: audit E2E 2026-10-24 (P2-1/P2-2): `upsertUser(s)Action` trả `warning` khi personnel lưu OK nhưng seed mật khẩu mặc định thất bại, UI vứt warning ở cả 2 đường → Quản lý không biết nhân viên chưa có mật khẩu.
+
+Fix (3 chỗ, không đổi nghiệp vụ seeding): `useBatchUpsertUsers` trả `{users, warning}` thay vì chỉ `users` (`use-db.ts:194-201`); import flow giữ success toast + thêm warning toast khi có (`EmployeesClient.tsx` handleFileChange); `handleSave` thêm nhánh `result.warning` toast warning (Toast là stack nên 2 toast cùng hiển thị được).
+
+```yaml
+task:
+  id: P110M3T01
+  tier: STANDARD
+  owns:
+    - src/hooks/use-db.ts
+    - src/components/employees/EmployeesClient.tsx
+    - tests/employee-seed-warning.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
