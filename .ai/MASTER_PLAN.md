@@ -1,6 +1,15 @@
 # Kurabe — current plan and closed execution record
 
-## P108 — 3 bộ tiêu chuẩn độc lập Leader / Staff / Worker (CURRENT PLAN, revised 2026-10-17)
+## Current verified continuation — P109 resilience queue DONE_LOCAL
+
+- P109M1T03/C01 canonical `7815b50b7bb3f90589b4c25b097332653f97314c`: Chat Widget recovers from rejected actions; focused regression, root gates and fresh review PASS.
+- P109M1T04/R01 canonical `fe352252368ed5c6fb011b6ad520f56d33319a24`: report saved before external calls, fail-closed DB errors, honest receipt, bounded notifications; focused15/15, root86/86, build/static/scans and fresh strict review PASS.
+- P109M1T05/A01 canonical `db5dbe7f147e2083b82ce1eb64cb4c611236f618`: no retry on HTTP4xx/network/timeout, one retry on5xx or unusable200; text/vision behavioral29/29, root86/86, build/static/scans and fresh strict inline-source review PASS. Matching egress assertions updated, not weakened.
+- Evidence: `/home/pi5/hermes-artifacts/kurabe-p109/`; original baseline failures, repair history, incomplete review transport and archived workspaces retained. No push/deploy/production mutation in this continuation; no paid application-provider or real Telegram test calls. P109M1T01/T02 UI_LIVE remains owner-accepted UNVERIFIED, not silently upgraded.
+- Residuals: report daily count/insert race across instances (source-confirmed, not reproduced live); summary6s wait cap does not cancel provider request; lint60 warnings/0errors. Historical dirty workspaces remain preserved. P108M2T01 trial-data disposition remains owner-gated and is not part of the completed P109 queue.
+- The older P108 planning status and decisions below are historical provenance; current execution checkboxes/outcomes are in `tasks.md`. This continuation does not revalidate old production claims or reopen completed P108 tasks.
+
+## P108 — 3 bộ tiêu chuẩn độc lập Leader / Staff / Worker (historical plan, revised 2026-10-17)
 
 **Status:** `PLANNED / IMPLEMENTATION_NOT_STARTED / NOT_REGISTERED`. This is the single canonical P108 plan. It supersedes the 2026-10-16 P108 text (Git `bd89e183238a91d6948dc027629cba5d1657546e`) after two review rounds (Mika + ChatGPT, 2026-10-17). Executable WBS: `tasks.md` § P108 (all `PLANNED`). This update is planning only: no application code, SQL, data, production, deletion or deployment change. P103–P107 below remain provenance and are not reopened.
 

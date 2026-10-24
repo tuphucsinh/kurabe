@@ -1335,7 +1335,9 @@ DoD:
 - focused mock test covering: insert OK+Telegram OK; insert OK+Telegram 400/timeout; insert returns `{error}` (no success claim, no send); AI slow/unavailable (insert unaffected, summary capped); webhook fail/absent; text with `_ * [` sent without parse_mode; daily limit unchanged; it FAILS on baseline and PASSES on the fix.
 - same root gates as P109M1T03 on the exact candidate; fresh read-only review PASS; local commit only.
 
-### [ ] [#P109M1T05] OpenAI Responses: do not retry permanent errors
+### [x] [#P109M1T05] OpenAI Responses: do not retry permanent errors
+
+Closure: local canonical `db5dbe7f147e2083b82ce1eb64cb4c611236f618`; focused 29/29, baseline behavioral diagnostic 17 passed/12 failed (exit 1), root 86/86, lint 0 errors/60 warnings, typecheck, synthetic-env build, secret/diff checks PASS; fresh strict read-only inline-source AGY review PASS. Initial permission-denied empty review was NOT accepted; no permission change. Egress test shape alignment completed under recorded owns amendment; failure_count 0 retained. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/P109M1T05/`. No real provider calls, push or deploy.
 
 ```yaml
 task:
