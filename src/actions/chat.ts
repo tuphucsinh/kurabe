@@ -500,10 +500,23 @@ export async function chatReportErrorAction(input: {
   const vnNow = new Date(Date.now() + VN_OFFSET_MS);
   const startOfDayVn = Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate());
   const startOfDay = new Date(startOfDayVn - VN_OFFSET_MS).toISOString();
-  const { count, error: countErr } = await supabaseAdmin
-    .from('chat_reports').select('id', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', startOfDay);
-  if (!countErr && (count ?? 0) >= 1) {
+  // Known limitation: daily count-then-insert isn't atomic across concurrent serverless instances; do not add process-local locks or migration/RPC.
+  let count: number | null = null;
+  let countErr: unknown = null;
+  try {
+    const res = await supabaseAdmin
+      .from('chat_reports').select('id', { count: 'exact', head: true })
+      .eq('user_id', userId).gte('created_at', startOfDay);
+    count = res.count;
+    countErr = res.error;
+  } catch (err) {
+    countErr = err;
+  }
+  if (countErr) {
+    console.error('chat_reports count error');
+    return { error: `Không thể kiểm tra giới hạn gửi báo lỗi lúc này, ${addr} vui lòng thử lại sau nhé.` };
+  }
+  if ((count ?? 0) >= 1) {
     return { reply: `Hôm nay ${addr} đã gửi báo lỗi rồi, ngày mai gửi lại nhé. Em vẫn theo dõi và sẽ phản hồi sớm ạ.` };
   }
 
@@ -512,100 +525,152 @@ export async function chatReportErrorAction(input: {
   }
   const boundedQuestion = boundAITextWithMeta(input.question, 2000, 'characters').text;
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_HOME_CHANNEL;
-  if (!token || !chatId) {
-    return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
-  }
+  const page = pageName(input.pathname || '');
+  const name = auth.user?.name || '?';
+  const role = auth.user?.role || '?';
+
+  const sanitizedHistory = sanitizeAIHistory(input.history);
+  const historyRaw = sanitizedHistory.map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n');
+  const historyText = boundAIText(historyRaw, MAX_AI_REPORT_HISTORY_CHARS);
+
+  // 1. Lưu vào chat_reports trước khi gọi AI/webhook/Telegram
+  let reportRow: { id?: string } | null = null;
+  let insertErr: unknown = null;
   try {
-    const page = pageName(input.pathname || '');
-    const name = auth.user?.name || '?';
-    const role = auth.user?.role || '?';
+    const res = await supabaseAdmin
+      .from('chat_reports').insert({
+        user_name: name,
+        role,
+        pathname: input.pathname || '',
+        question: boundedQuestion,
+        history: historyText,
+        user_id: userId,
+      })
+      .select('id').single();
+    if (res.error) {
+      insertErr = res.error;
+    } else {
+      reportRow = res.data;
+    }
+  } catch (err) {
+    insertErr = err;
+  }
 
-    const sanitizedHistory = sanitizeAIHistory(input.history);
-    const historyRaw = sanitizedHistory.map((m) => `${m.role === 'user' ? Addr : 'Em'}: ${m.text}`).join('\n');
-    const historyText = boundAIText(historyRaw, MAX_AI_REPORT_HISTORY_CHARS);
+  const reportId = reportRow?.id;
+  if (insertErr || !reportId) {
+    console.error('chat_reports insert error');
+    return { error: `Em chưa ghi nhận được báo lỗi lúc này, ${addr} vui lòng thử lại sau nhé.` };
+  }
 
-    // Summarize with the shared OpenAI model; keep the last-six-turn fallback.
-    let contextSummary = historyText.split('\n').slice(-6).join('\n');
+  // 2. Tóm tắt với OpenAI (best-effort, cap 6s hard bound; fallback giữ 6 lượt hội thoại cuối)
+  let contextSummary = historyText.split('\n').slice(-6).join('\n');
+  if (isAIConfigured()) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      if (isAIConfigured()) {
-        const s = await callAI(
+      const AI_SUMMARY_TIMEOUT_MS = 6000;
+      const aiPromise = Promise.resolve().then(() =>
+        callAI(
           `Hãy tóm tắt NGẮN GỌN (~100 từ) nội dung hội thoại hỗ trợ dưới đây để developer điều tra lỗi: vấn đề chính, user đã thử gì, kết quả. Không thêm giả định.\n\nHội thoại:\n${historyText || '(không có)'}`,
           { system: 'Bạn là trợ lý tóm tắt kỹ thuật tiếng Việt. Trả về đúng ~100 từ, không dẫn dắt.', maxTokens: 200, temperature: 0.2 }
-        );
-        if (s) contextSummary = boundAIText(s, 1000);
-      }
-    } catch { /* fallback giữ 6 lượt */ }
+        )
+      );
+      // Gắn no-op handler để tránh unhandled rejection nếu aiPromise bị reject sau khi timeout thắng
+      aiPromise.catch(() => {});
 
-    // Lưu vào chat_reports (service role) để Mika cron tự điều tra
-    let reportId: string | null = null;
-    try {
-      const { data: reportRow } = await supabaseAdmin
-        .from('chat_reports').insert({
-          user_name: name,
-          role,
-          pathname: input.pathname || '',
-          question: boundedQuestion,
-          history: historyText,
-          user_id: userId,
-        })
-        .select('id').single();
-      reportId = reportRow?.id || null;
+      const timeoutPromise = new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), AI_SUMMARY_TIMEOUT_MS);
+      });
+
+      const s = await Promise.race([aiPromise, timeoutPromise]);
+      if (s) {
+        contextSummary = boundAIText(s, 1000);
+      }
     } catch {
-      console.error('chat_reports insert error');
+      // fallback giữ 6 lượt
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-
-    // POST webhook tức thì → Mika điều tra (event-driven; chỉ khi env cấu hình — KURABE chạy Pi5/LAN; Vercel bỏ trống → fallback cron)
-    const webhookUrl = process.env.KURABE_WEBHOOK_URL;
-    const webhookSecret = process.env.KURABE_WEBHOOK_SECRET;
-    if (webhookUrl && webhookSecret) {
-      try {
-        const payload = JSON.stringify({
-          user_name: name,
-          role,
-          pathname: input.pathname || '',
-          question: boundedQuestion,
-          summary: contextSummary,
-          report_id: reportId,
-        });
-        const ts = Math.floor(Date.now() / 1000).toString();
-        const crypto = await import('node:crypto');
-        const sig = crypto
-          .createHmac('sha256', webhookSecret)
-          .update(`${ts}.${payload}`)
-          .digest('hex');
-        const wh = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Webhook-Signature-V2': sig,
-            'X-Webhook-Timestamp': ts,
-          },
-          body: payload,
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!wh.ok) console.error('webhook POST error:', wh.status);
-      } catch {
-        console.error('webhook POST error');
-      }
-    }
-    const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${boundedQuestion}\nBối cảnh: ${contextSummary.slice(0, 400)}\nLúc: ${new Date().toLocaleString('vi-VN')}`;
-
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: summary, parse_mode: 'Markdown' }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) {
-      console.error('Telegram send error:', res.status);
-      return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
-    }
-    return { reply: `${Addr} hãy thông báo lỗi này cho Manager nhé. Lỗi này cũng đã được gửi về cho Developer để xử lý.` };
-  } catch {
-    console.error('Telegram send error');
-    return { error: `Em chưa gửi được báo lỗi tới Developer lúc này, ${addr} vui lòng thông báo cho Manager nhé.` };
   }
+
+  // 3. POST webhook tức thì (best-effort, 5s hard bound; chỉ khi env cấu hình — KURABE chạy Pi5/LAN; Vercel bỏ trống → fallback cron)
+  const webhookUrl = process.env.KURABE_WEBHOOK_URL;
+  const webhookSecret = process.env.KURABE_WEBHOOK_SECRET;
+  if (webhookUrl && webhookSecret) {
+    try {
+      const payload = JSON.stringify({
+        user_name: name,
+        role,
+        pathname: input.pathname || '',
+        question: boundedQuestion,
+        summary: contextSummary,
+        report_id: reportId,
+      });
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const crypto = await import('node:crypto');
+      const sig = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(`${ts}.${payload}`)
+        .digest('hex');
+      const KURABE_WEBHOOK_TIMEOUT_MS = 5000;
+      const wh = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Signature-V2': sig,
+          'X-Webhook-Timestamp': ts,
+        },
+        body: payload,
+        signal: AbortSignal.timeout(KURABE_WEBHOOK_TIMEOUT_MS),
+      });
+      if (!wh.ok) {
+        console.error('webhook POST error:', wh.status);
+      }
+    } catch {
+      console.error('webhook POST error');
+    }
+  }
+
+  // 4. Telegram thông báo tới Developer (best-effort, 8s hard bound, plain text không dùng parse_mode Markdown)
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_HOME_CHANNEL;
+  let telegramSent = false;
+
+  if (token && chatId) {
+    try {
+      const summary = `[BÁO LỖI KURABE]\nNgười: ${name} (${role})\nTrang: ${page}\nCâu hỏi/lỗi: ${boundedQuestion}\nBối cảnh: ${contextSummary.slice(0, 400)}\nLúc: ${new Date().toLocaleString('vi-VN')}`;
+      const TELEGRAM_TIMEOUT_MS = 8000;
+
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: summary }),
+        signal: AbortSignal.timeout(TELEGRAM_TIMEOUT_MS),
+      });
+      if (res.ok) {
+        try {
+          const body = (await res.json()) as { ok?: unknown } | null;
+          if (body && typeof body === 'object' && body.ok === true) {
+            telegramSent = true;
+          } else {
+            console.error('Telegram response not ok envelope');
+          }
+        } catch {
+          console.error('Telegram JSON parse error');
+        }
+      } else {
+        console.error('Telegram send error:', res.status);
+      }
+    } catch {
+      console.error('Telegram send error');
+    }
+  }
+
+  // 5. Trả về receipt trung thực: nếu gửi Telegram thành công thì báo Developer đã được thông báo;
+  // nếu thất bại/timeout hoặc không cấu hình Telegram, chỉ báo đã ghi nhận trên hệ thống Kurabe.
+  if (telegramSent) {
+    return { reply: `${Addr} hãy thông báo lỗi này cho Manager nhé. Lỗi này cũng đã được gửi về cho Developer để xử lý.` };
+  }
+
+  return { reply: `${Addr} hãy thông báo lỗi này cho Manager nhé. Báo lỗi đã được ghi nhận trên hệ thống Kurabe.` };
 }
 
