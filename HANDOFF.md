@@ -9,5 +9,5 @@
 **Release boundary:** P110 RELEASED 2026-10-24 (owner-approved): pushed `a7dffe6..b791479`; Vercel production Ready (`kurabe-qzdmv9bv1`, aliases kurabe-tuphucsinhs-projects/lykiv.vercel.app); CI rerun success (lần đầu browser-lane flake, đã đối chiếu không phải regression). P109 C01/R01/A01 đã lên cùng đợt push.
 **Open / Need approval:** push/deploy riêng; P108M2T01 trial-data disposition; browser smoke P110 (cần local stack) nếu muốn evidence bổ sung.
 **Preserved:** anh-owned `.ai/DECISIONS_LOG.md` (modified, hash `f66ab7bb…`) + `TCDG2026.xls` (untracked, hash `3e3cfd7e…`) byte-identical through P110.
-**P110M2T01 (local, chưa push):** CI browser-lane diagnostics — live progress + stderr đỏ + evidence upload JSON-only; root stall ngoài code harness (runner degradation), RAM floor chặn repro local; cần anh duyệt push riêng.
+**P110M2T01 RELEASED 2026-10-24 (owner-approved):** push FF `40f46d2`, CI 40086230532 success 7m41s (93/93, 115 cases, smoke 5), Vercel `kurabe-crol5ycjb` READY @ 40f46d28ee, lykiv trỏ đúng, smoke 200. Stall root cause remains UNKNOWN (ngoài harness); diagnostics live sẵn sàng cho lần fail tới.
 **Next:** owner decision on push P110M2T01, or separately scoped residual work (backlog §E).

@@ -1459,6 +1459,10 @@ task:
 
 Lần CI stall kế tiếp: step log sẽ hiện live phase/case + durations, artifact chứa evidence (per-case durationMs) + stderr đã đỏ + failureError thật — chẩn đoán trong vài phút thay vì 40.
 
+### P110M2T01 release (owner-approved 2026-10-24)
+
+Push FF `3d7bf1f..40f46d2`; CI run **40086230532 success 7m41s** (tests 93/93, qualification `cases=115` PASS, build PASS, production-smoke 5 cases real-DB PASS, artifact upload đúng luật skip khi pass). Diagnostics mới xuất hiện đúng thiết kế trong log thật: 4 marker `[p107-browser +Ns]` (URL tự đỏ), 65/65 `[caseledger] PASS <case> <ms>`. Vercel production `kurabe-crol5ycjb` **READY** từ commit `40f46d28ee`; `lykiv.vercel.app` resolve đúng deployment đó; smoke `lykiv`/login 200, `/` 307, main-alias login 200.
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
