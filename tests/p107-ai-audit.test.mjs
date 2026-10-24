@@ -502,8 +502,21 @@ console.log('=== P107M1T08 bounded AI + visible audit failures ===');
 {
   reset();
   S.assertEvaluationPeriodActiveForEvaluation = async () => ({ success: true });
+  // P110M1T02: the update is now status-guarded and row-counted — the stub
+  // follows the new chain shape (eq id -> eq status -> select id) while the
+  // asserted behavior (business ok despite audit failure) stays the same.
   S.fromHandler = (table) => {
-    if (table === 'evaluations') return { update: () => ({ eq: async () => ({ error: null }) }) };
+    if (table === 'evaluations') {
+      return {
+        update: () => ({
+          eq: () => ({
+            eq: () => ({
+              select: async () => ({ data: [{ id: 'ev-a1' }], error: null }),
+            }),
+          }),
+        }),
+      };
+    }
     if (table === 'audit_logs') return { insert: async () => ({ error: { message: 'audit down' } }) };
     return {};
   };

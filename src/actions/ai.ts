@@ -14,7 +14,7 @@ import { getPeriodSummary } from '@/actions/ai-summary';
 import { toClientError } from '@/lib/errors';
 import { checkAndRecordAiUsage } from '@/lib/ai-limit';
 import { assertEvaluationPeriodActiveForEvaluation } from '@/lib/db/evaluation-period-write-guard';
-import { detectPromptInjection, boundAIText, boundAITextWithMeta, parseAiChunkBounds, parseAiProviderTimeout, runBoundedConcurrency, runProviderCallBounded, MAX_AI_PROMPT_CHARS, MAX_AI_CHUNK_CONCURRENCY, type AIPayloadCoverage } from '@/lib/ai-governance';
+import { detectPromptInjection, boundAIText, boundAITextWithMeta, parseAiChunkBounds, parseAiProviderTimeout, runBoundedConcurrency, runProviderCallBounded, MAX_AI_PROMPT_CHARS, MAX_AI_TOTAL_PAYLOAD_CHARS, MAX_AI_CHUNK_CONCURRENCY, type AIPayloadCoverage } from '@/lib/ai-governance';
 import type {
   CriteriaSnapshot,
   groupsForVersion as GroupsForVersionFn,
@@ -296,6 +296,18 @@ export async function saveResultMessageAction(input: {
   const auth = await requireManager();
   if (auth.error !== null) return { error: auth.error };
 
+  if (typeof input?.evaluationId !== 'string' || input.evaluationId.length === 0) {
+    return { error: 'Yêu cầu không hợp lệ.' };
+  }
+  if (typeof input?.message !== 'string' || input.message.trim().length === 0) {
+    return { error: 'Nội dung thông báo không được để trống.' };
+  }
+  // Existing payload contract (MAX_AI_PROMPT + MAX_AI_SYSTEM); reject instead of
+  // silently truncating a message the Manager composed.
+  if (input.message.length > MAX_AI_TOTAL_PAYLOAD_CHARS) {
+    return { error: `Nội dung thông báo quá dài (tối đa ${MAX_AI_TOTAL_PAYLOAD_CHARS} ký tự).` };
+  }
+
   // P96T05: Closed-period write firewall — guard evaluation period before write
   const periodGuard = await assertEvaluationPeriodActiveForEvaluation(input.evaluationId);
   if (!periodGuard.success) {
@@ -303,13 +315,22 @@ export async function saveResultMessageAction(input: {
   }
 
   try {
-    const { error } = await supabaseAdmin
+    // P110M1T02: the status guard lives on the UPDATE itself (TOCTOU-safe).
+    // Zero updated rows means the evaluation is not Approved (or no longer
+    // exists) — reported honestly, never treated as success, no success audit.
+    const { data, error } = await supabaseAdmin
       .from('evaluations')
-      .update({ result_message: input.message })
-      .eq('id', input.evaluationId);
+      .update({ result_message: input.message.trim() })
+      .eq('id', input.evaluationId)
+      .eq('status', 'Approved')
+      .select('id');
 
     if (error) {
       return { error: toClientError(error, 'Lỗi cập nhật thông báo kết quả. Vui lòng thử lại.') };
+    }
+
+    if (!data || data.length === 0) {
+      return { error: 'Chỉ phiếu đánh giá đã phê duyệt (Approved) mới lưu được thông báo kết quả.' };
     }
 
     revalidatePath(`/evaluations/${input.evaluationId}`);
@@ -324,7 +345,7 @@ export async function saveResultMessageAction(input: {
       'SAVE_RESULT_MESSAGE',
       'evaluation',
       input.evaluationId,
-      { messageLength: input.message?.length || 0 }
+      { messageLength: input.message.trim().length }
     );
 
     return { ok: true, auditRecorded: audit.ok };

@@ -290,6 +290,16 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
       }
     } catch (err) {
       console.error('Save error:', err);
+      // P110M1T02: a thrown save must surface on the item (status 'error',
+      // composed message kept) so the Lưu button re-enables and the failure is
+      // visible — never leave the item stuck on 'saving'.
+      setMessagesList((prev) =>
+        prev.map((m) =>
+          m.evaluationId === item.evaluationId
+            ? { ...m, status: 'error', error: 'Lỗi khi lưu thông báo. Vui lòng thử lại.' }
+            : m
+        )
+      );
       toast('Lỗi khi lưu thông báo.', 'error');
     }
   };
@@ -330,6 +340,15 @@ export default function BatchResultMessageModal({ periodId }: BatchResultMessage
         }
       } catch (err) {
         console.error('Save all item error:', err);
+        // P110M1T02: mark the failed item so progress keeps moving and the item
+        // can be retried individually after the batch loop finishes.
+        setMessagesList((prev) =>
+          prev.map((m) =>
+            m.evaluationId === item.evaluationId
+              ? { ...m, status: 'error', error: 'Lỗi khi lưu thông báo. Vui lòng thử lại.' }
+              : m
+          )
+        );
       }
       setSaveProgress({ current: i + 1, total: toSave.length });
     }
