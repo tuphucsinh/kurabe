@@ -125,9 +125,11 @@ export function CompareFrame({
 export interface ComparisonRow {
   criterion: Criterion;
   roundCriteria: Array<Criterion | null>;
-  roundScores: number[];
-  roundDeltas: number[];
-  totalDelta: number;
+  /** null = chưa chấm (hoặc tiêu chí không áp dụng ở lần đó) — 0 là điểm hợp lệ. */
+  roundScores: Array<number | null>;
+  /** null = chưa xác định (thiếu một trong hai đầu mút). */
+  roundDeltas: Array<number | null>;
+  totalDelta: number | null;
 }
 
 interface CompareRoundView {
@@ -262,15 +264,26 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
           view.criteriaGroups.flatMap((group) => group.criteria).find((item) => item.id === criterion.id) ?? null
         );
         const roundScores = roundViews.map((view, index) =>
-          roundCriteria[index] ? view.round.scores?.[criterion.id] ?? 0 : 0
+          roundCriteria[index] ? (view.round.scores?.[criterion.id] ?? null) : null
         );
-        const roundDeltas = roundScores.map((score, index) => index === 0 ? 0 : score - roundScores[index - 1]);
+        // Delta chỉ tồn tại khi cả hai đầu mút đều có điểm số hợp lệ; thiếu điểm
+        // không bao giờ bị tính là 0.
+        const roundDeltas = roundScores.map((score, index) => {
+          if (index === 0) return null;
+          const prev = roundScores[index - 1];
+          return typeof score === 'number' && typeof prev === 'number' ? score - prev : null;
+        });
+        const firstScore = roundScores[0];
+        const lastScore = roundScores[roundScores.length - 1];
         return {
           criterion,
           roundCriteria,
           roundScores,
           roundDeltas,
-          totalDelta: roundScores.length >= 2 ? roundScores[roundScores.length - 1] - roundScores[0] : 0,
+          totalDelta:
+            roundScores.length >= 2 && typeof firstScore === 'number' && typeof lastScore === 'number'
+              ? lastScore - firstScore
+              : null,
         };
       });
   // allCriteria and changedCriteriaIds are rebuilt from roundViews, covering its updates here.
@@ -494,11 +507,16 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-sm font-bold text-ink leading-tight">{criterion.name}</h3>
                         <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl shadow-sm ${
+                          totalDelta === null ? 'bg-surface-muted text-ink-muted' :
                           totalDelta > 0 ? 'bg-green-100 text-green-700' :
                           totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-muted text-ink-muted'
-                        }`}>
-                          {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
-                          {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                        }`} title={totalDelta === null ? 'Chưa xác định' : undefined}>
+                          {totalDelta === null ? '—' : (
+                            <>
+                              {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
+                              {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                            </>
+                          )}
                         </span>
                       </div>
 
@@ -523,10 +541,10 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                                 </span>
                               )}
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-base font-black ${isCurrent ? 'text-brand' : 'text-ink'}`}>
-                                  {score}
+                                <span className={`text-base font-black ${isCurrent ? 'text-brand' : 'text-ink'}`} title={score === null ? 'Chưa chấm' : undefined}>
+                                  {score === null ? '—' : score}
                                 </span>
-                                {delta !== 0 && (
+                                {delta !== null && delta !== 0 && (
                                   <span className={`text-[11px] font-bold ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {delta > 0 ? '+' : ''}{delta}
                                   </span>
@@ -584,11 +602,11 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                                     <div className={`
                                       w-9 h-9 flex items-center justify-center rounded-lg text-base font-black transition-all
                                       ${r.round === evaluation.currentRound ? 'bg-brand text-white shadow-md' : 'bg-surface text-ink'}
-                                      ${delta > 0 ? 'ring-2 ring-green-500/30' : delta < 0 ? 'ring-2 ring-red-500/30' : ''}
-                                    `}>
-                                      {score}
+                                      ${delta !== null && delta > 0 ? 'ring-2 ring-green-500/30' : delta !== null && delta < 0 ? 'ring-2 ring-red-500/30' : ''}
+                                    `} title={score === null ? 'Chưa chấm' : undefined}>
+                                      {score === null ? '—' : score}
                                     </div>
-                                    {delta !== 0 && (
+                                    {delta !== null && delta !== 0 && (
                                       <span className={`text-[11px] font-bold mt-1 flex items-center gap-0.5 ${
                                         delta > 0 ? 'text-green-600' : 'text-red-600'
                                       }`}>
@@ -601,11 +619,16 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                             })}
                             <td className="px-4 py-2.5 text-right">
                               <span className={`inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-xl shadow-sm ${
+                                totalDelta === null ? 'bg-surface-muted text-ink-muted' :
                                 totalDelta > 0 ? 'bg-green-100 text-green-700' :
                                 totalDelta < 0 ? 'bg-red-100 text-red-700' : 'bg-surface-muted text-ink-muted'
-                              }`}>
-                                {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
-                                {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                              }`} title={totalDelta === null ? 'Chưa xác định' : undefined}>
+                                {totalDelta === null ? '—' : (
+                                  <>
+                                    {totalDelta > 0 ? <TrendingUp size={12} /> : totalDelta < 0 ? <TrendingDown size={12} /> : null}
+                                    {totalDelta > 0 ? `+${totalDelta}` : totalDelta}
+                                  </>
+                                )}
                               </span>
                             </td>
                           </tr>
@@ -702,9 +725,10 @@ export default function ComparePageClient({ employeeId, scope }: ComparePageClie
                         {roundViews.map((view, index) => {
                           const roundCriterion = roundCriteria[index];
                           if (!roundCriterion) return null;
+                          const unchangedScore = view.round.scores?.[criterion.id];
                           return (
                             <span key={view.round.round} className="shrink-0 text-xs font-black text-ink-muted px-2 py-1 bg-surface-raised rounded-xl shadow-sm border border-outline-soft/30" title={`${roundCriterion.code}: ${roundCriterion.name}`}>
-                              L{view.round.round}: {view.round.scores?.[criterion.id] ?? 0}
+                              L{view.round.round}: {unchangedScore === undefined ? '—' : unchangedScore}
                             </span>
                           );
                         })}
