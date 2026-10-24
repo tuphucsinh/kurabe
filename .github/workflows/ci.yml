@@ -100,6 +100,20 @@ jobs:
           node scripts/verify-release.mjs --suite p107-qualification --tier authenticated \
             --evidence "$RUNNER_TEMP/p107-qualification.json"
 
+      # P110M2T01: keep the (redacted) qualification evidence + diagnostics when the
+      # lane fails, so a stall/failure is diagnosable from the run page instead of a
+      # single opaque line on a vanished runner.
+      - name: Upload qualification diagnostics on failure
+        if: cancelled() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p107-qualification-diagnostics
+          # JSON only: the redacted evidence/diagnostics artifacts. Never the
+          # `.runtime` tree (unredacted app copy + node_modules + chrome profile).
+          path: ${{ runner.temp }}/p107-qualification*.json
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify disposable loopback DB and real browser
         shell: bash
         env:

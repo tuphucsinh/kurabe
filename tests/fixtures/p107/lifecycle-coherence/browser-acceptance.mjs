@@ -36,6 +36,14 @@ import {
 const FILE = fileURLToPath(import.meta.url);
 const POLL_WAIT_MS = 33_000; // strictly above the app's 30s same-identity poll cadence
 
+// P110M2T01: phase progress on stderr (redaction-free ids/durations only) so the
+// wrapper can forward live visibility into the CI step log instead of 40 silent
+// minutes ending in one opaque line.
+const PROGRESS_T0 = Date.now();
+function progress(message) {
+  console.error(`[p107-browser +${Math.round((Date.now() - PROGRESS_T0) / 1000)}s] ${message}`);
+}
+
 const CASE_MANIFEST = [
   { id: 'src:frozen-head-expected-sha', group: 'identity', expected: 'git HEAD equals the caller-supplied expected SHA' },
   { id: 'src:harness-source-hashes', group: 'identity', expected: 'all owned harness sources hashed in evidence' },
@@ -341,11 +349,13 @@ export async function run(options, ctx) {
     ctx.ids = ids;
     ctx.config = config;
 
+    progress('isolated next build starting');
     assertResourceBudget(); // re-check the budget immediately before the build
     ctx.next = await startIsolatedNext({
       runtimeRoot, restUrl: ctx.stack.restUrl, anonKey: ctx.stack.anonKey,
       serviceRoleKey: ctx.stack.serviceRoleKey, runId: ctx.stack.runId,
     });
+    progress(`isolated next ready at ${ctx.next.url}`);
     const manifest = loadActionManifest(ctx.next.buildDir);
     ctx.manifest = manifest;
     ctx.origin = ctx.next.url;
@@ -371,6 +381,7 @@ export async function run(options, ctx) {
     // ---- launch browser + primary tab ----
     assertResourceBudget(); // re-check the budget immediately before Chromium
     ctx.browser = await launchChromium({ runtimeRoot, binary: options.chrome });
+    progress('chromium launched; starting primary UI journey');
     const pageA = await ctx.browser.newPage('primary', { origin: ctx.origin });
     ctx.pageA = pageA;
     // The lifecycle journeys are desktop journeys (the Manager mutation cluster in
@@ -407,6 +418,7 @@ export async function run(options, ctx) {
     // Period creation via the real UI.
     // -------------------------------------------------------------------
     const codesMap = org.userCodes;
+    progress('primary journey: login manager');
     await loginAs(pageA, ctx.origin, codesMap.manager);
     let periodCount = listPeriods(ctx.stack.dbTarget).length;
     await ledger.run('period:create-via-ui', async () => {
@@ -1634,7 +1646,7 @@ async function main() {
       if (!asserted.has(entry.id)) ledger.notRun(entry.id, 'aborted before assertion');
     }
     const blocked = ['MISSING_RUNTIME_CAPABILITY', 'MISSING_EXPECTED_SHA', 'REFUSE_TMP_RUNTIME_ROOT', 'RESOURCE_BUDGET_INSUFFICIENT', 'INSUFFICIENT_INPUT'].includes(error?.code);
-    ledger.setMeta({ status: blocked ? 'BLOCKED' : 'FAIL', failureKind: error?.code || 'SUBSTANTIVE_FAILURE' });
+    ledger.setMeta({ status: blocked ? 'BLOCKED' : 'FAIL', failureKind: error?.code || 'SUBSTANTIVE_FAILURE', failureError: safeError(error) });
     ledger.write();
     if (blocked) {
       console.error(`BROWSER_ACCEPTANCE BLOCKED ${safeError(error)}`);

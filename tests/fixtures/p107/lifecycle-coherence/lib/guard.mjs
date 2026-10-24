@@ -421,7 +421,7 @@ export class CaseLedger {
     const started = Date.now();
     try {
       const outcome = await fn();
-      return this.record({
+      const record = this.record({
         id,
         status: 'PASS',
         expected,
@@ -429,8 +429,12 @@ export class CaseLedger {
         readback: outcome?.readback ?? null,
         durationMs: Date.now() - started,
       });
+      // P110M2T01: per-case progress on stderr so a stalled lane shows WHERE it is
+      // (the wrapper forwards these lines live into the CI step log).
+      console.error(`[caseledger] PASS ${id} ${record.durationMs}ms`);
+      return record;
     } catch (error) {
-      this.record({
+      const record = this.record({
         id,
         status: 'FAIL',
         expected,
@@ -440,6 +444,7 @@ export class CaseLedger {
         error,
         durationMs: Date.now() - started,
       });
+      console.error(`[caseledger] FAIL ${id} ${record.durationMs}ms`);
       throw error;
     }
   }
