@@ -148,26 +148,77 @@ export async function upsertUsersAction(
       : { data: [] as Array<{ id: string }>, error: null };
     if (lookupError) return { success: false, error: toClientError(lookupError, 'Lỗi kiểm tra nhân viên hiện tại.') };
 
+    // P110M3T02 (audit P1-1): client's code map only covers the loaded page
+    // (20 rows), so an import updating a user beyond that page would mint a
+    // fresh UUID and collide with the active-code unique index. Resolve ids by
+    // employee_code against the full ACTIVE roster, case-insensitive — a code
+    // match always means an update of that exact user.
+    // P110M3T02 (audit P1-2): new Employee/Worker rows need their round-1
+    // evaluator (own SubLeader); the Excel file has no such column. Auto-assign
+    // only when the team has exactly one active SubLeader; anything ambiguous
+    // fails the whole batch BEFORE any write.
+    const { data: activeRoster, error: rosterError } = await supabaseAdmin
+      .from('users')
+      .select('id, employee_code, role, team_id')
+      .eq('is_active', true);
+    if (rosterError) return { success: false, error: toClientError(rosterError, 'Lỗi kiểm tra danh sách nhân viên đang hoạt động.') };
+
+    const codeToId = new Map<string, string>();
+    const subleadersByTeam = new Map<string, string[]>();
+    for (const row of activeRoster || []) {
+      const code = (row.employee_code ?? '').trim().toLowerCase();
+      if (code) codeToId.set(code, row.id);
+      if (row.role === 'SubLeader' && row.team_id) {
+        const current = subleadersByTeam.get(row.team_id) || [];
+        current.push(row.id);
+        subleadersByTeam.set(row.team_id, current);
+      }
+    }
+
     const existingIdSet = new Set((existing || []).map((row) => row.id));
-    const prepared = users.map((user) => {
-      const id = user.id || crypto.randomUUID();
+    const missingSubleaderCodes: string[] = [];
+    const prepared = users.map((user, rowIndex) => {
+      const code = (user.employeeCode ?? '').trim().toLowerCase();
+      const matchedId = code ? codeToId.get(code) : undefined;
+      const id = matchedId ?? user.id ?? crypto.randomUUID();
+      const isNew = matchedId ? false : !existingIdSet.has(id);
+
+      let effectiveUser = user;
+      const role = user.role ?? 'Employee';
+      if (isNew && (role === 'Employee' || role === 'Worker') && user.teamId && !user.subleaderId) {
+        const candidates = subleadersByTeam.get(user.teamId) || [];
+        if (candidates.length === 1) {
+          effectiveUser = { ...user, subleaderId: candidates[0] };
+        } else {
+          missingSubleaderCodes.push(user.employeeCode?.trim() || `(dòng ${rowIndex + 1})`);
+        }
+      }
+
       return {
         id,
-        isNew: !existingIdSet.has(id),
-        payload: buildPersonnelUserPayload(user, id, !existingIdSet.has(id)),
+        isNew,
+        payload: buildPersonnelUserPayload(effectiveUser, id, isNew),
       };
     });
+
+    if (missingSubleaderCodes.length > 0) {
+      return {
+        success: false,
+        error: `Không xác định được SubLeader chấm vòng 1 cho nhân viên mới: ${missingSubleaderCodes.join(', ')}. Nhóm của họ phải có đúng một SubLeader đang hoạt động, hoặc thêm/gán SubLeader trước khi import. Chưa có dữ liệu nào được ghi.`,
+      };
+    }
 
     const result = await applyPersonnelTransaction(prepared.map((item) => item.payload), null, auth.user.id);
     if (result.error || !result.data || result.data.users.length !== prepared.length) {
       return { success: false, error: toClientError(result.error, 'Lỗi lưu hàng loạt nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
     }
 
+    const updatedIdSet = new Set(prepared.filter((item) => !item.isNew).map((item) => item.id));
     const saved = result.data.users.map((row) => mapUserFromDb(row as DbUser));
     await logAuditBatch(
       auth.user,
       saved.map((user) => ({
-        action: existingIdSet.has(user.id) ? 'UPDATE_USER' : 'CREATE_USER',
+        action: updatedIdSet.has(user.id) ? 'UPDATE_USER' : 'CREATE_USER',
         entity: 'user',
         entityId: user.id,
         detail: { name: user.name, role: user.role, teamId: user.teamId },
