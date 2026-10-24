@@ -194,7 +194,9 @@ export const useBatchUpsertUsers = () => {
     mutationFn: async (users: Partial<User>[]) => {
       const res = await upsertUsersAction(users);
       if (!res.success) throw new Error(res.error || 'Lỗi khi import nhân viên');
-      return res.users;
+      // P110M3T01: giữ lại warning seed-password để UI báo (đã lưu nhưng
+      // không đặt được mật khẩu mặc định) thay vì vứt bỏ.
+      return { users: res.users, warning: res.warning };
     },
     onSuccess: () => {
       invalidateRequesterQueries(queryClient, 'users', requesterRef.current);

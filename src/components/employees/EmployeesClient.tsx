@@ -640,6 +640,11 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       const result = await upsertUserAction(payload);
       if (result.success) {
         toast('Cập nhật nhân viên thành công!', 'success');
+        // P110M3T01: nhân viên đã lưu nhưng seed mật khẩu mặc định thất bại —
+        // báo warning thay vì chỉ hiện success.
+        if (result.warning) {
+          toast(result.warning, 'warning');
+        }
         invalidateRequesterQueries(queryClient, 'teams', effectiveViewerRef.current);
         invalidateRequesterQueries(queryClient, 'users', effectiveViewerRef.current);
         invalidateRequesterQueries(queryClient, 'employees-page-data', effectiveViewerRef.current);
@@ -690,8 +695,13 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       });
 
       if (payloads.length > 0) {
-        await batchUpsertUsers(payloads);
+        const upsertResult = await batchUpsertUsers(payloads);
         toast(`Đã import thành công ${payloads.length} nhân viên.`, 'success');
+        // P110M3T01: seed password có thể thất bại dù import thành công —
+        // server trả warning, phải báo để Quản lý đặt lại mật khẩu thủ công.
+        if (upsertResult.warning) {
+          toast(upsertResult.warning, 'warning');
+        }
         invalidateRequesterQueries(queryClient, 'employee-batch', effectiveViewerRef.current);
         loadInitialBatch();
       }
