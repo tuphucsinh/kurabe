@@ -1345,10 +1345,12 @@ task:
   owns:
     - src/lib/ai.ts
     - tests/ai-responses-transport.test.mjs
+    - tests/ai-egress-boundary.test.mjs
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
 Goal: stop wasting calls (and cost) on permanent provider errors without changing provider, model, endpoint or payloads.
+Verification scope amendment: exact-candidate root gate found `tests/ai-egress-boundary.test.mjs:32,64` pins the old internal helper's literal `return null` / direct parser return. Update only these shape assertions to the planned explicit retryability result while retaining status-before-body, no failure-body downstream, governed parser, redirect, bounds, quota and secret-log guards. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/P109M1T05/gates-final/test.log`; initial candidate `504c30490e6e3de2c6fafc7f88dcd71520643fab` not integrated. No production/provider scope expansion.
 Current context: `src/lib/ai.ts` `callOpenAIResponses` (:99-163) and `callAIVision` (:199-258): any non-OK or exception makes `attempt` return null and the second attempt always runs. `tests/ai-responses-transport.test.mjs:34-35` pins exactly two `attempt(` call sites.
 Changes: make `attempt` report whether a failure is retryable. HTTP 4xx (including 429): no retry. HTTP 5xx: one retry. Network error/timeout: no retry. HTTP 200 paths (truncated/`length`/unusable output) keep the current single bounded retry. Apply identically to text and vision. Update the existing source-contract assertions deliberately (do not delete the test).
 Constraints: keep `/responses`, `gpt-6-luna`, `OPENAI_BASE_URL`, key handling, vision `image_url` string and PNG/JPEG MIME logic, `redirect: 'error'`, AI quota and all callers unchanged; no provider call with real cost; no Retry-After/backoff/benchmark work.
