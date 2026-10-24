@@ -98,17 +98,18 @@ assert.ok(
   cleanClient.includes('criterion: Criterion') || cleanClient.includes('criterion: (typeof allCriteria)'),
   'ComparisonRow interface must define criterion field'
 );
+// P110M1T03: scores/deltas are nullable — null means "not yet graded", never 0.
 assert.ok(
-  cleanClient.includes('roundScores: number[]'),
-  'ComparisonRow interface must define roundScores number array'
+  cleanClient.includes('roundScores: Array<number | null>'),
+  'ComparisonRow interface must define nullable roundScores array'
 );
 assert.ok(
-  cleanClient.includes('roundDeltas: number[]'),
-  'ComparisonRow interface must define roundDeltas number array'
+  cleanClient.includes('roundDeltas: Array<number | null>'),
+  'ComparisonRow interface must define nullable roundDeltas array'
 );
 assert.ok(
-  cleanClient.includes('totalDelta: number'),
-  'ComparisonRow interface must define totalDelta number'
+  cleanClient.includes('totalDelta: number | null'),
+  'ComparisonRow interface must define nullable totalDelta'
 );
 
 // Single memoized comparisonRows derivation
