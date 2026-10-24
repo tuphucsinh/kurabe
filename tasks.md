@@ -1312,7 +1312,9 @@ DoD:
 - `npm test`, `npm run lint`, `npm run typecheck`, isolated `npm run build` without `.env.local`, `node scripts/scan-source-secrets.mjs`, `git diff --check` pass on the exact candidate; edits stay inside owns.
 - Mika verifies diff/owns/BASE_SHA; one fresh read-only review PASS on the exact candidate. Local canonical commit only; push/deploy needs separate owner approval.
 
-### [ ] [#P109M1T04] Developer error report: record first, honest receipt
+### [x] [#P109M1T04] Developer error report: record first, honest receipt
+
+Closure: local canonical `fe352252368ed5c6fb011b6ad520f56d33319a24`; focused 15/15, baseline exit 1 (13 failures), root 86/86, lint (0 errors), typecheck, synthetic-env build, secret/diff checks PASS; fresh strict read-only AGY review PASS. Repair count 1 retained. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/P109M1T04/`. Residual: daily count/insert is not cross-instance atomic; AI summary wait cap does not cancel the underlying provider request. No push/deploy or production calls.
 
 ```yaml
 task:
