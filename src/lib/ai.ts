@@ -99,7 +99,7 @@ async function callOpenAIResponses(
   const attempt = async (
     maxTokens: number,
     extraSystem: string
-  ): Promise<{ content: string | null; finishReason: string | null } | null> => {
+  ): Promise<{ content: string | null; finishReason: string | null; retryable: boolean }> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45000);
     try {
@@ -129,17 +129,31 @@ async function callOpenAIResponses(
           hostname: providerCheck.hostname,
           model,
         });
-        return null;
+        return {
+          content: null,
+          finishReason: null,
+          retryable: res.status >= 500,
+        };
       }
 
       const data = await res.json();
-      return parseResponsesOutput(data);
+      const parsed = parseResponsesOutput(data);
+      const usable = isUsableAIOutput(parsed);
+      return {
+        content: parsed.content,
+        finishReason: parsed.finishReason,
+        retryable: !usable,
+      };
     } catch {
       console.error('callAI request error:', {
         hostname: providerCheck.hostname,
         model,
       });
-      return null;
+      return {
+        content: null,
+        finishReason: null,
+        retryable: false,
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -152,6 +166,7 @@ async function callOpenAIResponses(
   if (first?.content && first.finishReason !== 'length') {
     if (isUsableAIOutput(first)) return first.content;
   }
+  if (!first?.retryable) return null;
 
   // Lần 2 (retry): model reasoning có thể ngốn hết token hoặc bị cắt giữa chừng (finish_reason = "length").
   // Tăng token + nhấn mạnh trả lời ngắn trực tiếp.
@@ -199,7 +214,7 @@ export async function callAIVision(
   const attempt = async (
     maxTokens: number,
     extraSystem: string
-  ): Promise<{ content: string | null; finishReason: string | null } | null> => {
+  ): Promise<{ content: string | null; finishReason: string | null; retryable: boolean }> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 60000);
     try {
@@ -227,16 +242,30 @@ export async function callAIVision(
           hostname: providerCheck.hostname,
           model,
         });
-        return null;
+        return {
+          content: null,
+          finishReason: null,
+          retryable: res.status >= 500,
+        };
       }
       const data = await res.json();
-      return parseResponsesOutput(data);
+      const parsed = parseResponsesOutput(data);
+      const usable = isUsableAIOutput(parsed);
+      return {
+        content: parsed.content,
+        finishReason: parsed.finishReason,
+        retryable: !usable,
+      };
     } catch {
       console.error('callAIVision request error:', {
         hostname: providerCheck.hostname,
         model,
       });
-      return null;
+      return {
+        content: null,
+        finishReason: null,
+        retryable: false,
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -249,6 +278,7 @@ export async function callAIVision(
   if (first?.content && first.finishReason !== 'length') {
     if (isUsableAIOutput(first)) return first.content;
   }
+  if (!first?.retryable) return null;
 
   // Retry once with a bounded token increase and shorter-answer instruction.
   const second = await attempt(Math.round(baseTokens * 1.5), 'TRẢ LỜI NGẮN GỌN, KHÔNG PHÂN TÍCH DÀI.');

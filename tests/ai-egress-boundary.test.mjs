@@ -29,7 +29,7 @@ assert.doesNotMatch(ai, /redirect:\s*['"]follow['"]/, 'provider redirects must n
 const nonOkBeforeJson = [...ai.matchAll(/if \(!res\.ok\) \{([\s\S]*?)\n\s*}\n\s*const data = await res\.json\(\);/g)];
 assert.equal(nonOkBeforeJson.length, 2, 'text and vision must guard HTTP status before parsing');
 for (const match of nonOkBeforeJson) {
-  assert.match(match[1], /return null;/, 'HTTP exception/refusal must be fail-soft');
+  assert.match(match[1], /return\s*\{\s*content:\s*null,\s*finishReason:\s*null,\s*retryable:\s*res\.status\s*>=\s*500,?\s*\};/, 'HTTP exception/refusal must return null content and retryable only for >=500');
   assert.doesNotMatch(match[1], /res\.json|res\.text|res\.arrayBuffer|body/, 'HTTP failure must not pass response payload downstream');
 }
 
@@ -61,7 +61,8 @@ assert.match(ai, /function isUsableAIOutput\(/);
 assert.match(ai, /result\.finishReason === null \|\| result\.finishReason === 'stop' \|\| result\.finishReason === 'completed'/);
 assert.match(ai, /finishReason: 'refused'/);
 assert.match(ai, /d\.status === 'incomplete'/);
-assert.equal(count(ai, /return parseResponsesOutput\(data\);/g), 2, 'text and vision must use the governed Responses parser');
+assert.equal(count(ai, /const parsed = parseResponsesOutput\(data\);/g), 2, 'text and vision must use the governed Responses parser');
+assert.equal(count(ai, /return\s*\{\s*content:\s*parsed\.content,\s*finishReason:\s*parsed\.finishReason,\s*retryable:\s*!usable,?\s*\};/g), 2, 'text and vision must return governed parsed result');
 assert.equal(count(ai, /fetch\(`\$\{baseUrl\}\/responses`/g), 2, 'text and vision must use OpenAI Responses API');
 assert.equal(count(ai, /\{ type: 'input_image', image_url: dataUrl \}/g), 1, 'vision image must use Responses input_image');
 assert.equal(count(ai, /max_output_tokens: maxTokens/g), 2, 'text and vision use Responses output token field');
