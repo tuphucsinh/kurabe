@@ -1482,6 +1482,26 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### [x] [#P110M3T02] Sửa P1 import Excel: match mã phía server + auto-assign SubLeader (audit P1-1/P1-2)
+
+Closure: local canonical (commit sau mục này); focused test 7 kịch bản FAIL-on-baseline → PASS (reviewer đã tự tái tạo baseline trong /tmp và xác nhận FAIL); siblings xanh (password-seed, personnel-action-boundary 19, employee-batch-regression, employee-seed-warning); typecheck PASS, lint 0 lỗi/0 warning mới, full suite **95/95**, diff-check sạch. CONTROLLED — fresh read-only review **VERDICT: PASS** trên đúng diff (3 LOW không chặn đã ghi nhận). Không push.
+
+Nguồn: audit E2E 2026-10-24 tái hiện trên RPC/DB thật: P1-1 — import update user ngoài 20 dòng loaded → client sinh UUID mới → 409 duplicate `users_employee_code_active_idx` → cả file fail. P1-2 — file Excel không có cột SubLeader → Employee/Worker mới luôn `subleader_id` NULL → `resolve_personnel_evaluator` (chỉ theo subleader riêng, không fallback team) → RPC fail `P99M2T02_INIT_FAILED` khi có kỳ active.
+
+Fix (chỉ `upsertUsersAction`, Manager-only; không migration, không đổi RPC): nạp active roster 1 lần → (a) code→id map case-insensitive: mã khớp user active thì dùng id thật, isNew=false (không inject is_active, không seed lại, audit UPDATE_USER) — hết lỗi 409; (b) team→SubLeaders active: Employee/Worker mới có team + chưa có subleader → auto-assign khi nhóm có ĐÚNG 1 SubLeader; 0 hoặc >1 → fail CẢ batch TRƯỚC khi ghi, lỗi nêu rõ mã NV và hướng xử lý. Row không có teamId không bị validate (import thật luôn có team; giữ contract password-seed 5c).
+
+```yaml
+task:
+  id: P110M3T02
+  tier: CONTROLLED
+  owns:
+    - src/actions/users.ts
+    - tests/import-personnel-fix.test.mjs
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Follow-up (non-blocking, ghi nhận của reviewer): đếm SubLeader trong cùng file để import 1 lần cả SL+NV; chuẩn hóa hoa/thường mã khi update; cột SubLeader trong template.
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
