@@ -10,5 +10,5 @@
 **Open / Need approval:** push/deploy riêng; P108M2T01 trial-data disposition; browser smoke P110 (cần local stack) nếu muốn evidence bổ sung.
 **Preserved:** anh-owned `.ai/DECISIONS_LOG.md` (modified, hash `f66ab7bb…`) + `TCDG2026.xls` (untracked, hash `3e3cfd7e…`) byte-identical through P110.
 **P110M2T01 RELEASED 2026-10-24 (owner-approved):** push FF `40f46d2`, CI 40086230532 success 7m41s (93/93, 115 cases, smoke 5), Vercel `kurabe-crol5ycjb` READY @ 40f46d28ee, lykiv trỏ đúng, smoke 200. Stall root cause remains UNKNOWN (ngoài harness); diagnostics live sẵn sàng cho lần fail tới.
-**P110M3T01+T02 (local, chưa push):** P2 warning hiển thị (94/94) + P1 import fix — server match employee_code theo active roster, auto-assign SubLeader duy nhất, fail-closed trước ghi (95/95, review PASS).
+**P110M3T01+T02 + M4T01+T02 (local, chưa push):** P1/P2 import + warning (d318a84) + bundle server correctness & client UX (d40d50c/87f6478, 97/97, review PASS). Backlog còn: modal fire-and-forget, compare ?round=, OR-filter blowup, export N+1, chat double-fetch, AI 200-parse retry.
 **Next:** owner decision on push P110M3T01 + P1 import fix scope.

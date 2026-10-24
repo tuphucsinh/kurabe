@@ -1502,6 +1502,24 @@ task:
 
 Follow-up (non-blocking, ghi nhận của reviewer): đếm SubLeader trong cùng file để import 1 lần cả SL+NV; chuẩn hóa hoa/thường mã khi update; cột SubLeader trong template.
 
+### [x] [#P110M4T01] + [#P110M4T02] Dọn phần còn lại của audit E2E (server + client)
+
+Closure: local canonical `d40d50c` (T01) + `87f6478` (T02); focused tests FAIL-on-baseline → PASS (reviewer chứng minh bằng git archive /tmp); full suite **97/97**, lint 0 lỗi, typecheck, secret scan, diff-check PASS; 1 fresh read-only review chung **VERDICT: PASS** (đã áp 1 note LOW: family 'user' cho useDeleteUser). Không push.
+
+**T01 (CONTROLLED) — server correctness:** guard mã trùng trong cùng file import (fail trước ghi, nêu rõ mã); `successCount` của parseEmployeeExcel; whitelist `selectedSet` (bogus → typed null thay vì throw mờ — pin p108-d2-kpi:1356 cập nhật có chủ đích, giữ intent); clamp limit audit-log 1..500; evaluator-resolver throw lỗi DB thay vì map rỗng; getPeriodSummary throw lỗi DB (client đã catch); chat context nhóm tiêu chí theo code–name thay UUID; getUsersAdmin thêm tiebreaker `id`.
+
+**T02 (STANDARD) — client UX:** khóa nút save/submit qua cửa sổ redirect 900ms sau submit (hết toast lỗi mâu thuẫn); close/delete kỳ có catch+toast lỗi kết nối; login có pending state; joinDate mặc định theo ngày địa phương (lazy initializer, đúng rule react-compiler); year input hết NaN; đặt lại mật khẩu chống double-click; /criteria hết flash trước redirect; invalidation đủ family ('team','team-users','users-batch','user','criteria-edit-state' period-scoped); summary-batch key sort id; import type server-only; bỏ state write-only.
+
+Còn mở (backlog, cần quyết định thiết kế/perf): modal fire-and-forget save; compare `?round=` param; OR-filter URL blowup khi không chọn kỳ; export N+1; chat double-fetch; N+1 counts; AI 200-parse retry; post-commit verification messaging; dead code ensureEvaluationsForUsers/getEvaluationHistoryByEmployeeAdmin (bị pin chủ đích bởi p96t05/p107 — cần task riêng nếu muốn dọn).
+
+```yaml
+task:
+  id: P110M4T01+T02
+  tier: CONTROLLED (T01) / STANDARD (T02)
+  owns: [10 file T01 + 11 file T02 như commit]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
