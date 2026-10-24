@@ -49,21 +49,30 @@ export default function ChatWidget() {
     setOpen(true);
     if (greeted || visibleMessages.length > 0) return;
     setGreeted(true);
-    const res = await chatGreetingAction(pathname || '/');
-    const greeting = res.greeting;
-    if (greeting) {
-      setMessages((m) => [...m, { role: 'assistant', text: greeting, pathname: pathname || '/' }]);
+    try {
+      const res = await chatGreetingAction(pathname || '/');
+      const greeting = res.greeting;
+      if (greeting) {
+        setMessages((m) => [...m, { role: 'assistant', text: greeting, pathname: pathname || '/' }]);
+      }
+    } catch {
+      setGreeted(false);
     }
   };
 
   const submitManualReport = async () => {
     setConfirmReport(false);
     setReporting(true);
-    const q = input.trim() || `User bấm nút báo lỗi (không mô tả) — trang ${pathname || ''}`;
-    const res = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
-    setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em đã ghi nhận báo lỗi.', pathname: pathname || '/' }]);
-    setInput('');
-    setReporting(false);
+    try {
+      const q = input.trim() || `User bấm nút báo lỗi (không mô tả) — trang ${pathname || ''}`;
+      const res = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
+      setMessages((m) => [...m, { role: 'assistant', text: res.reply || res.error || 'Em đã ghi nhận báo lỗi.', pathname: pathname || '/' }]);
+      setInput('');
+    } catch {
+      setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa gửi được báo lỗi, chị thử lại sau nhé.', pathname: pathname || '/' }]);
+    } finally {
+      setReporting(false);
+    }
   };
 
   const send = async () => {
@@ -74,23 +83,27 @@ export default function ChatWidget() {
     const history = visibleMessages.slice(-12);
     setMessages((m) => [...m, { role: 'user', text: q, pathname: pathname || '/' }]);
     setLoading(true);
-    const res = await chatAskAction({ question: q, pathname: pathname || '/', history });
-    const raw = res.reply || res.error || '';
-    const needDev = raw.includes('[CẦN_DEV]');
-    if (needDev) {
-      const res2 = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
-      setMessages((m) => [...m, { role: 'assistant', text: res2.reply || res2.error || 'Em đã ghi nhận lỗi.', pathname: pathname || '/' }]);
-      setLoading(false);
-      return;
-    }
-    const needShot = raw.includes('[CẦN_ẢNH]');
-    const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
-    if (needShot) {
-      // Chụp im lặng — user không thấy thông báo, chỉ thấy kết quả phân tích
-      setLoading(false);
-      await autoCaptureAndSend(q);
-    } else {
-      setMessages((m) => [...m, { role: 'assistant', text: cleanReply || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.', pathname: pathname || '/' }]);
+    try {
+      const res = await chatAskAction({ question: q, pathname: pathname || '/', history });
+      const raw = res.reply || res.error || '';
+      const needDev = raw.includes('[CẦN_DEV]');
+      if (needDev) {
+        const res2 = await chatReportErrorAction({ question: q, pathname: pathname || '/', history: visibleMessages });
+        setMessages((m) => [...m, { role: 'assistant', text: res2.reply || res2.error || 'Em đã ghi nhận lỗi.', pathname: pathname || '/' }]);
+        return;
+      }
+      const needShot = raw.includes('[CẦN_ẢNH]');
+      const cleanReply = raw.replace(/\[CẦN_ẢNH\]/g, '').trim();
+      if (needShot) {
+        // Chụp im lặng — user không thấy thông báo, chỉ thấy kết quả phân tích
+        setLoading(false);
+        await autoCaptureAndSend(q);
+      } else {
+        setMessages((m) => [...m, { role: 'assistant', text: cleanReply || 'Em chưa trả lời được lúc này, chị thử lại sau nhé.', pathname: pathname || '/' }]);
+      }
+    } catch {
+      setMessages((m) => [...m, { role: 'assistant', text: 'Em chưa trả lời được lúc này, chị thử lại sau nhé.', pathname: pathname || '/' }]);
+    } finally {
       setLoading(false);
     }
   };
