@@ -10,6 +10,78 @@ export interface ImportResult {
 
 const VALID_ROLES: Role[] = ALL_ROLES;
 
+// dd/mm/yyyy (hoặc dd-mm-yyyy) — năm 4 chữ số ở cuối nên không khớp ISO YYYY-MM-DD.
+const JOIN_DATE_DMY_RE = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+const JOIN_DATE_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Parse một ô "Ngày vào làm" thành YYYY-MM-DD theo lịch địa phương (không lệch timezone).
+ * Chuỗi dd/mm/yyyy đọc theo thứ tự ngày-trước (định dạng Excel Việt Nam);
+ * ISO YYYY-MM-DD và Excel serial giữ nguyên hành vi cũ; ô trống vẫn tùy chọn.
+ * Giá trị có nhưng không hợp lệ => trả về error để báo theo dòng, không bỏ im lặng.
+ */
+export function parseJoinDateValue(value: unknown): { date?: string; error?: string } {
+  if (value === null || value === undefined) return {};
+
+  if (typeof value === 'number') {
+    // Excel serial date (epoch UTC, hành vi giữ nguyên như trước)
+    if (!Number.isFinite(value)) {
+      return { error: `Ngày vào làm không hợp lệ: ${value}` };
+    }
+    const parsed = new Date(Math.round((value - 25569) * 86400 * 1000));
+    if (isNaN(parsed.getTime())) {
+      return { error: `Ngày vào làm không hợp lệ: ${value}` };
+    }
+    return { date: parsed.toISOString().split('T')[0] };
+  }
+
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) {
+      return { error: 'Ngày vào làm không hợp lệ' };
+    }
+    return {
+      date: `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`,
+    };
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return {};
+
+  const dmy = JOIN_DATE_DMY_RE.exec(raw);
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]);
+    const year = Number(dmy[3]);
+    // Kiểm chứng lịch thật: 31/02/2024 phải bị từ chối, không roll-over sang tháng 3.
+    const probe = new Date(year, month - 1, day);
+    if (probe.getFullYear() !== year || probe.getMonth() !== month - 1 || probe.getDate() !== day) {
+      return { error: `Ngày vào làm không hợp lệ: ${raw}` };
+    }
+    return { date: `${year}-${pad2(month)}-${pad2(day)}` };
+  }
+
+  if (JOIN_DATE_ISO_RE.test(raw)) {
+    const [isoYear, isoMonth, isoDay] = raw.split('-').map(Number);
+    const probe = new Date(isoYear, isoMonth - 1, isoDay);
+    if (
+      probe.getFullYear() !== isoYear ||
+      probe.getMonth() !== isoMonth - 1 ||
+      probe.getDate() !== isoDay
+    ) {
+      return { error: `Ngày vào làm không hợp lệ: ${raw}` };
+    }
+    return { date: raw };
+  }
+
+  const fallback = new Date(raw);
+  if (!isNaN(fallback.getTime())) {
+    return { date: fallback.toISOString().split('T')[0] };
+  }
+  return { error: `Ngày vào làm không hợp lệ: ${raw}` };
+}
+
 const ROLE_ALIAS_MAP: Record<string, Role> = {
   'manager': 'Manager',
   'quản lý': 'Manager',
@@ -89,20 +161,12 @@ export async function parseEmployeeExcel(
       }
 
       let formattedJoinDate = '';
-      if (joinDate) {
-        try {
-          if (typeof joinDate === 'number') {
-            // Excel serial date
-            const date = new Date(Math.round((joinDate - 25569) * 86400 * 1000));
-            formattedJoinDate = date.toISOString().split('T')[0];
-          } else {
-            const date = new Date(joinDate as string | number | Date);
-            if (!isNaN(date.getTime())) {
-              formattedJoinDate = date.toISOString().split('T')[0];
-            }
-          }
-        } catch {
-          // Ignore date error, just keep empty
+      if (joinDate !== null && joinDate !== undefined) {
+        const parsedJoinDate = parseJoinDateValue(joinDate);
+        if (parsedJoinDate.error) {
+          errors.push(parsedJoinDate.error);
+        } else if (parsedJoinDate.date) {
+          formattedJoinDate = parsedJoinDate.date;
         }
       }
 
