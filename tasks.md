@@ -1287,7 +1287,10 @@ DoD:
 - Push the verified commit to `main`, deploy through the existing Vercel production workflow, and verify `lykiv.vercel.app` source SHA plus production bundle string.
 - Verify live loading-state rendering when an authorized app session exists; otherwise `UI_LIVE=UNVERIFIED`, no auth bypass, and task remains blocked.
 
-### [ ] [#P109M1T03] Chat Widget: no stuck state on server-action failure
+### [x] [#P109M1T03] Chat Widget: no stuck state on server-action failure
+
+Closure: local canonical `7815b50b7bb3f90589b4c25b097332653f97314c`; exact candidate gates PASS (focused, npm test 85/85, lint, typecheck, secret scan, diff check, synthetic-env build); fresh strict read-only review PASS. No push/deploy; UI live remains UNVERIFIED. Evidence `/home/pi5/hermes-artifacts/kurabe-p109/P109M1T03/`.
+
 
 ```yaml
 task:
