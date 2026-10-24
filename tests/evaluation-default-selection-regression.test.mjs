@@ -258,8 +258,8 @@ assert.match(
 );
 assert.match(
   hookSource,
-  /userEditedRef\.current\s*=\s*true/,
-  'score/note/comment dispatch must mark the active round as edited'
+  /setUserEdited\(true\)/,
+  'P110M1T04: score/note/comment dispatch must mark the active round as edited (reactive unsaved flag)'
 );
 
 // 1.3 Edit revision, Save snapshot guard & Refetch sequence regressions
@@ -588,7 +588,7 @@ const makeGetSaveSnapshot = new Function(
 );
 
 const makeAckSave = new Function(
-  'latestContextRef', 'evaluation', 'targetRound', 'accessState', 'editRevisionRef', 'userEditedRef', 'applySaveAcknowledgement',
+  'latestContextRef', 'evaluation', 'targetRound', 'accessState', 'editRevisionRef', 'userEditedRef', 'applySaveAcknowledgement', 'setUserEdited',
   `return ${ackSaveJs};`
 );
 
@@ -631,7 +631,7 @@ const makeHandleSave = new Function(
   userEditedRef.current = true;
 
   const getSaveSnapshotA = makeGetSaveSnapshot(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef);
-  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
 
   let resolveSaveA;
   const saveAPromise = new Promise(resolve => { resolveSaveA = resolve; });
@@ -728,7 +728,7 @@ const makeHandleSave = new Function(
   userEditedRef.current = true;
 
   const getSaveSnapshotA = makeGetSaveSnapshot(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef);
-  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, targetRoundA, accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
   let returnedHydrationDecision = null;
   const invalidateRequesterQueriesA = async (_queryClient, queryName) => {
     if (queryName !== 'evaluation-page-data') return;
@@ -824,7 +824,7 @@ const makeHandleSave = new Function(
   userEditedRef.current = true;
 
   const getSaveSnapshotR1 = makeGetSaveSnapshot(latestContextRef, evaluationA1, targetRoundA1, accessStateA1, editRevisionRef);
-  const acknowledgeSaveR1 = makeAckSave(latestContextRef, evaluationA1, targetRoundA1, accessStateA1, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveR1 = makeAckSave(latestContextRef, evaluationA1, targetRoundA1, accessStateA1, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
 
   let resolveSaveR1;
   const saveR1Promise = new Promise(resolve => { resolveSaveR1 = resolve; });
@@ -886,7 +886,7 @@ const makeHandleSave = new Function(
   });
 
   const getSaveSnapshotA = makeGetSaveSnapshot(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef);
-  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
 
   let invalidationAwaited = false;
   const mockInvalidate = async () => {
@@ -944,7 +944,7 @@ const makeHandleSave = new Function(
   });
 
   const getSaveSnapshotA = makeGetSaveSnapshot(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef);
-  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
 
   const handleSaveA = makeHandleSave(
     evaluationA, accessStateA, { id: 'user-1' }, getSaveSnapshotA, () => {}, async () => ({ success: false, error: 'Database locked' }),
@@ -994,7 +994,7 @@ const makeHandleSave = new Function(
   });
 
   const getSaveSnapshotA = makeGetSaveSnapshot(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef);
-  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement);
+  const acknowledgeSaveA = makeAckSave(latestContextRef, evaluationA, evaluationA.rounds[0], accessStateA, editRevisionRef, userEditedRef, applySaveAcknowledgement, (v) => { userEditedRef.current = v; });
 
   let resolveSaveA;
   const saveAPromise = new Promise(resolve => { resolveSaveA = resolve; });

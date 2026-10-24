@@ -279,6 +279,13 @@ export function useEvaluationPageState({
   });
 
   const userEditedRef = useRef(false);
+  // P110M1T04: reactive mirror of userEditedRef so the page can guard
+  // navigation (beforeunload / internal links) while edits are unsaved.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const setUserEdited = useCallback((value: boolean) => {
+    userEditedRef.current = value;
+    setHasUnsavedChanges(value);
+  }, []);
   const editRevisionRef = useRef(0);
   const lastInitializedKeyRef = useRef<string | null>(null);
   const lastHydratedUpdatedAtRef = useRef<string | null>(null);
@@ -308,11 +315,11 @@ export function useEvaluationPageState({
 
   const wrappedDispatch = useCallback((action: EvaluationAction) => {
     if (action.type === 'SET_SCORE' || action.type === 'SET_NOTE' || action.type === 'SET_COMMENT') {
-      userEditedRef.current = true;
+      setUserEdited(true);
       editRevisionRef.current += 1;
     }
     dispatch(action);
-  }, []);
+  }, [setUserEdited]);
 
   const refetchCriteria = useCallback(() => {
     setCriteriaRetryCount((c) => c + 1);
@@ -390,7 +397,7 @@ export function useEvaluationPageState({
 
       lastInitializedKeyRef.current = roundKey;
       lastHydratedUpdatedAtRef.current = evaluation.updatedAt || null;
-      userEditedRef.current = false;
+      setUserEdited(false);
       if (!isSameRound) {
         editRevisionRef.current = 0;
       }
@@ -409,7 +416,7 @@ export function useEvaluationPageState({
         }
       });
     }
-  }, [employee, evaluation, accessState]);
+  }, [employee, evaluation, accessState, setUserEdited]);
 
   // 2. Layer 2: Nạp criteria độc lập + hydrate defaults & missing selectedLevelIndexes sau khi có criteria
   useEffect(() => {
@@ -468,7 +475,7 @@ export function useEvaluationPageState({
         targetRound.status === 'NotStarted';
 
       if (lastInitializedKeyRef.current !== initKey) {
-        userEditedRef.current = false;
+        setUserEdited(false);
         lastInitializedKeyRef.current = initKey;
       }
 
@@ -533,6 +540,7 @@ export function useEvaluationPageState({
     isSubmittedRound,
     targetRound,
     targetRoundNumber,
+    setUserEdited,
   ]);
 
   // 3. Layer 3: Tải lịch sử đánh giá các kỳ trước của Employee (non-blocking)
@@ -619,9 +627,9 @@ export function useEvaluationPageState({
       isDirty: userEditedRef.current,
     };
     const result = applySaveAcknowledgement(currentContext, snapshot, saveSucceeded);
-    userEditedRef.current = result.isDirty;
+    setUserEdited(result.isDirty);
     return result.acknowledged;
-  }, []);
+  }, [setUserEdited]);
 
   return {
     state,
@@ -642,6 +650,7 @@ export function useEvaluationPageState({
     firstOpenEligible: initMetadata.firstOpenEligible,
     userEditedRef,
     isUserEdited: () => userEditedRef.current,
+    hasUnsavedChanges,
     editRevisionRef,
     latestContextRef,
     getSaveSnapshot,

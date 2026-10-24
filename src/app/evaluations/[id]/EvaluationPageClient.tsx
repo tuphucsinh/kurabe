@@ -58,6 +58,24 @@ const ROLE_RANK: Record<User['role'], number> = {
 
 const EMPTY_PERIODS: EvaluationPeriod[] = [];
 
+export const UNSAVED_CHANGES_CONFIRM_MESSAGE =
+  'Bạn có chỉnh sửa chưa lưu. Rời trang bây giờ sẽ mất các thay đổi. Tiếp tục?';
+
+/** True khi sự kiện click đáng xác nhận: điều hướng nội bộ qua <a href>. */
+export function shouldConfirmNavigation(target: EventTarget | null, currentOrigin: string): boolean {
+  if (!target || typeof (target as Element).closest !== 'function') return false;
+  const anchor = (target as Element).closest('a[href]');
+  if (!anchor) return false;
+  const href = anchor.getAttribute('href');
+  if (!href || href.startsWith('#')) return false;
+  if (anchor.getAttribute('target') === '_blank') return false;
+  try {
+    return new URL(href, currentOrigin).origin === currentOrigin;
+  } catch {
+    return false;
+  }
+}
+
 export default function EvaluationPageClient({ employeeId, scope }: EvaluationPageClientProps) {
   const router = useRouter();
   const periodId = scope.kind === 'ACTIVE' ? scope.activePeriodId : undefined;
@@ -143,6 +161,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     renderedCriteriaRules,
     historicalDisplayRound,
     historicalSnapshotState,
+    hasUnsavedChanges,
   } = useEvaluationPageState({
     employee,
     evaluation,
@@ -153,6 +172,39 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
     evaluationDisplayStatus,
   });
   const { scores, selectedLevelIndexes, notes, comment, currentRoundData, allPreviousRounds } = state;
+
+  // P110M1T04: guard against silently losing unsaved edits. beforeunload covers
+  // refresh/close; a capture-phase click listener confirms internal <a> nav
+  // (Sidebar, breadcrumb links) while dirty. Browser back inside the SPA is a
+  // documented limitation — no history monkey-patching.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const onClickCapture = (event: MouseEvent) => {
+      if (event.defaultPrevented) return;
+      if (!shouldConfirmNavigation(event.target, window.location.origin)) return;
+      if (!window.confirm(UNSAVED_CHANGES_CONFIRM_MESSAGE)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener('click', onClickCapture, true);
+    return () => document.removeEventListener('click', onClickCapture, true);
+  }, [hasUnsavedChanges]);
+
+  const handleOpenCompare = () => {
+    if (hasUnsavedChanges && !window.confirm(UNSAVED_CHANGES_CONFIRM_MESSAGE)) return;
+    router.push(`/evaluations/${employeeId}/compare`);
+  };
 
   useEffect(() => {
     const currentEvaluationId = evaluationId;
@@ -581,7 +633,7 @@ export default function EvaluationPageClient({ employeeId, scope }: EvaluationPa
               </span>
               {allPreviousRounds.length > 0 && (
                 <button
-                  onClick={() => router.push(`/evaluations/${employeeId}/compare`)}
+                  onClick={handleOpenCompare}
                   className="flex items-center gap-1.5 px-3 py-1.5 max-md:min-h-[44px] bg-surface-raised border border-outline-soft rounded-xl text-sm max-md:text-xs font-bold text-ink hover:text-brand hover:border-brand/40 transition-all shadow-2xs active:scale-95"
                 >
                   <ArrowLeftRight size={14} className="text-brand" />
