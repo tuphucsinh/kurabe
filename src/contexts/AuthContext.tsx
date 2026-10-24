@@ -118,7 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const userRef = useRef<User | null>(null);
   const scopeRef = useRef<ViewerScope | null>(null);
-  const scopeRequestRef = useRef<Promise<ViewerScope | null> | null>(null);
+  // P110M1T06: an in-flight scope request is bound to the identity that started
+  // it. A login to a different user must never be blocked by (or clobber) the
+  // previous user's pending request.
+  const scopeRequestRef = useRef<{ userId: string; request: Promise<ViewerScope | null> } | null>(null);
   const authGenerationRef = useRef(0);
   const lastScopeRefreshAtRef = useRef(0);
   const lastPeriodRefreshAtRef = useRef(0);
@@ -152,7 +155,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshViewerScope = useCallback(async ({ clearBeforeRender = false } = {}): Promise<ViewerScope | null> => {
     const activeUserId = userRef.current?.id;
-    if (!activeUserId || scopeRequestRef.current) return scopeRef.current;
+    if (!activeUserId) return scopeRef.current;
+
+    // Same-identity dedupe: one request per user at a time. An in-flight request
+    // for a DIFFERENT identity neither blocks this one nor gets overwritten; its
+    // late response is discarded by the identity check below.
+    const inflight = scopeRequestRef.current;
+    if (inflight && inflight.userId === activeUserId) return scopeRef.current;
 
     if (clearBeforeRender) {
       setViewerScope(null);
@@ -160,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const request = getViewerScopeAction();
-    scopeRequestRef.current = request;
+    scopeRequestRef.current = { userId: activeUserId, request };
     try {
       const nextScope = await request;
       if (userRef.current?.id !== activeUserId) return null;
@@ -182,7 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await clearScopedQueries();
       return null;
     } finally {
-      scopeRequestRef.current = null;
+      // Release the slot only while this request still owns it — a newer
+      // identity's request may already be registered.
+      if (scopeRequestRef.current?.request === request) scopeRequestRef.current = null;
     }
   }, [clearScopedQueries]);
 
@@ -314,7 +325,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [isInitialized, maybeRefreshViewerScope, maybeRefreshPeriodMetadata]);
 
+  // P110M1T06: bootstrap exactly once. The old deps-[isInitialized] effect
+  // re-ran loadAuth (3 server actions) and discarded the results when
+  // isInitialized flipped true. The started-ref also dedupes the StrictMode
+  // double effect invocation in dev; production gets exactly one bootstrap.
+  const bootstrapStartedRef = useRef(false);
   useEffect(() => {
+    if (isInitialized || bootstrapStartedRef.current) return undefined;
+    bootstrapStartedRef.current = true;
+
     async function loadAuth() {
       const generation = ++authGenerationRef.current;
       try {
