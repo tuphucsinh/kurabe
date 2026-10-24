@@ -1436,6 +1436,29 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### [x] [#P110M2T01] CI browser qualification: chẩn đoán khi FAIL/treo
+
+Closure: local canonical (commit sau mục này); focused test FAIL-on-baseline → PASS-on-fix; full 93/93, lint 0 error/60 warnings (baseline), typecheck, secret scan, `verify-release --suite ci-suite-manifest` 13/13, Group 7 no-bypass PASS; fresh strict read-only review trên candidate cuối: FAIL vòng 1 (glob artifact quét cây `.runtime` chưa redact) → sửa glob JSON-only + `cancelled() || failure()` → **VERDICT: PASS** vòng 2 trên đúng candidate. Không push/deploy.
+
+ROOT_CAUSE (không xác định được 100% — xem UNKNOWN-RISK): 2 run FAIL (40068448285, 40073646678) cùng signature `status=FAIL firstFailure=period:create-via-ui` sau ~2430s im lặng; run PASS cùng commit 243s. Phân tích tĩnh: mọi pha producer đều bounded (docker 30-90s, build 600s, CDP/goto/waitFor có timeout); tổng worst-case ~28 phút < 2430s quan sát ⇒ gốc stall nằm ngoài code harness (nghi runner degradation); throw thật nằm ở journey UI đầu (loginAs/createPeriod — `notRun()` gán nhầm `firstFailure` nên dòng lỗi cũ chỉ điểm case chưa chạy). Repro local 3 lần BLOCKED đúng RAM floor 3GiB của producer (2.94-3.11GiB available) — không ép vượt resource guard.
+
+FIX (diagnostics, không đổi hành vi PASS/FAIL): CaseLedger phát `[caseledger] PASS/FAIL id ms` từng case; producer phát `[p107-browser +Ns]` tại các pha + `meta.failureError` giữ lỗi thật; wrapper spawn async forward stderr đỏ theo dòng (budget 2_400_000ms giữ nguyên), `buildFailureDiagnostics` (safeError toàn bộ error fields) in + persist `.diagnostics.json`; ci.yml upload `p107-qualification*.json` (chỉ JSON đã đỏ) khi `cancelled() || failure()`.
+
+```yaml
+task:
+  id: P110M2T01
+  tier: CONTROLLED   # CI release infrastructure
+  owns:
+    - tests/fixtures/p107/lifecycle-coherence/lib/guard.mjs
+    - tests/fixtures/p107/lifecycle-coherence/browser-acceptance.mjs
+    - tests/browser/p107-qualification.mjs
+    - tests/p107-qualification-diagnostics.test.mjs
+    - .github/workflows/ci.yml
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+Lần CI stall kế tiếp: step log sẽ hiện live phase/case + durations, artifact chứa evidence (per-case durationMs) + stderr đã đỏ + failureError thật — chẩn đoán trong vài phút thay vì 40.
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
