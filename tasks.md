@@ -1360,6 +1360,86 @@ DoD:
 - mock-`fetch` behavioral test counts requests: 200 usable=1, 400/401/403/429=1, 503 then 200=2, 503 twice=2, network error=1, truncated then usable=2, truncated twice=2; Vision PNG/JPEG MIME preserved; FAILS on baseline, PASSES on fix.
 - same root gates; fresh read-only review PASS; local commit only.
 
+## P110 — owner-approved controlled fix queue (2026-10-24)
+
+Source: `KURABE_ZCODE_FIX_PLAN_FINAL_2026-10-24.md`; baseline `a7dffe60b64a7091129b0056893fc4733b88cf9c`. Six sequential tasks, local canonical integration only, no push/deploy, no migration. Owner files `.ai/DECISIONS_LOG.md` + `TCDG2026.xls` preserved byte-identical.
+
+### [x] [#P110M1T01] Import Excel: ngày Việt Nam parse day-first
+
+Closure: local canonical `2a74845`; focused test FAIL-on-baseline → PASS-on-fix (helper + full parseEmployeeExcel on real xlsx buffer); typecheck/lint-scoped/diff-check PASS. `15/01/2024→2024-01-15`, `01/02/2024→2024-02-01`, `29/02/2024` ok, `31/02/2024` lỗi theo dòng, ISO + Excel serial giữ nguyên, cột trống tùy chọn. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T01/`.
+
+```yaml
+task:
+  id: P110M1T01
+  tier: STANDARD
+  owns: [src/lib/import.ts, tests/import-date-parsing.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### [x] [#P110M1T02] Thông báo kết quả: Approved-only + reset saving
+
+Closure: local canonical `a99dc04`; focused behavioral test on real transpiled `ai.ts` (chain `.eq('status','Approved').select('id')`, zero-row + `data:null` → honest error + no success audit, input validation reject-not-truncate at `MAX_AI_TOTAL_PAYLOAD_CHARS`, boundary accepted); modal catch paths mark item `error` (không kẹt `saving`). `tests/p107-ai-audit.test.mjs` stub cập nhật có chủ đích theo chain shape mới, intent giữ nguyên. CONTROLLED — fresh review PASS tại candidate cuối. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T02/`.
+
+```yaml
+task:
+  id: P110M1T02
+  tier: CONTROLLED
+  owns: [src/actions/ai.ts, src/components/reports/BatchResultMessageModal.tsx, tests/result-message-approved-only.test.mjs, tests/p107-ai-audit.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### [x] [#P110M1T03] Compare: phân biệt 0 với chưa chấm
+
+Closure: local canonical `1986df6`; AST-extracted behavioral test 6 scenarios (`4→6→missing` = +2/null/null, `0→4` = +4, `4→0` = -4, mid-gap không chế tạo delta, tiêu chí không áp dụng ≠ 0); cả disclosure tiêu chí không đổi cũng bỏ `?? 0`. `tests/p96t08-compare-render-cost.test.mjs` cập nhật có chủ đích sang nullable contract. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T03/`.
+
+```yaml
+task:
+  id: P110M1T03
+  tier: STANDARD
+  owns: [src/app/evaluations/[id]/compare/ComparePageClient.tsx, tests/compare-missing-score.test.mjs, tests/p96t08-compare-render-cost.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### [x] [#P110M1T04] Chưa Save: guard rời trang
+
+Closure: local canonical `812d776`; reactive `hasUnsavedChanges` mirror qua `setUserEdited` (đủ 4 transition); `beforeunload` + capture-phase click confirm cho `<a>` nội bộ + confirm trước compare; không monkey-patch history (SPA back = giới hạn đã ghi rõ). `tests/evaluation-default-selection-regression.test.mjs` sandbox thêm binding `setUserEdited` có chủ đích. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T04/`.
+
+```yaml
+task:
+  id: P110M1T04
+  tier: STANDARD
+  owns: [src/app/evaluations/[id]/EvaluationPageClient.tsx, src/hooks/use-evaluation-page-state.ts, tests/evaluation-unsaved-guard.test.mjs, tests/evaluation-default-selection-regression.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### [x] [#P110M1T05] /teams dùng summary projection
+
+Closure: local canonical `8b261ab`; `getTeamsPageDataAction(periodId)` đọc qua `getEvaluationSummariesByPeriodAdmin` (không scores/notes/comment), zero-period branch không đọc evaluations, per-part error contract + role scope giữ nguyên; full reader giữ opt-in limit cho export/aggregation. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T05/`.
+
+```yaml
+task:
+  id: P110M1T05
+  tier: STANDARD
+  owns: [src/actions/read.ts, tests/teams-summary-projection.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### [x] [#P110M1T06] AuthContext: bootstrap một lần + scope request gắn identity
+
+Closure: local canonical `2b1a73e`; `bootstrapStartedRef` + early return khi `isInitialized` (bỏ 3 server action thừa mỗi load); `scopeRequestRef` gắn `{userId, request}` — same-identity dedupe giữ nguyên, identity khác không bị chặn, finally chỉ release khi còn sở hữu; behavioral test trên callback thật (stale A không block/ghi đè login B). CONTROLLED — fresh review PASS tại candidate cuối. Evidence `/home/pi5/hermes-artifacts/kurabe-p110/T06/`.
+
+```yaml
+task:
+  id: P110M1T06
+  tier: CONTROLLED
+  owns: [src/contexts/AuthContext.tsx, tests/auth-bootstrap-scope-race.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
+### P110 candidate gates (tại `8fa0618`, kèm control pin `8fa0618`)
+
+`npm test` 92/92 PASS (86 baseline + 6 focused mới); `npm run lint` 0 error/60 warning (đúng baseline); typecheck PASS; secret scan PASS 302 files; `git diff --check` sạch; synthetic-env isolated build PASS (worktree P110-candidate, node_modules vật lý, .env.local synthetic mode 600, đã dọn). Fresh strict read-only review trên diff `a7dffe6..8fa0618`: **VERDICT: PASS** (scope khớp owns, không regression tìm thấy, 3 test cũ cập nhật có chủ đích giữ intent). Browser smoke NOT_RUN (không có local stack chạy; bù bằng unit/source-contract + review). Không push/deploy/production/migration; không dữ liệu production.
+
 ## Closed / historical record
 
 - P103 execution DAG: **13/13 DONE**.
