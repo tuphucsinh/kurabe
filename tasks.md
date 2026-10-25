@@ -1520,6 +1520,22 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### [x] [#P110M5T01] Hardening CI browser lane sau root-cause Chrome runner
+
+Closure: local `bb7f1fa` → push → **CI 40158146191 SUCCESS 8m40s** (tests 98/98, qualification 115 cases, build, production-smoke); focused test FAIL-on-baseline → PASS (retry path 3 lần bounded 61s + happy path chromium thật; review PASS). Vercel READY @ bb7f1fa; lykiv smoke 200/307.
+
+ROOT_CAUSE (chốt bằng evidence 40149899462 + artifact diagnostics): runner-fleet Chrome không mở được DevTools port (2 điểm chết khác nhau trên 2 runner; image/Chrome/Node **giống hệt** run xanh hôm trước → transient host-level). Bug phụ: launchChromium không dọn child khi fail → producer treo ~39 phút tới SIGTERM.
+
+Fix: launchChromium retry ≤3 lần (port+profile mới mỗi lần, kill child + dọn profile khi fail, worst ~75s); wrapper SIGKILL escalate sau SIGTERM 30s; `runs-on: ubuntu-24.04` pin image đã xác minh (ubuntu-latest đang migrate 26.04).
+
+```yaml
+task:
+  id: P110M5T01
+  tier: CONTROLLED
+  owns: [tests/fixtures/p107/lifecycle-coherence/lib/browser.mjs, tests/browser/p107-qualification.mjs, .github/workflows/ci.yml, tests/chromium-launch-resilience.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
