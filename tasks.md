@@ -1554,6 +1554,28 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### [x] [#P110M7T01] Sửa 2 lỗi UX từ live E2E + chốt backlog hiệu năng
+
+Closure: local canonical (commit này); focused test FAIL-on-baseline → PASS (behavioral trên 2 action thật + source contract UI catch); siblings xanh; typecheck, lint scoped, full **100/100**; STANDARD — xem control release phía dưới.
+
+UX-1: catch của import Excel giờ toast `error.message` thật của server (mã trùng, thiếu kỳ…) với fallback chung cũ (`EmployeesClient.tsx` handleFileChange).
+UX-2: thêm nhân viên mới khi chưa có kỳ active → thông báo hành động được: "Chưa có kỳ đánh giá đang mở. Hãy tạo kỳ đánh giá trước khi thêm nhân viên mới." (map trong `personnelErrorMessage`, áp cho cả lưu đơn lẻ + batch; các lỗi RPC khác giữ nguyên fallback toClientError).
+
+**Backlog hiệu năng — ghi nhận xử lý sau (owner quyết 2026-10-25):**
+1. `/teams/[id]` 779ms (chậm nhất; gộp query tuần tự thành aggregate như employees/reports → ước −400ms).
+2. Import ≥100 người: RPC tuần tự per-user (~130ms/người; 500 người ≈ 65s) — batch phía RPC nếu cần nhập lớn.
+3. Export N+1 (~7 query/evaluation) — chỉ đáng làm khi xuất hàng trăm phiếu.
+4. Chat double-fetch dataset mỗi câu hỏi; đếm tiến độ N+1 theo kỳ; AI buildAIPayload O(n²).
+5. (Font) vendoring next/font/local 2 slice để bỏ face latin-ext khỏi CSS — −83KB tiềm năng, đổi lại binary trong repo.
+
+```yaml
+task:
+  id: P110M7T01
+  tier: STANDARD
+  owns: [src/actions/users.ts, src/components/employees/EmployeesClient.tsx, tests/import-ux-messages.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
