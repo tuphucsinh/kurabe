@@ -719,7 +719,9 @@ export default function EmployeesClient({ initialViewer }: EmployeesClientProps)
       }
     } catch (error) {
       console.error('Import process error:', error);
-      toast('Lỗi khi xử lý file import.', 'error');
+      // P110M7T01 (UX-1): hiện message thật từ server (mã trùng, thiếu kỳ
+      // đánh giá…) thay vì câu chung chung — người dùng cần biết nguyên nhân.
+      toast(error instanceof Error && error.message ? error.message : 'Lỗi khi xử lý file import.', 'error');
     } finally {
       setIsImporting(false);
       e.target.value = '';

@@ -37,6 +37,20 @@ function buildPersonnelUserPayload(
   return payload;
 }
 
+
+/**
+ * P110M7T01 (UX-2): thêm nhân viên MỚI đòi hỏi đúng một kỳ đang Active để khởi
+ * tạo đánh giá. Khi hệ thống chưa có kỳ nào, RPC từ chối với chuỗi kỹ thuật —
+ * map sang thông báo hành động được thay vì để toClientError che thành câu chung.
+ */
+function personnelErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (/expected exactly one active evaluation period/i.test(message)) {
+    return 'Chưa có kỳ đánh giá đang mở. Hãy tạo kỳ đánh giá trước khi thêm nhân viên mới.';
+  }
+  return toClientError(error, fallback);
+}
+
 function revalidateUserPaths() {
   revalidateTag('dashboard-data', 'default');
   revalidateTag('report-aggregation', 'default');
@@ -107,7 +121,7 @@ export async function upsertUserAction(
     const payload = buildPersonnelUserPayload(user, userId, isNewUser);
     const result = await applyPersonnelTransaction([payload], null, auth.user.id);
     if (result.error || !result.data || result.data.users.length !== 1) {
-      return { success: false, error: toClientError(result.error, 'Lỗi lưu nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
+      return { success: false, error: personnelErrorMessage(result.error, 'Lỗi lưu nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
     }
 
     const saved = mapUserFromDb(result.data.users[0] as DbUser);
@@ -223,7 +237,7 @@ export async function upsertUsersAction(
 
     const result = await applyPersonnelTransaction(prepared.map((item) => item.payload), null, auth.user.id);
     if (result.error || !result.data || result.data.users.length !== prepared.length) {
-      return { success: false, error: toClientError(result.error, 'Lỗi lưu hàng loạt nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
+      return { success: false, error: personnelErrorMessage(result.error, 'Lỗi lưu hàng loạt nhân viên và khởi tạo đánh giá. Không có thay đổi nào được giữ lại.') };
     }
 
     const updatedIdSet = new Set(prepared.filter((item) => !item.isNew).map((item) => item.id));
