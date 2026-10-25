@@ -170,6 +170,11 @@ async function runLifecycleBrowser(sha, evidencePath) {
     const timer = setTimeout(() => {
       timedOut = true;
       try { child.kill('SIGTERM'); } catch { /* already gone */ }
+      // P110M5T01: SIGTERM có thể không hạ được producer đang kẹt trong I/O —
+      // escalate SIGKILL sau 30s để lane không kéo dài quá budget.
+      setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      }, 30_000).unref();
     }, LIFECYCLE_BROWSER_TIMEOUT_MS);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');

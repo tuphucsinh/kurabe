@@ -565,42 +565,69 @@ export class CdpPage {
   }
 }
 
-/** Launch headless Chromium and return a connection + shared-context tab factory. */
+// P110M5T01: số lần thử khởi động Chromium. Runner fleet thỉnh thoảng có host
+// không mở được DevTools port (đã bắt bằng evidence 2026-10-25, cùng image/Chrome
+// như run xanh ngày trước) — retry bounded thay vì fail cả lane.
+const CHROMIUM_LAUNCH_ATTEMPTS = 3;
+
+/**
+ * Launch headless Chromium and return a connection + shared-context tab factory.
+ * Mỗi lần thử dùng port + profile riêng; thất bại thì GIẮT child (SIGTERM→SIGKILL)
+ * trước khi thử lại — child treo từng giữ producer sống thêm ~39 phút.
+ */
 export async function launchChromium({ runtimeRoot, binary, headless = true } = {}) {
   const resolved = resolveChromiumBinary(binary);
-  const debugPort = await new Promise((resolve, reject) => {
-    const probe = spawnSync(process.execPath, ['-e', "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})"], { encoding: 'utf8' });
-    if (probe.status !== 0) return reject(new Error('failed to allocate debug port'));
-    resolve(Number(String(probe.stdout).trim()));
-  });
-  const profileDir = path.join(runtimeRoot, 'chrome-profile');
-  fs.mkdirSync(profileDir, { recursive: true });
-  const args = [
-    headless ? '--headless=new' : '--headless',
-    '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
-    '--disable-background-networking', '--disable-component-update', '--disable-sync',
-    '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
-    '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
-    `--user-data-dir=${profileDir}`, `--remote-debugging-port=${debugPort}`,
-    '--remote-allow-origins=*', 'about:blank',
-  ];
   const { spawn } = await import('node:child_process');
-  const child = spawn(resolved.binary, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-  let log = '';
-  child.stdout.on('data', (chunk) => { log = (log + String(chunk)).slice(-8000); });
-  child.stderr.on('data', (chunk) => { log = (log + String(chunk)).slice(-8000); });
+  const { stopOwned } = await import('./guard.mjs');
+  let lastError = null;
 
-  const versionInfo = await waitFor(async () => {
+  for (let attempt = 1; attempt <= CHROMIUM_LAUNCH_ATTEMPTS; attempt += 1) {
+    const debugPort = await new Promise((resolve, reject) => {
+      const probe = spawnSync(process.execPath, ['-e', "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})"], { encoding: 'utf8' });
+      if (probe.status !== 0) return reject(new Error('failed to allocate debug port'));
+      resolve(Number(String(probe.stdout).trim()));
+    });
+    const profileDir = path.join(runtimeRoot, `chrome-profile-${attempt}`);
+    fs.mkdirSync(profileDir, { recursive: true });
+    const args = [
+      headless ? '--headless=new' : '--headless',
+      '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
+      '--disable-background-networking', '--disable-component-update', '--disable-sync',
+      '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
+      '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
+      `--user-data-dir=${profileDir}`, `--remote-debugging-port=${debugPort}`,
+      '--remote-allow-origins=*', 'about:blank',
+    ];
+    const child = spawn(resolved.binary, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let log = '';
+    child.stdout.on('data', (chunk) => { log = (log + String(chunk)).slice(-8000); });
+    child.stderr.on('data', (chunk) => { log = (log + String(chunk)).slice(-8000); });
+
     try {
-      const response = await fetch(`http://127.0.0.1:${debugPort}/json/version`);
-      return response.ok ? response.json() : false;
-    } catch {
-      if (child.exitCode !== null) throw new Error(`chromium exited early (${child.exitCode}): ${log}`);
-      return false;
-    }
-  }, { timeout: 20_000, label: 'chromium devtools endpoint' });
+      const versionInfo = await waitFor(async () => {
+        try {
+          const response = await fetch(`http://127.0.0.1:${debugPort}/json/version`);
+          return response.ok ? response.json() : false;
+        } catch {
+          if (child.exitCode !== null) throw new Error(`chromium exited early (${child.exitCode}): ${log}`);
+          return false;
+        }
+      }, { timeout: 20_000, label: `chromium devtools endpoint (attempt ${attempt}/${CHROMIUM_LAUNCH_ATTEMPTS})` });
 
-  const connection = await new CdpConnection(versionInfo.webSocketDebuggerUrl).connect();
+      const connection = await new CdpConnection(versionInfo.webSocketDebuggerUrl).connect();
+      return buildChromiumHandle({ resolved, debugPort, profileDir, child, connection, runtimeRoot, stopOwned });
+    } catch (error) {
+      lastError = error;
+      console.error(`[p107-browser] chromium launch attempt ${attempt}/${CHROMIUM_LAUNCH_ATTEMPTS} failed: ${String(error?.message || error).slice(0, 200)}`);
+      await stopOwned(child, { graceMs: 3000 }).catch(() => {});
+      fs.rmSync(profileDir, { recursive: true, force: true });
+    }
+  }
+  throw lastError || new Error('chromium launch failed');
+}
+
+function buildChromiumHandle({ resolved, debugPort, profileDir, child, connection, runtimeRoot, stopOwned }) {
+  void debugPort; void runtimeRoot; void stopOwned;
 
   async function newPage(name, { origin = null } = {}) {
     const { targetId } = await connection.send('Target.createTarget', { url: 'about:blank' });

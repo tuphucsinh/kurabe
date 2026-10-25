@@ -10,7 +10,9 @@ permissions:
 jobs:
   ci:
     name: Lint, Typecheck, Test & Build
-    runs-on: ubuntu-latest
+    # P110M5T01: pin image đã được xác minh xanh (ubuntu-latest đang trong
+    # quá trình migrate sang Ubuntu 26 theo thông báo của GitHub).
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
