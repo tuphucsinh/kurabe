@@ -12,4 +12,5 @@
 **P110M2T01 RELEASED 2026-10-24 (owner-approved):** push FF `40f46d2`, CI 40086230532 success 7m41s (93/93, 115 cases, smoke 5), Vercel `kurabe-crol5ycjb` READY @ 40f46d28ee, lykiv trỏ đúng, smoke 200. Stall root cause remains UNKNOWN (ngoài harness); diagnostics live sẵn sàng cho lần fail tới.
 **P110M3T01+T02 + M4T01+T02 (local, chưa push):** P1/P2 import + warning (d318a84) + bundle server correctness & client UX (d40d50c/87f6478, 97/97, review PASS). Backlog còn: modal fire-and-forget, compare ?round=, OR-filter blowup, export N+1, chat double-fetch, AI 200-parse retry.
 **P110M5T01 RELEASED 2026-10-25:** CI hardening (chromium retry/cleanup/SIGKILL, image pin) — CI xanh lại 8m40s (98/98, 115 cases); production @ bb7f1fa.
+**P110M6T01 (local, chưa push):** font VN subset (+10KB một lần, typography nhất quán; perf mục 2 = cache đã đúng sẵn, 99/99).
 **Next:** backlog thiết kế/perf (modal fire-and-forget, compare ?round=, OR-filter, export/chat N+1, AI 200-parse retry); disposition dữ liệu test cũ.

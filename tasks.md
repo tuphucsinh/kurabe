@@ -1536,6 +1536,24 @@ task:
   locks: [KURABE_SOURCE_CONTRACT]
 ```
 
+### [x] [#P110M6T01] Tối ưu font (perf mục 2): subset tiếng Việt + chốt cache
+
+Closure: local canonical (commit này); focused contract test FAIL-on-baseline → PASS; typecheck, lint scoped, full **99/99** PASS; synthetic-env build verified trong worktree sạch (CSS emit đủ slice, vietnamese được preload `.p.`). STANDARD — không push.
+
+Điều tra (đo thật trên production + build): (1) cache font production **đúng sẵn** (`immutable, max-age=31536000`) — "84KB mỗi page-load" của lần đo perf là **artifact đo** (CDP đếm cả cached response), chi phí thật = 1 lần/browser; (2) slices cyrillic/greek/latin-ext luôn được emit nhưng browser **không bao giờ fetch** (unicode-range không khớp chữ hiển thị) — 0 byte runtime; (3) variable font 84KB cho 6 weight (400-900 đang dùng ×652 chỗ) **hiệu quả hơn** 6 file static (~150KB) — không pin weight.
+
+Vấn đề thật tìm thấy: subset thiếu "vietnamese" → dấu tổ hợp ạ/ế/ộ… (U+1EA0-1EF9) render bằng **font hệ thống trộn lẫn Inter** trên mọi câu tiếng Việt. Fix: `subsets: ["latin","vietnamese"]` (slice VN chỉ **10KB**, chứa đủ đ/ơ/ư + U+1EA0-1EF9, được preload) + `display: "swap"` tường minh. Chi phí ròng: **+10KB một lần/browser**, đổi lấy typography nhất quán + first-paint chữ Việt không phải chờ fallback.
+
+Option đã ghi nhận KHÔNG làm (anti-over-engineering): vendoring `next/font/local` chỉ 2 slice (bỏ face latin-ext 83KB khỏi CSS) → −83KB nhưng thêm binary vào repo + mất auto-update.
+
+```yaml
+task:
+  id: P110M6T01
+  tier: STANDARD
+  owns: [src/app/layout.tsx, tests/font-loading-contract.test.mjs]
+  locks: [KURABE_SOURCE_CONTRACT]
+```
+
 ### P110 release (owner-approved 2026-10-24)
 
 Push `a7dffe6..b791479` → GitHub; Vercel production deploy Ready (dpl `kurabe-qzdmv9bv1`, aliases `kurabe-tuphucsinhs-projects.vercel.app` + `lykiv.vercel.app`); smoke `/login` 200, `/` 307. CI run 40068448285: lần đầu browser lane flake (`real=false`, firstFailure `period:create-via-ui`, producer stderr không được surface — 41 phút im lặng); `gh run rerun --failed` cùng commit: **success** toàn bộ (p107-qualification 115 cases, harness real-DB/browser, production-smoke 5 cases). Đã thử tái hiện local (worktree sạch P110-qual) — BLOCKED vì MemAvailable dưới sàn 3GiB của producer; không tái hiện được. Kết luận: hạ tầng flake, không phải regression P110 (matrix auth thật đã PASS ở cả hai lần chạy).
